@@ -77,16 +77,16 @@ export const ROLES: { id: Rol; label: string; note: string }[] = [
   {
     id: "jefatura",
     label: "Jefatura",
-    note: "Ve el campus completo. La asignación de labores se abre en la supervisión.",
+    note: "Ve todas las labores abiertas. Puede crear, reasignar y archivar.",
   },
   {
     id: "coordinacion",
     label: "Coordinación",
-    note: "Consulta el catastro y, cuando haya labores, las crea y asigna.",
+    note: "Crea labores con un pin, asigna el equipo y sigue la bitácora.",
   },
   {
     id: "capataz",
     label: "Capataz",
-    note: "Vista de campo. Más adelante solo verá las labores de su equipo.",
+    note: "Solo ve las labores de su equipo. Puede cambiar el estado, no reasignar.",
   },
 ]

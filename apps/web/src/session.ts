@@ -11,3 +11,13 @@ export function readRol(): Rol {
 export function writeRol(rol: Rol) {
   localStorage.setItem(KEY, rol)
 }
+
+const EQUIPO = "campus-verde-equipo"
+
+export function readEquipo(): string {
+  return localStorage.getItem(EQUIPO) || "cap-norte"
+}
+
+export function writeEquipo(id: string) {
+  localStorage.setItem(EQUIPO, id)
+}

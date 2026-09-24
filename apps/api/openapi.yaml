@@ -10,13 +10,15 @@ info:
     CRS de las geometrías: **EPSG:4326** (longitud, latitud), GeoJSON RFC 7946.
     La columna `geom` admite NULL (catastro progresivo, sin GPS).
 
-    Fase A–B: salud y lectura de catastro. Sin autenticación en este corte.
+    Fases A–D: salud, catastro y labores de supervisión. El rol viaja en el cuerpo
+    o en la query (`rol`, `capataz_id`); no hay SSO.
 servers:
   - url: http://127.0.0.1:8091
     description: Desarrollo local
 tags:
   - name: sistema
   - name: catastro
+  - name: operacion
 paths:
   /health:
     get:
@@ -176,6 +178,43 @@ paths:
           description: Capa desconocida
         "503":
           description: Base no disponible
+  /api/v1/operacion/actividades:
+    get:
+      tags: [operacion]
+      summary: Labores como FeatureCollection (Point EPSG:4326)
+      parameters:
+        - in: query
+          name: rol
+          schema: { type: string, enum: [jefatura, coordinacion, capataz] }
+        - in: query
+          name: capataz_id
+          schema: { type: string }
+          description: Obligatorio si rol=capataz. Solo ve las asignadas a ese equipo.
+        - in: query
+          name: abiertas
+          schema: { type: string, default: "1" }
+          description: 1 excluye cerradas, canceladas y archivadas.
+      responses:
+        "200":
+          description: FeatureCollection
+          content:
+            application/geo+json:
+              schema:
+                $ref: "#/components/schemas/FeatureCollection"
+        "400":
+          description: Filtro inválido
+    post:
+      tags: [operacion]
+      summary: Crear labor desde un pin. El UUID del cliente es idempotente.
+      responses:
+        "201":
+          description: Creada
+        "200":
+          description: El mismo UUID ya existía con el mismo contenido
+        "403":
+          description: El rol capataz no crea labores
+        "409":
+          description: UUID repetido con otro contenido
 components:
   parameters:
     bbox:

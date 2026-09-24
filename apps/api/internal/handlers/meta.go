@@ -23,6 +23,13 @@ var RutasV1 = []Route{
 	{Metodo: "GET", Ruta: "/api/v1/geo/zonas", Descripcion: "Zonas (sin PII) como FeatureCollection EPSG:4326"},
 	{Metodo: "GET", Ruta: "/api/v1/geo/capas", Descripcion: "Catálogo de capas auxiliares"},
 	{Metodo: "GET", Ruta: "/api/v1/geo/capas/:capa", Descripcion: "jardines_reserva o xerofitica"},
+	{Metodo: "GET", Ruta: "/api/v1/operacion/capataces", Descripcion: "Equipos de campo ficticios"},
+	{Metodo: "GET", Ruta: "/api/v1/operacion/actividades", Descripcion: "Labores abiertas como FeatureCollection"},
+	{Metodo: "POST", Ruta: "/api/v1/operacion/actividades", Descripcion: "Alta idempotente desde un pin"},
+	{Metodo: "PATCH", Ruta: "/api/v1/operacion/actividades/:id/asignacion", Descripcion: "Asignar o reasignar equipo"},
+	{Metodo: "PATCH", Ruta: "/api/v1/operacion/actividades/:id/estado", Descripcion: "Cambiar estado"},
+	{Metodo: "POST", Ruta: "/api/v1/operacion/actividades/:id/archivar", Descripcion: "Baja lógica"},
+	{Metodo: "GET", Ruta: "/api/v1/operacion/actividades/:id/timeline", Descripcion: "Bitácora de la labor"},
 }
 
 // Meta es el índice JSON de /api/v1.

@@ -5,6 +5,7 @@ import (
 
 	"campusverde/api/internal/catastro"
 	"campusverde/api/internal/handlers"
+	"campusverde/api/internal/operacion"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -35,6 +36,11 @@ func New(deps Deps) *gin.Engine {
 	}
 	meta := handlers.Meta{OpenAPIPath: deps.OpenAPIPath}
 
+	var op handlers.Operacion
+	if deps.DB != nil {
+		op.Store = operacion.NewStore(deps.DB)
+	}
+
 	r.GET("/health", health.Get)
 	r.GET("/api/v1", meta.Index)
 	r.GET("/api/v1/openapi.yaml", meta.OpenAPI)
@@ -46,6 +52,15 @@ func New(deps Deps) *gin.Engine {
 	v1.GET("/capas", geo.Capas)
 	v1.GET("/capas/:capa", geo.Capa)
 
+	lab := r.Group("/api/v1/operacion")
+	lab.GET("/capataces", op.Capataces)
+	lab.GET("/actividades", op.List)
+	lab.POST("/actividades", op.Create)
+	lab.PATCH("/actividades/:id/asignacion", op.Assign)
+	lab.PATCH("/actividades/:id/estado", op.Estado)
+	lab.POST("/actividades/:id/archivar", op.Archive)
+	lab.GET("/actividades/:id/timeline", op.Timeline)
+
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ruta no encontrada"})
 	})
@@ -54,7 +69,7 @@ func New(deps Deps) *gin.Engine {
 
 func cors(c *gin.Context) {
 	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
+	c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
 	c.Header("Access-Control-Allow-Headers", "Content-Type")
 	if c.Request.Method == http.MethodOptions {
 		c.AbortWithStatus(http.StatusNoContent)

@@ -53,15 +53,15 @@ Fuentes: `docs/fuente/Propuesta_Arquitectura_DP2_v0.2.docx`, backlog épica J (H
 
 **MVP visor:** sí como base de CORE. **Crear actividad desde mapa:** Fase D.
 
-### Fase D — Supervisión de actividades en mapa (épica CORE)
+### Fase D — Supervisión de actividades en mapa (épica CORE) *(hecha, 2026-09-24)*
 
 **Depende de:** API de actividades/asignaciones/trazabilidad (base operativa + atención).
 
-- [ ] Marcadores de actividades no cerradas (color=estado, icono=tipo); panel filtros; popup.
-- [ ] Timeline de eventos (RF-30).
-- [ ] Crear/asignar desde mapa: pin + selector capataz (RF-31).
-- [ ] Vista capataz restringida mapa/lista + offline (RF-32, RNF-01).
-- [ ] Reasignación con auditoría (RF-35); cancelar/archivar lógica (RF-34).
+- [x] Marcadores de actividades no cerradas (color=estado, letra=tipo); panel filtros; popup.
+- [x] Timeline de eventos (RF-30).
+- [x] Crear/asignar desde mapa: pin + selector capataz (RF-31).
+- [x] Vista capataz restringida mapa/lista + cola local IndexedDB con UUID idempotente (RF-32, RNF-01).
+- [x] Reasignación con auditoría (RF-35); cancelar/archivar lógica (RF-34).
 
 **MVP CORE mapa:** **sí — esto es el MUST del backlog.**  
 Implementar **después** (o en paralelo controlado) de tener modelo de actividades; no antes de Fase A–B estables.
@@ -98,7 +98,7 @@ Implementar **después** (o en paralelo controlado) de tener modelo de actividad
 | A | Repo y docs hablan solo de Go API; esqueleto Gin/GORM y OpenAPI publicados. **Hecho.** |
 | B | PostGIS: 521 áreas, 534 zonas, CRS 4326; capas opcionales 21 + 10. **Hecho.** |
 | C | Demo: OSM + 2–3 capas catastro desde API. **Hecho.** |
-| D | Demo: crear actividad con pin, verla como marcador, capataz solo ve las suyas |
+| D | Demo: crear actividad con pin, verla como marcador, capataz solo ve las suyas. **Hecho.** |
 | E | Extrusión visible sin romper 2D |
 | F | Capas legacy must-have del inventario en checklist opcional |
 

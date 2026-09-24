@@ -86,6 +86,13 @@ La contraseña de `.env.example` es solo para desarrollo local. `.env` no se ver
 | GET | `/api/v1/geo/zonas` | FeatureCollection de zonas |
 | GET | `/api/v1/geo/capas` | Capas auxiliares |
 | GET | `/api/v1/geo/capas/{capa}` | `jardines_reserva` o `xerofitica` |
+| GET | `/api/v1/operacion/capataces` | Equipos ficticios (Equipo Norte, Sur, Riego) |
+| GET | `/api/v1/operacion/actividades` | Labores abiertas, GeoJSON Point. `rol=capataz&capataz_id=` filtra |
+| POST | `/api/v1/operacion/actividades` | Alta desde un pin. UUID de cliente, idempotente |
+| PATCH | `/api/v1/operacion/actividades/{id}/asignacion` | Asignar o reasignar |
+| PATCH | `/api/v1/operacion/actividades/{id}/estado` | Cambio de estado |
+| POST | `/api/v1/operacion/actividades/{id}/archivar` | Baja lógica |
+| GET | `/api/v1/operacion/actividades/{id}/timeline` | Bitácora |
 
 Filtro opcional `bbox=minLon,minLat,maxLon,maxLat` (EPSG:4326) y `limit`.
 
@@ -114,6 +121,8 @@ docker-compose.yml
 | [`docs/DECISIONES.md`](docs/DECISIONES.md) | ADRs, incluido CRS y PII de zonas |
 | [`docs/legacy-recovery/`](docs/legacy-recovery/) | Análisis del monolito Leaflet |
 
+El visor crea labores con un pin (Jefatura y Coordinación), las asigna a un equipo y muestra la bitácora. El rol Capataz solo recibe las de su equipo. Si la API no responde, el alta queda en IndexedDB y se reintenta con el mismo UUID.
+
 ## Fuera de este corte
 
-SSO institucional, Fase D (actividades en el mapa), Fase E (3D), Fase F (tachos, flora, bebederos…), Google Sheets en runtime y reservas reales (solo el mock FAKE).
+SSO institucional, Fase E (3D), Fase F (tachos, flora, bebederos…), Google Sheets en runtime y reservas reales (solo el mock FAKE).
