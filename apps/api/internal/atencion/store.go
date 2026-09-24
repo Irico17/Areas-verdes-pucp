@@ -323,7 +323,7 @@ func (s *Store) Reporte(ctx context.Context, estado, desde, hasta string) (Repor
 		Filas:     []Fila{},
 	}
 	if err := s.db.WithContext(ctx).Raw(`
-		SELECT estado, count(*) FROM actividades
+		SELECT estado, count(*)::int AS n FROM actividades
 		WHERE archivada_en IS NULL GROUP BY estado ORDER BY estado`).Scan(&out.PorEstado).Error; err != nil {
 		return out, err
 	}
