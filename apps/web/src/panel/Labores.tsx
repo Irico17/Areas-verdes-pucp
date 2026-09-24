@@ -8,6 +8,7 @@ import {
   type Capataz,
   type Evento,
 } from "../operacion"
+import type { CatalogoItem, Evidencia } from "../producto"
 import type { Rol } from "../types"
 
 export type LaborItem = {
@@ -18,6 +19,7 @@ export type LaborItem = {
   equipo: string
   detalle: string
   capatazId: string
+  ejecutor?: string
   queued?: boolean
 }
 
@@ -38,7 +40,7 @@ type Props = {
   formTitulo: string
   formDetalle: string
   formEquipo: string
-  onForm: (patch: { tipo?: string; titulo?: string; detalle?: string; equipo?: string }) => void
+  onForm: (patch: { tipo?: string; titulo?: string; detalle?: string; equipo?: string; ejecutor?: string }) => void
   onCreate: () => void
   creating: boolean
   selected: LaborItem | null
@@ -56,6 +58,15 @@ type Props = {
   notice: string
   queueCount: number
   onFlush: () => void
+  tipos: { id: string; label: string }[]
+  formEjecutor: string
+  motivos: CatalogoItem[]
+  motivo: string
+  onMotivo: (id: string) => void
+  onSugerir: () => void
+  sugerencia: string
+  evidencias: Evidencia[]
+  onSubir: (file: File) => void
 }
 
 export function Labores(props: Props) {
@@ -64,18 +75,7 @@ export function Labores(props: Props) {
     <section className="block">
       <h2>Labores</h2>
       <p className="lede">Puntos abiertos. El color es el estado y la letra, el tipo.</p>
-      {props.rol === "capataz" && (
-        <label className="field">
-          Equipo en vista
-          <select value={props.equipoId} onChange={(event) => props.onEquipo(event.target.value)}>
-            {props.equipos.map((equipo) => (
-              <option key={equipo.id} value={equipo.id}>
-                {equipo.equipo} · {equipo.turno}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
+      {props.rol === "capataz" && <p className="hint">Solo ve las labores de su equipo.</p>}
       <div className="checks">
         {ESTADOS.filter((estado) => (ABIERTOS as readonly string[]).includes(estado.id)).map((estado) => (
           <label key={estado.id}>
@@ -93,9 +93,9 @@ export function Labores(props: Props) {
         Tipo
         <select value={props.tipo} onChange={(event) => props.onTipo(event.target.value)}>
           <option value="">Todos</option>
-          {TIPOS.map((tipo) => (
+          {props.tipos.map((tipo) => (
             <option key={tipo.id} value={tipo.id}>
-              {tipo.marca} · {tipo.label}
+              {tipo.label}
             </option>
           ))}
         </select>
@@ -120,7 +120,7 @@ export function Labores(props: Props) {
           <label className="field">
             Tipo
             <select value={props.formTipo} onChange={(event) => props.onForm({ tipo: event.target.value })}>
-              {TIPOS.map((tipo) => (
+              {props.tipos.map((tipo) => (
                 <option key={tipo.id} value={tipo.id}>
                   {tipo.label}
                 </option>
@@ -130,6 +130,17 @@ export function Labores(props: Props) {
           <label className="field">
             Título
             <input value={props.formTitulo} maxLength={160} onChange={(event) => props.onForm({ titulo: event.target.value })} required />
+          </label>
+          {props.sugerencia && <p className="hint">{props.sugerencia}</p>}
+          <button type="button" onClick={props.onSugerir}>
+            Sugerir tipo
+          </button>
+          <label className="field">
+            Quién ejecuta
+            <select value={props.formEjecutor} onChange={(event) => props.onForm({ ejecutor: event.target.value })}>
+              <option value="propia">Personal propio</option>
+              <option value="tercerizada">Servicio tercerizado</option>
+            </select>
           </label>
           <label className="field">
             Detalle
@@ -172,6 +183,7 @@ export function Labores(props: Props) {
                 <strong>{item.titulo}</strong>
                 <small>
                   {etiquetaTipo(item.tipo)} · {etiquetaEstado(item.estado)} · {item.equipo || "Sin equipo"}
+                  {item.ejecutor === "tercerizada" ? " · tercerizada" : ""}
                   {item.queued ? " · pendiente de envío" : ""}
                 </small>
               </span>
@@ -184,6 +196,7 @@ export function Labores(props: Props) {
           <h3>{props.selected.titulo}</h3>
           <p className="meta">
             {etiquetaTipo(props.selected.tipo)} · {etiquetaEstado(props.selected.estado)} · {props.selected.equipo || "Sin equipo"}
+            {props.selected.ejecutor === "tercerizada" ? " · tercerizada" : " · personal propio"}
           </p>
           {props.selected.detalle && <p className="lede">{props.selected.detalle}</p>}
           {props.selected.queued ? (
@@ -215,6 +228,17 @@ export function Labores(props: Props) {
                       ))}
                     </select>
                   </label>
+                  <label className="field">
+                    Motivo de archivo
+                    <select value={props.motivo} onChange={(event) => props.onMotivo(event.target.value)}>
+                      <option value="">Elegir</option>
+                      {props.motivos.map((item) => (
+                        <option key={item.codigo} value={item.codigo}>
+                          {item.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <div className="row-actions">
                     <button type="button" onClick={props.onReasignar}>
                       Reasignar
@@ -225,6 +249,28 @@ export function Labores(props: Props) {
                   </div>
                 </>
               )}
+              <h3>Evidencias</h3>
+              {props.evidencias.length === 0 && <p className="empty">Esta labor no tiene archivos.</p>}
+              <ul className="labor-list">
+                {props.evidencias.map((item) => (
+                  <li key={item.id} className="agenda">
+                    <a href={`/api/v1/evidencias/${item.id}/archivo`}>{item.nombre}</a>
+                    <small>{item.nota}</small>
+                  </li>
+                ))}
+              </ul>
+              <label className="field">
+                Adjuntar
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (file) props.onSubir(file)
+                    event.target.value = ""
+                  }}
+                />
+              </label>
               <h3>Bitácora</h3>
               {props.timelineError && <p className="status error">{props.timelineError}</p>}
               <ol className="timeline">

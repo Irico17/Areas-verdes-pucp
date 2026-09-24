@@ -19,9 +19,9 @@ export const TIPOS = [
 ] as const
 
 export const ESTADOS = [
-  { id: "pendiente", label: "Pendiente", color: "#a8843d" },
-  { id: "en_proceso", label: "En proceso", color: "#1e4d3a" },
-  { id: "bloqueada", label: "Bloqueada", color: "#8c3a32" },
+  { id: "pendiente", label: "Pendiente", color: "#8a6a12" },
+  { id: "en_proceso", label: "En proceso", color: "#145c3e" },
+  { id: "bloqueada", label: "Bloqueada", color: "#8d2f2c" },
   { id: "cerrada", label: "Cerrada", color: "#5c6560" },
   { id: "cancelada", label: "Cancelada", color: "#8a8478" },
 ] as const
@@ -50,6 +50,7 @@ export type CreateBody = {
   lat: number
   assigned_capataz_id: string
   actor_rol: Rol
+  ejecutor?: string
 }
 
 const EVENTO_LABEL: Record<string, string> = {
@@ -59,6 +60,7 @@ const EVENTO_LABEL: Record<string, string> = {
   estado: "Estado",
   cancelada: "Cancelada",
   archivada: "Archivada",
+  evidencia: "Evidencia",
 }
 
 export function etiquetaEvento(tipo: string): string {
@@ -141,8 +143,8 @@ export async function cambiarEstado(id: string, estado: string, rol: Rol, capata
   })
 }
 
-export async function archivar(id: string, rol: Rol): Promise<void> {
-  await send(`/api/v1/operacion/actividades/${id}/archivar`, "POST", { actor_rol: rol })
+export async function archivar(id: string, rol: Rol, motivo: string): Promise<void> {
+  await send(`/api/v1/operacion/actividades/${id}/archivar`, "POST", { actor_rol: rol, motivo })
 }
 
 export async function fetchTimeline(id: string): Promise<Evento[]> {

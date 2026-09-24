@@ -27,22 +27,22 @@ func (e InputError) Unwrap() error { return ErrValidacion }
 
 var uuidRe = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
-func known(list []string, value string) bool {
-	for _, item := range list {
-		if item == value {
-			return true
-		}
-	}
-	return false
-}
-
 func rolConocido(rol string) bool {
-	return rol == RolJefatura || rol == RolCoordinacion || rol == RolCapataz
+	return rol == RolJefatura || rol == RolCoordinacion || rol == RolCapataz || rol == RolAdmin
 }
 
 func puedeAsignar(rol string) bool {
-	return rol == RolJefatura || rol == RolCoordinacion
+	return rol == RolJefatura || rol == RolCoordinacion || rol == RolAdmin
 }
+
+func ejecutorDe(v string) string {
+	if strings.TrimSpace(v) == "tercerizada" {
+		return "tercerizada"
+	}
+	return "propia"
+}
+
+var slugRe = regexp.MustCompile(`^[a-z0-9_]{2,32}$`)
 
 // ValidateCreate rechaza altas incompletas o de capataz antes de tocar la base.
 func ValidateCreate(in CreateInput) error {
@@ -50,12 +50,12 @@ func ValidateCreate(in CreateInput) error {
 		if in.ActorRol == RolCapataz {
 			return ErrProhibido
 		}
-		return InputError{Reason: "actor_rol debe ser jefatura o coordinacion"}
+		return InputError{Reason: "actor_rol debe ser jefatura, coordinacion o admin"}
 	}
 	if !uuidRe.MatchString(in.ID) {
 		return InputError{Reason: "id debe ser un UUID"}
 	}
-	if !known(Tipos, in.Tipo) {
+	if !slugRe.MatchString(in.Tipo) {
 		return InputError{Reason: "tipo no reconocido"}
 	}
 	titulo := strings.TrimSpace(in.Titulo)
@@ -79,10 +79,10 @@ func ValidateQuery(q Query) error {
 	if q.Rol == RolCapataz && strings.TrimSpace(q.CapatazID) == "" {
 		return InputError{Reason: "capataz_id es obligatorio para el rol capataz"}
 	}
-	if q.Estado != "" && !known(Estados, q.Estado) {
+	if q.Estado != "" && !slugRe.MatchString(q.Estado) {
 		return InputError{Reason: "estado no reconocido"}
 	}
-	if q.Tipo != "" && !known(Tipos, q.Tipo) {
+	if q.Tipo != "" && !slugRe.MatchString(q.Tipo) {
 		return InputError{Reason: "tipo no reconocido"}
 	}
 	return nil
@@ -93,7 +93,7 @@ func ValidateEstado(estado, actorRol, capatazID string) error {
 	if !rolConocido(actorRol) {
 		return InputError{Reason: "actor_rol no reconocido"}
 	}
-	if !known(Estados, estado) {
+	if !slugRe.MatchString(estado) {
 		return InputError{Reason: "estado no reconocido"}
 	}
 	if actorRol == RolCapataz && strings.TrimSpace(capatazID) == "" {
@@ -108,7 +108,7 @@ func ValidateAsignacion(actorRol, capatazID string) error {
 		if actorRol == RolCapataz {
 			return ErrProhibido
 		}
-		return InputError{Reason: "actor_rol debe ser jefatura o coordinacion"}
+		return InputError{Reason: "actor_rol debe ser jefatura, coordinacion o admin"}
 	}
 	if strings.TrimSpace(capatazID) == "" {
 		return InputError{Reason: "capataz_id es obligatorio"}
@@ -116,7 +116,7 @@ func ValidateAsignacion(actorRol, capatazID string) error {
 	return nil
 }
 
-// ValidateArchivo solo lo hace jefatura o coordinación.
+// ValidateArchivo solo lo hace jefatura, coordinación o admin.
 func ValidateArchivo(actorRol string) error {
 	if puedeAsignar(actorRol) {
 		return nil
@@ -124,7 +124,7 @@ func ValidateArchivo(actorRol string) error {
 	if actorRol == RolCapataz {
 		return ErrProhibido
 	}
-	return InputError{Reason: "actor_rol debe ser jefatura o coordinacion"}
+	return InputError{Reason: "actor_rol debe ser jefatura, coordinacion o admin"}
 }
 
 // SamePayload compara un reintento con la fila ya guardada.
@@ -135,6 +135,7 @@ func SamePayload(saved Saved, in CreateInput) bool {
 		saved.AssignedCapatazID == strings.TrimSpace(in.AssignedCapatazID) &&
 		saved.AreaFeatureID == strings.TrimSpace(in.AreaFeatureID) &&
 		saved.ZonaFeatureID == strings.TrimSpace(in.ZonaFeatureID) &&
+		ejecutorDe(saved.Ejecutor) == ejecutorDe(in.Ejecutor) &&
 		math.Abs(saved.Lon-in.Lon) < 1e-5 &&
 		math.Abs(saved.Lat-in.Lat) < 1e-5
 }

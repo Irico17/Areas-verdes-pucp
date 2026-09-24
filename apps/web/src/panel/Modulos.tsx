@@ -1,0 +1,638 @@
+import { useEffect, useState, type FormEvent } from "react"
+import { ApiError } from "../operacion"
+import {
+  crearAreaSinGeom,
+  crearCatalogo,
+  crearOrden,
+  crearRiego,
+  crearSolicitud,
+  desactivarCatalogo,
+  entrar,
+  fetchCatalogo,
+  fetchCuentas,
+  fetchFichas,
+  fetchOrdenes,
+  fetchReporte,
+  fetchRiego,
+  fetchSolicitudes,
+  guardarFicha,
+  reporteHref,
+  type CatalogoItem,
+  type Ficha,
+  type Orden,
+  type Usuario,
+} from "../producto"
+
+export function Login(props: { onIn: (usuario: Usuario) => void }) {
+  const [usuario, setUsuario] = useState("coordinacion")
+  const [clave, setClave] = useState("")
+  const [error, setError] = useState("")
+  const [pending, setPending] = useState(false)
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    setPending(true)
+    setError("")
+    try {
+      props.onIn(await entrar(usuario.trim(), clave))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo entrar")
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <main className="login">
+      <p className="login-kicker">PUCP Pando</p>
+      <h1>Campus Verde</h1>
+      <p className="lede">Supervisión de áreas verdes. La sesión es local: el SSO de la universidad no está conectado.</p>
+      <form onSubmit={(event) => void submit(event)}>
+        <label className="field">
+          Usuario
+          <input value={usuario} onChange={(event) => setUsuario(event.target.value)} autoComplete="username" required />
+        </label>
+        <label className="field">
+          Clave
+          <input type="password" value={clave} onChange={(event) => setClave(event.target.value)} autoComplete="current-password" required />
+        </label>
+        {error && <p className="status error">{error}</p>}
+        <button type="submit" className="primary" disabled={pending}>
+          {pending ? "Entrando…" : "Entrar"}
+        </button>
+      </form>
+      <p className="hint">
+        Cuentas de esta instalación: norte, sur, riego, coordinacion, jefatura, admin. Clave local: pando-local.
+      </p>
+    </main>
+  )
+}
+
+export function CatastroPanel() {
+  const [q, setQ] = useState("")
+  const [rows, setRows] = useState<Ficha[]>([])
+  const [error, setError] = useState("")
+  const [sel, setSel] = useState<Ficha | null>(null)
+  const [nombreNuevo, setNombreNuevo] = useState("")
+  const [usoNuevo, setUsoNuevo] = useState("")
+  const [aviso, setAviso] = useState("")
+
+  async function load(query = q) {
+    try {
+      setRows(await fetchFichas(query))
+      setError("")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo leer el catastro")
+    }
+  }
+
+  useEffect(() => {
+    void load("")
+  }, [])
+
+  return (
+    <section className="block">
+      <h2>Catastro</h2>
+      <p className="lede">Metadatos de las áreas. Una ficha puede existir sin geometría.</p>
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void load(q)
+        }}
+      >
+        <label className="field">
+          Buscar
+          <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Nombre o código" />
+        </label>
+        <button type="submit">Buscar</button>
+      </form>
+      {error && <p className="status error">{error}</p>}
+      {rows.length === 0 && !error && <p className="empty">Ningún área coincide con esa búsqueda.</p>}
+      <ul className="labor-list">
+        {rows.map((row) => (
+          <li key={row.feature_id}>
+            <button
+              type="button"
+              className={sel?.feature_id === row.feature_id ? "labor on" : "labor"}
+              onClick={() => setSel(row)}
+            >
+              <span>
+                <strong>{row.nombre || "Sin nombre"}</strong>
+                <small>
+                  {row.feature_id}
+                  {row.con_geometria ? "" : " · sin geometría"}
+                </small>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {sel && (
+        <form
+          className="form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void guardarFicha(sel)
+              .then(() => setAviso("Ficha guardada."))
+              .catch((err: unknown) => setAviso(err instanceof Error ? err.message : "No se pudo guardar"))
+          }}
+        >
+          <label className="field">
+            Nombre
+            <input value={sel.nombre} onChange={(event) => setSel({ ...sel, nombre: event.target.value })} />
+          </label>
+          <label className="field">
+            Uso
+            <input value={sel.uso} onChange={(event) => setSel({ ...sel, uso: event.target.value })} />
+          </label>
+          <label className="field">
+            Riego actual
+            <input value={sel.riego_act} onChange={(event) => setSel({ ...sel, riego_act: event.target.value })} />
+          </label>
+          <label className="field">
+            Referencia
+            <input value={sel.referencia} onChange={(event) => setSel({ ...sel, referencia: event.target.value })} />
+          </label>
+          <button type="submit" className="primary">
+            Guardar ficha
+          </button>
+        </form>
+      )}
+      <h3>Área sin GPS</h3>
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void crearAreaSinGeom(nombreNuevo, usoNuevo)
+            .then(() => {
+              setNombreNuevo("")
+              setUsoNuevo("")
+              setAviso("Área creada sin geometría.")
+              return load(q)
+            })
+            .catch((err: unknown) => setAviso(err instanceof Error ? err.message : "No se pudo crear"))
+        }}
+      >
+        <label className="field">
+          Nombre
+          <input value={nombreNuevo} onChange={(event) => setNombreNuevo(event.target.value)} required />
+        </label>
+        <label className="field">
+          Uso
+          <input value={usoNuevo} onChange={(event) => setUsoNuevo(event.target.value)} />
+        </label>
+        <button type="submit">Registrar sin geometría</button>
+      </form>
+      {aviso && <p className="hint">{aviso}</p>}
+    </section>
+  )
+}
+
+export function SolicitudesPanel(props: { actividadId: string }) {
+  const [rows, setRows] = useState<Awaited<ReturnType<typeof fetchSolicitudes>>>([])
+  const [ordenes, setOrdenes] = useState<Orden[]>([])
+  const [error, setError] = useState("")
+  const [titulo, setTitulo] = useState("")
+  const [fuente, setFuente] = useState("osg")
+  const [codigo, setCodigo] = useState("")
+  const [prioridad, setPrioridad] = useState("media")
+  const [lugar, setLugar] = useState("")
+  const [empresa, setEmpresa] = useState("")
+  const [referencia, setReferencia] = useState("")
+
+  async function load() {
+    try {
+      const [sol, ord] = await Promise.all([fetchSolicitudes(), fetchOrdenes()])
+      setRows(sol)
+      setOrdenes(ord)
+      setError("")
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudieron leer las solicitudes")
+    }
+  }
+
+  useEffect(() => {
+    void load()
+  }, [])
+
+  return (
+    <section className="block">
+      <h2>Solicitudes</h2>
+      <p className="lede">Captura manual. El código externo se conserva si viene de Centuria u OSG; el sistema no lo inventa.</p>
+      {error && <p className="status error">{error}</p>}
+      {rows.length === 0 && !error && <p className="empty">No hay solicitudes registradas.</p>}
+      <ul className="labor-list">
+        {rows.map((row) => (
+          <li key={row.id} className="agenda">
+            <strong>{row.titulo}</strong>
+            <small>
+              {row.fuente} · {row.estado} · {row.prioridad}
+              {row.codigo_externo ? ` · ${row.codigo_externo}` : " · sin código externo"}
+            </small>
+          </li>
+        ))}
+      </ul>
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void crearSolicitud({
+            id: crypto.randomUUID(),
+            titulo,
+            fuente,
+            codigo_externo: codigo,
+            prioridad,
+            lugar,
+            detalle: "",
+          })
+            .then(() => {
+              setTitulo("")
+              setCodigo("")
+              return load()
+            })
+            .catch((err: unknown) => setError(err instanceof Error ? err.message : "No se pudo crear"))
+        }}
+      >
+        <label className="field">
+          Título
+          <input value={titulo} onChange={(event) => setTitulo(event.target.value)} required />
+        </label>
+        <label className="field">
+          Fuente
+          <select value={fuente} onChange={(event) => setFuente(event.target.value)}>
+            <option value="centuria">Centuria</option>
+            <option value="osg">Matriz OSG</option>
+            <option value="correo">Correo</option>
+            <option value="interna">Interna</option>
+          </select>
+        </label>
+        <label className="field">
+          Código externo
+          <input value={codigo} onChange={(event) => setCodigo(event.target.value)} placeholder="Opcional" />
+        </label>
+        <label className="field">
+          Prioridad
+          <select value={prioridad} onChange={(event) => setPrioridad(event.target.value)}>
+            <option value="baja">Baja</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+          </select>
+        </label>
+        <label className="field">
+          Lugar
+          <input value={lugar} onChange={(event) => setLugar(event.target.value)} />
+        </label>
+        <button type="submit" className="primary">
+          Registrar solicitud
+        </button>
+      </form>
+      <h3>Órdenes de servicio</h3>
+      <p className="lede">Solo se vinculan a una labor marcada como tercerizada. Sin orden, esa labor no se cierra.</p>
+      {ordenes.length === 0 && <p className="empty">No hay órdenes.</p>}
+      <ul className="labor-list">
+        {ordenes.map((row) => (
+          <li key={row.id} className="agenda">
+            <strong>{row.empresa}</strong>
+            <small>
+              {row.referencia} · {row.estado}
+            </small>
+          </li>
+        ))}
+      </ul>
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          if (!props.actividadId) {
+            setError("Elija una labor en el mapa antes de crear la orden.")
+            return
+          }
+          void crearOrden({
+            id: crypto.randomUUID(),
+            actividad_id: props.actividadId,
+            empresa,
+            referencia,
+            frecuencia: "",
+          })
+            .then(() => {
+              setEmpresa("")
+              setReferencia("")
+              return load()
+            })
+            .catch((err: unknown) => setError(err instanceof Error ? err.message : "No se pudo crear la orden"))
+        }}
+      >
+        <p className="hint">{props.actividadId ? `Labor seleccionada ${props.actividadId.slice(0, 8)}` : "Ninguna labor seleccionada."}</p>
+        <label className="field">
+          Empresa
+          <input value={empresa} onChange={(event) => setEmpresa(event.target.value)} required />
+        </label>
+        <label className="field">
+          Referencia de contratación
+          <input value={referencia} onChange={(event) => setReferencia(event.target.value)} required />
+        </label>
+        <button type="submit">Registrar orden</button>
+      </form>
+    </section>
+  )
+}
+
+export function ReportesPanel() {
+  const [estado, setEstado] = useState("")
+  const [desde, setDesde] = useState("")
+  const [hasta, setHasta] = useState("")
+  const [data, setData] = useState<Awaited<ReturnType<typeof fetchReporte>> | null>(null)
+  const [error, setError] = useState("")
+
+  async function load() {
+    try {
+      setData(await fetchReporte(estado, desde, hasta))
+      setError("")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo armar el reporte")
+    }
+  }
+
+  useEffect(() => {
+    void load()
+  }, [])
+
+  return (
+    <section className="block">
+      <h2>Reportes</h2>
+      <p className="lede">Un reporte básico de labores, con el historial filtrable por estado y fecha.</p>
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void load()
+        }}
+      >
+        <label className="field">
+          Estado
+          <input value={estado} onChange={(event) => setEstado(event.target.value)} placeholder="pendiente, en_proceso…" />
+        </label>
+        <label className="field">
+          Desde
+          <input type="date" value={desde} onChange={(event) => setDesde(event.target.value)} />
+        </label>
+        <label className="field">
+          Hasta
+          <input type="date" value={hasta} onChange={(event) => setHasta(event.target.value)} />
+        </label>
+        <button type="submit" className="primary">
+          Actualizar
+        </button>
+      </form>
+      {error && <p className="status error">{error}</p>}
+      {data && (
+        <>
+          <p className="hint">{data.aviso}</p>
+          <ul className="checks">
+            {data.por_estado.map((row) => (
+              <li key={row.estado}>
+                {row.estado}: {row.n}
+              </li>
+            ))}
+          </ul>
+          <p className="row-actions">
+            <a href={reporteHref("csv", estado, desde, hasta)}>Descargar CSV</a>
+            <a href={reporteHref("xls", estado, desde, hasta)}>Descargar Excel</a>
+          </p>
+          {data.filas.length === 0 && <p className="empty">No hay labores en ese rango.</p>}
+          <ul className="labor-list">
+            {data.filas.slice(0, 40).map((row) => (
+              <li key={row.id} className="agenda">
+                <strong>{row.titulo}</strong>
+                <small>
+                  {row.tipo} · {row.estado} · {row.ejecutor}
+                  {row.codigo_externo ? ` · ${row.codigo_externo}` : ""}
+                </small>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  )
+}
+
+const CLASES = [
+  ["tipo_actividad", "Tipos de labor"],
+  ["estado", "Estados"],
+  ["prioridad", "Prioridades"],
+  ["lugar", "Lugares"],
+  ["especie", "Especies"],
+  ["motivo_archivo", "Motivos de archivo"],
+  ["turno", "Turnos"],
+  ["fuente", "Fuentes"],
+] as const
+
+export function CatalogosPanel() {
+  const [clase, setClase] = useState<string>("tipo_actividad")
+  const [items, setItems] = useState<CatalogoItem[]>([])
+  const [error, setError] = useState("")
+  const [codigo, setCodigo] = useState("")
+  const [nombre, setNombre] = useState("")
+
+  async function load(next = clase) {
+    try {
+      setItems(await fetchCatalogo(next, false))
+      setError("")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo leer el catálogo")
+    }
+  }
+
+  useEffect(() => {
+    void load(clase)
+  }, [clase])
+
+  return (
+    <section className="block">
+      <h2>Catálogos</h2>
+      <p className="lede">Valores que usa la operación. Desactivar no borra el historial.</p>
+      <label className="field">
+        Clase
+        <select value={clase} onChange={(event) => setClase(event.target.value)}>
+          {CLASES.map(([id, label]) => (
+            <option key={id} value={id}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {error && <p className="status error">{error}</p>}
+      {items.length === 0 && !error && <p className="empty">Esta clase no tiene ítems.</p>}
+      <ul className="labor-list">
+        {items.map((item) => (
+          <li key={item.id} className="agenda">
+            <strong>
+              {item.nombre}
+              {item.activo ? "" : " · inactivo"}
+            </strong>
+            <small>{item.codigo}</small>
+            {item.activo && (
+              <button type="button" className="link" onClick={() => void desactivarCatalogo(item.id).then(() => load())}>
+                Desactivar
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void crearCatalogo(clase, codigo, nombre)
+            .then(() => {
+              setCodigo("")
+              setNombre("")
+              return load()
+            })
+            .catch((err: unknown) => setError(err instanceof Error ? err.message : "No se pudo guardar"))
+        }}
+      >
+        <label className="field">
+          Código
+          <input value={codigo} onChange={(event) => setCodigo(event.target.value)} placeholder="minusculas_sin_espacio" required />
+        </label>
+        <label className="field">
+          Nombre
+          <input value={nombre} onChange={(event) => setNombre(event.target.value)} required />
+        </label>
+        <button type="submit" className="primary">
+          Agregar
+        </button>
+      </form>
+    </section>
+  )
+}
+
+export function AdminPanel() {
+  const [data, setData] = useState<Awaited<ReturnType<typeof fetchCuentas>> | null>(null)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    void fetchCuentas()
+      .then(setData)
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "No se pudo leer las cuentas"))
+  }, [])
+
+  return (
+    <section className="block">
+      <h2>Admin</h2>
+      <p className="lede">{data?.aviso || "Cuentas locales. El SSO institucional no forma parte de este piloto."}</p>
+      {error && <p className="status error">{error}</p>}
+      {!data && !error && <p className="hint">Leyendo cuentas…</p>}
+      <ul className="labor-list">
+        {(data?.usuarios ?? []).map((user) => (
+          <li key={user.id} className="agenda">
+            <strong>{user.nombre}</strong>
+            <small>
+              {user.usuario} · {user.rol}
+              {user.capataz_id ? ` · ${user.capataz_id}` : ""}
+            </small>
+          </li>
+        ))}
+      </ul>
+      <h3>Permisos semilla</h3>
+      <ul className="labor-list">
+        {(data?.permisos ?? []).map((item) => (
+          <li key={`${item.rol}-${item.accion}`} className="agenda">
+            <small>
+              {item.rol} · {item.accion}
+            </small>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+export function RiegoPanel(props: { capatazId: string }) {
+  const [aviso, setAviso] = useState("")
+  const [rows, setRows] = useState<Awaited<ReturnType<typeof fetchRiego>>["registros"]>([])
+  const [error, setError] = useState("")
+  const [sector, setSector] = useState("Eje central")
+  const [turno, setTurno] = useState("manana")
+  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10))
+  const [nota, setNota] = useState("")
+
+  async function load() {
+    try {
+      const body = await fetchRiego()
+      setAviso(body.aviso)
+      setRows(body.registros)
+      setError("")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo leer el riego")
+    }
+  }
+
+  useEffect(() => {
+    void load()
+  }, [])
+
+  return (
+    <section className="block">
+      <h2>Riego</h2>
+      <p className="lede">{aviso || "Sector, turno y equipo. Sin porcentaje oficial de cobertura."}</p>
+      {error && <p className="status error">{error}</p>}
+      {rows.length === 0 && !error && <p className="empty">Todavía no hay turnos registrados.</p>}
+      <ul className="labor-list">
+        {rows.map((row) => (
+          <li key={row.id} className="agenda">
+            <strong>{row.sector}</strong>
+            <small>
+              {row.fecha} · {row.turno} · {row.equipo || "sin equipo"}
+            </small>
+          </li>
+        ))}
+      </ul>
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void crearRiego({
+            id: crypto.randomUUID(),
+            sector,
+            turno,
+            capataz_id: props.capatazId,
+            fecha,
+            nota,
+          })
+            .then(() => {
+              setNota("")
+              return load()
+            })
+            .catch((err: unknown) => setError(err instanceof Error ? err.message : "No se pudo registrar"))
+        }}
+      >
+        <label className="field">
+          Sector
+          <input value={sector} onChange={(event) => setSector(event.target.value)} required />
+        </label>
+        <label className="field">
+          Turno
+          <select value={turno} onChange={(event) => setTurno(event.target.value)}>
+            <option value="manana">Mañana</option>
+            <option value="tarde">Tarde</option>
+          </select>
+        </label>
+        <label className="field">
+          Fecha
+          <input type="date" value={fecha} onChange={(event) => setFecha(event.target.value)} required />
+        </label>
+        <label className="field">
+          Nota
+          <input value={nota} onChange={(event) => setNota(event.target.value)} />
+        </label>
+        <button type="submit" className="primary">
+          Registrar turno
+        </button>
+      </form>
+    </section>
+  )
+}

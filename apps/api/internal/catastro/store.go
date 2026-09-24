@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
+	"unicode/utf8"
 
 	"campusverde/api/internal/geojson"
 	"campusverde/api/internal/models"
@@ -305,6 +307,108 @@ func nullFloat(v sql.NullFloat64) *float64 {
 	}
 	f := v.Float64
 	return &f
+}
+
+// Ficha es un área sin depender del GeoJSON del mapa.
+type Ficha struct {
+	FeatureID string   `json:"feature_id"`
+	Nombre    string   `json:"nombre"`
+	Uso       string   `json:"uso"`
+	RiegoAct  string   `json:"riego_act"`
+	Referencia string  `json:"referencia"`
+	AreaM2    *float64 `json:"area_m2,omitempty"`
+	ConGeom   bool     `json:"con_geometria"`
+}
+
+// ErrFichaNoEncontrada: no hay área con ese feature_id.
+var ErrFichaNoEncontrada = errors.New("ficha no encontrada")
+
+// Fichas lista áreas para editar metadatos. q filtra por nombre o código.
+func (s *Store) Fichas(ctx context.Context, q string) ([]Ficha, error) {
+	q = strings.TrimSpace(q)
+	rows, err := s.db.WithContext(ctx).Raw(`
+		SELECT feature_id, COALESCE(nombre, ''), COALESCE(uso, ''), COALESCE(riego_act, ''),
+		       COALESCE(referencia, ''), area_m2, geom IS NOT NULL
+		FROM areas_verdes
+		WHERE ($1 = '' OR feature_id ILIKE '%' || $1 || '%' OR COALESCE(nombre, '') ILIKE '%' || $1 || '%')
+		ORDER BY feature_id
+		LIMIT 40`, q).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Ficha{}
+	for rows.Next() {
+		var f Ficha
+		var area sql.NullFloat64
+		if err := rows.Scan(&f.FeatureID, &f.Nombre, &f.Uso, &f.RiegoAct, &f.Referencia, &area, &f.ConGeom); err != nil {
+			return nil, err
+		}
+		f.AreaM2 = nullFloat(area)
+		out = append(out, f)
+	}
+	return out, rows.Err()
+}
+
+// ActualizarFicha cambia metadatos. No toca la geometría.
+func (s *Store) ActualizarFicha(ctx context.Context, featureID, nombre, uso, riego, referencia string) (Ficha, error) {
+	featureID = strings.TrimSpace(featureID)
+	nombre = strings.TrimSpace(nombre)
+	if featureID == "" || utf8.RuneCountInString(nombre) > 160 {
+		return Ficha{}, errors.New("entrada")
+	}
+	res := s.db.WithContext(ctx).Exec(`
+		UPDATE areas_verdes
+		SET nombre = NULLIF($2, ''), uso = NULLIF($3, ''), riego_act = NULLIF($4, ''),
+		    referencia = NULLIF($5, ''), updated_at = now()
+		WHERE feature_id = $1`,
+		featureID, nombre, strings.TrimSpace(uso), strings.TrimSpace(riego), strings.TrimSpace(referencia),
+	)
+	if res.Error != nil {
+		return Ficha{}, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return Ficha{}, ErrFichaNoEncontrada
+	}
+	list, err := s.Fichas(ctx, featureID)
+	if err != nil {
+		return Ficha{}, err
+	}
+	for _, item := range list {
+		if item.FeatureID == featureID {
+			return item, nil
+		}
+	}
+	return Ficha{}, ErrFichaNoEncontrada
+}
+
+// CrearSinGeom registra un área que todavía no tiene GPS.
+func (s *Store) CrearSinGeom(ctx context.Context, featureID, nombre, uso string) (Ficha, error) {
+	featureID = strings.TrimSpace(featureID)
+	nombre = strings.TrimSpace(nombre)
+	if nombre == "" {
+		return Ficha{}, errors.New("entrada")
+	}
+	if featureID == "" {
+		featureID = fmt.Sprintf("AV-P%d", time.Now().Unix()%100000000)
+	}
+	if len(featureID) > 40 || strings.ContainsAny(featureID, " \t") {
+		return Ficha{}, errors.New("entrada")
+	}
+	err := s.db.WithContext(ctx).Exec(`
+		INSERT INTO areas_verdes (feature_id, source_index, codigo, nombre, uso, geom)
+		VALUES (
+		  $1,
+		  (SELECT COALESCE(MAX(source_index), 0) + 1 FROM areas_verdes),
+		  $1, $2, NULLIF($3, ''), NULL
+		)`, featureID, nombre, strings.TrimSpace(uso)).Error
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
+			return Ficha{}, errors.New("entrada")
+		}
+		return Ficha{}, err
+	}
+	return s.ActualizarFicha(ctx, featureID, nombre, uso, "", "")
 }
 
 func geomJSON(v sql.NullString) []byte {

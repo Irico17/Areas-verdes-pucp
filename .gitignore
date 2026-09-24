@@ -38,6 +38,7 @@ temp/
 *.sql.gz
 *.dump
 data/v1/*.pgdump
+data/evidencias/
 
 # Python
 __pycache__/

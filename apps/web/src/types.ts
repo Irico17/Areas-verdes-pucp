@@ -1,4 +1,4 @@
-export type Rol = "jefatura" | "coordinacion" | "capataz"
+export type Rol = "jefatura" | "coordinacion" | "capataz" | "admin"
 
 export type FeatureProps = Record<string, unknown>
 

@@ -2,7 +2,7 @@
 
 Monorepo del **DP2 · Grupo 12**: sistema de gestión (catastro, operación, reportes) con el **módulo de mapa** sobre la misma API. No es un mapa aislado ni un segundo backend.
 
-Fuentes oficiales en [`docs/fuente/`](docs/fuente/). Plan de mapa: [`docs/PLAN-INTEGRACION-MAPA.md`](docs/PLAN-INTEGRACION-MAPA.md).
+Fuentes oficiales en [`docs/fuente/`](docs/fuente/). Plan de mapa: [`docs/PLAN-INTEGRACION-MAPA.md`](docs/PLAN-INTEGRACION-MAPA.md). Plan de producto e interfaz: [`docs/PLAN-PRODUCTO-Y-UI.md`](docs/PLAN-PRODUCTO-Y-UI.md).
 
 ## Stack
 
@@ -12,9 +12,10 @@ Fuentes oficiales en [`docs/fuente/`](docs/fuente/). Plan de mapa: [`docs/PLAN-I
 | Datos | **PostgreSQL + PostGIS** en la misma base (sin GeoServer) | Fase B |
 | Catastro | ETL `data/raw` → `data/v1` → PostGIS, EPSG:4326 | Fase B |
 | PWA | React + TypeScript + Vite + MapLibre | Fase C |
-| Objetos | Bucket privado tipo S3 | Posterior |
+| Objetos | Archivos de evidencia en disco local (`data/evidencias`, no se versiona) | Piloto. Sin bucket S3 |
+| Sesión | Cuentas locales y cookie HttpOnly | No es SSO |
 
-Roles en el visor: **Jefatura**, **Coordinación**, **Capataz**. Es un interruptor local, no SSO.
+Roles de la sesión: **Capataz** (norte, sur, riego), **Coordinación**, **Jefatura** y **Admin**. La clave local de desarrollo es `pando-local` (`CAMPUS_DEV_PASSWORD`). No es el SSO de la PUCP.
 
 ## Qué hay cargado
 
@@ -49,7 +50,7 @@ cd apps/web && npm install
 make web
 ```
 
-Abre **http://127.0.0.1:4317**. Vite reenvía `/api` y `/health` a la API.
+Abre **http://127.0.0.1:4317**. Vite reenvía `/api` y `/health` a la API. Entra con `coordinacion` / `pando-local` (u otra cuenta semilla: `norte`, `sur`, `riego`, `jefatura`, `admin`).
 
 ```bash
 curl -s http://127.0.0.1:8091/health
@@ -93,6 +94,15 @@ La contraseña de `.env.example` es solo para desarrollo local. `.env` no se ver
 | PATCH | `/api/v1/operacion/actividades/{id}/estado` | Cambio de estado |
 | POST | `/api/v1/operacion/actividades/{id}/archivar` | Baja lógica |
 | GET | `/api/v1/operacion/actividades/{id}/timeline` | Bitácora |
+| POST | `/api/v1/sesion` | Ingreso local. Cookie `cv_sesion` HttpOnly |
+| GET | `/api/v1/catalogos` | Catálogos (tipos, estados, lugares, especies…) |
+| GET/POST/PATCH | `/api/v1/catastro/areas` | Fichas y alta sin geometría |
+| GET/POST | `/api/v1/solicitudes` | Solicitudes con código externo |
+| GET/POST | `/api/v1/ordenes` | Órdenes de una labor tercerizada |
+| GET/POST | `/api/v1/riego` | Riego por sector y turno |
+| POST | `/api/v1/evidencias` | Archivo ligado a una labor |
+| GET | `/api/v1/reportes/labores` | Reporte básico. `formato=csv` o `formato=xls` |
+| POST | `/api/v1/ia/sugerir-tipo` | Regla local sobre el título. No sale del proceso |
 
 Filtro opcional `bbox=minLon,minLat,maxLon,maxLat` (EPSG:4326) y `limit`.
 
@@ -116,7 +126,8 @@ docker-compose.yml
 | Doc | Contenido |
 |-----|-----------|
 | [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) | Arquitectura DP2 |
-| [`docs/PLAN-INTEGRACION-MAPA.md`](docs/PLAN-INTEGRACION-MAPA.md) | Fases A–F (A, B y C hechas) |
+| [`docs/PLAN-INTEGRACION-MAPA.md`](docs/PLAN-INTEGRACION-MAPA.md) | Fases A–F del visor, hechas |
+| [`docs/PLAN-PRODUCTO-Y-UI.md`](docs/PLAN-PRODUCTO-Y-UI.md) | Backlog, interfaz y olas de producto |
 | [`docs/PLAN-MIGRACION.md`](docs/PLAN-MIGRACION.md) | Migración legacy → DP2 |
 | [`docs/DECISIONES.md`](docs/DECISIONES.md) | ADRs, incluido CRS y PII de zonas |
 | [`docs/legacy-recovery/`](docs/legacy-recovery/) | Análisis del monolito Leaflet |

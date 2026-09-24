@@ -26,6 +26,7 @@ type createBody struct {
 	ZonaFeatureID     string  `json:"zona_feature_id"`
 	AssignedCapatazID string  `json:"assigned_capataz_id"`
 	ActorRol          string  `json:"actor_rol"`
+	Ejecutor          string  `json:"ejecutor"`
 }
 
 type assignBody struct {
@@ -41,6 +42,7 @@ type estadoBody struct {
 
 type archiveBody struct {
 	ActorRol string `json:"actor_rol"`
+	Motivo   string `json:"motivo"`
 }
 
 func (h Operacion) Capataces(c *gin.Context) {
@@ -65,6 +67,10 @@ func (h Operacion) List(c *gin.Context) {
 		Tipo:         c.Query("tipo"),
 		SoloAbiertas: c.DefaultQuery("abiertas", "1") != "0",
 	}
+	if u, ok := usuarioEn(c); ok && u.Rol == "capataz" {
+		q.Rol = operacion.RolCapataz
+		q.CapatazID = u.CapatazID
+	}
 	if err := operacion.ValidateQuery(q); err != nil {
 		writeOperacionErr(c, err)
 		return
@@ -88,11 +94,12 @@ func (h Operacion) Create(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
 		return
 	}
+	rol, capataz := sesionOCuerpo(c, body.ActorRol, body.AssignedCapatazID)
 	in := operacion.CreateInput{
 		ID: body.ID, Tipo: body.Tipo, Titulo: body.Titulo, Detalle: body.Detalle,
 		Lon: body.Lon, Lat: body.Lat, AreaFeatureID: body.AreaFeatureID,
-		ZonaFeatureID: body.ZonaFeatureID, AssignedCapatazID: body.AssignedCapatazID,
-		ActorRol: body.ActorRol,
+		ZonaFeatureID: body.ZonaFeatureID, AssignedCapatazID: capataz,
+		ActorRol: rol, Ejecutor: body.Ejecutor,
 	}
 	if err := operacion.ValidateCreate(in); err != nil {
 		writeOperacionErr(c, err)
@@ -120,7 +127,8 @@ func (h Operacion) Assign(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
 		return
 	}
-	if err := operacion.ValidateAsignacion(body.ActorRol, body.CapatazID); err != nil {
+	rol, capataz := sesionOCuerpo(c, body.ActorRol, body.CapatazID)
+	if err := operacion.ValidateAsignacion(rol, capataz); err != nil {
 		writeOperacionErr(c, err)
 		return
 	}
@@ -128,7 +136,7 @@ func (h Operacion) Assign(c *gin.Context) {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
 	}
-	feature, err := h.Store.Assign(c.Request.Context(), c.Param("id"), body.CapatazID, body.ActorRol)
+	feature, err := h.Store.Assign(c.Request.Context(), c.Param("id"), capataz, rol)
 	if err != nil {
 		writeOperacionErr(c, err)
 		return
@@ -142,7 +150,8 @@ func (h Operacion) Estado(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
 		return
 	}
-	if err := operacion.ValidateEstado(body.Estado, body.ActorRol, body.CapatazID); err != nil {
+	rol, capataz := sesionOCuerpo(c, body.ActorRol, body.CapatazID)
+	if err := operacion.ValidateEstado(body.Estado, rol, capataz); err != nil {
 		writeOperacionErr(c, err)
 		return
 	}
@@ -150,7 +159,7 @@ func (h Operacion) Estado(c *gin.Context) {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
 	}
-	feature, err := h.Store.SetEstado(c.Request.Context(), c.Param("id"), body.Estado, body.ActorRol, body.CapatazID)
+	feature, err := h.Store.SetEstado(c.Request.Context(), c.Param("id"), body.Estado, rol, capataz)
 	if err != nil {
 		writeOperacionErr(c, err)
 		return
@@ -164,7 +173,8 @@ func (h Operacion) Archive(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
 		return
 	}
-	if err := operacion.ValidateArchivo(body.ActorRol); err != nil {
+	rol, _ := sesionOCuerpo(c, body.ActorRol, "")
+	if err := operacion.ValidateArchivo(rol); err != nil {
 		writeOperacionErr(c, err)
 		return
 	}
@@ -172,7 +182,7 @@ func (h Operacion) Archive(c *gin.Context) {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
 	}
-	if err := h.Store.Archive(c.Request.Context(), c.Param("id"), body.ActorRol); err != nil {
+	if err := h.Store.Archive(c.Request.Context(), c.Param("id"), rol, body.Motivo); err != nil {
 		writeOperacionErr(c, err)
 		return
 	}

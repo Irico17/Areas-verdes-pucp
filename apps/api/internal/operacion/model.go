@@ -7,6 +7,7 @@ const (
 	RolJefatura     = "jefatura"
 	RolCoordinacion = "coordinacion"
 	RolCapataz      = "capataz"
+	RolAdmin        = "admin"
 )
 
 // Tipos de labor que el mapa distingue.
@@ -41,6 +42,7 @@ type ActividadProperties struct {
 	ZonaFeatureID     *string `json:"zona_feature_id,omitempty"`
 	AssignedCapatazID *string `json:"assigned_capataz_id,omitempty"`
 	Equipo            *string `json:"equipo,omitempty"`
+	Ejecutor          string  `json:"ejecutor,omitempty"`
 	Archivada         bool    `json:"archivada"`
 	CreatedAt         string  `json:"created_at"`
 	UpdatedAt         string  `json:"updated_at"`
@@ -76,6 +78,7 @@ type CreateInput struct {
 	ZonaFeatureID     string
 	AssignedCapatazID string
 	ActorRol          string
+	Ejecutor          string
 }
 
 // Query filtra el listado GeoJSON.
@@ -97,5 +100,6 @@ type Saved struct {
 	ZonaFeatureID     string
 	Lon               float64
 	Lat               float64
+	Ejecutor          string
 	CreatedAt         time.Time
 }

@@ -152,7 +152,7 @@ export function CampusMap({
         source: "areas",
         layout: { visibility: "none" },
         paint: {
-          "fill-extrusion-color": "#1e4d3a",
+          "fill-extrusion-color": "#145c3e",
           "fill-extrusion-opacity": 0.8,
           "fill-extrusion-height": [
             "interpolate",
@@ -192,7 +192,7 @@ export function CampusMap({
               "circle-radius": layer.id === "bebederos" ? 9 : 7,
               "circle-color": layer.color,
               "circle-stroke-width": 1.5,
-              "circle-stroke-color": "#f6f3ec",
+              "circle-stroke-color": "#f4f7f4",
             },
           })
         } else {
@@ -218,16 +218,16 @@ export function CampusMap({
         paint: {
           "circle-radius": 13,
           "circle-stroke-width": 2,
-          "circle-stroke-color": "#f6f3ec",
+          "circle-stroke-color": "#f4f7f4",
           "circle-color": [
             "match",
             ["get", "estado"],
             "pendiente",
-            "#a8843d",
+            "#8a6a12",
             "en_proceso",
-            "#1e4d3a",
+            "#145c3e",
             "bloqueada",
-            "#8c3a32",
+            "#8d2f2c",
             "cerrada",
             "#5c6560",
             "cancelada",

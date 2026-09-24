@@ -57,7 +57,7 @@ Estado, solo en el dato: pendiente `#8a6a12`, en proceso `#145c3e`, bloqueada `#
 
 ## C. Matriz del backlog
 
-Prioridad del CSV. Ola: (1) base operativa, (2) atención, (3) priorizadas. «Hecho» es lo que el repo demuestra hoy (fases A–F del plan de mapa), no el cierre del HUID.
+Prioridad del CSV. Ola: (1) base operativa, (2) atención, (3) priorizadas. La columna Estado es la línea de base del 2026-09-24, antes de las olas. Lo que este corte dejó hecho está en las casillas de la sección E.
 
 | HUID | RF | Must | Estado | Ola | Nota |
 |------|----|------|--------|-----|------|
@@ -135,30 +135,30 @@ Misma API Go y la misma PWA. Profundidad honesta: cada módulo lista, crea o fil
 
 ### Ola 1 — Base operativa
 
-- [ ] Riel de guardia, tokens nuevos, tipo Source Sans 3 + Newsreader, módulos en sentencia.
-- [ ] Sesión: usuarios semilla (capataz de cada equipo, coordinación, jefatura, admin), clave solo de desarrollo, cookie HttpOnly. El interruptor de rol sale.
-- [ ] Permisos semilla por rol (consultar, registrar, validar, reportes, catálogos, solicitudes).
-- [ ] Catálogos RF-24: tipos, estados, prioridades, lugares, especies, motivos de archivo. Alta y baja lógica.
-- [ ] Catastro: lista, ficha, edición de metadatos, registro sin geometría.
-- [ ] Labor: ejecutada por personal propio o tercerizado; motivo al archivar; alta consecutiva; tipos desde catálogo.
-- [ ] Riego mínimo: sector, turno, equipo, fecha, nota. Sin porcentaje oficial.
-- [ ] Offline del capataz: lista de asignadas en IndexedDB y cola de altas y cambios de estado, con UUID.
-- [ ] Evidencia: metadatos + archivo en disco local, ligada a la labor.
-- [ ] Mapa CORE intacto (capas, marcadores, bitácora, capataz).
+- [x] Riel de guardia, tokens nuevos, tipo Source Sans 3 + Newsreader, módulos en sentencia.
+- [x] Sesión: usuarios semilla (capataz de cada equipo, coordinación, jefatura, admin), clave solo de desarrollo, cookie HttpOnly. El interruptor de rol sale.
+- [x] Permisos semilla por rol (consultar, registrar, validar, reportes, catálogos, solicitudes).
+- [x] Catálogos RF-24: tipos, estados, prioridades, lugares, especies, motivos de archivo. Alta y baja lógica.
+- [x] Catastro: lista, ficha, edición de metadatos, registro sin geometría.
+- [x] Labor: ejecutada por personal propio o tercerizado; motivo al archivar; alta consecutiva; tipos desde catálogo.
+- [x] Riego mínimo: sector, turno, equipo, fecha, nota. Sin porcentaje oficial.
+- [x] Offline del capataz: lista de asignadas en IndexedDB y cola de altas y cambios de estado, con UUID.
+- [x] Evidencia: metadatos + archivo en disco local, ligada a la labor.
+- [x] Mapa CORE intacto (capas, marcadores, bitácora, capataz).
 
 ### Ola 2 — Atención
 
-- [ ] Solicitudes e incidencias: fuente, código externo, prioridad, estado, vínculo opcional a labor.
-- [ ] Orden tercerizada mínima (empresa, referencia, estado) ligada a una labor tercerizada.
-- [ ] Historial filtrable y un reporte básico con exportación CSV y Excel.
-- [ ] Cierre: una labor tercerizada no pasa a cerrada sin orden registrada.
+- [x] Solicitudes e incidencias: fuente, código externo, prioridad, estado, vínculo opcional a labor.
+- [x] Orden tercerizada mínima (empresa, referencia, estado) ligada a una labor tercerizada.
+- [x] Historial filtrable y un reporte básico con exportación CSV y Excel.
+- [x] Cierre: una labor tercerizada no pasa a cerrada sin orden registrada.
 
 ### Ola 3 — Priorizadas, delgadas
 
-- [ ] IA etiquetada: sugerir el tipo de labor a partir del título, en proceso, sin red externa ni PII. La persona confirma.
-- [ ] Indicadores: conteos operativos con la frase de definición pendiente. Sin meta oficial.
-- [ ] Pulido del mapa (filtros ya existentes, evidencia visible en la bitácora).
-- [ ] Import de inventario: no se inventa el Excel. Queda nombrado como pendiente de estructura.
+- [x] IA etiquetada: sugerir el tipo de labor a partir del título, en proceso, sin red externa ni PII. La persona confirma.
+- [x] Indicadores: conteos operativos con la frase de definición pendiente. Sin meta oficial.
+- [x] Pulido del mapa (filtros ya existentes, evidencia visible en la bitácora).
+- [x] Import de inventario: no se inventa el Excel. Queda nombrado como pendiente de estructura.
 
 ### Verificación
 

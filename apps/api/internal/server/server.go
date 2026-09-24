@@ -3,6 +3,9 @@ package server
 import (
 	"net/http"
 
+	"campusverde/api/internal/accesos"
+	"campusverde/api/internal/atencion"
+	"campusverde/api/internal/catalogos"
 	"campusverde/api/internal/catastro"
 	"campusverde/api/internal/handlers"
 	"campusverde/api/internal/inventario"
@@ -19,6 +22,7 @@ type Deps struct {
 	EdificiosPath string
 	ReservasPath  string
 	FotosDir      string
+	EvidenciasDir string
 }
 
 // New arma el router Gin de la API.
@@ -27,6 +31,25 @@ func New(deps Deps) *gin.Engine {
 	r := gin.New()
 	_ = r.SetTrustedProxies([]string{})
 	r.Use(gin.Logger(), gin.Recovery(), cors)
+
+	var acc *accesos.Store
+	var cats *catalogos.Store
+	var aten *atencion.Store
+	if deps.DB != nil {
+		acc = accesos.NewStore(deps.DB)
+		cats = catalogos.NewStore(deps.DB)
+		aten = atencion.NewStore(deps.DB)
+	}
+	r.Use(func(c *gin.Context) {
+		if acc != nil {
+			if token := accesos.Token(c.Request); token != "" {
+				if u, err := acc.FromToken(c.Request.Context(), token); err == nil {
+					c.Set("usuario", u)
+				}
+			}
+		}
+		c.Next()
+	})
 
 	var store *catastro.Store
 	if deps.DB != nil {
@@ -74,6 +97,35 @@ func New(deps Deps) *gin.Engine {
 	lab.POST("/actividades/:id/archivar", op.Archive)
 	lab.GET("/actividades/:id/timeline", op.Timeline)
 
+	ses := handlers.Sesion{Store: acc}
+	r.POST("/api/v1/sesion", ses.Entrar)
+	r.GET("/api/v1/sesion", ses.Actual)
+	r.DELETE("/api/v1/sesion", ses.Salir)
+	r.GET("/api/v1/accesos/usuarios", ses.Usuarios)
+
+	cat := handlers.Catalogo{Store: cats}
+	r.GET("/api/v1/catalogos", cat.List)
+	r.POST("/api/v1/catalogos", cat.Create)
+	r.POST("/api/v1/catalogos/:id/desactivar", cat.Off)
+
+	fichas := handlers.Fichas{Store: store}
+	r.GET("/api/v1/catastro/areas", fichas.List)
+	r.POST("/api/v1/catastro/areas", fichas.Create)
+	r.PATCH("/api/v1/catastro/areas/:id", fichas.Patch)
+
+	at := handlers.Atencion{Store: aten, Dir: deps.EvidenciasDir}
+	r.GET("/api/v1/solicitudes", at.Solicitudes)
+	r.POST("/api/v1/solicitudes", at.CrearSolicitud)
+	r.GET("/api/v1/ordenes", at.Ordenes)
+	r.POST("/api/v1/ordenes", at.CrearOrden)
+	r.GET("/api/v1/riego", at.Riego)
+	r.POST("/api/v1/riego", at.CrearRiego)
+	r.GET("/api/v1/evidencias", at.Evidencias)
+	r.POST("/api/v1/evidencias", at.SubirEvidencia)
+	r.GET("/api/v1/evidencias/:id/archivo", at.Archivo)
+	r.GET("/api/v1/reportes/labores", at.Reporte)
+	r.POST("/api/v1/ia/sugerir-tipo", at.Sugerir)
+
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ruta no encontrada"})
 	})
@@ -82,7 +134,7 @@ func New(deps Deps) *gin.Engine {
 
 func cors(c *gin.Context) {
 	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+	c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
 	c.Header("Access-Control-Allow-Headers", "Content-Type")
 	if c.Request.Method == http.MethodOptions {
 		c.AbortWithStatus(http.StatusNoContent)

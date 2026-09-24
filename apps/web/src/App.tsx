@@ -3,7 +3,7 @@ import { fetchCollection } from "./api"
 import { INVENTARIO } from "./inventario"
 import { CampusMap } from "./map/CampusMap"
 import { MapBoundary } from "./map/MapBoundary"
-import { enqueue, listQueue, removeQueued, type QueuedLabor } from "./offline/queue"
+import { enqueue, enqueueEstado, listEstados, listQueue, loadLabores, removeEstado, removeQueued, saveLabores, type QueuedLabor } from "./offline/queue"
 import {
   ApiError,
   archivar,
@@ -14,15 +14,37 @@ import {
   fetchCapataces,
   fetchTimeline,
   lonLat,
+  TIPOS,
   type Capataz,
   type CreateBody,
   type Evento,
 } from "./operacion"
 import { Labores, type LaborItem } from "./panel/Labores"
-import { readEquipo, readRol, writeEquipo, writeRol } from "./session"
-import { LAYERS, ROLES, type FeatureCollection, type GeoFeature, type LayerId, type Rol } from "./types"
+import { AdminPanel, CatalogosPanel, CatastroPanel, Login, ReportesPanel, RiegoPanel, SolicitudesPanel } from "./panel/Modulos"
+import { fetchCatalogo, fetchEvidencias, fetchSesion, salir, subirEvidencia, sugerirTipo, type CatalogoItem, type Evidencia, type Usuario } from "./producto"
+import { readEquipo, writeEquipo } from "./session"
+import { LAYERS, type FeatureCollection, type GeoFeature, type LayerId, type Rol } from "./types"
 
 type LoadState = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ready" }
+
+type Modulo = "mapa" | "labores" | "catastro" | "solicitudes" | "reportes" | "catalogos" | "admin"
+
+const MODULOS: { id: Modulo; label: string }[] = [
+  { id: "mapa", label: "Mapa" },
+  { id: "labores", label: "Labores" },
+  { id: "catastro", label: "Catastro" },
+  { id: "solicitudes", label: "Solicitudes" },
+  { id: "reportes", label: "Reportes" },
+  { id: "catalogos", label: "Catálogos" },
+  { id: "admin", label: "Admin" },
+]
+
+function modulosDe(rol: Rol): Modulo[] {
+  if (rol === "capataz") return ["mapa", "labores", "catastro"]
+  if (rol === "jefatura") return ["mapa", "labores", "catastro", "solicitudes", "reportes"]
+  if (rol === "admin") return MODULOS.map((item) => item.id)
+  return ["mapa", "labores", "catastro", "solicitudes", "reportes", "catalogos"]
+}
 
 function prop(feature: GeoFeature, key: string): string {
   const value = feature.properties?.[key]
@@ -40,6 +62,7 @@ function toItem(feature: GeoFeature, queued = false): LaborItem | null {
     equipo: prop(feature, "equipo"),
     detalle: prop(feature, "detalle"),
     capatazId: prop(feature, "assigned_capataz_id"),
+    ejecutor: prop(feature, "ejecutor"),
     queued,
   }
 }
@@ -62,7 +85,10 @@ function queuedFeature(item: QueuedLabor): GeoFeature {
 }
 
 export default function App() {
-  const [rol, setRol] = useState<Rol>(() => readRol())
+  const [sesion, setSesion] = useState<Usuario | null>(null)
+  const [sesionLista, setSesionLista] = useState(false)
+  const [modulo, setModulo] = useState<Modulo>("mapa")
+  const rol = (sesion?.rol ?? "coordinacion") as Rol
   const [equipoId, setEquipoId] = useState(() => readEquipo())
   const [equipos, setEquipos] = useState<Capataz[]>([])
   const [visible, setVisible] = useState<Record<LayerId, boolean>>(() =>
@@ -85,6 +111,12 @@ export default function App() {
   const [formTitulo, setFormTitulo] = useState("")
   const [formDetalle, setFormDetalle] = useState("")
   const [formEquipo, setFormEquipo] = useState("cap-norte")
+  const [formEjecutor, setFormEjecutor] = useState("propia")
+  const [motivo, setMotivo] = useState("")
+  const [tiposCat, setTiposCat] = useState<CatalogoItem[]>([])
+  const [motivos, setMotivos] = useState<CatalogoItem[]>([])
+  const [sugerencia, setSugerencia] = useState("")
+  const [evidencias, setEvidencias] = useState<Evidencia[]>([])
   const [creating, setCreating] = useState(false)
   const [notice, setNotice] = useState("")
   const [timeline, setTimeline] = useState<Evento[]>([])
@@ -103,10 +135,17 @@ export default function App() {
     try {
       const fc = await fetchActividades(rol, equipoId)
       setActivities(fc)
+      void saveLabores(fc)
       setActivityError("")
     } catch (error) {
-      const message = error instanceof Error ? error.message : "No se pudieron leer las labores"
-      setActivityError(message)
+      const cached = await loadLabores<FeatureCollection>().catch(() => null)
+      if (cached && Array.isArray(cached.features)) {
+        setActivities(cached)
+        setActivityError("Sin conexión: se muestra la última lista guardada en este navegador.")
+      } else {
+        const message = error instanceof Error ? error.message : "No se pudieron leer las labores"
+        setActivityError(message)
+      }
     }
   }, [rol, equipoId])
 
@@ -135,9 +174,44 @@ export default function App() {
         }
       }
     }
+    const estadosPendientes = await listEstados().catch(() => [])
+    for (const item of estadosPendientes) {
+      try {
+        await cambiarEstado(item.actividadId, item.estado, rol, equipoId)
+        await removeEstado(item.id)
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 0) {
+          await removeEstado(item.id)
+        } else {
+          break
+        }
+      }
+    }
     await reloadQueue()
     await reloadActivities()
-  }, [reloadActivities, reloadQueue])
+  }, [reloadActivities, reloadQueue, rol, equipoId])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchSesion()
+      .then((user) => {
+        if (cancelled) return
+        setSesion(user)
+        if (user?.rol === "capataz" && user.capataz_id) {
+          setEquipoId(user.capataz_id)
+          writeEquipo(user.capataz_id)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSesion(null)
+      })
+      .finally(() => {
+        if (!cancelled) setSesionLista(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -219,6 +293,20 @@ export default function App() {
     }
   }, [selectedId, queue, activities])
 
+  useEffect(() => {
+    if (!sesion) return
+    void fetchCatalogo("tipo_actividad", true).then(setTiposCat).catch(() => setTiposCat([]))
+    void fetchCatalogo("motivo_archivo", true).then(setMotivos).catch(() => setMotivos([]))
+  }, [sesion])
+
+  useEffect(() => {
+    if (!selectedId) {
+      setEvidencias([])
+      return
+    }
+    void fetchEvidencias(selectedId).then(setEvidencias).catch(() => setEvidencias([]))
+  }, [selectedId, activities])
+
   const items = useMemo(() => {
     const fromApi = activities.features
       .map((feature) => toItem(feature))
@@ -254,7 +342,6 @@ export default function App() {
   }, [items, queue, activities])
 
   const selected = items.find((item) => item.id === selectedId) ?? null
-  const role = ROLES.find((item) => item.id === rol) ?? ROLES[1]
   const summary = useMemo(() => {
     const areas = data.areas?.features.length
     const zonas = data.zonas?.features.length
@@ -289,16 +376,17 @@ export default function App() {
       lat: draft.lat,
       assigned_capataz_id: formEquipo,
       actor_rol: rol,
+      ejecutor: formEjecutor,
     }
     setCreating(true)
     setNotice("")
     try {
       await crearActividad(body)
       setDraft(null)
-      setPinMode(false)
       setFormTitulo("")
       setFormDetalle("")
-      setNotice("Labor creada.")
+      setSugerencia("")
+      setNotice("Labor creada. Marque el siguiente punto.")
       await reloadActivities()
       setSelectedId(body.id)
     } catch (error) {
@@ -323,7 +411,17 @@ export default function App() {
       setNotice("Estado actualizado.")
       await reloadActivities()
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "No se pudo cambiar el estado")
+      if (error instanceof ApiError && error.status === 0) {
+        await enqueueEstado({
+          id: crypto.randomUUID(),
+          actividadId: selected.id,
+          estado: estadoNuevo,
+          createdAt: new Date().toISOString(),
+        })
+        setNotice("Sin conexión: el cambio de estado quedó en la cola.")
+      } else {
+        setNotice(error instanceof Error ? error.message : "No se pudo cambiar el estado")
+      }
     }
   }
 
@@ -344,8 +442,12 @@ export default function App() {
       setConfirmarArchivo(true)
       return
     }
+    if (!motivo) {
+      setNotice("Elija un motivo de archivo.")
+      return
+    }
     try {
-      await archivar(selected.id, rol)
+      await archivar(selected.id, rol, motivo)
       setSelectedId(null)
       setNotice("Labor archivada. Ya no aparece en el mapa abierto.")
       await reloadActivities()
@@ -354,179 +456,206 @@ export default function App() {
     }
   }
 
+  if (!sesionLista) return <p className="boot">Abriendo la sesión…</p>
+  if (!sesion) return <Login onIn={setSesion} />
+
+  const permitidos = modulosDe(rol)
+  const moduloActivo = permitidos.includes(modulo) ? modulo : "mapa"
+  const tipos = tiposCat.length > 0 ? tiposCat.map((item) => ({ id: item.codigo, label: item.nombre })) : TIPOS.map((item) => ({ id: item.id, label: item.label }))
+
   return (
-    <div className="shell">
-      <MapBoundary>
-      <CampusMap
-        data={data}
-        visible={visible}
-        activities={mapActivities}
-        pinMode={pinMode && rol !== "capataz"}
-        draft={draft}
-        focus={focus}
-        relieve={relieve}
-        edificios={edificios}
-        showEdificios={showEdificios}
-        inventory={inventory}
-        inventoryOn={inventoryOn}
-        onSelectCatastro={(hit) => setPicked(hit ? `${hit.layer}: ${String(hit.props.nombre || hit.props.feature_id || "polígono")}` : null)}
-        onSelectActividad={(id) => {
-          if (id) choose(id)
-          else setSelectedId(null)
-        }}
-        onPin={(lon, lat) => {
-          setDraft({ lon, lat })
-          setNotice("")
-        }}
-      />
-      </MapBoundary>
-      <header className="topbar">
-        <div className="brand">
-          <strong>Campus Verde</strong>
-          <span>PUCP Pando · supervisión</span>
-        </div>
-        <button type="button" className="menu-btn" onClick={() => setRailOpen((open) => !open)}>
-          Panel
-        </button>
-        <div className="top-spacer" />
-        <div className="roles" role="group" aria-label="Vista del mapa">
-          <button type="button" aria-pressed={!relieve} onClick={() => setRelieve(false)}>
-            Plano
+    <div className={railOpen ? "shell" : "shell panel-off"}>
+      <nav className="guard" aria-label="Módulos">
+        {MODULOS.filter((item) => permitidos.includes(item.id)).map((item) => (
+          <button key={item.id} type="button" aria-pressed={moduloActivo === item.id} onClick={() => { setModulo(item.id); setRailOpen(true) }}>
+            {item.label}
           </button>
-          <button type="button" aria-pressed={relieve} onClick={() => setRelieve(true)}>
-            Relieve
-          </button>
+        ))}
+        <div className="who">
+          <div>{sesion.nombre}</div>
+          <button type="button" onClick={() => void salir().then(() => setSesion(null))}>Salir</button>
         </div>
-        <div className="roles" role="group" aria-label="Rol de consulta">
-          {ROLES.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              aria-pressed={item.id === rol}
-              onClick={() => {
-                setRol(item.id)
-                writeRol(item.id)
-                setPinMode(false)
-                setDraft(null)
-                setSelectedId(null)
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </header>
-      <aside className={railOpen ? "rail open" : "rail"}>
-        <p className="role-note">{role.note}</p>
+      </nav>
+      <aside className="panel">
         <p className={load.kind === "error" || activityError ? "status error" : "status"}>
           {load.kind === "error" ? load.message : summary}
           {activityError ? ` · ${activityError}` : ""}
           {picked ? ` · ${picked}` : ""}
         </p>
-        <Labores
-          rol={rol}
-          equipos={equipos}
-          equipoId={equipoId}
-          onEquipo={(id) => {
-            setEquipoId(id)
-            writeEquipo(id)
-            setSelectedId(null)
-          }}
-          items={items}
-          estados={estados}
-          onToggleEstado={(id) => setEstados((current) => ({ ...current, [id]: current[id] === false }))}
-          tipo={tipoFiltro}
-          onTipo={setTipoFiltro}
-          pinMode={pinMode}
-          onPinMode={(on) => {
-            setPinMode(on)
-            if (!on) setDraft(null)
-          }}
-          draft={draft}
-          formTipo={formTipo}
-          formTitulo={formTitulo}
-          formDetalle={formDetalle}
-          formEquipo={formEquipo}
-          onForm={(patch) => {
-            if (patch.tipo) setFormTipo(patch.tipo)
-            if (patch.titulo != null) setFormTitulo(patch.titulo)
-            if (patch.detalle != null) setFormDetalle(patch.detalle)
-            if (patch.equipo != null) setFormEquipo(patch.equipo)
-          }}
-          onCreate={() => void onCreate()}
-          creating={creating}
-          selected={selected}
-          onSelect={choose}
-          timeline={timeline}
-          timelineError={timelineError}
-          estadoNuevo={estadoNuevo}
-          onEstadoNuevo={setEstadoNuevo}
-          onEstado={() => void onEstado()}
-          reasignarA={reasignarA}
-          onReasignarA={setReasignarA}
-          onReasignar={() => void onReasignar()}
-          onArchivar={() => void onArchivar()}
-          confirmarArchivo={confirmarArchivo}
-          notice={notice}
-          queueCount={queue.length}
-          onFlush={() => void flush()}
-        />
-        <h2>Catastro</h2>
-        <div className="layer">
-          <span className="swatch" style={{ background: "#c8c0b2" }} />
-          <label>
-            <input type="checkbox" checked={showEdificios} onChange={() => setShowEdificios((on) => !on)} /> Edificios OSM
-            <small>Huellas del recinto, solo en relieve</small>
-          </label>
-          <span className="count">{edificios.features.length || "—"}</span>
-        </div>
-        {LAYERS.map((layer) => (
-          <div className="layer" key={layer.id}>
-            <span className="swatch" style={{ background: layer.fill }} />
-            <label>
-              <input
-                type="checkbox"
-                checked={visible[layer.id]}
-                onChange={() => setVisible((current) => ({ ...current, [layer.id]: !current[layer.id] }))}
-              />{" "}
-              {layer.label}
-              <small>{layer.hint}</small>
-            </label>
-            <span className="count">{data[layer.id]?.features.length ?? "—"}</span>
-          </div>
-        ))}
-        <h2>Inventario</h2>
-        <p className="lede">Capas opcionales del recovery. Apagadas hasta que se necesiten.</p>
-        {INVENTARIO.map((layer) => (
-          <div className="layer" key={layer.id}>
-            <span className="swatch" style={{ background: layer.color }} />
-            <label>
-              <input
-                type="checkbox"
-                checked={inventoryOn[layer.id] === true}
-                onChange={() => setInventoryOn((current) => ({ ...current, [layer.id]: !current[layer.id] }))}
-              />{" "}
-              {layer.label}
-              <small>{layer.hint}</small>
-            </label>
-            <span className="count">{inventory[layer.id]?.features.length ?? "—"}</span>
-          </div>
-        ))}
-        <h2>Agenda ficticia</h2>
-        <p className="lede">{agenda?.aviso ?? "Leyendo la agenda de demostración…"}</p>
-        <ul className="labor-list">
-          {(agenda?.reservas ?? []).slice(0, 6).map((item) => (
-            <li key={item.id} className="agenda">
-              <strong>{item.jardin}</strong>
-              <small>
-                {item.fecha} · {item.hora} · {item.evento}
-              </small>
-            </li>
-          ))}
-        </ul>
-        {agenda && <p className="hint">{agenda.total} reservas de demostración. No hay hoja de cálculo en runtime.</p>}
-        <p className="foot">Sin Street View. El rol es local: no hay sesión institucional.</p>
+        {moduloActivo === "mapa" && (
+          <section className="block">
+            <h2>Capas</h2>
+            <div className="layer">
+              <span className="swatch" style={{ background: "#c8c0b2" }} />
+              <label>
+                <input type="checkbox" checked={showEdificios} onChange={() => setShowEdificios((on) => !on)} /> Edificios OSM
+                <small>Huellas del recinto, solo en relieve</small>
+              </label>
+              <span className="count">{edificios.features.length || "—"}</span>
+            </div>
+            {LAYERS.map((layer) => (
+              <div className="layer" key={layer.id}>
+                <span className="swatch" style={{ background: layer.fill }} />
+                <label>
+                  <input type="checkbox" checked={visible[layer.id]} onChange={() => setVisible((current) => ({ ...current, [layer.id]: !current[layer.id] }))} />{" "}
+                  {layer.label}
+                  <small>{layer.hint}</small>
+                </label>
+                <span className="count">{data[layer.id]?.features.length ?? "—"}</span>
+              </div>
+            ))}
+            <h2>Inventario</h2>
+            <p className="lede">Capas opcionales. Apagadas hasta que se necesiten.</p>
+            {INVENTARIO.map((layer) => (
+              <div className="layer" key={layer.id}>
+                <span className="swatch" style={{ background: layer.color }} />
+                <label>
+                  <input type="checkbox" checked={inventoryOn[layer.id] === true} onChange={() => setInventoryOn((current) => ({ ...current, [layer.id]: !current[layer.id] }))} />{" "}
+                  {layer.label}
+                  <small>{layer.hint}</small>
+                </label>
+                <span className="count">{inventory[layer.id]?.features.length ?? "—"}</span>
+              </div>
+            ))}
+            <h2>Agenda ficticia</h2>
+            <p className="lede">{agenda?.aviso ?? "Leyendo la agenda de demostración…"}</p>
+            {(agenda?.reservas ?? []).length === 0 && <p className="empty">No hay reservas de demostración.</p>}
+            <ul className="labor-list">
+              {(agenda?.reservas ?? []).slice(0, 6).map((item) => (
+                <li key={item.id} className="agenda">
+                  <strong>{item.jardin}</strong>
+                  <small>{item.fecha} · {item.hora} · {item.evento}</small>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {moduloActivo === "labores" && (
+          <>
+            <Labores
+              rol={rol}
+              equipos={equipos}
+              equipoId={equipoId}
+              onEquipo={(id) => {
+                setEquipoId(id)
+                writeEquipo(id)
+                setSelectedId(null)
+              }}
+              items={items}
+              estados={estados}
+              onToggleEstado={(id) => setEstados((current) => ({ ...current, [id]: current[id] === false }))}
+              tipo={tipoFiltro}
+              onTipo={setTipoFiltro}
+              pinMode={pinMode}
+              onPinMode={(on) => {
+                setPinMode(on)
+                if (!on) setDraft(null)
+              }}
+              draft={draft}
+              formTipo={formTipo}
+              formTitulo={formTitulo}
+              formDetalle={formDetalle}
+              formEquipo={formEquipo}
+              onForm={(patch) => {
+                if (patch.tipo) setFormTipo(patch.tipo)
+                if (patch.titulo != null) setFormTitulo(patch.titulo)
+                if (patch.detalle != null) setFormDetalle(patch.detalle)
+                if (patch.equipo != null) setFormEquipo(patch.equipo)
+                if (patch.ejecutor) setFormEjecutor(patch.ejecutor)
+              }}
+              onCreate={() => void onCreate()}
+              creating={creating}
+              selected={selected}
+              onSelect={choose}
+              timeline={timeline}
+              timelineError={timelineError}
+              estadoNuevo={estadoNuevo}
+              onEstadoNuevo={setEstadoNuevo}
+              onEstado={() => void onEstado()}
+              reasignarA={reasignarA}
+              onReasignarA={setReasignarA}
+              onReasignar={() => void onReasignar()}
+              onArchivar={() => void onArchivar()}
+              confirmarArchivo={confirmarArchivo}
+              notice={notice}
+              queueCount={queue.length}
+              onFlush={() => void flush()}
+              tipos={tipos}
+              formEjecutor={formEjecutor}
+              motivos={motivos}
+              motivo={motivo}
+              onMotivo={setMotivo}
+              onSugerir={() => {
+                void sugerirTipo(formTitulo)
+                  .then((s) => {
+                    setSugerencia(s.explicacion)
+                    if (s.codigo) setFormTipo(s.codigo)
+                  })
+                  .catch((error: unknown) => setSugerencia(error instanceof Error ? error.message : "Sin sugerencia"))
+              }}
+              sugerencia={sugerencia}
+              evidencias={evidencias}
+              onSubir={(file) => {
+                if (!selected) return
+                void subirEvidencia(selected.id, file, "")
+                  .then(() => fetchEvidencias(selected.id))
+                  .then(setEvidencias)
+                  .then(() => setNotice("Evidencia guardada en disco local."))
+                  .catch((error: unknown) => setNotice(error instanceof Error ? error.message : "No se pudo adjuntar"))
+              }}
+            />
+            <RiegoPanel capatazId={rol === "capataz" ? equipoId : formEquipo} />
+          </>
+        )}
+        {moduloActivo === "catastro" && <CatastroPanel />}
+        {moduloActivo === "solicitudes" && <SolicitudesPanel actividadId={selected?.queued ? "" : selected?.id ?? ""} />}
+        {moduloActivo === "reportes" && <ReportesPanel />}
+        {moduloActivo === "catalogos" && <CatalogosPanel />}
+        {moduloActivo === "admin" && <AdminPanel />}
       </aside>
+      <div className="stage">
+        <MapBoundary>
+          <CampusMap
+            data={data}
+            visible={visible}
+            activities={mapActivities}
+            pinMode={pinMode && rol !== "capataz" && moduloActivo === "labores"}
+            draft={draft}
+            focus={focus}
+            relieve={relieve}
+            edificios={edificios}
+            showEdificios={showEdificios}
+            inventory={inventory}
+            inventoryOn={inventoryOn}
+            onSelectCatastro={(hit) => setPicked(hit ? `${hit.layer}: ${String(hit.props.nombre || hit.props.feature_id || "polígono")}` : null)}
+            onSelectActividad={(id) => {
+              if (id) {
+                choose(id)
+                setModulo("labores")
+                setRailOpen(true)
+              } else setSelectedId(null)
+            }}
+            onPin={(lon, lat) => {
+              setDraft({ lon, lat })
+              setNotice("")
+            }}
+          />
+        </MapBoundary>
+        <header className="topbar">
+          <div className="brand">
+            <strong>Campus Verde</strong>
+            <span>PUCP Pando · {sesion.nombre}</span>
+          </div>
+          <button type="button" className="menu-btn" onClick={() => setRailOpen((open) => !open)}>
+            Panel
+          </button>
+          <div className="top-spacer" />
+          <div className="roles" role="group" aria-label="Vista del mapa">
+            <button type="button" aria-pressed={!relieve} onClick={() => setRelieve(false)}>Plano</button>
+            <button type="button" aria-pressed={relieve} onClick={() => setRelieve(true)}>Relieve</button>
+          </div>
+        </header>
+      </div>
     </div>
   )
 }

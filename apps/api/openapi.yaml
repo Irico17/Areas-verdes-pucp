@@ -11,7 +11,9 @@ info:
     La columna `geom` admite NULL (catastro progresivo, sin GPS).
 
     Fases A–F: salud, catastro, labores, relieve y overlays de inventario.
-    El rol viaja en el cuerpo o en la query (`rol`, `capataz_id`); no hay SSO.
+    La sesión de la PWA es una cookie HttpOnly de cuentas locales.
+    Si la cookie viene, el rol del cuerpo se ignora. Sin cookie, `actor_rol` sigue valiendo
+    para las labores (compatibilidad del piloto). No hay SSO.
     La agenda de reservas es un mock ficticio y no consulta hojas de cálculo.
 servers:
   - url: http://127.0.0.1:8091
@@ -253,6 +255,109 @@ paths:
       responses:
         "200":
           description: Lista marcada como fake
+  /api/v1/sesion:
+    post:
+      tags: [sistema]
+      summary: Ingreso con cuenta local. Responde Set-Cookie HttpOnly
+      responses:
+        "200":
+          description: Sesión abierta
+        "401":
+          description: Credenciales incorrectas
+    get:
+      tags: [sistema]
+      summary: Usuario de la cookie
+      responses:
+        "200":
+          description: Sesión vigente
+        "401":
+          description: Sin sesión
+    delete:
+      tags: [sistema]
+      summary: Cierra la sesión
+      responses:
+        "200":
+          description: Cookie retirada
+  /api/v1/catalogos:
+    get:
+      tags: [sistema]
+      summary: Ítems de catálogo. Query clase y activos=1
+      responses:
+        "200":
+          description: Lista
+    post:
+      tags: [sistema]
+      summary: Alta o reactivación. Requiere permiso catalogos
+      responses:
+        "201":
+          description: Ítem guardado
+  /api/v1/catastro/areas:
+    get:
+      tags: [catastro]
+      summary: Fichas para editar metadatos
+      responses:
+        "200":
+          description: Hasta 40 áreas
+    post:
+      tags: [catastro]
+      summary: Crea un área sin geometría
+      responses:
+        "201":
+          description: Ficha creada
+  /api/v1/solicitudes:
+    get:
+      tags: [operacion]
+      summary: Solicitudes con código externo conservado, no generado
+      responses:
+        "200":
+          description: Lista
+    post:
+      tags: [operacion]
+      summary: Alta manual (Centuria, OSG, correo o interna)
+      responses:
+        "201":
+          description: Solicitud creada
+  /api/v1/ordenes:
+    post:
+      tags: [operacion]
+      summary: Orden de servicio para una labor tercerizada
+      responses:
+        "201":
+          description: Orden creada
+  /api/v1/riego:
+    get:
+      tags: [operacion]
+      summary: Riego por sector y turno, sin indicador oficial
+      responses:
+        "200":
+          description: Registros
+  /api/v1/reportes/labores:
+    get:
+      tags: [operacion]
+      summary: Reporte básico. formato=csv o formato=xls exporta el mismo filtro
+      parameters:
+        - name: formato
+          in: query
+          schema: { type: string, enum: [csv, xls] }
+        - name: estado
+          in: query
+          schema: { type: string }
+        - name: desde
+          in: query
+          schema: { type: string, example: "2026-09-01" }
+        - name: hasta
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: JSON, CSV o SpreadsheetML
+  /api/v1/ia/sugerir-tipo:
+    post:
+      tags: [operacion]
+      summary: Regla local sobre el título. No llama a un modelo externo
+      responses:
+        "200":
+          description: Sugerencia que una persona debe confirmar
 components:
   parameters:
     bbox:

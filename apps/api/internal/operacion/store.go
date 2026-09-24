@@ -25,7 +25,7 @@ func NewStore(db *gorm.DB) *Store {
 const selectFeature = `
 SELECT a.id::text, a.tipo, a.estado, a.titulo, a.detalle,
        a.area_feature_id, a.zona_feature_id, a.assigned_capataz_id, c.equipo,
-       a.archivada_en IS NOT NULL, a.created_at, a.updated_at,
+       a.archivada_en IS NOT NULL, a.created_at, a.updated_at, COALESCE(a.ejecutor, 'propia'),
        ST_AsGeoJSON(a.geom, 6)
 FROM actividades a
 LEFT JOIN capataces c ON c.id = a.assigned_capataz_id
@@ -123,16 +123,23 @@ func (s *Store) Create(ctx context.Context, in CreateInput) (geojson.Feature, bo
 				return InputError{Reason: "capataz_id no existe"}
 			}
 		}
+		var nTipo int
+		if err := tx.Raw(`SELECT count(*) FROM catalogos WHERE clase = 'tipo_actividad' AND codigo = $1 AND activo`, in.Tipo).Scan(&nTipo).Error; err != nil {
+			return err
+		}
+		if nTipo != 1 {
+			return InputError{Reason: "tipo no está en el catálogo activo"}
+		}
 		if err := tx.Exec(`
 			INSERT INTO actividades (
 			  id, tipo, estado, titulo, detalle, area_feature_id, zona_feature_id,
-			  assigned_capataz_id, geom
+			  assigned_capataz_id, geom, ejecutor
 			) VALUES (
 			  $1, $2, 'pendiente', $3, $4, NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''),
-			  ST_SetSRID(ST_MakePoint($8, $9), 4326)
+			  ST_SetSRID(ST_MakePoint($8, $9), 4326), $10
 			)`,
 			in.ID, in.Tipo, in.Titulo, in.Detalle, in.AreaFeatureID, in.ZonaFeatureID,
-			in.AssignedCapatazID, in.Lon, in.Lat,
+			in.AssignedCapatazID, in.Lon, in.Lat, ejecutorDe(in.Ejecutor),
 		).Error; err != nil {
 			return err
 		}
@@ -228,6 +235,15 @@ func (s *Store) SetEstado(ctx context.Context, id, estado, actorRol, capatazID s
 		if row.estado == estado {
 			return nil
 		}
+		if estado == "cerrada" && row.ejecutor == "tercerizada" {
+			var n int
+			if err := tx.Raw(`SELECT count(*) FROM ordenes_servicio WHERE actividad_id = $1`, id).Scan(&n).Error; err != nil {
+				return err
+			}
+			if n == 0 {
+				return InputError{Reason: "una labor tercerizada no se cierra sin una orden de servicio"}
+			}
+		}
 		if err := tx.Exec(`
 			UPDATE actividades SET estado = $2, updated_at = now() WHERE id = $1`, id, estado).Error; err != nil {
 			return err
@@ -240,7 +256,7 @@ func (s *Store) SetEstado(ctx context.Context, id, estado, actorRol, capatazID s
 	return s.one(ctx, id)
 }
 
-func (s *Store) Archive(ctx context.Context, id, actorRol string) error {
+func (s *Store) Archive(ctx context.Context, id, actorRol, motivo string) error {
 	if err := ValidateArchivo(actorRol); err != nil {
 		return err
 	}
@@ -252,11 +268,16 @@ func (s *Store) Archive(ctx context.Context, id, actorRol string) error {
 		if row.archivada {
 			return nil
 		}
+		nota := "Baja lógica"
+		motivo = strings.TrimSpace(motivo)
+		if motivo != "" {
+			nota = nota + ": " + motivo
+		}
 		if err := tx.Exec(`
-			UPDATE actividades SET archivada_en = now(), updated_at = now() WHERE id = $1`, id).Error; err != nil {
+			UPDATE actividades SET archivada_en = now(), motivo_archivo = NULLIF($2, ''), updated_at = now() WHERE id = $1`, id, motivo).Error; err != nil {
 			return err
 		}
-		return insertEvento(tx, id, "archivada", row.estado, row.capataz, actorRol, "Baja lógica")
+		return insertEvento(tx, id, "archivada", row.estado, row.capataz, actorRol, nota)
 	})
 }
 
@@ -319,6 +340,7 @@ func (s *Store) one(ctx context.Context, id string) (geojson.Feature, error) {
 type locked struct {
 	estado    string
 	capataz   string
+	ejecutor  string
 	archivada bool
 }
 
@@ -330,8 +352,8 @@ func lockActividad(tx *gorm.DB, id string) (locked, error) {
 	var cap sql.NullString
 	var archivada sql.NullTime
 	err := tx.Raw(`
-		SELECT estado, assigned_capataz_id, archivada_en
-		FROM actividades WHERE id = $1 FOR UPDATE`, id).Row().Scan(&row.estado, &cap, &archivada)
+		SELECT estado, assigned_capataz_id, archivada_en, COALESCE(ejecutor, 'propia')
+		FROM actividades WHERE id = $1 FOR UPDATE`, id).Row().Scan(&row.estado, &cap, &archivada, &row.ejecutor)
 	if err == sql.ErrNoRows {
 		return row, ErrNoEncontrada
 	}
@@ -350,9 +372,9 @@ func loadSaved(tx *gorm.DB, id string) (Saved, bool, error) {
 	var cap, area, zona sql.NullString
 	err := tx.Raw(`
 		SELECT tipo, titulo, detalle, assigned_capataz_id, area_feature_id, zona_feature_id,
-		       ST_X(geom), ST_Y(geom), created_at
+		       ST_X(geom), ST_Y(geom), created_at, COALESCE(ejecutor, 'propia')
 		FROM actividades WHERE id = $1`, id).Row().Scan(
-		&saved.Tipo, &saved.Titulo, &saved.Detalle, &cap, &area, &zona, &saved.Lon, &saved.Lat, &saved.CreatedAt,
+		&saved.Tipo, &saved.Titulo, &saved.Detalle, &cap, &area, &zona, &saved.Lon, &saved.Lat, &saved.CreatedAt, &saved.Ejecutor,
 	)
 	if err == sql.ErrNoRows {
 		return Saved{}, false, nil
@@ -396,9 +418,9 @@ func scanFeature(rows scanner) (geojson.Feature, error) {
 		area, zona, capataz, equipo       sql.NullString
 		archivada                         bool
 		created, updated                  time.Time
-		geom                              string
+		ejecutor, geom                    string
 	)
-	if err := rows.Scan(&id, &tipo, &estado, &titulo, &detalle, &area, &zona, &capataz, &equipo, &archivada, &created, &updated, &geom); err != nil {
+	if err := rows.Scan(&id, &tipo, &estado, &titulo, &detalle, &area, &zona, &capataz, &equipo, &archivada, &created, &updated, &ejecutor, &geom); err != nil {
 		return geojson.Feature{}, err
 	}
 	props := ActividadProperties{
@@ -411,6 +433,7 @@ func scanFeature(rows scanner) (geojson.Feature, error) {
 		ZonaFeatureID:     nullString(zona),
 		AssignedCapatazID: nullString(capataz),
 		Equipo:            nullString(equipo),
+		Ejecutor:          ejecutor,
 		Archivada:         archivada,
 		CreatedAt:         created.UTC().Format(time.RFC3339),
 		UpdatedAt:         updated.UTC().Format(time.RFC3339),
