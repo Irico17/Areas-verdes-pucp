@@ -26,12 +26,13 @@ func main() {
 	}
 
 	engine := server.New(server.Deps{
-		DB:            gdb,
-		OpenAPIPath:   cfg.OpenAPIPath,
-		EdificiosPath: cfg.EdificiosPath,
-		ReservasPath:  cfg.ReservasPath,
-		FotosDir:      filepath.Join(cfg.RawDir, "drive_fotos"),
-		EvidenciasDir: cfg.EvidenciasDir,
+		DB:               gdb,
+		OpenAPIPath:      cfg.OpenAPIPath,
+		EdificiosPath:    cfg.EdificiosPath,
+		ReservasPath:     cfg.ReservasPath,
+		FotosDir:         filepath.Join(cfg.RawDir, "drive_fotos"),
+		EvidenciasDir:    cfg.EvidenciasDir,
+		EvidenciasBucket: cfg.EvidenciasBucket,
 	})
 	log.Printf("campus-verde-api escuchando en %s", cfg.APIAddr)
 	if err := engine.Run(cfg.APIAddr); err != nil {

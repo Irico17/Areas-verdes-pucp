@@ -3,12 +3,12 @@ package handlers
 import (
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"campusverde/api/internal/accesos"
 	"campusverde/api/internal/atencion"
+	"campusverde/api/internal/blobs"
 	"campusverde/api/internal/catalogos"
 	"campusverde/api/internal/catastro"
 
@@ -295,6 +295,14 @@ func (h Fichas) Create(c *gin.Context) {
 type Atencion struct {
 	Store *atencion.Store
 	Dir   string
+	Files blobs.Store
+}
+
+func (h Atencion) files() blobs.Store {
+	if h.Files != nil {
+		return h.Files
+	}
+	return blobs.Disk{Dir: h.Dir}
 }
 
 func (h Atencion) ready(c *gin.Context) bool {
@@ -478,17 +486,18 @@ func (h Atencion) SubirEvidencia(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "falta el id"})
 		return
 	}
-	if err := os.MkdirAll(h.Dir, 0o755); err != nil {
-		c.JSON(500, gin.H{"error": "no se pudo abrir la carpeta de evidencias"})
+	src, err := file.Open()
+	if err != nil {
+		c.JSON(400, gin.H{"error": "no se pudo leer el archivo"})
 		return
 	}
-	dest := filepath.Join(h.Dir, id+ext)
-	if err := c.SaveUploadedFile(file, dest); err != nil {
+	defer src.Close()
+	ref, err := h.files().Put(c.Request.Context(), id+ext, src, mime)
+	if err != nil {
 		c.JSON(500, gin.H{"error": "no se pudo guardar el archivo"})
 		return
 	}
-	if err := h.Store.GuardarEvidencia(c.Request.Context(), id, actividadID, filepath.Base(file.Filename), mime, dest, nota, int(file.Size)); err != nil {
-		_ = os.Remove(dest)
+	if err := h.Store.GuardarEvidencia(c.Request.Context(), id, actividadID, filepath.Base(file.Filename), mime, ref, nota, int(file.Size)); err != nil {
 		writeAtencion(c, err)
 		return
 	}
@@ -507,14 +516,15 @@ func (h Atencion) Archivo(c *gin.Context) {
 		writeAtencion(c, err)
 		return
 	}
-	clean := filepath.Clean(ruta)
-	base := filepath.Clean(h.Dir)
-	if base == "" || !strings.HasPrefix(clean, base+string(os.PathSeparator)) {
+	body, err := h.files().Open(c.Request.Context(), ruta)
+	if err != nil {
 		c.JSON(404, gin.H{"error": "archivo no disponible"})
 		return
 	}
+	defer body.Close()
 	c.Header("Content-Type", mime)
-	c.File(clean)
+	c.Status(200)
+	_, _ = io.Copy(c.Writer, body)
 }
 
 func (h Atencion) Reporte(c *gin.Context) {

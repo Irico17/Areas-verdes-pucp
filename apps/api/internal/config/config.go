@@ -9,17 +9,18 @@ import (
 
 // Config reúne la configuración de proceso. Los secretos vienen de entorno, nunca del repo.
 type Config struct {
-	DatabaseURL   string
-	APIAddr       string
-	RepoRoot      string
-	RawDir        string
-	V1Dir         string
-	MigrationsDir string
-	OpenAPIPath   string
-	EdificiosPath string
-	ReservasPath  string
-	DevPassword   string
-	EvidenciasDir string
+	DatabaseURL      string
+	APIAddr          string
+	RepoRoot         string
+	RawDir           string
+	V1Dir            string
+	MigrationsDir    string
+	OpenAPIPath      string
+	EdificiosPath    string
+	ReservasPath     string
+	DevPassword      string
+	EvidenciasDir    string
+	EvidenciasBucket string
 }
 
 // Load lee .env del raíz del repo (sin pisar variables ya exportadas) y aplica defaults locales.
@@ -28,17 +29,18 @@ func Load() Config {
 	loadEnvFile(filepath.Join(root, ".env"))
 
 	return Config{
-		DatabaseURL:   env("DATABASE_URL", "postgres://campus:campus@127.0.0.1:5432/campus_verde?sslmode=disable"),
-		APIAddr:       env("API_ADDR", ":8091"),
-		RepoRoot:      root,
-		RawDir:        env("DATA_RAW_DIR", filepath.Join(root, "data", "raw")),
-		V1Dir:         env("DATA_V1_DIR", filepath.Join(root, "data", "v1")),
-		MigrationsDir: env("MIGRATIONS_DIR", filepath.Join(root, "apps", "api", "migrations")),
-		OpenAPIPath:   env("OPENAPI_PATH", filepath.Join(root, "apps", "api", "openapi.yaml")),
-		EdificiosPath: env("EDIFICIOS_PATH", filepath.Join(root, "data", "osm", "edificios_pando.geojson")),
-		ReservasPath:  env("RESERVAS_MOCK_PATH", filepath.Join(root, "data", "mocks", "reservas_agenda.mock.json")),
-		DevPassword:   env("CAMPUS_DEV_PASSWORD", "pando-local"),
-		EvidenciasDir: env("EVIDENCIAS_DIR", filepath.Join(root, "data", "evidencias")),
+		DatabaseURL:      env("DATABASE_URL", "postgres://campus:campus@127.0.0.1:5432/campus_verde?sslmode=disable"),
+		APIAddr:          env("API_ADDR", ":8091"),
+		RepoRoot:         root,
+		RawDir:           env("DATA_RAW_DIR", filepath.Join(root, "data", "raw")),
+		V1Dir:            env("DATA_V1_DIR", filepath.Join(root, "data", "v1")),
+		MigrationsDir:    env("MIGRATIONS_DIR", filepath.Join(root, "apps", "api", "migrations")),
+		OpenAPIPath:      env("OPENAPI_PATH", filepath.Join(root, "apps", "api", "openapi.yaml")),
+		EdificiosPath:    env("EDIFICIOS_PATH", filepath.Join(root, "data", "osm", "edificios_pando.geojson")),
+		ReservasPath:     env("RESERVAS_MOCK_PATH", filepath.Join(root, "data", "mocks", "reservas_agenda.mock.json")),
+		DevPassword:      env("CAMPUS_DEV_PASSWORD", "pando-local"),
+		EvidenciasDir:    env("EVIDENCIAS_DIR", filepath.Join(root, "data", "evidencias")),
+		EvidenciasBucket: env("EVIDENCIAS_BUCKET", ""),
 	}
 }
 

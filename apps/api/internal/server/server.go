@@ -5,6 +5,7 @@ import (
 
 	"campusverde/api/internal/accesos"
 	"campusverde/api/internal/atencion"
+	"campusverde/api/internal/blobs"
 	"campusverde/api/internal/catalogos"
 	"campusverde/api/internal/catastro"
 	"campusverde/api/internal/handlers"
@@ -17,12 +18,13 @@ import (
 
 // Deps son las dependencias del HTTP server.
 type Deps struct {
-	DB            *gorm.DB
-	OpenAPIPath   string
-	EdificiosPath string
-	ReservasPath  string
-	FotosDir      string
-	EvidenciasDir string
+	DB               *gorm.DB
+	OpenAPIPath      string
+	EdificiosPath    string
+	ReservasPath     string
+	FotosDir         string
+	EvidenciasDir    string
+	EvidenciasBucket string
 }
 
 // New arma el router Gin de la API.
@@ -113,7 +115,7 @@ func New(deps Deps) *gin.Engine {
 	r.POST("/api/v1/catastro/areas", fichas.Create)
 	r.PATCH("/api/v1/catastro/areas/:id", fichas.Patch)
 
-	at := handlers.Atencion{Store: aten, Dir: deps.EvidenciasDir}
+	at := handlers.Atencion{Store: aten, Dir: deps.EvidenciasDir, Files: blobs.Open(deps.EvidenciasDir, deps.EvidenciasBucket)}
 	r.GET("/api/v1/solicitudes", at.Solicitudes)
 	r.POST("/api/v1/solicitudes", at.CrearSolicitud)
 	r.GET("/api/v1/ordenes", at.Ordenes)
