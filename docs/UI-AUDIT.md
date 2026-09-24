@@ -184,3 +184,30 @@ Mapa: áreas `#1a5c44` / `#0e3b2c`; zonas `#5c6a62` / `#3e5148`; reserva `#2f4a4
 Se corrige: fuente con carácter (no Inter ni Source Sans genérico), pesos 500 y 600, tabulares, un solo acento, sombras teñidas, hover y presión, foco, esqueletos, vacíos, fechas, `100dvh` donde haga falta, objetivos táctiles, semántica (`nav`, `main`, `aside`).
 
 No se aplica, porque Impeccable en Operate lo prohíbe o el producto no lo pide: fotos de stock, grano en toda la app, asimetría de afiche, parallax, tres columnas de tarjetas, iconos de “lanzamiento”, migrar a Tailwind, reescribir desde cero el mapa.
+
+## Auditoría móvil (campo)
+
+El teléfono no es un escritorio encogido. Lo usa el capataz al sol, con una mano, a veces sin red, y puede instalar la PWA. Anchos a cubrir: 360–430 px. Tableta (821–1199): la misma grilla de escritorio, más estrecha. Escritorio 1280–1920: riel lateral y panel.
+
+### Lo que había
+
+- A 820 px la navegación era una fila horizontal con scroll. En 360 px “Solicitudes” y “Catálogos” se salían.
+- El panel era una columna lateral absoluta, no una hoja sobre el mapa. El mapa quedaba a la mitad o tapado de lado.
+- Salir se escondía (`.who { display: none }`).
+- Controles a 36 px. El zoom de MapLibre, más chico.
+- Sin `viewport-fit=cover` ni `safe-area-inset`. En un teléfono con barra de gestos, la última fila queda bajo el sistema.
+- “Marcar labor” y “Adjuntar” vivían a mitad del scroll, lejos del pulgar.
+- La animación, si se agregaba igual que en escritorio, era el mismo desplazamiento. En un equipo lento tiene que ser corta y solo de opacidad/traslación pequeña.
+
+### Lo que debe quedar
+
+- Barra inferior fija, sin scroll horizontal. Cada módulo cabe en un flex igual, texto en dos líneas si hace falta, alto mínimo 48 px, más `env(safe-area-inset-bottom)`.
+- El mapa a sangre. La barra superior flota, con Plano/Relieve y Salir al alcance, y `safe-area-inset-top`.
+- La ficha es una hoja inferior (`bottom sheet`) de hasta 74 dvh, con asa y “Cerrar hoja”. Al entrar en el teléfono la hoja nace cerrada: lo primero es el mapa.
+- “Marcar labor” y “Adjuntar foto o PDF” se pegan al borde inferior de la hoja (`position: sticky`), ancho completo, 48 px.
+- Zoom del mapa a 44 px y subido para no quedar bajo la barra.
+- Contraste de cuerpo sobre hoja y de texto claro sobre yucca, pensado para sol: sin grises lavados.
+- Movimiento: 180 ms de la hoja, 140 ms del botón. `prefers-reduced-motion` anula la traslación.
+- PWA: `display: standalone`, `theme-color` yucca, `viewport-fit=cover`. El service worker sigue solo en producción.
+- Tableta: no usa la barra inferior. Mantiene riel y panel para quien coordina con un iPad en horizontal.
+- Sin scroll horizontal en 360 px: `overflow: hidden` en la cáscara y en la barra.

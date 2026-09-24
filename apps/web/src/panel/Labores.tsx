@@ -119,7 +119,7 @@ export function Labores(props: Props) {
         </select>
       </label>
       {puedeAsignar && (
-        <button type="button" className={props.pinMode ? "primary on" : "primary"} onClick={() => props.onPinMode(!props.pinMode)}>
+        <button type="button" className={props.pinMode ? "primary sheet-action on" : "primary sheet-action"} onClick={() => props.onPinMode(!props.pinMode)}>
           {props.pinMode ? "Cancelar marca" : "Marcar labor"}
         </button>
       )}
@@ -277,8 +277,8 @@ export function Labores(props: Props) {
                   </li>
                 ))}
               </ul>
-              <label className="field">
-                Adjuntar
+              <label className="field sheet-action">
+                Adjuntar foto o PDF
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp,application/pdf"

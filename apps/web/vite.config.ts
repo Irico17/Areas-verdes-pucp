@@ -7,20 +7,17 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.svg", "icon-192.png", "icon-512.png"],
+      includeAssets: ["favicon.svg"],
       manifest: {
         name: "Campus Verde",
         short_name: "Campus Verde",
         description: "Supervisión de áreas verdes del campus PUCP Pando",
-        lang: "es",
+        lang: "es-PE",
         start_url: "/",
         display: "standalone",
-        background_color: "#e7ece6",
-        theme_color: "#145c3e",
-        icons: [
-          { src: "icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "icon-512.png", sizes: "512x512", type: "image/png" },
-        ],
+        background_color: "#e4ebe4",
+        theme_color: "#0e3b2c",
+        icons: [{ src: "favicon.svg", sizes: "any", type: "image/svg+xml" }],
       },
       devOptions: { enabled: false },
       workbox: {

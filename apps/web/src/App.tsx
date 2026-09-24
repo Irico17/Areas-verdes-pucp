@@ -101,7 +101,7 @@ export default function App() {
   const [queue, setQueue] = useState<QueuedLabor[]>([])
   const [estados, setEstados] = useState<Record<string, boolean>>({ pendiente: true, en_proceso: true, bloqueada: true })
   const [tipoFiltro, setTipoFiltro] = useState("")
-  const [railOpen, setRailOpen] = useState(true)
+  const [railOpen, setRailOpen] = useState(() => window.matchMedia("(min-width: 821px)").matches)
   const [picked, setPicked] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pinMode, setPinMode] = useState(false)
@@ -506,6 +506,9 @@ export default function App() {
         ))}
       </nav>
       <aside className="panel" id="panel">
+        <button type="button" className="sheet-close" onClick={() => setRailOpen(false)}>
+          Cerrar hoja
+        </button>
         <div key={moduloActivo} className="panel-view">
         <p className={load.kind === "error" || activityError ? "status error" : "status"}>
           {load.kind === "error" ? load.message : summary}
