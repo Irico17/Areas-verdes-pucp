@@ -55,7 +55,7 @@ aws s3api put-bucket-versioning --bucket campus-verde-tfstate-890991908027 \
 
 5. Abra la URL que imprime el script (`http://<elastic-ip>`). Entre con `coordinacion` / `pando-local`, o `norte` para el capataz.
 
-La primera vez la instancia puede tardar un par de minutos: cloud-init instala Docker y el compose reintenta el pull hasta que las imágenes existan.
+La primera vez la instancia puede tardar unos minutos: cloud-init instala Docker y el binario de Compose v2 (Amazon Linux 2023 no trae el paquete `docker-compose-plugin`), formatea el volumen de datos y arranca el compose. Si el pull ocurre antes de que las imágenes estén en ECR, `systemctl restart campus.service` lo repite.
 
 ## Cuando se acaba la sesión
 
