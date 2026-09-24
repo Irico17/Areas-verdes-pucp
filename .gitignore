@@ -68,5 +68,8 @@ apps/api/bin/
 infra/terraform/.terraform/
 *.tfstate
 *.tfstate.*
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
 crash.log
 crash.*.log

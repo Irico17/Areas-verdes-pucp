@@ -1,6 +1,8 @@
-# Campus Verde — Gestión de áreas verdes Campus PUCP (Pando)
+# VerdePUCP — Gestión de Áreas Verdes
 
-Monorepo del **DP2 · Grupo 12**: sistema de gestión (catastro, operación, reportes) con el **módulo de mapa** sobre la misma API. No es un mapa aislado ni un segundo backend.
+VerdePUCP es el sistema de gestión de áreas verdes del campus PUCP (Pando): catastro, labores, solicitudes, riego y reportes, con el mapa sobre la misma API. No es un mapa aislado ni un segundo backend.
+
+Licencia: [MIT](LICENSE).
 
 Fuentes oficiales en [`docs/fuente/`](docs/fuente/). Plan de mapa: [`docs/PLAN-INTEGRACION-MAPA.md`](docs/PLAN-INTEGRACION-MAPA.md). Plan de producto e interfaz: [`docs/PLAN-PRODUCTO-Y-UI.md`](docs/PLAN-PRODUCTO-Y-UI.md).
 
@@ -15,7 +17,9 @@ Fuentes oficiales en [`docs/fuente/`](docs/fuente/). Plan de mapa: [`docs/PLAN-I
 | Objetos | Archivos de evidencia en disco local (`data/evidencias`, no se versiona) | Piloto. Sin bucket S3 |
 | Sesión | Cuentas locales y cookie HttpOnly | No es SSO |
 
-Roles de la sesión: **Capataz** (norte, sur, riego), **Coordinación**, **Jefatura** y **Admin**. La clave local de desarrollo es `pando-local` (`CAMPUS_DEV_PASSWORD`). No es el SSO de la PUCP.
+Roles de la sesión: **Capataz** (norte, sur, riego), **Coordinación**, **Jefatura** y **Admin**.
+
+Las cuentas semilla (`norte`, `sur`, `riego`, `coordinacion`, `jefatura`, `admin`) y la clave `pando-local` (`CAMPUS_DEV_PASSWORD`) son **solo para desarrollo local**. No son cuentas de la universidad ni el SSO de la PUCP. No las use en un entorno con datos reales.
 
 ## Qué hay cargado
 
@@ -137,6 +141,16 @@ El visor crea labores con un pin (Jefatura y Coordinación), las asigna a un equ
 La vista **Relieve** extruye las áreas verdes según su superficie y, si se enciende la capa, las huellas de edificios OSM del recinto (`GET /api/v1/geo/edificios`). **Plano** vuelve al relleno 2D.
 
 Inventario opcional (apagado al entrar): bebederos 67, fauna 19, puertas 7, tachos 184, flora 74, cafetos 53, playas 15, vereda 1. `GET /api/v1/geo/inventario` y `GET /api/v1/geo/inventario/{capa}`. La agenda de reservas es ficticia: `GET /api/v1/geo/reservas-mock` (71 ítems, sin hoja de cálculo). No hay JPEG de bebederos en `data/raw`; el mapa lo indica en el popup.
+
+## Despliegue
+
+El destino previsto es un AWS Academy Learner Lab: una EC2 pequeña con Docker Compose (PostGIS, API y nginx). Los pasos, el presupuesto y cómo destruir la instancia están en [`docs/DEPLOY-AWS.md`](docs/DEPLOY-AWS.md). Desde una laptop, con credenciales temporales del lab:
+
+```bash
+bash scripts/deploy-learner-lab.sh
+```
+
+Esas credenciales no van en el repositorio. `.env`, `*.tfstate`, `*.tfvars` y `.terraform/` están en `.gitignore`.
 
 ## Fuera de este corte
 
