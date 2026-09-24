@@ -66,10 +66,10 @@ Fuentes: `docs/fuente/Propuesta_Arquitectura_DP2_v0.2.docx`, backlog épica J (H
 **MVP CORE mapa:** **sí — esto es el MUST del backlog.**  
 Implementar **después** (o en paralelo controlado) de tener modelo de actividades; no antes de Fase A–B estables.
 
-### Fase E — 3D extrusión
+### Fase E — 3D extrusión *(hecha, 2026-09-24)*
 
-- [ ] `fill-extrusion` / alturas sobre `areas_verdes`.
-- [ ] Footprints OSM buildings del campus.
+- [x] `fill-extrusion` / alturas sobre `areas_verdes` (heurística por `area_m2`). La vista plana sigue con `fill`.
+- [x] Footprints OSM buildings del campus (`data/osm/edificios_pando.geojson`, 483 huellas, © OpenStreetMap).
 
 **MVP CORE:** **no.** Mejora UX post-piloto 2D.
 

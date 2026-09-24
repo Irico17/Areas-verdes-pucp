@@ -49,6 +49,7 @@ button { cursor: pointer; }
 .brand span { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; color: var(--muted); }
 .top-spacer { flex: 1; }
 .roles { display: flex; border: 1px solid var(--line); background: #fffdf8; }
+.roles + .roles { margin-left: 8px; }
 .roles button {
   border: 0;
   background: transparent;

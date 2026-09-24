@@ -20,6 +20,9 @@ type Props = {
   pinMode: boolean
   draft: { lon: number; lat: number } | null
   focus: { lon: number; lat: number; token: number } | null
+  relieve: boolean
+  edificios: FeatureCollection
+  showEdificios: boolean
   onSelectCatastro: (hit: { layer: string; props: Record<string, unknown> } | null) => void
   onSelectActividad: (id: string | null) => void
   onPin: (lon: number, lat: number) => void
@@ -53,6 +56,9 @@ export function CampusMap({
   onSelectCatastro,
   onSelectActividad,
   onPin,
+  relieve,
+  edificios,
+  showEdificios,
 }: Props) {
   const host = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Map | null>(null)
@@ -107,6 +113,41 @@ export function CampusMap({
         })
         if (layer.id === "zonas") map.setPaintProperty(`${layer.id}-line`, "line-dasharray", [1.4, 1.1])
       }
+      map.addLayer({
+        id: "areas-extrusion",
+        type: "fill-extrusion",
+        source: "areas",
+        layout: { visibility: "none" },
+        paint: {
+          "fill-extrusion-color": "#1e4d3a",
+          "fill-extrusion-opacity": 0.8,
+          "fill-extrusion-height": [
+            "interpolate",
+            ["linear"],
+            ["coalesce", ["to-number", ["get", "area_m2"]], 0],
+            0,
+            2.5,
+            500,
+            4,
+            2500,
+            8,
+            12000,
+            14,
+          ],
+        },
+      })
+      map.addSource("edificios", { type: "geojson", data: { type: "FeatureCollection", features: [] } })
+      map.addLayer({
+        id: "edificios-extrusion",
+        type: "fill-extrusion",
+        source: "edificios",
+        layout: { visibility: "none" },
+        paint: {
+          "fill-extrusion-color": "#c8c0b2",
+          "fill-extrusion-opacity": 0.55,
+          "fill-extrusion-height": ["coalesce", ["to-number", ["get", "altura_m"]], 8],
+        },
+      })
       map.addSource("actividades", { type: "geojson", data: { type: "FeatureCollection", features: [] } })
       map.addLayer({
         id: "actividades-circle",
@@ -232,15 +273,30 @@ export function CampusMap({
     for (const layer of LAYERS) {
       const source = map.getSource(layer.id) as GeoJSONSource | undefined
       if (source) source.setData(asCollection(data[layer.id]))
-      const vis = visible[layer.id] ? "visible" : "none"
+      const showFill = visible[layer.id] && !(relieve && layer.id === "areas")
+      const vis = showFill ? "visible" : "none"
       if (map.getLayer(`${layer.id}-fill`)) {
         map.setLayoutProperty(`${layer.id}-fill`, "visibility", vis)
-        map.setLayoutProperty(`${layer.id}-line`, "visibility", vis)
+        map.setLayoutProperty(`${layer.id}-line`, "visibility", visible[layer.id] ? "visible" : "none")
       }
+    }
+    if (map.getLayer("areas-extrusion")) {
+      map.setLayoutProperty("areas-extrusion", "visibility", relieve && visible.areas ? "visible" : "none")
     }
     const acts = map.getSource("actividades") as GeoJSONSource | undefined
     acts?.setData(asCollection(activities))
-  }, [data, visible, activities, ready])
+    const buildings = map.getSource("edificios") as GeoJSONSource | undefined
+    buildings?.setData(asCollection(edificios))
+    if (map.getLayer("edificios-extrusion")) {
+      map.setLayoutProperty("edificios-extrusion", "visibility", relieve && showEdificios ? "visible" : "none")
+    }
+  }, [data, visible, activities, ready, relieve, edificios, showEdificios])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
+    map.easeTo({ pitch: relieve ? 52 : 0, bearing: relieve ? -18 : 0, duration: 650 })
+  }, [relieve, ready])
 
   useEffect(() => {
     const map = mapRef.current

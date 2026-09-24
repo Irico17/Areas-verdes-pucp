@@ -123,6 +123,8 @@ docker-compose.yml
 
 El visor crea labores con un pin (Jefatura y Coordinación), las asigna a un equipo y muestra la bitácora. El rol Capataz solo recibe las de su equipo. Si la API no responde, el alta queda en IndexedDB y se reintenta con el mismo UUID.
 
+La vista **Relieve** extruye las áreas verdes según su superficie y, si se enciende la capa, las huellas de edificios OSM del recinto (`GET /api/v1/geo/edificios`). **Plano** vuelve al relleno 2D.
+
 ## Fuera de este corte
 
-SSO institucional, Fase E (3D), Fase F (tachos, flora, bebederos…), Google Sheets en runtime y reservas reales (solo el mock FAKE).
+SSO institucional, Fase F (tachos, flora, bebederos…), Google Sheets en runtime y reservas reales (solo el mock FAKE).

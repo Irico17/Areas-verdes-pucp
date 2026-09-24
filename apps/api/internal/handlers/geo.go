@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"os"
 	"strconv"
 
 	"campusverde/api/internal/catastro"
@@ -23,7 +24,8 @@ type GeoSource interface {
 
 // Geo expone FeatureCollections de catastro.
 type Geo struct {
-	Source GeoSource
+	Source        GeoSource
+	EdificiosPath string
 }
 
 func (h Geo) Areas(c *gin.Context) {
@@ -73,6 +75,16 @@ func (h Geo) Capas(c *gin.Context) {
 		return
 	}
 	c.JSON(200, idx)
+}
+
+// Edificios sirve el extracto OSM commiteado. Si falta el archivo, responde colección vacía.
+func (h Geo) Edificios(c *gin.Context) {
+	body, err := os.ReadFile(h.EdificiosPath)
+	if err != nil {
+		writeFC(c, geojson.Collection("edificios"))
+		return
+	}
+	c.Data(200, "application/geo+json; charset=utf-8", body)
 }
 
 func (h Geo) Resumen(c *gin.Context) {

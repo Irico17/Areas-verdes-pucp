@@ -18,8 +18,9 @@ func main() {
 	}
 
 	engine := server.New(server.Deps{
-		DB:          gdb,
-		OpenAPIPath: cfg.OpenAPIPath,
+		DB:            gdb,
+		OpenAPIPath:   cfg.OpenAPIPath,
+		EdificiosPath: cfg.EdificiosPath,
 	})
 	log.Printf("campus-verde-api escuchando en %s", cfg.APIAddr)
 	if err := engine.Run(cfg.APIAddr); err != nil {

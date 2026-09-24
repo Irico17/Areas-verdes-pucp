@@ -90,6 +90,9 @@ export default function App() {
   const [estadoNuevo, setEstadoNuevo] = useState("pendiente")
   const [reasignarA, setReasignarA] = useState("cap-norte")
   const [confirmarArchivo, setConfirmarArchivo] = useState(false)
+  const [relieve, setRelieve] = useState(false)
+  const [showEdificios, setShowEdificios] = useState(false)
+  const [edificios, setEdificios] = useState<FeatureCollection>({ type: "FeatureCollection", features: [] })
 
   const reloadActivities = useCallback(async () => {
     try {
@@ -143,6 +146,13 @@ export default function App() {
         if (cancelled) return
         const message = error instanceof Error ? error.message : "No se pudo leer el catastro"
         setLoad({ kind: "error", message })
+      })
+    fetchCollection("/api/v1/geo/edificios")
+      .then((fc) => {
+        if (!cancelled) setEdificios(fc)
+      })
+      .catch(() => {
+        if (!cancelled) setEdificios({ type: "FeatureCollection", features: [] })
       })
     fetchCapataces()
       .then((rows) => {
@@ -329,6 +339,9 @@ export default function App() {
         pinMode={pinMode && rol !== "capataz"}
         draft={draft}
         focus={focus}
+        relieve={relieve}
+        edificios={edificios}
+        showEdificios={showEdificios}
         onSelectCatastro={(hit) => setPicked(hit ? `${hit.layer}: ${String(hit.props.nombre || hit.props.feature_id || "polígono")}` : null)}
         onSelectActividad={(id) => {
           if (id) choose(id)
@@ -348,6 +361,14 @@ export default function App() {
           Panel
         </button>
         <div className="top-spacer" />
+        <div className="roles" role="group" aria-label="Vista del mapa">
+          <button type="button" aria-pressed={!relieve} onClick={() => setRelieve(false)}>
+            Plano
+          </button>
+          <button type="button" aria-pressed={relieve} onClick={() => setRelieve(true)}>
+            Relieve
+          </button>
+        </div>
         <div className="roles" role="group" aria-label="Rol de consulta">
           {ROLES.map((item) => (
             <button
@@ -423,6 +444,14 @@ export default function App() {
           onFlush={() => void flush()}
         />
         <h2>Catastro</h2>
+        <div className="layer">
+          <span className="swatch" style={{ background: "#c8c0b2" }} />
+          <label>
+            <input type="checkbox" checked={showEdificios} onChange={() => setShowEdificios((on) => !on)} /> Edificios OSM
+            <small>Huellas del recinto, solo en relieve</small>
+          </label>
+          <span className="count">{edificios.features.length || "—"}</span>
+        </div>
         {LAYERS.map((layer) => (
           <div className="layer" key={layer.id}>
             <span className="swatch" style={{ background: layer.fill }} />

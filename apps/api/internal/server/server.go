@@ -13,8 +13,9 @@ import (
 
 // Deps son las dependencias del HTTP server.
 type Deps struct {
-	DB          *gorm.DB
-	OpenAPIPath string
+	DB            *gorm.DB
+	OpenAPIPath   string
+	EdificiosPath string
 }
 
 // New arma el router Gin de la API.
@@ -30,7 +31,7 @@ func New(deps Deps) *gin.Engine {
 	}
 
 	health := handlers.Health{DB: deps.DB, Store: store}
-	geo := handlers.Geo{}
+	geo := handlers.Geo{EdificiosPath: deps.EdificiosPath}
 	if store != nil {
 		geo.Source = store
 	}
@@ -51,6 +52,7 @@ func New(deps Deps) *gin.Engine {
 	v1.GET("/zonas", geo.Zonas)
 	v1.GET("/capas", geo.Capas)
 	v1.GET("/capas/:capa", geo.Capa)
+	v1.GET("/edificios", geo.Edificios)
 
 	lab := r.Group("/api/v1/operacion")
 	lab.GET("/capataces", op.Capataces)
