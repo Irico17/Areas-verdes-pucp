@@ -13,7 +13,7 @@ export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 export AWS_REGION="$AWS_DEFAULT_REGION"
 
 cd "$ROOT/infra/terraform"
-terraform init -input=false
+terraform init -input=false -reconfigure
 terraform apply -input=false -auto-approve
 
 API_REPO="$(terraform output -raw ecr_api)"

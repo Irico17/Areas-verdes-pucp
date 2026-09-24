@@ -32,7 +32,26 @@ export AWS_DEFAULT_REGION=us-east-1
 bash scripts/deploy-learner-lab.sh
 ```
 
-El script hace `terraform init` y `apply` en `infra/terraform` (estado **local**), construye las dos imágenes, las sube a ECR y pide a la instancia, por SSM, que reinicie `campus.service`. Ese servicio hace `docker compose pull` y `up`.
+El script hace `terraform init -reconfigure` y `apply` en `infra/terraform`, construye las dos imágenes, las sube a ECR y pide a la instancia, por SSM, que reinicie `campus.service`. Ese servicio hace `docker compose pull` y `up`. La API, al arrancar, migra y corre el ETL una vez (521 áreas y el resto del catastro) si `/data/.etl-done` no existe.
+
+El estado de Terraform vive en S3, no en la laptop. El cubo es `campus-verde-tfstate-890991908027` (versionado, cifrado SSE-S3, sin acceso público), clave `learner-lab/terraform.tfstate`, región `us-east-1`. No hay tabla de lock: no haga dos `apply` a la vez. El bloque está en `infra/terraform/versions.tf`:
+
+```hcl
+backend "s3" {
+  bucket  = "campus-verde-tfstate-890991908027"
+  key     = "learner-lab/terraform.tfstate"
+  region  = "us-east-1"
+  encrypt = true
+}
+```
+
+Si el cubo no existe en una cuenta nueva, créelo antes del primer `init` (el lab no deja crear IAM; este comando no lo hace):
+
+```bash
+aws s3api create-bucket --bucket campus-verde-tfstate-890991908027 --region us-east-1
+aws s3api put-bucket-versioning --bucket campus-verde-tfstate-890991908027 \
+  --versioning-configuration Status=Enabled
+```
 
 5. Abra la URL que imprime el script (`http://<elastic-ip>`). Entre con `coordinacion` / `pando-local`, o `norte` para el capataz.
 
@@ -43,6 +62,33 @@ La primera vez la instancia puede tardar un par de minutos: cloud-init instala D
 - Las credenciales dejan de servir. Un `apply` a medias hay que repetirlo en la sesión siguiente, con claves nuevas.
 - EC2 queda **detenida**. El Elastic IP asociado a una instancia detenida sí se cobra. El disco (raíz de 20 GB y otro de 20 GB para Postgres y archivos) también, aunque la máquina esté apagada.
 - Al volver: Start Lab, copiar credenciales nuevas, y o bien encender la instancia en la consola, o volver a correr el script. `user_data` no se repite; Docker arranca solo si la instancia vuelve a encender y el unit `campus.service` está habilitado.
+
+## Parar, encender y destruir desde la laptop
+
+En una sesión nueva del lab, copie credenciales frescas (no sirven las de la sesión anterior) y deje `AWS_DEFAULT_REGION=us-east-1`. El estado ya está en el cubo de arriba.
+
+```bash
+cd infra/terraform
+terraform init -input=false -reconfigure
+```
+
+Detener (la instancia para; el Elastic IP y los discos siguen cobrando):
+
+```bash
+aws ec2 stop-instances --instance-ids "$(terraform output -raw instance_id)"
+```
+
+Encender en la sesión siguiente:
+
+```bash
+aws ec2 start-instances --instance-ids "$(terraform output -raw instance_id)"
+```
+
+Destruir el stack (instancia, IP, volúmenes y ECR). El cubo de estado no forma parte del root; bórrelo aparte solo si ya no va a redesplegar:
+
+```bash
+terraform destroy -auto-approve
+```
 
 ## Cómo no quemar el saldo
 

@@ -1,5 +1,11 @@
-# Estado remoto (opcional, no requerido)
+# Estado remoto
 
-El lab usa estado local en `infra/terraform/terraform.tfstate`. No haga falta S3 ni DynamoDB.
+El root usa el backend S3 declarado en `versions.tf`:
 
-En una cuenta normal, un bootstrap aparte puede crear un cubo y una tabla de lock. No forma parte de este apply y no crea IAM: quien aplica usa el rol que ya tiene.
+- Cubo: `campus-verde-tfstate-890991908027`
+- Clave: `learner-lab/terraform.tfstate`
+- Región: `us-east-1`
+- Cifrado: SSE-S3 (`encrypt = true`)
+- Versionado del cubo: activado a mano, fuera de este módulo
+
+No hay tabla DynamoDB de lock y este directorio no crea IAM. Un `apply` a la vez. El cubo se crea con la CLI antes del primer `terraform init`, como dice `docs/DEPLOY-AWS.md`.
