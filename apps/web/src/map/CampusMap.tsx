@@ -152,7 +152,7 @@ export function CampusMap({
         source: "areas",
         layout: { visibility: "none" },
         paint: {
-          "fill-extrusion-color": "#145c3e",
+          "fill-extrusion-color": "#1a5c44",
           "fill-extrusion-opacity": 0.8,
           "fill-extrusion-height": [
             "interpolate",
@@ -218,21 +218,21 @@ export function CampusMap({
         paint: {
           "circle-radius": 13,
           "circle-stroke-width": 2,
-          "circle-stroke-color": "#f4f7f4",
+          "circle-stroke-color": "#f7faf6",
           "circle-color": [
             "match",
             ["get", "estado"],
             "pendiente",
-            "#8a6a12",
+            "#8a6410",
             "en_proceso",
-            "#145c3e",
+            "#1a5c44",
             "bloqueada",
-            "#8d2f2c",
+            "#8c3832",
             "cerrada",
-            "#5c6560",
+            "#5c6a62",
             "cancelada",
-            "#8a8478",
-            "#1c211e",
+            "#5c6a62",
+            "#1a2420",
           ],
         },
       })
@@ -338,7 +338,8 @@ export function CampusMap({
         const props = (hit.properties ?? {}) as Record<string, unknown>
         onActividad.current(null)
         onCatastro.current({ layer: labelOf(String(hit.source)), props })
-        const nombre = props.nombre || "Sin nombre"
+        const crudo = String(props.nombre ?? "").trim()
+        const nombre = crudo || String(props.feature_id ?? props.codigo ?? "Área sin nombre")
         const codigo = props.codigo ? String(props.codigo) : "sin código"
         const uso = props.uso ? String(props.uso) : ""
         const popup = new Popup({ closeButton: true, maxWidth: "280px", className: "cv-popup" })
@@ -401,7 +402,9 @@ export function CampusMap({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-    map.easeTo({ pitch: relieve ? 52 : 0, bearing: relieve ? -18 : 0, duration: 650 })
+    const quiet = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    if (quiet) map.jumpTo({ pitch: relieve ? 52 : 0, bearing: relieve ? -18 : 0 })
+    else map.easeTo({ pitch: relieve ? 52 : 0, bearing: relieve ? -18 : 0, duration: 650 })
   }, [relieve, ready])
 
   useEffect(() => {
@@ -424,7 +427,10 @@ export function CampusMap({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready || !focus) return
-    map.easeTo({ center: [focus.lon, focus.lat], zoom: Math.max(map.getZoom(), 16.4), duration: 450 })
+    const quiet = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const zoom = Math.max(map.getZoom(), 16.4)
+    if (quiet) map.jumpTo({ center: [focus.lon, focus.lat], zoom })
+    else map.flyTo({ center: [focus.lon, focus.lat], zoom, duration: 900, essential: true })
   }, [focus, ready])
 
   return <div ref={host} className="map-host" />

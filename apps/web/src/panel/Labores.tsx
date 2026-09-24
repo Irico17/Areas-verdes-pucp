@@ -1,3 +1,5 @@
+import { useState } from "react"
+import { formatFechaHora } from "../fecha"
 import {
   ABIERTOS,
   ESTADOS,
@@ -71,11 +73,27 @@ type Props = {
 
 export function Labores(props: Props) {
   const puedeAsignar = props.rol !== "capataz"
+  const [equipoVista, setEquipoVista] = useState("")
+  const visibles = props.items.filter((item) => !equipoVista || item.capatazId === equipoVista)
+  const avisoError = /no se|sin conexión|error/i.test(props.notice)
   return (
     <section className="block">
       <h2>Labores</h2>
       <p className="lede">Puntos abiertos. El color es el estado y la letra, el tipo.</p>
       {props.rol === "capataz" && <p className="hint">Solo ve las labores de su equipo.</p>}
+      {puedeAsignar && (
+        <label className="field">
+          Equipo
+          <select value={equipoVista} onChange={(event) => setEquipoVista(event.target.value)}>
+            <option value="">Todos los equipos</option>
+            {props.equipos.map((equipo) => (
+              <option key={equipo.id} value={equipo.id}>
+                {equipo.equipo}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <div className="checks">
         {ESTADOS.filter((estado) => (ABIERTOS as readonly string[]).includes(estado.id)).map((estado) => (
           <label key={estado.id}>
@@ -170,10 +188,10 @@ export function Labores(props: Props) {
           </button>
         </p>
       )}
-      {props.notice && <p className="hint">{props.notice}</p>}
+      {props.notice && <p className={avisoError ? "status error" : "banner"}>{props.notice}</p>}
       <ul className="labor-list">
-        {props.items.length === 0 && <li className="empty">No hay labores con este filtro.</li>}
-        {props.items.map((item) => (
+        {visibles.length === 0 && <li className="empty">No hay labores con este filtro.</li>}
+        {visibles.map((item) => (
           <li key={item.id}>
             <button type="button" className={props.selected?.id === item.id ? "labor on" : "labor"} onClick={() => props.onSelect(item.id)}>
               <span className="marca" data-estado={item.estado}>
@@ -282,7 +300,7 @@ export function Labores(props: Props) {
                       {evento.equipo ? ` · ${evento.equipo}` : ""}
                       {` · ${evento.actor_rol}`}
                     </span>
-                    <time>{evento.created_at.replace("T", " ").slice(0, 16)}</time>
+                    <time dateTime={evento.created_at}>{formatFechaHora(evento.created_at)}</time>
                   </li>
                 ))}
               </ol>

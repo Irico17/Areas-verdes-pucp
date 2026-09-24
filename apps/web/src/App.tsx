@@ -456,7 +456,21 @@ export default function App() {
     }
   }
 
-  if (!sesionLista) return <p className="boot">Abriendo la sesión…</p>
+  if (!sesionLista) {
+    return (
+      <main className="gate" aria-busy="true">
+        <section className="gate-brand">
+          <h1>Campus Verde</h1>
+        </section>
+        <section className="gate-form">
+          <div className="skel-wrap">
+            <div className="skel" />
+            <div className="skel" />
+          </div>
+        </section>
+      </main>
+    )
+  }
   if (!sesion) return <Login onIn={setSesion} />
 
   const permitidos = modulosDe(rol)
@@ -465,18 +479,34 @@ export default function App() {
 
   return (
     <div className={railOpen ? "shell" : "shell panel-off"}>
+      <a className="skip" href="#panel">Saltar al panel</a>
+      <header className="topbar">
+        <div className="brand">
+          <strong>Campus Verde</strong>
+          <span>PUCP Pando</span>
+        </div>
+        <button type="button" className="menu-btn" onClick={() => setRailOpen((open) => !open)}>
+          {railOpen ? "Ocultar" : "Panel"}
+        </button>
+        <div className="top-spacer" />
+        <div className="roles" role="group" aria-label="Vista del mapa">
+          <button type="button" aria-pressed={!relieve} onClick={() => setRelieve(false)}>Plano</button>
+          <button type="button" aria-pressed={relieve} onClick={() => setRelieve(true)}>Relieve</button>
+        </div>
+        <div className="session">
+          <span>{sesion.nombre}</span>
+          <button type="button" onClick={() => void salir().then(() => setSesion(null))}>Salir</button>
+        </div>
+      </header>
       <nav className="guard" aria-label="Módulos">
         {MODULOS.filter((item) => permitidos.includes(item.id)).map((item) => (
           <button key={item.id} type="button" aria-pressed={moduloActivo === item.id} onClick={() => { setModulo(item.id); setRailOpen(true) }}>
             {item.label}
           </button>
         ))}
-        <div className="who">
-          <div>{sesion.nombre}</div>
-          <button type="button" onClick={() => void salir().then(() => setSesion(null))}>Salir</button>
-        </div>
       </nav>
-      <aside className="panel">
+      <aside className="panel" id="panel">
+        <div key={moduloActivo} className="panel-view">
         <p className={load.kind === "error" || activityError ? "status error" : "status"}>
           {load.kind === "error" ? load.message : summary}
           {activityError ? ` · ${activityError}` : ""}
@@ -610,8 +640,9 @@ export default function App() {
         {moduloActivo === "catastro" && <CatastroPanel />}
         {moduloActivo === "solicitudes" && <SolicitudesPanel actividadId={selected?.queued ? "" : selected?.id ?? ""} />}
         {moduloActivo === "reportes" && <ReportesPanel />}
-        {moduloActivo === "catalogos" && <CatalogosPanel />}
+        {moduloActivo === "catalogos" && <CatalogosPanel editable={rol === "admin"} />}
         {moduloActivo === "admin" && <AdminPanel />}
+        </div>
       </aside>
       <div className="stage">
         <MapBoundary>
@@ -641,20 +672,6 @@ export default function App() {
             }}
           />
         </MapBoundary>
-        <header className="topbar">
-          <div className="brand">
-            <strong>Campus Verde</strong>
-            <span>PUCP Pando · {sesion.nombre}</span>
-          </div>
-          <button type="button" className="menu-btn" onClick={() => setRailOpen((open) => !open)}>
-            Panel
-          </button>
-          <div className="top-spacer" />
-          <div className="roles" role="group" aria-label="Vista del mapa">
-            <button type="button" aria-pressed={!relieve} onClick={() => setRelieve(false)}>Plano</button>
-            <button type="button" aria-pressed={relieve} onClick={() => setRelieve(true)}>Relieve</button>
-          </div>
-        </header>
       </div>
     </div>
   )

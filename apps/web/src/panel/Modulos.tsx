@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react"
-import { ApiError } from "../operacion"
+import { FechaCampo } from "../FechaCampo"
+import { formatFecha, hoyISO } from "../fecha"
+import { ApiError, ESTADOS, etiquetaEstado, etiquetaTipo } from "../operacion"
 import {
   crearAreaSinGeom,
   crearCatalogo,
@@ -43,34 +45,50 @@ export function Login(props: { onIn: (usuario: Usuario) => void }) {
   }
 
   return (
-    <main className="login">
-      <p className="login-kicker">PUCP Pando</p>
-      <h1>Campus Verde</h1>
-      <p className="lede">Supervisión de áreas verdes. La sesión es local: el SSO de la universidad no está conectado.</p>
-      <form onSubmit={(event) => void submit(event)}>
-        <label className="field">
-          Usuario
-          <input value={usuario} onChange={(event) => setUsuario(event.target.value)} autoComplete="username" required />
-        </label>
-        <label className="field">
-          Clave
-          <input type="password" value={clave} onChange={(event) => setClave(event.target.value)} autoComplete="current-password" required />
-        </label>
-        {error && <p className="status error">{error}</p>}
-        <button type="submit" className="primary" disabled={pending}>
-          {pending ? "Entrando…" : "Entrar"}
-        </button>
-      </form>
-      <p className="hint">
-        Cuentas de esta instalación: norte, sur, riego, coordinacion, jefatura, admin. Clave local: pando-local.
-      </p>
+    <main className="gate">
+      <section className="gate-brand">
+        <svg className="gate-mark" viewBox="0 0 48 48" aria-hidden="true">
+          <rect x="4" y="8" width="22" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <rect x="20" y="22" width="22" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
+        <h1>Campus Verde</h1>
+        <p>Áreas verdes de PUCP Pando. La sesión es local: el SSO de la universidad no está conectado.</p>
+      </section>
+      <section className="gate-form">
+        <div className="gate-card">
+          <h2>Entrar al turno</h2>
+          <form onSubmit={(event) => void submit(event)}>
+            <label className="field">
+              Usuario
+              <input value={usuario} onChange={(event) => setUsuario(event.target.value)} autoComplete="username" required />
+            </label>
+            <label className="field">
+              Clave
+              <input type="password" value={clave} onChange={(event) => setClave(event.target.value)} autoComplete="current-password" required />
+            </label>
+            {error && <p className="status error">{error}</p>}
+            <button type="submit" className="primary" disabled={pending}>
+              {pending ? "Entrando…" : "Entrar"}
+            </button>
+          </form>
+          <p className="hint">
+            Cuentas de esta instalación: norte, sur, riego, coordinacion, jefatura, admin. Clave local: pando-local.
+          </p>
+        </div>
+      </section>
     </main>
   )
+}
+
+function tituloFicha(row: Ficha): string {
+  const nombre = row.nombre.trim()
+  return nombre || row.feature_id
 }
 
 export function CatastroPanel() {
   const [q, setQ] = useState("")
   const [rows, setRows] = useState<Ficha[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [sel, setSel] = useState<Ficha | null>(null)
   const [nombreNuevo, setNombreNuevo] = useState("")
@@ -78,11 +96,14 @@ export function CatastroPanel() {
   const [aviso, setAviso] = useState("")
 
   async function load(query = q) {
+    setLoading(true)
     try {
       setRows(await fetchFichas(query))
       setError("")
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo leer el catastro")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -91,100 +112,117 @@ export function CatastroPanel() {
   }, [])
 
   return (
-    <section className="block">
-      <h2>Catastro</h2>
-      <p className="lede">Metadatos de las áreas. Una ficha puede existir sin geometría.</p>
-      <form
-        className="form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void load(q)
-        }}
-      >
-        <label className="field">
-          Buscar
-          <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Nombre o código" />
-        </label>
-        <button type="submit">Buscar</button>
-      </form>
-      {error && <p className="status error">{error}</p>}
-      {rows.length === 0 && !error && <p className="empty">Ningún área coincide con esa búsqueda.</p>}
-      <ul className="labor-list">
-        {rows.map((row) => (
-          <li key={row.feature_id}>
-            <button
-              type="button"
-              className={sel?.feature_id === row.feature_id ? "labor on" : "labor"}
-              onClick={() => setSel(row)}
-            >
-              <span>
-                <strong>{row.nombre || "Sin nombre"}</strong>
-                <small>
-                  {row.feature_id}
-                  {row.con_geometria ? "" : " · sin geometría"}
-                </small>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      {sel && (
+    <section className="split">
+      <div className="split-list">
+        <h2>Catastro</h2>
+        <p className="lede">Las áreas con nombre van primero. Si el catastro no trae nombre, se muestra el código.</p>
         <form
           className="form"
           onSubmit={(event) => {
             event.preventDefault()
-            void guardarFicha(sel)
-              .then(() => setAviso("Ficha guardada."))
-              .catch((err: unknown) => setAviso(err instanceof Error ? err.message : "No se pudo guardar"))
+            void load(q)
+          }}
+        >
+          <label className="field">
+            Buscar
+            <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Nombre, código o uso" />
+          </label>
+          <button type="submit">Buscar</button>
+        </form>
+        {error && <p className="status error">{error}</p>}
+        {loading && (
+          <div className="skel-wrap" aria-hidden="true">
+            <div className="skel" />
+            <div className="skel" />
+            <div className="skel" />
+          </div>
+        )}
+        {!loading && rows.length === 0 && !error && <p className="empty">Ningún área coincide con esa búsqueda.</p>}
+        <ul className="labor-list">
+          {rows.map((row) => (
+            <li key={row.feature_id}>
+              <button
+                type="button"
+                className={sel?.feature_id === row.feature_id ? "labor on" : "labor"}
+                onClick={() => setSel(row)}
+              >
+                <span>
+                  <strong>{tituloFicha(row)}</strong>
+                  <small>
+                    {row.nombre.trim() ? row.feature_id : "Sin nombre en el catastro"}
+                    {row.uso ? ` · ${row.uso}` : ""}
+                    {row.con_geometria ? "" : " · sin geometría"}
+                  </small>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="split-detail">
+        {!sel && <p className="empty">Elija un área. La ficha queda en este panel, sin bajar por la lista.</p>}
+        {sel && (
+          <form
+            className="form"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void guardarFicha(sel)
+                .then(() => {
+                  setAviso("Ficha guardada.")
+                  setRows((current) => current.map((row) => (row.feature_id === sel.feature_id ? sel : row)))
+                })
+                .catch((err: unknown) => setAviso(err instanceof Error ? err.message : "No se pudo guardar"))
+            }}
+          >
+            <h3>{tituloFicha(sel)}</h3>
+            <label className="field">
+              Nombre
+              <input value={sel.nombre} onChange={(event) => setSel({ ...sel, nombre: event.target.value })} />
+            </label>
+            <label className="field">
+              Uso
+              <input value={sel.uso} onChange={(event) => setSel({ ...sel, uso: event.target.value })} />
+            </label>
+            <label className="field">
+              Riego actual
+              <input value={sel.riego_act} onChange={(event) => setSel({ ...sel, riego_act: event.target.value })} />
+            </label>
+            <label className="field">
+              Referencia
+              <input value={sel.referencia} onChange={(event) => setSel({ ...sel, referencia: event.target.value })} />
+            </label>
+            <button type="submit" className="primary">
+              Guardar ficha
+            </button>
+          </form>
+        )}
+        <h3>Área sin GPS</h3>
+        <form
+          className="form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void crearAreaSinGeom(nombreNuevo, usoNuevo)
+              .then(() => {
+                setNombreNuevo("")
+                setUsoNuevo("")
+                setAviso("Área creada sin geometría.")
+                return load(q)
+              })
+              .catch((err: unknown) => setAviso(err instanceof Error ? err.message : "No se pudo crear"))
           }}
         >
           <label className="field">
             Nombre
-            <input value={sel.nombre} onChange={(event) => setSel({ ...sel, nombre: event.target.value })} />
+            <input value={nombreNuevo} onChange={(event) => setNombreNuevo(event.target.value)} required />
           </label>
           <label className="field">
             Uso
-            <input value={sel.uso} onChange={(event) => setSel({ ...sel, uso: event.target.value })} />
+            <input value={usoNuevo} onChange={(event) => setUsoNuevo(event.target.value)} />
           </label>
-          <label className="field">
-            Riego actual
-            <input value={sel.riego_act} onChange={(event) => setSel({ ...sel, riego_act: event.target.value })} />
-          </label>
-          <label className="field">
-            Referencia
-            <input value={sel.referencia} onChange={(event) => setSel({ ...sel, referencia: event.target.value })} />
-          </label>
-          <button type="submit" className="primary">
-            Guardar ficha
-          </button>
+          <button type="submit">Registrar sin geometría</button>
         </form>
-      )}
-      <h3>Área sin GPS</h3>
-      <form
-        className="form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void crearAreaSinGeom(nombreNuevo, usoNuevo)
-            .then(() => {
-              setNombreNuevo("")
-              setUsoNuevo("")
-              setAviso("Área creada sin geometría.")
-              return load(q)
-            })
-            .catch((err: unknown) => setAviso(err instanceof Error ? err.message : "No se pudo crear"))
-        }}
-      >
-        <label className="field">
-          Nombre
-          <input value={nombreNuevo} onChange={(event) => setNombreNuevo(event.target.value)} required />
-        </label>
-        <label className="field">
-          Uso
-          <input value={usoNuevo} onChange={(event) => setUsoNuevo(event.target.value)} />
-        </label>
-        <button type="submit">Registrar sin geometría</button>
-      </form>
-      {aviso && <p className="hint">{aviso}</p>}
+        {aviso && <p className={aviso.toLowerCase().includes("no se") ? "status error" : "banner"}>{aviso}</p>}
+      </div>
     </section>
   )
 }
@@ -289,7 +327,7 @@ export function SolicitudesPanel(props: { actividadId: string }) {
       </form>
       <h3>Órdenes de servicio</h3>
       <p className="lede">Solo se vinculan a una labor marcada como tercerizada. Sin orden, esa labor no se cierra.</p>
-      {ordenes.length === 0 && <p className="empty">No hay órdenes.</p>}
+      {ordenes.length === 0 && <p className="empty">Todavía no hay órdenes. Una labor tercerizada no se cierra hasta que exista una.</p>}
       <ul className="labor-list">
         {ordenes.map((row) => (
           <li key={row.id} className="agenda">
@@ -371,15 +409,22 @@ export function ReportesPanel() {
       >
         <label className="field">
           Estado
-          <input value={estado} onChange={(event) => setEstado(event.target.value)} placeholder="pendiente, en_proceso…" />
+          <select value={estado} onChange={(event) => setEstado(event.target.value)}>
+            <option value="">Todos</option>
+            {ESTADOS.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="field">
           Desde
-          <input type="date" value={desde} onChange={(event) => setDesde(event.target.value)} />
+          <FechaCampo value={desde} onChange={setDesde} />
         </label>
         <label className="field">
           Hasta
-          <input type="date" value={hasta} onChange={(event) => setHasta(event.target.value)} />
+          <FechaCampo value={hasta} onChange={setHasta} />
         </label>
         <button type="submit" className="primary">
           Actualizar
@@ -389,10 +434,11 @@ export function ReportesPanel() {
       {data && (
         <>
           <p className="hint">{data.aviso}</p>
-          <ul className="checks">
+          <ul className="counts">
             {data.por_estado.map((row) => (
               <li key={row.estado}>
-                {row.estado}: {row.n}
+                <strong>{row.n}</strong>
+                <span>{etiquetaEstado(row.estado)}</span>
               </li>
             ))}
           </ul>
@@ -406,7 +452,7 @@ export function ReportesPanel() {
               <li key={row.id} className="agenda">
                 <strong>{row.titulo}</strong>
                 <small>
-                  {row.tipo} · {row.estado} · {row.ejecutor}
+                  {etiquetaTipo(row.tipo)} · {etiquetaEstado(row.estado)} · {row.ejecutor}
                   {row.codigo_externo ? ` · ${row.codigo_externo}` : ""}
                 </small>
               </li>
@@ -429,7 +475,7 @@ const CLASES = [
   ["fuente", "Fuentes"],
 ] as const
 
-export function CatalogosPanel() {
+export function CatalogosPanel(props: { editable: boolean }) {
   const [clase, setClase] = useState<string>("tipo_actividad")
   const [items, setItems] = useState<CatalogoItem[]>([])
   const [error, setError] = useState("")
@@ -473,7 +519,7 @@ export function CatalogosPanel() {
               {item.activo ? "" : " · inactivo"}
             </strong>
             <small>{item.codigo}</small>
-            {item.activo && (
+            {props.editable && item.activo && (
               <button type="button" className="link" onClick={() => void desactivarCatalogo(item.id).then(() => load())}>
                 Desactivar
               </button>
@@ -481,6 +527,7 @@ export function CatalogosPanel() {
           </li>
         ))}
       </ul>
+      {props.editable && (
       <form
         className="form"
         onSubmit={(event) => {
@@ -506,6 +553,8 @@ export function CatalogosPanel() {
           Agregar
         </button>
       </form>
+      )}
+      {!props.editable && <p className="hint">Puede consultar el catálogo. Solo administración lo modifica.</p>}
     </section>
   )
 }
@@ -525,7 +574,13 @@ export function AdminPanel() {
       <h2>Admin</h2>
       <p className="lede">{data?.aviso || "Cuentas locales. El SSO institucional no forma parte de este piloto."}</p>
       {error && <p className="status error">{error}</p>}
-      {!data && !error && <p className="hint">Leyendo cuentas…</p>}
+      {!data && !error && (
+        <div className="skel-wrap" aria-hidden="true">
+          <div className="skel" />
+          <div className="skel" />
+          <div className="skel" />
+        </div>
+      )}
       <ul className="labor-list">
         {(data?.usuarios ?? []).map((user) => (
           <li key={user.id} className="agenda">
@@ -557,7 +612,7 @@ export function RiegoPanel(props: { capatazId: string }) {
   const [error, setError] = useState("")
   const [sector, setSector] = useState("Eje central")
   const [turno, setTurno] = useState("manana")
-  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10))
+  const [fecha, setFecha] = useState(hoyISO)
   const [nota, setNota] = useState("")
 
   async function load() {
@@ -586,7 +641,7 @@ export function RiegoPanel(props: { capatazId: string }) {
           <li key={row.id} className="agenda">
             <strong>{row.sector}</strong>
             <small>
-              {row.fecha} · {row.turno} · {row.equipo || "sin equipo"}
+              {formatFecha(row.fecha)} · {row.turno === "manana" ? "mañana" : row.turno} · {row.equipo || "sin equipo"}
             </small>
           </li>
         ))}
@@ -623,7 +678,7 @@ export function RiegoPanel(props: { capatazId: string }) {
         </label>
         <label className="field">
           Fecha
-          <input type="date" value={fecha} onChange={(event) => setFecha(event.target.value)} required />
+          <FechaCampo value={fecha} onChange={setFecha} required />
         </label>
         <label className="field">
           Nota

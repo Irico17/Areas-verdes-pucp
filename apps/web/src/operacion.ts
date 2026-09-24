@@ -19,11 +19,11 @@ export const TIPOS = [
 ] as const
 
 export const ESTADOS = [
-  { id: "pendiente", label: "Pendiente", color: "#8a6a12" },
-  { id: "en_proceso", label: "En proceso", color: "#145c3e" },
-  { id: "bloqueada", label: "Bloqueada", color: "#8d2f2c" },
-  { id: "cerrada", label: "Cerrada", color: "#5c6560" },
-  { id: "cancelada", label: "Cancelada", color: "#8a8478" },
+  { id: "pendiente", label: "Pendiente", color: "#8a6410" },
+  { id: "en_proceso", label: "En proceso", color: "#1a5c44" },
+  { id: "bloqueada", label: "Bloqueada", color: "#8c3832" },
+  { id: "cerrada", label: "Cerrada", color: "#5c6a62" },
+  { id: "cancelada", label: "Cancelada", color: "#5c6a62" },
 ] as const
 
 export const ABIERTOS = ["pendiente", "en_proceso", "bloqueada"] as const

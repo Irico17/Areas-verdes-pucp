@@ -37,8 +37,8 @@ export const LAYERS: LayerSpec[] = [
     hint: "Catastro principal",
     path: "/api/v1/geo/areas",
     defaultOn: true,
-    fill: "#1e4d3a",
-    line: "#10281e",
+    fill: "#1a5c44",
+    line: "#0e3b2c",
     fillOpacity: 0.32,
   },
   {
@@ -47,8 +47,8 @@ export const LAYERS: LayerSpec[] = [
     hint: "Sectores operativos, sin nombres de personas",
     path: "/api/v1/geo/zonas",
     defaultOn: true,
-    fill: "#a8843d",
-    line: "#5c4618",
+    fill: "#5c6a62",
+    line: "#3e5148",
     fillOpacity: 0.14,
   },
   {
@@ -57,8 +57,8 @@ export const LAYERS: LayerSpec[] = [
     hint: "Capa auxiliar",
     path: "/api/v1/geo/capas/jardines_reserva",
     defaultOn: false,
-    fill: "#3d5c78",
-    line: "#24384a",
+    fill: "#2f4a44",
+    line: "#1a3330",
     fillOpacity: 0.28,
   },
   {
@@ -67,8 +67,8 @@ export const LAYERS: LayerSpec[] = [
     hint: "Capa auxiliar",
     path: "/api/v1/geo/capas/xerofitica",
     defaultOn: false,
-    fill: "#8c4a32",
-    line: "#5a2e1e",
+    fill: "#6e5344",
+    line: "#4a3428",
     fillOpacity: 0.4,
   },
 ]
