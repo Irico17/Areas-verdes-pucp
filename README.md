@@ -11,10 +11,10 @@ Fuentes oficiales en [`docs/fuente/`](docs/fuente/). Plan de mapa: [`docs/PLAN-I
 | API | **Go + Gin + GORM** — monolito modular | Fase A |
 | Datos | **PostgreSQL + PostGIS** en la misma base (sin GeoServer) | Fase B |
 | Catastro | ETL `data/raw` → `data/v1` → PostGIS, EPSG:4326 | Fase B |
-| PWA | React + TypeScript + MapLibre | Fase C, fuera de este corte |
+| PWA | React + TypeScript + Vite + MapLibre | Fase C |
 | Objetos | Bucket privado tipo S3 | Posterior |
 
-Roles previstos: **Capataz**, **Ingeniería/Coordinación**, **Jefatura**. Este corte no incluye auth ni SSO.
+Roles en el visor: **Jefatura**, **Coordinación**, **Capataz**. Es un interruptor local, no SSO.
 
 ## Qué hay cargado
 
@@ -29,7 +29,7 @@ Las zonas **no** guardan el campo `jefes` (nombres de personas). El identificado
 
 ## Cómo correrlo en local
 
-Requisitos: Docker (Compose v2), Go 1.22+.
+Requisitos: Docker (Compose v2), Go 1.22+, Node 22+ para el visor.
 
 ```bash
 cp .env.example .env
@@ -42,7 +42,14 @@ make api
 
 Equivalente: `make bootstrap` y después `make api`.
 
-La API escucha en **http://127.0.0.1:8091**.
+La API escucha en **http://127.0.0.1:8091**. El visor, en otra terminal:
+
+```bash
+cd apps/web && npm install
+make web
+```
+
+Abre **http://127.0.0.1:4317**. Vite reenvía `/api` y `/health` a la API.
 
 ```bash
 curl -s http://127.0.0.1:8091/health
@@ -88,7 +95,7 @@ Detalle del contrato: [`apps/api/openapi.yaml`](apps/api/openapi.yaml) y [`apps/
 
 ```
 apps/api          API Go (cmd/api, cmd/migrate, cmd/etl)
-apps/web          PWA (placeholder, Fase C)
+apps/web          Visor PWA (React, MapLibre, OSM)
 data/raw          recovery, no editar
 data/v1           GeoJSON normalizado (salida del ETL)
 data/mocks        reservas FAKE
@@ -102,11 +109,11 @@ docker-compose.yml
 | Doc | Contenido |
 |-----|-----------|
 | [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) | Arquitectura DP2 |
-| [`docs/PLAN-INTEGRACION-MAPA.md`](docs/PLAN-INTEGRACION-MAPA.md) | Fases A–F (A y B hechas) |
+| [`docs/PLAN-INTEGRACION-MAPA.md`](docs/PLAN-INTEGRACION-MAPA.md) | Fases A–F (A, B y C hechas) |
 | [`docs/PLAN-MIGRACION.md`](docs/PLAN-MIGRACION.md) | Migración legacy → DP2 |
 | [`docs/DECISIONES.md`](docs/DECISIONES.md) | ADRs, incluido CRS y PII de zonas |
 | [`docs/legacy-recovery/`](docs/legacy-recovery/) | Análisis del monolito Leaflet |
 
 ## Fuera de este corte
 
-Fase C (visor MapLibre), auth/SSO, Fase D (actividades en el mapa), Fase E (3D), Fase F (tachos, flora, bebederos…), Google Sheets en runtime y reservas reales (solo el mock FAKE).
+SSO institucional, Fase D (actividades en el mapa), Fase E (3D), Fase F (tachos, flora, bebederos…), Google Sheets en runtime y reservas reales (solo el mock FAKE).

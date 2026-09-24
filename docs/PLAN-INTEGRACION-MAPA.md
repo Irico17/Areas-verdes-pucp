@@ -43,13 +43,13 @@ Fuentes: `docs/fuente/Propuesta_Arquitectura_DP2_v0.2.docx`, backlog épica J (H
 **CRS:** EPSG:4326 (lon/lat), el que espera MapLibre / RFC 7946.  
 **MVP catastro (RF-04/06):** sí. **Marcadores de actividad:** no aún.
 
-### Fase C — Visor mapa en PWA (OSM + capas catastro)
+### Fase C — Visor mapa en PWA (OSM + capas catastro) *(hecha, 2026-09-24)*
 
 **Objetivo:** mapa 2D de consulta sobre catastro, sin depender aún del CRUD completo de actividades.
 
-- [ ] Scaffold PWA React+TS en `apps/web`.
-- [ ] Base OSM; capas on/off (zonas, sectores, áreas).
-- [ ] Auth stub + roles para quién ve el visor.
+- [x] Scaffold PWA React+TS en `apps/web`.
+- [x] Base OSM; capas on/off (zonas, sectores, áreas, jardines y xerofítica).
+- [x] Auth stub + roles para quién ve el visor (Jefatura / Coordinación / Capataz, sin SSO).
 
 **MVP visor:** sí como base de CORE. **Crear actividad desde mapa:** Fase D.
 
@@ -97,7 +97,7 @@ Implementar **después** (o en paralelo controlado) de tener modelo de actividad
 |------|----------------|
 | A | Repo y docs hablan solo de Go API; esqueleto Gin/GORM y OpenAPI publicados. **Hecho.** |
 | B | PostGIS: 521 áreas, 534 zonas, CRS 4326; capas opcionales 21 + 10. **Hecho.** |
-| C | Demo: OSM + 2–3 capas catastro desde API |
+| C | Demo: OSM + 2–3 capas catastro desde API. **Hecho.** |
 | D | Demo: crear actividad con pin, verla como marcador, capataz solo ve las suyas |
 | E | Extrusión visible sin romper 2D |
 | F | Capas legacy must-have del inventario en checklist opcional |

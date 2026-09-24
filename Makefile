@@ -6,7 +6,7 @@ include .env
 export
 endif
 
-.PHONY: help env up down wait migrate etl api test bootstrap counts
+.PHONY: help env up down wait migrate etl api web test bootstrap counts
 
 help:
 	@echo "make bootstrap   # compose + migraciones + ETL"
@@ -15,6 +15,7 @@ help:
 	@echo "make migrate     # aplica SQL de apps/api/migrations"
 	@echo "make etl         # data/raw → data/v1 → PostGIS"
 	@echo "make api         # GET /health y /api/v1/geo/..."
+	@echo "make web         # visor MapLibre en http://127.0.0.1:4317"
 	@echo "make test        # go test ./..."
 	@echo "make counts      # conteos en PostGIS"
 	@echo "make down        # detiene compose"
@@ -39,6 +40,9 @@ etl: env
 
 api: env
 	cd apps/api && go run ./cmd/api
+
+web:
+	cd apps/web && npm run dev
 
 test:
 	cd apps/api && go test ./...

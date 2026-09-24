@@ -1,15 +1,24 @@
 # apps/web
 
-PWA del sistema DP2 — **React + TypeScript** (propuesta de equipo).
+Visor PWA del campus: React, TypeScript, Vite y MapLibre. El mapa no tiene backend propio; habla con `apps/api`.
 
-## Responsabilidades previstas
+## Arranque
 
-- Interfaz campo (Capataz) y oficina (Ingeniería/Coordinación, Jefatura).
-- Offline: IndexedDB + cola de sync (labores, riego, evidencias).
-- **Módulo mapa**: base OSM, capas de catastro, marcadores/supervisión de actividades (épica CORE del backlog) — consume `apps/api`, sin backend propio.
+Con la API en el puerto 8091:
 
-## Estado
+```bash
+npm install
+npm run dev
+```
 
-Placeholder del monorepo. **No hay app Vite ejecutable aún.**
+Desde la raíz del repo: `make web`. Abre http://127.0.0.1:4317.
 
-Próximo paso (Fase C): scaffold Vite+React+TS + visor mapa leyendo geo de Catastro.
+Vite reenvía `/api` y `/health` a `http://127.0.0.1:8091`.
+
+## Qué muestra
+
+- Base OpenStreetMap (teselas raster). Sin Street View.
+- Capas de catastro: áreas, zonas, jardines de reserva y xerofítica.
+- Interruptor de rol (Jefatura, Coordinación, Capataz) guardado en el navegador. No es SSO.
+
+El manifiesto PWA y el service worker se generan con `vite-plugin-pwa`. En desarrollo el worker no intercepta la API.
