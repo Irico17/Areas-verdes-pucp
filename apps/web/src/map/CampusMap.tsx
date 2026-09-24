@@ -161,9 +161,9 @@ export function CampusMap({
             type: "circle",
             source: `inv-${layer.id}`,
             paint: {
-              "circle-radius": 5,
+              "circle-radius": layer.id === "bebederos" ? 8 : 6.5,
               "circle-color": layer.color,
-              "circle-stroke-width": 1.25,
+              "circle-stroke-width": 1.5,
               "circle-stroke-color": "#f6f3ec",
             },
           })
