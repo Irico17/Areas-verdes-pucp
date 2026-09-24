@@ -104,7 +104,22 @@ export function CatastroPanel() {
   }
 
   useEffect(() => {
-    void load("")
+    let cancelled = false
+    fetchFichas("")
+      .then((rows) => {
+        if (cancelled) return
+        setRows(rows)
+        setError("")
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "No se pudo leer el catastro")
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (
@@ -247,7 +262,20 @@ export function SolicitudesPanel(props: { actividadId: string }) {
   }
 
   useEffect(() => {
-    void load()
+    let cancelled = false
+    Promise.all([fetchSolicitudes(), fetchOrdenes()])
+      .then(([sol, ord]) => {
+        if (cancelled) return
+        setRows(sol)
+        setOrdenes(ord)
+        setError("")
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : "No se pudieron leer las solicitudes")
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (
@@ -389,7 +417,19 @@ export function ReportesPanel() {
   }
 
   useEffect(() => {
-    void load()
+    let cancelled = false
+    fetchReporte("", "", "")
+      .then((report) => {
+        if (cancelled) return
+        setData(report)
+        setError("")
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "No se pudo armar el reporte")
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (
@@ -488,7 +528,19 @@ export function CatalogosPanel(props: { editable: boolean }) {
   }
 
   useEffect(() => {
-    void load(clase)
+    let cancelled = false
+    fetchCatalogo(clase, false)
+      .then((next) => {
+        if (cancelled) return
+        setItems(next)
+        setError("")
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "No se pudo leer el catálogo")
+      })
+    return () => {
+      cancelled = true
+    }
   }, [clase])
 
   return (
@@ -623,7 +675,20 @@ export function RiegoPanel(props: { capatazId: string }) {
   }
 
   useEffect(() => {
-    void load()
+    let cancelled = false
+    fetchRiego()
+      .then((body) => {
+        if (cancelled) return
+        setAviso(body.aviso)
+        setRows(body.registros)
+        setError("")
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "No se pudo leer el riego")
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (

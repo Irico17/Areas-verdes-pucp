@@ -110,14 +110,17 @@ export function CampusMap({
   const onCatastro = useRef(onSelectCatastro)
   const onActividad = useRef(onSelectActividad)
   const onPinRef = useRef(onPin)
-  pinRef.current = pinMode
   const inventoryRef = useRef(inventory)
   const inventoryOnRef = useRef(inventoryOn)
-  inventoryRef.current = inventory
-  inventoryOnRef.current = inventoryOn
-  onCatastro.current = onSelectCatastro
-  onActividad.current = onSelectActividad
-  onPinRef.current = onPin
+
+  useEffect(() => {
+    pinRef.current = pinMode
+    inventoryRef.current = inventory
+    inventoryOnRef.current = inventoryOn
+    onCatastro.current = onSelectCatastro
+    onActividad.current = onSelectActividad
+    onPinRef.current = onPin
+  }, [pinMode, inventory, inventoryOn, onSelectCatastro, onSelectActividad, onPin])
 
   useEffect(() => {
     if (!host.current || mapRef.current) return
