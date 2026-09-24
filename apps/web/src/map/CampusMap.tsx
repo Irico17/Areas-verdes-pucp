@@ -152,7 +152,7 @@ export function CampusMap({
         source: "areas",
         layout: { visibility: "none" },
         paint: {
-          "fill-extrusion-color": "#1a5c44",
+          "fill-extrusion-color": "#308046",
           "fill-extrusion-opacity": 0.8,
           "fill-extrusion-height": [
             "interpolate",
@@ -225,14 +225,14 @@ export function CampusMap({
             "pendiente",
             "#8a6410",
             "en_proceso",
-            "#1a5c44",
+            "#308046",
             "bloqueada",
             "#8c3832",
             "cerrada",
             "#5c6a62",
             "cancelada",
             "#5c6a62",
-            "#1a2420",
+            "#083465",
           ],
         },
       })

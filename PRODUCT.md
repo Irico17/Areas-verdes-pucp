@@ -46,7 +46,7 @@ Módulos: Mapa (plano y relieve por extrusión), Labores, Catastro, Solicitudes 
 
 ## Brand Commitments
 
-Nombre: Campus Verde. Lugar: PUCP Pando. Voz: operativa, concreta, en español del Perú, sin eslóganes. El encargo rechaza el aspecto genérico de “IA” y el estado actual, descrito como feo: formulario de acceso pegado arriba a la izquierda, fechas en mm/dd/yyyy, lista de catastro dominada por “Sin nombre”.
+Nombre: VerdePUCP. Lugar: PUCP Pando. Voz: operativa, concreta, en español del Perú, sin eslóganes. El encargo rechaza el aspecto genérico de “IA” y el estado actual, descrito como feo: formulario de acceso pegado arriba a la izquierda, fechas en mm/dd/yyyy, lista de catastro dominada por “Sin nombre”.
 
 ## Evidence on Hand
 

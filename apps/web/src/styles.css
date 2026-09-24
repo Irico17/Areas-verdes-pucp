@@ -1,11 +1,13 @@
 :root {
-  --tinta: #1a2420;
-  --papel: #e4ebe4;
-  --hoja: #f7faf6;
-  --linea: #c5d2c8;
-  --yucca: #1a5c44;
-  --yucca-deep: #0e3b2c;
-  --yucca-ink: #f3faf6;
+  --tinta: #102033;
+  --papel: #e7eeeb;
+  --hoja: #f7faf8;
+  --linea: #c5d4ce;
+  --verde: #308046;
+  --marino: #083465;
+  --yucca: var(--verde);
+  --yucca-deep: var(--marino);
+  --yucca-ink: #f4faf6;
   --alerta: #8c3832;
   --pendiente: #8a6410;
   --muted: #3e5148;
@@ -69,16 +71,18 @@ a { color: var(--yucca-deep); }
   border-bottom: 1px solid var(--linea);
   z-index: 3;
 }
-.brand { min-width: 0; }
-.brand strong {
-  display: block;
-  font-family: Newsreader, Georgia, serif;
-  font-weight: 500;
-  font-size: 22px;
+.brand { min-width: 0; display: flex; align-items: center; gap: 10px; }
+.brand-mark { display: none; width: 36px; height: 36px; }
+.word {
+  font-family: "Familjen Grotesk", "Segoe UI", sans-serif;
+  font-weight: 700;
+  font-size: 20px;
   letter-spacing: -0.03em;
   line-height: 1;
 }
-.brand span { display: block; color: var(--muted); font-size: 12px; font-weight: 500; }
+.wv { color: var(--verde); }
+.wp { color: var(--marino); }
+.brand-sub { display: block; color: var(--muted); font-size: 12px; font-weight: 500; }
 .top-spacer { flex: 1; }
 .session {
   display: flex;
@@ -100,6 +104,8 @@ a { color: var(--yucca-deep); }
   padding: 12px 8px;
   gap: 4px;
 }
+.rail-mark { display: grid; place-items: center; padding: 4px 0 10px; }
+.rail-mark img { width: 44px; height: 44px; }
 .guard button {
   border: 0;
   background: transparent;
@@ -305,25 +311,17 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   background: var(--papel);
 }
 .gate-brand {
-  background: var(--yucca-deep);
-  color: var(--yucca-ink);
+  background: var(--hoja);
+  color: var(--tinta);
   padding: 56px 48px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  gap: 16px;
+  justify-content: center;
+  gap: 20px;
+  border-right: 1px solid var(--linea);
 }
-.gate-mark { width: 48px; height: 48px; }
-.gate-brand h1 {
-  font-family: Newsreader, Georgia, serif;
-  font-weight: 500;
-  font-size: 56px;
-  line-height: 1.02;
-  letter-spacing: -0.03em;
-  color: var(--yucca-ink);
-  max-width: 8ch;
-}
-.gate-brand p { margin: 0; max-width: 36ch; color: color-mix(in srgb, var(--yucca-ink) 82%, var(--yucca-deep)); }
+.gate-logo { width: min(100%, 460px); height: auto; }
+.gate-brand p { margin: 0; max-width: 36ch; color: var(--marino); }
 .gate-form {
   display: grid;
   place-items: center;
@@ -406,8 +404,9 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
     padding-left: 12px;
     z-index: 3;
   }
-  .brand strong { font-size: 18px; }
-  .brand span, .session span, .menu-btn { display: none; }
+  .brand-mark { display: block; }
+  .word { font-size: 18px; }
+  .brand-sub, .session span, .menu-btn, .rail-mark { display: none; }
   .roles button, .session button { min-height: 44px; }
   .guard {
     position: fixed;
@@ -505,7 +504,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
     min-height: 0;
     justify-content: flex-end;
   }
-  .gate-brand h1 { font-size: 40px; }
+  .gate-logo { width: min(100%, 320px); }
   .gate-form {
     align-items: start;
     padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
@@ -514,7 +513,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 }
 
 @media (max-width: 380px) {
-  .brand strong { font-size: 16px; }
+  .word { font-size: 16px; }
   .roles button { padding: 8px 8px; }
 }
 

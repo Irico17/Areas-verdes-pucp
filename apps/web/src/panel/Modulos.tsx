@@ -47,12 +47,8 @@ export function Login(props: { onIn: (usuario: Usuario) => void }) {
   return (
     <main className="gate">
       <section className="gate-brand">
-        <svg className="gate-mark" viewBox="0 0 48 48" aria-hidden="true">
-          <rect x="4" y="8" width="22" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" />
-          <rect x="20" y="22" width="22" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" />
-        </svg>
-        <h1>Campus Verde</h1>
-        <p>Áreas verdes de PUCP Pando. La sesión es local: el SSO de la universidad no está conectado.</p>
+        <img className="gate-logo" src="/logo-verdepucp.png" alt="VerdePUCP. Gestión de Áreas Verdes" />
+        <p>La sesión de esta instalación es local: el SSO de la universidad no está conectado.</p>
       </section>
       <section className="gate-form">
         <div className="gate-card">

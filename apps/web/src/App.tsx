@@ -460,7 +460,7 @@ export default function App() {
     return (
       <main className="gate" aria-busy="true">
         <section className="gate-brand">
-          <h1>Campus Verde</h1>
+          <img className="gate-logo" src="/logo-verdepucp.png" alt="VerdePUCP" />
         </section>
         <section className="gate-form">
           <div className="skel-wrap">
@@ -482,8 +482,11 @@ export default function App() {
       <a className="skip" href="#panel">Saltar al panel</a>
       <header className="topbar">
         <div className="brand">
-          <strong>Campus Verde</strong>
-          <span>PUCP Pando</span>
+          <img className="brand-mark" src="/isotipo.svg" alt="" />
+          <div>
+            <strong className="word"><span className="wv">Verde</span><span className="wp">PUCP</span></strong>
+            <span className="brand-sub">Gestión de Áreas Verdes</span>
+          </div>
         </div>
         <button type="button" className="menu-btn" onClick={() => setRailOpen((open) => !open)}>
           {railOpen ? "Ocultar" : "Panel"}
@@ -499,6 +502,7 @@ export default function App() {
         </div>
       </header>
       <nav className="guard" aria-label="Módulos">
+        <div className="rail-mark"><img src="/isotipo.svg" alt="VerdePUCP" /></div>
         {MODULOS.filter((item) => permitidos.includes(item.id)).map((item) => (
           <button key={item.id} type="button" aria-pressed={moduloActivo === item.id} onClick={() => { setModulo(item.id); setRailOpen(true) }}>
             {item.label}

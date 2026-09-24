@@ -37,8 +37,8 @@ export const LAYERS: LayerSpec[] = [
     hint: "Catastro principal",
     path: "/api/v1/geo/areas",
     defaultOn: true,
-    fill: "#1a5c44",
-    line: "#0e3b2c",
+    fill: "#308046",
+    line: "#083465",
     fillOpacity: 0.32,
   },
   {
@@ -47,8 +47,8 @@ export const LAYERS: LayerSpec[] = [
     hint: "Sectores operativos, sin nombres de personas",
     path: "/api/v1/geo/zonas",
     defaultOn: true,
-    fill: "#5c6a62",
-    line: "#3e5148",
+    fill: "#5a6e80",
+    line: "#083465",
     fillOpacity: 0.14,
   },
   {

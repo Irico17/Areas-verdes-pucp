@@ -1,14 +1,16 @@
 ---
-name: Campus Verde
-description: Mesa de guardia de las áreas verdes de PUCP Pando.
+name: VerdePUCP
+description: Gestión de Áreas Verdes. Mesa de guardia del campus PUCP Pando.
 colors:
-  tinta: "#1a2420"
-  papel: "#e4ebe4"
-  hoja: "#f7faf6"
-  linea: "#c5d2c8"
-  yucca: "#1a5c44"
-  yucca-deep: "#0e3b2c"
-  yucca-ink: "#f3faf6"
+  tinta: "#102033"
+  papel: "#e7eeeb"
+  hoja: "#f7faf8"
+  linea: "#c5d4ce"
+  verde: "#308046"
+  marino: "#083465"
+  yucca: "#308046"
+  yucca-deep: "#083465"
+  yucca-ink: "#f4faf6"
   alerta: "#8c3832"
   pendiente: "#8a6410"
   muted: "#3e5148"
@@ -78,7 +80,7 @@ components:
     padding: "10px 12px"
 ---
 
-# Design System: Campus Verde
+# Design System: VerdePUCP
 
 ## Overview
 

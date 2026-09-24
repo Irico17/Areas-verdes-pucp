@@ -9,6 +9,7 @@ import (
 func CSV(filas []Fila) string {
 	var b strings.Builder
 	b.WriteString("\uFEFF")
+	b.WriteString("VerdePUCP — Gestión de Áreas Verdes\n")
 	b.WriteString("id,titulo,tipo,estado,ejecutor,equipo,zona,codigo_externo,fuente,creada\n")
 	for _, f := range filas {
 		b.WriteString(csv(f.ID))
@@ -48,6 +49,7 @@ func ExcelXML(filas []Fila) string {
 	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
 	b.WriteString(`<?mso-application progid="Excel.Sheet"?>` + "\n")
 	b.WriteString(`<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Labores" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Table>`)
+	b.WriteString(`<Row><Cell><Data ss:Type="String">VerdePUCP — Gestión de Áreas Verdes</Data></Cell></Row>`)
 	cabeceras := []string{"id", "titulo", "tipo", "estado", "ejecutor", "equipo", "zona", "codigo_externo", "fuente", "creada"}
 	b.WriteString("<Row>")
 	for _, h := range cabeceras {
