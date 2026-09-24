@@ -382,13 +382,18 @@ func (h Atencion) CrearOrden(c *gin.Context) {
 }
 
 func (h Atencion) Riego(c *gin.Context) {
-	if _, ok := exige(c, "consultar"); !ok {
+	u, ok := exige(c, "consultar")
+	if !ok {
 		return
 	}
 	if !h.ready(c) {
 		return
 	}
-	rows, err := h.Store.ListarRiego(c.Request.Context())
+	scope := ""
+	if u.Rol == "capataz" {
+		scope = u.CapatazID
+	}
+	rows, err := h.Store.ListarRiego(c.Request.Context(), scope)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "no se pudo leer el riego"})
 		return

@@ -311,13 +311,13 @@ func nullFloat(v sql.NullFloat64) *float64 {
 
 // Ficha es un área sin depender del GeoJSON del mapa.
 type Ficha struct {
-	FeatureID string   `json:"feature_id"`
-	Nombre    string   `json:"nombre"`
-	Uso       string   `json:"uso"`
-	RiegoAct  string   `json:"riego_act"`
-	Referencia string  `json:"referencia"`
-	AreaM2    *float64 `json:"area_m2,omitempty"`
-	ConGeom   bool     `json:"con_geometria"`
+	FeatureID  string   `json:"feature_id"`
+	Nombre     string   `json:"nombre"`
+	Uso        string   `json:"uso"`
+	RiegoAct   string   `json:"riego_act"`
+	Referencia string   `json:"referencia"`
+	AreaM2     *float64 `json:"area_m2,omitempty"`
+	ConGeom    bool     `json:"con_geometria"`
 }
 
 // ErrFichaNoEncontrada: no hay área con ese feature_id.
@@ -330,8 +330,11 @@ func (s *Store) Fichas(ctx context.Context, q string) ([]Ficha, error) {
 		SELECT feature_id, COALESCE(nombre, ''), COALESCE(uso, ''), COALESCE(riego_act, ''),
 		       COALESCE(referencia, ''), area_m2, geom IS NOT NULL
 		FROM areas_verdes
-		WHERE ($1 = '' OR feature_id ILIKE '%' || $1 || '%' OR COALESCE(nombre, '') ILIKE '%' || $1 || '%')
-		ORDER BY feature_id
+		WHERE ($1 = '' OR feature_id ILIKE '%' || $1 || '%'
+		   OR COALESCE(nombre, '') ILIKE '%' || $1 || '%'
+		   OR COALESCE(codigo, '') ILIKE '%' || $1 || '%'
+		   OR COALESCE(uso, '') ILIKE '%' || $1 || '%')
+		ORDER BY (NULLIF(btrim(COALESCE(nombre, '')), '') IS NULL), lower(COALESCE(nombre, '')), feature_id
 		LIMIT 40`, q).Rows()
 	if err != nil {
 		return nil, err

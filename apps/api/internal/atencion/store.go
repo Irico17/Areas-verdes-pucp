@@ -183,13 +183,25 @@ type Riego struct {
 	Nota      string `json:"nota,omitempty"`
 }
 
-func (s *Store) ListarRiego(ctx context.Context) ([]Riego, error) {
-	rows, err := s.db.WithContext(ctx).Raw(`
+// consultaRiego arma el listado. Un capataz solo recibe las filas de su equipo.
+func consultaRiego(capatazID string) (string, []any) {
+	q := `
 		SELECT r.id::text, r.sector, r.turno, COALESCE(r.capataz_id, ''), COALESCE(c.equipo, ''),
 		       to_char(r.fecha, 'YYYY-MM-DD'), r.nota
 		FROM riego_registros r
-		LEFT JOIN capataces c ON c.id = r.capataz_id
-		ORDER BY r.fecha DESC, r.created_at DESC LIMIT 100`).Rows()
+		LEFT JOIN capataces c ON c.id = r.capataz_id`
+	var args []any
+	if id := strings.TrimSpace(capatazID); id != "" {
+		q += ` WHERE r.capataz_id = $1`
+		args = append(args, id)
+	}
+	q += ` ORDER BY r.fecha DESC, r.created_at DESC LIMIT 100`
+	return q, args
+}
+
+func (s *Store) ListarRiego(ctx context.Context, capatazID string) ([]Riego, error) {
+	q, args := consultaRiego(capatazID)
+	rows, err := s.db.WithContext(ctx).Raw(q, args...).Rows()
 	if err != nil {
 		return nil, err
 	}
