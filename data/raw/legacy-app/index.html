@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Control Ambiental Campus</title>
+    
+    <!-- 1. CSS base de Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- 2. CSS de MarkerCluster (Agrupación de marcadores) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    
+    <!-- 3. Estilos personalizados -->
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- 4. Estilos en línea para el Panel Lateral y Panel de Bebederos -->
+    <style>
+        #sidebar-info {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 380px;
+            max-width: 100vw;
+            height: 100vh;
+            background-color: #ffffff;
+            box-shadow: -4px 0 15px rgba(0, 0, 0, 0.2);
+            z-index: 2000; /* Por encima del mapa y paneles */
+            overflow-y: auto;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 24px 20px;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* Ocultar el panel deslizándolo hacia la derecha */
+        .sidebar-oculto {
+            transform: translateX(100%);
+        }
+
+        /* Mostrar el panel */
+        .sidebar-visible {
+            transform: translateX(0);
+        }
+
+        /* Botón de cierre (X) estilo Google Earth */
+        #btn-cerrar-sidebar {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #f1f5f9;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease;
+        }
+
+        #btn-cerrar-sidebar:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        /* ==========================================================================
+           ESTILOS DEL PANEL FLOTANTE DE TOTALES (BEBEDEROS)
+           ========================================================================== */
+        #panel-resumen-agua {
+            position: fixed;
+            bottom: 20px;
+            left: 20px; /* Posicionado en la esquina inferior izquierda para no chocar con el panel de capas */
+            width: 230px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            border: 1px solid #cbd5e1;
+            z-index: 1500;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            transition: all 0.3s ease;
+        }
+        .panel-resumen-oculto {
+            display: none;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .panel-resumen-visible {
+            display: block;
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .panel-resumen-header {
+            background: #1a365d;
+            color: white;
+            padding: 8px 12px;
+            border-top-left-radius: 9px;
+            border-top-right-radius: 9px;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-resumen-header button {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .panel-resumen-body {
+            padding: 10px 12px;
+            font-size: 12px;
+        }
+        .item-resumen {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            color: #334155;
+        }
+        .item-resumen.total {
+            font-weight: bold;
+            color: #1e293b;
+            font-size: 13px;
+        }
+        /* ==========================================================================
+           ESTILOS DEL PANEL FLOTANTE DE TOTALES (TACHOS)
+           ========================================================================== */
+        #panel-resumen-tachos {
+            position: fixed;
+            bottom: 20px;
+            left: 20px; /* Alineado al lado del panel de bebederos */
+            width: 250px;
+            max-height: 70vh;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            border: 1px solid #cbd5e1;
+            z-index: 1500;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            transition: all 0.3s ease;
+            overflow-y: auto;
+        }
+        #lista-desglose-tachos {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .item-tacho-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #334155;
+            padding: 2px 0;
+        }
+        .indicador-color-tacho {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        /* ==========================================================================
+           ESTILOS AGREGADOS: PANEL FLOTANTE DE CONTROL DE BARREDORA
+           ========================================================================== */
+       .panel-control-flotante {
+           position: fixed;
+           width: 240px;
+           background: #ffffff;
+           border-radius: 10px;
+           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+           border: 1px solid #cbd5e1;
+           z-index: 1500;
+           font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           transition: all 0.3s ease;
+        }
+        
+        #panel-control-barredora {
+            bottom: 20px;
+            left: 20px;
+        }
+
+        #panel-control-barredora-2 {
+            bottom: 20px;
+            left: 270px; /* 20px base + 240px de ancho del primer panel + 10px de separación */
+        }
+        
+        .btn-barredora-accion {
+            width: 100%;
+            padding: 6px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            transition: background 0.2s ease;
+        }
+        .btn-play { background-color: #2e7d32; color: white; }
+        .btn-play:hover { background-color: #1b5e20; }
+        .btn-reset { background-color: #64748b; color: white; margin-top: 5px; }
+        .btn-reset:hover { background-color: #475569; }
+    </style>
+</head>
+<body>
+
+    <!-- 🔍 BARRA DE BÚSQUEDA INTEGRADA -->
+    <div class="google-search-container">
+        <div class="google-search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="input-busqueda-pucp" placeholder="Buscar facultad, especialidad o lugar..." autocomplete="off">
+            <button id="btn-limpiar-busqueda" style="display: none;">✕</button>
+        </div>
+        <ul id="sugerencias-busqueda" class="google-suggestions-list"></ul>
+    </div>
+
+    <!-- 🗺️ CONTENEDOR DEL MAPA -->
+    <div id="map"></div>
+
+    <!-- ♻️ PANEL LATERAL TIPO GOOGLE EARTH (INVENTARIO DE TACHOS) -->
+    <div id="sidebar-info" class="sidebar-oculto">
+        <button id="btn-cerrar-sidebar" onclick="cerrarSidebar()">&times;</button>
+        <div id="sidebar-contenido">
+            <!-- La información detallada del tacho/estación se inyectará aquí con JS -->
+        </div>
+    </div>
+
+    <!-- 🏢 PANEL FLOTANTE DE DETALLES (LUGARES/FACULTADES) -->
+    <div id="panel-detalle-lugar" class="panel-google-maps" style="display: none;">
+        <button class="btn-cerrar-panel" onclick="cerrarPanelDetalle()">×</button>
+        <div id="lugar-foto-contenedor"></div>
+        <div class="panel-detalle-info">
+            <h2 id="lugar-nombre">Nombre del Lugar</h2>
+            <p id="lugar-subtitulo" class="subtitulo-maps">Universidad • Campus</p>
+            <hr class="divisor-panel" style="border: 0; border-top: 1px solid #e2e8f0; margin: 12px 0;">
+            <div class="item-info-maps" style="margin: 10px 0; font-size: 14px; display: flex; align-items: center; gap: 10px;">📍 <span id="lugar-direccion">Dirección</span></div>
+            <div class="item-info-maps" style="margin: 10px 0; font-size: 14px; display: flex; align-items: center; gap: 10px;">🌐 <span id="lugar-web">Información del Campus</span></div>
+        </div>
+    </div>
+
+    <!-- 📊 PANEL DE RESUMEN ESTADÍSTICO DE BEBEDEROS (NUEVO) -->
+    <div id="panel-resumen-agua" class="panel-resumen-oculto">
+        <div class="panel-resumen-header">
+            <span>💧 Resumen de Bebederos</span>
+            <button id="btn-cerrar-resumen" title="Cerrar">&times;</button>
+        </div>
+        <div class="panel-resumen-body">
+            <div class="item-resumen">
+                <span>⛲ Tipo Fuente:</span>
+                <strong id="cant-fuente">0</strong>
+            </div>
+            <div class="item-resumen">
+                <span>🧴 Llenador Botella:</span>
+                <strong id="cant-llenador">0</strong>
+            </div>
+            <div class="item-resumen">
+                <span>🟢 Nuevos:</span>
+                <strong id="cant-nuevo">0</strong>
+            </div>
+            <div class="item-resumen">
+                <span>🔄 Renovación:</span>
+                <strong id="cant-renovacion">0</strong>
+            </div>
+            <hr style="margin: 6px 0; border: 0; border-top: 1px solid #e2e8f0;">
+            <div class="item-resumen total">
+                <span>Total Activos:</span>
+                <strong id="cant-total-agua">0</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🗑️ PANEL FLOTANTE DE TOTALES (TACHOS Y PUNTOS DE RESIDUOS) -->
+    <div id="panel-resumen-tachos" class="panel-resumen-oculto">
+        <div class="panel-resumen-header">
+            <span>♻️ Resumen de Tachos</span>
+            <button id="btn-cerrar-resumen-tachos" title="Cerrar">&times;</button>
+        </div>
+        <div class="panel-resumen-body">
+            <div class="item-resumen total" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 8px;">
+                <span>📍 Puntos Totales:</span>
+                <strong id="cant-total-puntos">0</strong>
+            </div>
+            <div class="item-resumen total" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 8px;">
+                <span>🗑️ Total Tachos:</span>
+                <strong id="cant-total-tachos" style="color: #2b6cb0;">0</strong>
+            </div>   
+            <div id="lista-desglose-tachos">
+            <!-- Los tipos de tachos y sus cantidades se inyectarán dinámicamente aquí -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 🧹 NUEVO: PANEL FLOTANTE DE CONTROL DE BARREDORA 1 -->
+    <div id="panel-control-barredora" class="panel-control-flotante panel-resumen-oculto">
+        <div class="panel-resumen-header" style="background: #2e7d32;">
+            <span>🧹 Control - Barredora 1</span>
+            <button id="btn-cerrar-panel-barredora" title="Cerrar">&times;</button>
+        </div>
+        <div class="panel-resumen-body">
+            <button id="btn-iniciar-barredora" class="btn-barredora-accion btn-play">▶ Iniciar Simulación</button>
+            <button id="btn-reiniciar-barredora" class="btn-barredora-accion btn-reset">↺ Reiniciar</button>
+            <div id="txt-estado-barredora" style="margin-top: 8px; font-size: 11px; color: #475569; text-align: center;">
+                Estado: En espera
+            </div>
+        </div>
+    </div>
+
+    <!-- 🧹 PANEL FLOTANTE DE CONTROL DE BARREDORA 2 -->
+    <div id="panel-control-barredora-2" class="panel-control-flotante panel-resumen-oculto">
+        <div class="panel-resumen-header" style="background: #0284c7;">
+            <span>🧹 Control - Barredora 2</span>
+            <button id="btn-cerrar-panel-barredora-2" title="Cerrar">&times;</button>
+        </div>
+        <div class="panel-resumen-body">
+            <button id="btn-iniciar-barredora-2" class="btn-barredora-accion btn-play">▶ Iniciar Simulación</button>
+            <button id="btn-reiniciar-barredora-2" class="btn-barredora-accion btn-reset">↺ Reiniciar</button>
+            <div id="txt-estado-barredora-2" style="margin-top: 8px; font-size: 11px; color: #475569; text-align: center;">
+                Estado: En espera
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL DE CAPAS LATERAL DERECHO (COLAPSABLE CON FLECHA) -->
+    <div class="control-panel-pro" id="panel-capas-derecho">
+        <!-- Pestaña flotante con flecha para replegar/desplegar -->
+        <button id="btn-toggle-capas" onclick="togglePanelCapas()" title="Ocultar/Mostrar panel">
+            <span id="flecha-capas">❯</span>
+        </button>
+
+        <div class="panel-header">
+            <h2>Capas del Campus</h2>
+            <span class="panel-subtitle">Sistema de Gestión e Información</span>
+        </div>
+        
+        <div class="panel-body">
+            <!-- Mapas Base -->
+            <details open>
+                <summary>🗺️ Mapas Base</summary>
+                <div class="grupo-contenido">
+                    <label><input type="radio" name="mapa-base" id="rb-satelite" checked> 🛰️ Satélite Google</label>
+                    <label><input type="radio" name="mapa-base" id="rb-esri"> 🌍 Satélite Esri (Alternativo)</label>
+                    <label><input type="radio" name="mapa-base" id="rb-clasico"> 🗺️ Mapa Clásico</label>
+                </div>
+            </details>
+            <hr class="divisor-panel">
+
+            <!-- NUEVA SECCIÓN: MANTENIMIENTO Y BARREDORAS -->
+            <details>
+                <summary>🧹 Limpieza y Barredoras</summary>
+                <div class="grupo-contenido">
+                    <label class="btn-maestro" style="background-color: #f0fdf4; border: 1px solid #22c55e; border-radius: 6px; padding: 4px 8px; cursor: pointer;">
+                        <input type="checkbox" id="chk-barredora-1"> 🚜 Barredora N° 1
+                    </label>
+                    <label class="btn-maestro" style="background-color: #f0f9ff; border: 1px solid #0284c7; border-radius: 6px; padding: 4px 8px; cursor: pointer;">
+                        <input type="checkbox" id="chk-barredora-2"> 🚜 Barredora N° 2
+                    </label>
+                </div>
+            </details>
+            <hr class="divisor-panel">
+
+           <!-- Gestión de Residuos -->
+            <details>
+                <summary>♻️ Gestión de Residuos</summary>
+                <div class="grupo-contenido">
+                    <!-- 🗺️ FILTRO POR ZONA DE SUPERVISORES -->
+                    <div style="margin-bottom: 12px; padding: 6px; background: #EDF2F7; border-radius: 6px;">
+                        <label for="select-zona-tachos" style="font-weight: bold; font-size: 12px; display: block; margin-bottom: 4px; color: #2D3748;">
+                            🗺️ Filtrar por Zona:
+                        </label>
+                        <select id="select-zona-tachos" onchange="filtrarTachosPorZona(this.value)" style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #CBD5E0; font-size: 13px; color: #2D3748; background: #FFFFFF; cursor: pointer;">
+                            <option value="TODAS">🌍 Todas las Zonas</option>
+                            <option value="Zona1">📍 Zona 1</option>
+                            <option value="Zona2">📍 Zona 2</option>
+                            <option value="Zona3">📍 Zona 3</option>
+                            <option value="Zona4">📍 Zona 4</option>
+                        </select>
+                    </div>
+                    <label class="btn-maestro"><input type="checkbox" id="chk-todos-tachos"> 🔄 ACTIVAR TODOS LOS TACHOS</label>
+                    <label><input type="checkbox" id="chk-no-aprov"> <span style="display:inline-block; width:12px; height:12px; background:#2D3748; border-radius:50%; margin-right:5px;"></span> No Aprovechables (Negro)</label>
+                    <label><input type="checkbox" id="chk-papel"> <span style="display:inline-block; width:12px; height:12px; background:#2B6CB0; border-radius:50%; margin-right:5px;"></span> Papel y Cartón (Azul)</label>
+                    <label><input type="checkbox" id="chk-plastico"> <span style="display:inline-block; width:12px; height:12px; background:#FFFFFF; border:1px solid #CBD5E0; border-radius:50%; margin-right:5px;"></span> Plástico (Blanco)</label>
+                    <label><input type="checkbox" id="chk-vidrio"> <span style="display:inline-block; width:12px; height:12px; background:#48BB78; border-radius:50%; margin-right:5px;"></span> Vidrio (Verde)</label>
+                    <label><input type="checkbox" id="chk-pilas"> <span style="display:inline-block; width:12px; height:12px; background:#C53030; border-radius:50%; margin-right:5px;"></span> Pilas (Rojo)</label>
+                    <label><input type="checkbox" id="chk-peligrosos"> <span style="display:inline-block; width:12px; height:12px; background:#E53E3E; border-radius:50%; margin-right:5px;"></span> Peligrosos (Rojo Oscuro)</label>
+                    <label><input type="checkbox" id="chk-raee"> <span style="display:inline-block; width:12px; height:12px; background:#ED8936; border-radius:50%; margin-right:5px;"></span> RAEE (Naranja)</label>
+                    <label><input type="checkbox" id="chk-metales"> <span style="display:inline-block; width:12px; height:12px; background:#ECC94B; border-radius:50%; margin-right:5px;"></span> Metales (Amarillo)</label>
+                    <label><input type="checkbox" id="chk-aniquem"> <span style="display:inline-block; width:12px; height:12px; background:#1A365D; border-radius:50%; margin-right:5px;"></span> Aniquem (Azul Oscuro)</label>
+                    <label><input type="checkbox" id="chk-intermedios-plastico"> <span style="display:inline-block; width:12px; height:12px; background:#718096; border-radius:50%; margin-right:5px;"></span> Intermedios Plástico (Plomo)</label>
+                    <label><input type="checkbox" id="chk-intermedios-metal"> <span style="display:inline-block; width:12px; height:12px; background:#718096; border-radius:50%; margin-right:5px;"></span> Intermedios Metal (Plomo)</label>
+                </div>
+            </details>
+
+            <!-- Zonas de Áreas Verdes -->
+            <details>
+                <summary>🌳 Zonas de Áreas Verdes</summary>
+                <div class="grupo-contenido">
+                    <label class="btn-maestro"><input type="checkbox" id="chk-todas-verdes"> 🟢 ACTIVAR TODAS LAS ZONAS</label>
+                    <label><input type="checkbox" id="chk-oscar"> Sectores de responsable</label>
+                    <label><input type="checkbox" id="chk-andres"> Sectores de responsable</label>
+                    <label><input type="checkbox" id="chk-alfonso"> Sectores de responsable</label>
+                    <label><input type="checkbox" id="chk-camposdepo"> Campo deportivo</label>
+                    <label><input type="checkbox" id="chk-bosque"> Bosque húmedo</label>
+                    
+                    <div style="font-size: 11px; color: #718096; font-weight: bold; margin-top: 14px; text-transform: uppercase; border-bottom: 1px solid #edf2f7; padding-bottom: 2px;">📍 Adicionales Campus</div>
+                    <label class="btn-maestro" style="margin-top: 6px; color: #2980b9;"><input type="checkbox" id="chk-todo-adicionales"> 🔵 ACTIVAR TODO ADICIONALES</label>
+                    
+                    <div style="margin-top: 6px;">
+                        <label class="btn-maestro" style="color: #27ae60; cursor: pointer;">
+                            <input type="checkbox" id="chk-nuevas-areas"> 🌿 Áreas Verdes (por Uso)
+                        </label>
+
+                        <div id="sub-menu-areas-verdes" style="margin-left: 18px; font-size: 11px; display: none; padding: 6px 0 2px 8px; border-left: 2px solid #27ae60;">
+                            <div style="font-size: 9px; font-weight: bold; color: #718096; text-transform: uppercase; margin-bottom: 4px;">Clasificación por Uso:</div>
+                            <label style="display: flex; align-items: center; margin-bottom: 3px; cursor: pointer;"><input type="checkbox" class="chk-sub-area" data-uso="institucional" checked><span style="display:inline-block; width:10px; height:10px; background:#16a085; border-radius:50%; margin:0 6px;"></span> Uso Institucional</label>
+                            <label style="display: flex; align-items: center; margin-bottom: 3px; cursor: pointer;"><input type="checkbox" class="chk-sub-area" data-uso="administrativo" checked><span style="display:inline-block; width:10px; height:10px; background:#e67e22; border-radius:50%; margin:0 6px;"></span> Áreas de Uso Administrativo</label>
+                            <label style="display: flex; align-items: center; margin-bottom: 3px; cursor: pointer;"><input type="checkbox" class="chk-sub-area" data-uso="recreativo" checked><span style="display:inline-block; width:10px; height:10px; background:#2ecc71; border-radius:50%; margin:0 6px;"></span> Áreas Recreativas / Descanso</label>
+                            <label style="display: flex; align-items: center; margin-bottom: 3px; cursor: pointer;"><input type="checkbox" class="chk-sub-area" data-uso="sostenible" checked><span style="display:inline-block; width:10px; height:10px; background:#3498db; border-radius:50%; margin:0 6px;"></span> Manejo Sostenible y Ahorro Agua</label>
+                            <label style="display: flex; align-items: center; margin-bottom: 3px; cursor: pointer;"><input type="checkbox" class="chk-sub-area" data-uso="otros" checked><span style="display:inline-block; width:10px; height:10px; background:#95a5a6; border-radius:50%; margin:0 6px;"></span> Otros Usos</label>
+                        </div>
+
+                        <label class="btn-maestro" style="color: #0984e3; cursor: pointer; margin-top: 6px;">
+                            <input type="checkbox" id="chk-riego-actual"> 💧 Áreas Verdes (por Riego Actual)
+                        </label>
+
+                        <div id="sub-menu-riego-actual" style="margin-left: 18px; font-size: 11px; display: none; padding: 6px 0 2px 8px; border-left: 2px solid #0984e3;">
+                            <div style="font-size: 9px; font-weight: bold; color: #718096; text-transform: uppercase; margin-bottom: 4px;">Sistema de Riego Actual:</div>
+                            <label style="display: flex; align-items: center; margin-bottom: 3px; cursor: pointer;"><input type="checkbox" class="chk-sub-riego" data-riego="gotero" checked><span style="display:inline-block; width:10px; height:10px; background:#00cec9; border-radius:50%; margin:0 6px;"></span> Riego por Goteo</label>
+                            <label style="display: flex; align-items: center; margin-bottom: 3px; cursor: pointer;"><input type="checkbox" class="chk-sub-riego" data-riego="aspersion" checked><span style="display:inline-block; width:10px; height:10px; background:#0984e3; border-radius:50%; margin:0 6px;"></span> Aspersión</label>
+                            <label style="display: flex; align-items: center; margin-bottom: 3px; cursor: pointer;"><input type="checkbox" class="chk-sub-riego" data-riego="cisterna" checked><span style="display:inline-block; width:10px; height:10px; background:#6c5ce7; border-radius:50%; margin:0 6px;"></span> Cisterna / Camión</label>
+                            <label style="display: flex; align-items: center; margin-bottom: 3px; cursor: pointer;"><input type="checkbox" class="chk-sub-riego" data-riego="manual" checked><span style="display:inline-block; width:10px; height:10px; background:#fdcb6e; border-radius:50%; margin:0 6px;"></span> Riego Manual</label>
+                            <label style="display: flex; align-items: center; margin-bottom: 3px; cursor: pointer;"><input type="checkbox" class="chk-sub-riego" data-riego="sin_riego" checked><span style="display:inline-block; width:10px; height:10px; background:#d63031; border-radius:50%; margin:0 6px;"></span> Sin Riego / Seco</label>
+                            <label style="display: flex; align-items: center; margin-bottom: 3px; cursor: pointer;"><input type="checkbox" class="chk-sub-riego" data-riego="otros" checked><span style="display:inline-block; width:10px; height:10px; background:#b2bec3; border-radius:50%; margin:0 6px;"></span> Otros Sistemas</label>
+                        </div>
+                    </div>
+
+                    <label style="margin-top: 6px;"><input type="checkbox" id="chk-puertas"> 🚪 Puertas de Entradas</label>
+                    <label><input type="checkbox" id="chk-estacionamientos"> 🚗 Playas de Estacionamiento</label>
+                    <label><input type="checkbox" id="chk-xerofitica"> 🌵 Zonas Xerofíticas</label>
+                </div>
+            </details>
+
+            <!-- Plan de Fauna -->
+            <details>
+                <summary>🐿️ Plan de Fauna</summary>
+                <div class="grupo-contenido">
+                    <label class="btn-maestro"><input type="checkbox" id="chk-toda-fauna"> 🐾 ACTIVAR TODA LA FAUNA</label>
+                    <label><input type="checkbox" id="chk-ardillas"> 🐿️ Ardillas</label>
+                    <label><input type="checkbox" id="chk-aves"> 🦅 Aves</label>
+                    <label><input type="checkbox" id="chk-canes"> 🐕 Canes</label>
+                    <label><input type="checkbox" id="chk-insectos"> 🪰 Insectos</label>
+                    <label><input type="checkbox" id="chk-gallinazos"> 🦅 Gallinazos</label>
+                    <label><input type="checkbox" id="chk-roedores"> 🐀 Roedores</label>
+                    <label><input type="checkbox" id="chk-gatos"> ⚠️ Colonias de Gatos</label>
+                </div>
+            </details>
+
+            <!-- Gestión de Flora -->
+            <details>
+                <summary>🌴 Gestión de Flora</summary>
+                <div class="grupo-contenido">
+                    <label class="btn-maestro" style="margin-top: 8px; background-color: #f0fdf4; border: 1px solid #22c55e; border-radius: 6px; padding: 4px 8px;">
+                        <input type="checkbox" id="chk-toda-flora"> 🌿 VER ESPECIES
+                    </label>
+                </div>
+            </details>
+
+           <!-- 🌱 SECCIÓN INDEPENDIENTE: VIVERO -->
+            <details>
+                <summary>🌱 Vivero</summary>
+                <div class="grupo-contenido">
+                    <label class="btn-maestro" style="margin-top: 8px; background-color: #fefce8; border: 1px solid #eab308; border-radius: 6px; padding: 4px 8px; color: #854d0e; cursor: pointer; display: block;">
+                        <input type="checkbox" id="chk-vivero"> 🌱 ACTIVAR VIVERO
+                    </label>
+
+                    <!-- FILTRO DE MESES -->
+                    <div style="margin-top: 8px;">
+                        <label for="cbo-vivero-mes" style="font-size:11px; font-weight:bold; color:#4a5568;">Filtrar por Mes:</label>
+                        <select id="cbo-vivero-mes" style="width: 100%; padding: 4px; margin-top: 2px; border-radius: 4px; border: 1px solid #cbd5e0; font-size: 12px; background: white;">
+                            <option value="TODOS">📅 Todos los meses</option>
+                        </select>
+                    </div>
+                </div>
+            </details>
+
+          <!-- Bebederos (NUEVO) -->
+            <details>
+                <summary>💧 Bebederos</summary>
+                <div class="grupo-contenido">
+                    <label class="btn-maestro"><input type="checkbox" id="chk-todo-agua"> 🚰 ACTIVAR TODO (BEBEDEROS)</label>
+
+                    <!-- SECCIÓN 1: OPERATIVOS -->
+                    <div style="font-size: 11px; color: #718096; font-weight: bold; margin-top: 8px; text-transform: uppercase; border-bottom: 1px solid #edf2f7; padding-bottom: 2px;">🔹 Operativos</div>
+                    <label><input type="checkbox" id="chk-bebed-fuente"> ⛲ Tipo Fuente</label>
+                    <label><input type="checkbox" id="chk-bebed-llenador"> 🧴 Tipo Llenador de Botella</label>
+
+                    <!-- SECCIÓN 2: PENDIENTE DE INSTALACIÓN -->
+                    <div style="font-size: 11px; color: #718096; font-weight: bold; margin-top: 8px; text-transform: uppercase; border-bottom: 1px solid #edf2f7; padding-bottom: 2px;">🔹 Pendiente de Instalación</div>
+                    <label><input type="checkbox" id="chk-bebed-nuevo"> 🟢 Nuevos</label>
+                    <label><input type="checkbox" id="chk-bebed-renovacion"> 🔄 Renovación</label>
+                </div>
+            </details>
+            
+            
+            <!-- Veredas -->
+            <details>
+                <summary>🚶 Veredas</summary>
+                <div class="grupo-contenido">
+                    <label class="item-capa">
+                        <input type="checkbox" id="chk-veredas-peligro">
+                        <span>🚶 Veredas de Alto Tránsito</span>
+                    </label>
+                </div>
+            </details>
+
+            <!-- Reservas de Jardines -->
+            <details>
+                <summary>📅 Reservas de Jardines</summary>
+                <div class="grupo-contenido">
+                    <label><input type="checkbox" id="chk-reservas-jardines"> 🍊 Ver Polígonos de Reserva</label>
+                    <div style="margin-top: 10px; padding: 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <div style="margin-bottom: 6px;">
+                            <label for="reserva-mes" style="font-size: 11px; color: #4a5568; font-weight: bold; display: block; margin-bottom: 2px;">Mes:</label>
+                            <select id="reserva-mes" style="width: 100%; padding: 4px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 12px; background: #fff;">
+                                <option value="0">Enero</option>
+                                <option value="1">Febrero</option>
+                                <option value="2">Marzo</option>
+                                <option value="3">Abril</option>
+                                <option value="4">Mayo</option>
+                                <option value="5">Junio</option>
+                                <option value="6" selected>Julio</option>
+                                <option value="7">Agosto</option>
+                                <option value="8">Septiembre</option>
+                                <option value="9">Octubre</option>
+                                <option value="10">Noviembre</option>
+                                <option value="11">Diciembre</option>
+                            </select>
+                        </div>
+                        <div style="margin-bottom: 6px;">
+                            <label for="reserva-semana" style="font-size: 11px; color: #4a5568; font-weight: bold; display: block; margin-bottom: 2px;">Semana del Mes:</label>
+                            <select id="reserva-semana" style="width: 100%; padding: 4px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 12px; background: #fff;">
+                                <option value="1" selected>Semana 1</option>
+                                <option value="2">Semana 2</option>
+                                <option value="3">Semana 3</option>
+                                <option value="4">Semana 4</option>
+                                <option value="5">Semana 5</option>
+                                <option value="6">Semana 6</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="reserva-dia" style="font-size: 11px; color: #4a5568; font-weight: bold; display: block; margin-bottom: 2px;">Día de la semana:</label>
+                            <select id="reserva-dia" style="width: 100%; padding: 4px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 12px; background: #fff;">
+                                <option value="todos" selected>Semana completa (Lunes a Domingo)</option>
+                                <option value="1">Lunes</option>
+                                <option value="2">Martes</option>
+                                <option value="3">Miércoles</option>
+                                <option value="4">Jueves</option>
+                                <option value="5">Viernes</option>
+                                <option value="6">Sábado</option>
+                                <option value="0">Domingo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         SCRIPTS (Orden de carga obligatorio)
+         ========================================== -->
+    <!-- 1. Leaflet Core (PRIMERO OBLIGATORIO) -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- 2. Plugins dependientes de Leaflet -->
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <!-- NUEVA LIBRERÍA AGREGADA: Turf.js para el cálculo geométrico del barrido -->
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+    <!-- 3. MarkerCluster (OBLIGATORIO antes de script.js) -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    
+    <!-- 4. Lógica de tu aplicación (SIEMPRE AL FINAL) -->
+    <script src="script.js"></script>
+</body>
+</html>

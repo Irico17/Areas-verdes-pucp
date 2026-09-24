@@ -1,0 +1,294 @@
+openapi: 3.0.3
+info:
+  title: Campus Verde API
+  version: 0.1.0
+  description: |
+    API del sistema de gestión de áreas verdes (PUCP / DP2).
+    Monolito modular Go + Gin + GORM. El mapa es un cliente de estas rutas;
+    no hay un segundo backend geo ni GeoServer.
+
+    CRS de las geometrías: **EPSG:4326** (longitud, latitud), GeoJSON RFC 7946.
+    La columna `geom` admite NULL (catastro progresivo, sin GPS).
+
+    Fase A–B: salud y lectura de catastro. Sin autenticación en este corte.
+servers:
+  - url: http://127.0.0.1:8091
+    description: Desarrollo local
+tags:
+  - name: sistema
+  - name: catastro
+paths:
+  /health:
+    get:
+      tags: [sistema]
+      summary: Salud del proceso, Postgres y PostGIS
+      operationId: health
+      responses:
+        "200":
+          description: Base y PostGIS disponibles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503":
+          description: Base o PostGIS no disponibles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /api/v1:
+    get:
+      tags: [sistema]
+      summary: Índice de rutas
+      operationId: indice
+      responses:
+        "200":
+          description: Índice
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  servicio:
+                    type: string
+                  version:
+                    type: string
+                  crs:
+                    type: string
+                    example: EPSG:4326
+                  rutas:
+                    type: array
+                    items:
+                      type: object
+  /api/v1/openapi.yaml:
+    get:
+      tags: [sistema]
+      summary: Este contrato
+      operationId: openapi
+      responses:
+        "200":
+          description: OpenAPI YAML
+          content:
+            application/yaml:
+              schema:
+                type: string
+  /api/v1/geo/resumen:
+    get:
+      tags: [catastro]
+      summary: Conteos de áreas, zonas y capas auxiliares
+      operationId: resumenCatastro
+      responses:
+        "200":
+          description: Conteos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resumen"
+        "503":
+          description: Base no disponible
+  /api/v1/geo/areas:
+    get:
+      tags: [catastro]
+      summary: Áreas verdes
+      description: FeatureCollection de `areas_verdes`. Identificador estable `AV-NNNN`.
+      operationId: areas
+      parameters:
+        - $ref: "#/components/parameters/bbox"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: FeatureCollection
+          content:
+            application/geo+json:
+              schema:
+                $ref: "#/components/schemas/FeatureCollection"
+        "400":
+          description: bbox o limit inválidos
+        "503":
+          description: Base no disponible
+  /api/v1/geo/zonas:
+    get:
+      tags: [catastro]
+      summary: Zonas de catastro
+      description: |
+        FeatureCollection derivada de `jefe_de_grupo.json`.
+        El campo `jefes` (nombres de personas) no se almacena ni se sirve.
+        Identificador estable `Z-NNNN`.
+      operationId: zonas
+      parameters:
+        - $ref: "#/components/parameters/bbox"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: FeatureCollection
+          content:
+            application/geo+json:
+              schema:
+                $ref: "#/components/schemas/FeatureCollection"
+        "400":
+          description: bbox o limit inválidos
+        "503":
+          description: Base no disponible
+  /api/v1/geo/capas:
+    get:
+      tags: [catastro]
+      summary: Catálogo de capas auxiliares
+      operationId: capas
+      responses:
+        "200":
+          description: Capas conocidas y conteos cargados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  capas_conocidas:
+                    type: array
+                    items:
+                      type: string
+                  cargadas:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CapaCount"
+  /api/v1/geo/capas/{capa}:
+    get:
+      tags: [catastro]
+      summary: Capa auxiliar
+      description: "`jardines_reserva` o `xerofitica`."
+      operationId: capa
+      parameters:
+        - name: capa
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [jardines_reserva, xerofitica]
+        - $ref: "#/components/parameters/bbox"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: FeatureCollection
+          content:
+            application/geo+json:
+              schema:
+                $ref: "#/components/schemas/FeatureCollection"
+        "404":
+          description: Capa desconocida
+        "503":
+          description: Base no disponible
+components:
+  parameters:
+    bbox:
+      name: bbox
+      in: query
+      required: false
+      description: minLon,minLat,maxLon,maxLat en EPSG:4326. Filtra por intersección.
+      schema:
+        type: string
+        example: "-77.09,-12.08,-77.07,-12.06"
+    limit:
+      name: limit
+      in: query
+      required: false
+      description: Máximo de features (1–10000). Sin el parámetro se devuelve la colección completa.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 10000
+  schemas:
+    Health:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        service:
+          type: string
+        database:
+          type: string
+          enum: [up, down]
+        postgis:
+          type: string
+    Resumen:
+      type: object
+      properties:
+        crs:
+          type: string
+          example: EPSG:4326
+        areas:
+          type: integer
+        areas_con_geometria:
+          type: integer
+        zonas:
+          type: integer
+        zonas_con_geometria:
+          type: integer
+        capas:
+          type: array
+          items:
+            $ref: "#/components/schemas/CapaCount"
+    CapaCount:
+      type: object
+      properties:
+        capa:
+          type: string
+        features:
+          type: integer
+    FeatureCollection:
+      type: object
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        name:
+          type: string
+        features:
+          type: array
+          items:
+            $ref: "#/components/schemas/Feature"
+    Feature:
+      type: object
+      required: [type, geometry, properties]
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        id:
+          type: string
+          description: feature_id estable (AV-NNNN, Z-NNNN, JR-NNNN, XE-NNNN)
+        geometry:
+          nullable: true
+          description: MultiPolygon EPSG:4326, o null si aún no hay GPS
+        properties:
+          type: object
+          properties:
+            id:
+              type: integer
+            feature_id:
+              type: string
+            source_index:
+              type: integer
+            codigo:
+              type: string
+            nombre:
+              type: string
+            uso:
+              type: string
+            proy_riego:
+              type: string
+            riego_act:
+              type: string
+            referencia:
+              type: string
+            perimetro_m:
+              type: number
+            area_m2:
+              type: number
+            capa:
+              type: string
+            clase:
+              type: string
+            pertenecen:
+              type: string
+              description: Unidad organizacional, no una persona

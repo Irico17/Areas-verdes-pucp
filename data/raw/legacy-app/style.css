@@ -1,0 +1,491 @@
+/* ==========================================================================
+   1. RESET GLOBAL ABSOLUTO (Corregido para Leaflet)
+   ========================================================================== */
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow: hidden !important;
+    position: relative;
+}
+
+/* ==========================================================================
+   2. CONFIGURACIÓN DEL MAPA
+   ========================================================================== */
+#map {
+    width: 100% !important;
+    height: 100% !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    background-color: #f8fafc;
+}
+
+/* Ocultar el control viejo de capas de Leaflet */
+.leaflet-control-layers {
+    display: none !important;
+}
+
+/* Ajuste preventivo para los botones nativos de zoom (+/-) */
+.leaflet-top.leaflet-left {
+    top: 80px !important;
+    left: 20px !important;
+}
+
+/* ==========================================================================
+   3. PANEL FLOTANTE DE CAPAS (CON BOTÓN REPLEGABLE)
+   ========================================================================== */
+.control-panel-pro {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    z-index: 9999 !important;
+    width: 320px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+    box-sizing: border-box;
+    overflow: visible !important; /* Permite que la pestaña sobresalga a la izquierda */
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Estado replegado: oculta el panel fuera de la pantalla hacia la derecha */
+.control-panel-pro.panel-colapsado {
+    transform: translateX(calc(100% + 30px));
+}
+
+/* Botón Pestaña Flotante que sobresale del panel */
+#btn-toggle-capas {
+    position: absolute;
+    top: 14px;
+    left: -38px;
+    width: 38px;
+    height: 38px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-right: none;
+    border-radius: 10px 0 0 10px;
+    box-shadow: -4px 2px 10px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    outline: none;
+}
+
+#btn-toggle-capas:hover {
+    background: #f8fafc;
+}
+
+#flecha-capas {
+    display: inline-block;
+    font-size: 13px;
+    color: #334155;
+    transition: transform 0.3s ease;
+}
+
+.panel-header {
+    background: #f8fafc;
+    padding: 14px 18px;
+    border-bottom: 1px solid #e2e8f0;
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+}
+
+.panel-header h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.panel-subtitle {
+    font-size: 11px;
+    color: #64748b;
+    display: block;
+    margin-top: 2px;
+}
+
+.panel-body {
+    max-height: 420px;
+    overflow-y: auto;
+    padding: 10px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+}
+
+.panel-body::-webkit-scrollbar {
+    width: 4px;
+}
+
+.panel-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.panel-body details {
+    margin-bottom: 6px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.panel-body summary {
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+}
+
+.panel-body summary::-webkit-details-marker {
+    display: none;
+}
+
+.panel-body summary::after {
+    content: '▾';
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.panel-body details[open] summary::after {
+    transform: rotate(-180deg);
+    color: #2563eb;
+}
+
+.grupo-contenido {
+    padding: 0 6px 10px 6px;
+    display: flex;
+    flex-direction: column;
+}
+
+.grupo-contenido label {
+    display: flex;
+    align-items: center;
+    font-size: 12.5px;
+    color: #475569;
+    padding: 6px 8px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.grupo-contenido label:hover {
+    background: #f1f5f9;
+}
+
+.grupo-contenido input[type="checkbox"],
+.grupo-contenido input[type="radio"] {
+    margin-right: 10px;
+    accent-color: #2563eb;
+}
+
+.divisor-panel {
+    border: 0;
+    border-top: 1px dashed #e2e8f0;
+    margin: 6px 0;
+}
+
+.btn-maestro {
+    font-weight: 700;
+    color: #2563eb !important;
+    border-bottom: 1px dashed #e2e8f0;
+    margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   4. BARRA DE BÚSQUEDA INTEGRADA
+   ========================================================================== */
+.google-search-container {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1100;
+    width: 360px;
+}
+
+.google-search-box {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    padding: 0 15px;
+    height: 48px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 -1px 0px rgba(0,0,0,0.02);
+    border: 1px solid #dee2e6;
+}
+
+.search-icon {
+    font-size: 18px;
+    color: #70757a;
+    margin-right: 12px;
+}
+
+#input-busqueda-pucp {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 15px;
+    color: #202124;
+    background: transparent;
+}
+
+#btn-limpiar-busqueda {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: #70757a;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.google-suggestions-list {
+    margin: 4px 0 0 0;
+    padding: 0;
+    list-style: none;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(32,33,36,0.28);
+    max-height: 250px;
+    overflow-y: auto;
+    display: none;
+}
+
+.google-suggestions-list li {
+    padding: 12px 15px;
+    font-size: 14px;
+    color: #202124;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.google-suggestions-list li:hover {
+    background-color: #f8f9fa;
+}
+
+.google-suggestions-list li::before {
+    content: "📍";
+    margin-right: 10px;
+    font-size: 14px;
+}
+
+/* ==========================================================================
+   5. TARJETA DE DETALLE LATERAL
+   ========================================================================== */
+.panel-google-maps {
+    position: fixed !important;
+    top: 76px !important;
+    left: 20px !important;
+    width: 360px;
+    background: #ffffff;
+    z-index: 10000 !important;
+    border-radius: 12px;
+    box-shadow: 0px 8px 30px rgba(15, 23, 42, 0.25);
+    overflow: hidden;
+    animation: aparecerPanel 0.25s ease-out;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+}
+
+.foto-panel-maps {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    display: block;
+}
+
+.cargador-foto {
+    width: 100%;
+    height: 180px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #64748b;
+    font-style: italic;
+    padding: 0 20px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.panel-detalle-info {
+    padding: 16px;
+}
+
+.panel-detalle-info h2 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    color: #0f172a;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.subtitulo-maps {
+    margin: 0 0 12px 0;
+    font-size: 12.5px;
+    color: #64748b;
+}
+
+.item-info-maps {
+    color: #334155;
+    line-height: 1.4;
+}
+
+.btn-cerrar-panel {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(4px);
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.btn-cerrar-panel:hover {
+    background: #ffffff;
+    color: #000000;
+    transform: scale(1.05);
+}
+
+@keyframes aparecerPanel {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   6. DISEÑO RESPONSIVO MÓVIL
+   ========================================================================== */
+@media (max-width: 768px) {
+    .google-search-container {
+        width: calc(100% - 40px) !important;
+        left: 20px !important;
+        top: 15px !important;
+    }
+
+    .control-panel-pro {
+        top: auto !important;
+        right: 10px !important;
+        bottom: 15px !important;
+        left: 10px !important;
+        width: auto !important;
+        max-height: 45vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        box-shadow: 0 -5px 25px rgba(15, 23, 42, 0.25) !important;
+    }
+
+    .control-panel-pro.panel-colapsado {
+        transform: translateY(calc(100% + 20px)) !important;
+    }
+
+    #btn-toggle-capas {
+        top: -38px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-radius: 10px 10px 0 0;
+        border-bottom: none;
+        border-right: 1px solid #e2e8f0;
+        width: 48px;
+    }
+
+    .panel-header {
+        padding: 10px 14px !important;
+        flex-shrink: 0;
+    }
+    
+    .panel-header h2 {
+        font-size: 14px !important;
+    }
+
+    .panel-body {
+        max-height: none !important;
+        overflow-y: auto !important;
+        flex-grow: 1 !important;
+        padding: 8px !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .grupo-contenido label {
+        font-size: 14px !important;
+        padding: 10px 8px !important;
+    }
+
+    .grupo-contenido input[type="checkbox"],
+    .grupo-contenido input[type="radio"] {
+        width: 18px !important;
+        height: 18px !important;
+        margin-right: 12px !important;
+    }
+    
+    .leaflet-top.leaflet-left {
+        top: 75px !important;
+        left: 20px !important;
+    }
+
+    .panel-google-maps {
+        top: auto !important;
+        left: 10px !important;
+        right: 10px !important;
+        bottom: 15px !important; 
+        width: auto !important;
+        z-index: 10001 !important;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        max-height: 60vh;
+    }
+    
+    .foto-panel-maps, .cargador-foto {
+        height: 140px;
+    }
+}
+
+/* ==========================================================================
+   7. CAPA DE INTERFACES SUPERIORES
+   ========================================================================== */
+.marcador-forzado-visible {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+/* ==========================================================================
+   8. ETIQUETAS FIJAS DE FLORA (COLUMNA C - REFERENCIA)
+   ========================================================================== */
+.etiqueta-solo-referencia {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid #16a34a !important;
+    border-radius: 4px !important;
+    color: #14532d !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    padding: 1px 4px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+}
+
+.etiqueta-solo-referencia::before {
+    display: none !important;
+}

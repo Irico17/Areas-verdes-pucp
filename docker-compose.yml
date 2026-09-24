@@ -1,0 +1,25 @@
+# Postgres + PostGIS para Campus Verde (misma base; sin GeoServer).
+# Credenciales de desarrollo local. No usar en producción.
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: campus-verde-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-campus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-campus}
+      POSTGRES_DB: ${POSTGRES_DB:-campus_verde}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - campus_verde_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  campus_verde_pg:

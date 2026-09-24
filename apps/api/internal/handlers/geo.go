@@ -1,0 +1,137 @@
+package handlers
+
+import (
+	"context"
+	"errors"
+	"log"
+	"strconv"
+
+	"campusverde/api/internal/catastro"
+	"campusverde/api/internal/geojson"
+
+	"github.com/gin-gonic/gin"
+)
+
+// GeoSource lee el catastro. *catastro.Store la cumple.
+type GeoSource interface {
+	Areas(ctx context.Context, f catastro.Filter) (geojson.FeatureCollection, error)
+	Zonas(ctx context.Context, f catastro.Filter) (geojson.FeatureCollection, error)
+	Capa(ctx context.Context, capa string, f catastro.Filter) (geojson.FeatureCollection, error)
+	Capas(ctx context.Context) (catastro.CapasIndex, error)
+	Resumen(ctx context.Context) (catastro.Resumen, error)
+}
+
+// Geo expone FeatureCollections de catastro.
+type Geo struct {
+	Source GeoSource
+}
+
+func (h Geo) Areas(c *gin.Context) {
+	h.collection(c, func(ctx context.Context, f catastro.Filter) (geojson.FeatureCollection, error) {
+		return h.Source.Areas(ctx, f)
+	})
+}
+
+func (h Geo) Zonas(c *gin.Context) {
+	h.collection(c, func(ctx context.Context, f catastro.Filter) (geojson.FeatureCollection, error) {
+		return h.Source.Zonas(ctx, f)
+	})
+}
+
+func (h Geo) Capa(c *gin.Context) {
+	if h.Source == nil {
+		c.JSON(503, gin.H{"error": "base de datos no disponible"})
+		return
+	}
+	f, err := parseFilter(c)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	fc, err := h.Source.Capa(c.Request.Context(), c.Param("capa"), f)
+	if errors.Is(err, catastro.ErrCapaDesconocida) {
+		c.JSON(404, gin.H{"error": "capa desconocida", "capas": catastro.CapasConocidas})
+		return
+	}
+	if err != nil {
+		log.Printf("geo capa: %v", err)
+		c.JSON(500, gin.H{"error": "no se pudo leer el catastro"})
+		return
+	}
+	writeFC(c, fc)
+}
+
+func (h Geo) Capas(c *gin.Context) {
+	if h.Source == nil {
+		c.JSON(503, gin.H{"error": "base de datos no disponible"})
+		return
+	}
+	idx, err := h.Source.Capas(c.Request.Context())
+	if err != nil {
+		log.Printf("geo capas: %v", err)
+		c.JSON(500, gin.H{"error": "no se pudo leer el catastro"})
+		return
+	}
+	c.JSON(200, idx)
+}
+
+func (h Geo) Resumen(c *gin.Context) {
+	if h.Source == nil {
+		c.JSON(503, gin.H{"error": "base de datos no disponible"})
+		return
+	}
+	res, err := h.Source.Resumen(c.Request.Context())
+	if err != nil {
+		log.Printf("geo resumen: %v", err)
+		c.JSON(500, gin.H{"error": "no se pudo leer el catastro"})
+		return
+	}
+	c.JSON(200, res)
+}
+
+func (h Geo) collection(c *gin.Context, load func(context.Context, catastro.Filter) (geojson.FeatureCollection, error)) {
+	if h.Source == nil {
+		c.JSON(503, gin.H{"error": "base de datos no disponible"})
+		return
+	}
+	f, err := parseFilter(c)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	fc, err := load(c.Request.Context(), f)
+	if err != nil {
+		log.Printf("geo: %v", err)
+		c.JSON(500, gin.H{"error": "no se pudo leer el catastro"})
+		return
+	}
+	writeFC(c, fc)
+}
+
+func writeFC(c *gin.Context, fc geojson.FeatureCollection) {
+	c.Header("Content-Type", "application/geo+json; charset=utf-8")
+	c.JSON(200, fc)
+}
+
+func parseFilter(c *gin.Context) (catastro.Filter, error) {
+	bbox, err := geojson.ParseBBox(c.Query("bbox"))
+	if err != nil {
+		return catastro.Filter{}, err
+	}
+	limit, err := parseLimit(c.Query("limit"))
+	if err != nil {
+		return catastro.Filter{}, err
+	}
+	return catastro.Filter{BBox: bbox, Limit: limit}, nil
+}
+
+func parseLimit(raw string) (int, error) {
+	if raw == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 1 || n > 10000 {
+		return 0, errLimit
+	}
+	return n, nil
+}

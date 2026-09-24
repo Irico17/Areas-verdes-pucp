@@ -1,0 +1,31 @@
+{
+  "crs": "EPSG:4326",
+  "generado_en": "2026-09-24T16:26:39Z",
+  "nota_pii": "zonas derivan de jefe_de_grupo.json. Se omitió el campo jefes (nombres de personas). feature_id Z-NNNN no identifica a una persona.",
+  "datasets": {
+    "areas_verdes": {
+      "archivo": "areas_verdes.geojson",
+      "fuente": "areas_verdes.geojson",
+      "features": 521,
+      "sha256_fuente": "184f388e8c146e28801cf19fb577c087fb796fc84a3db409b5ce01339cba73a1"
+    },
+    "jardines_reserva": {
+      "archivo": "jardines_reserva.geojson",
+      "fuente": "jardines_reserva.geojson",
+      "features": 21,
+      "sha256_fuente": "2883a967fd41356aa9b6e967a1cd0bbc1ea3e258a4f469a07ae949f2535209d2"
+    },
+    "xerofitica": {
+      "archivo": "xerofitica.geojson",
+      "fuente": "xerofitica.geojson",
+      "features": 10,
+      "sha256_fuente": "6cd64f3020e4b4a28efe938d57b0b5ebad2730513861934ccabfa9690e95eef5"
+    },
+    "zonas": {
+      "archivo": "zonas.geojson",
+      "fuente": "jefe_de_grupo.json",
+      "features": 534,
+      "sha256_fuente": "6f690cf85c5e40e9e669b6af46b4f38788b3ac491818510767b0be1c7736d0da"
+    }
+  }
+}
