@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { fetchCollection } from "./api"
 import { INVENTARIO } from "./inventario"
 import { CampusMap } from "./map/CampusMap"
+import { MapBoundary } from "./map/MapBoundary"
 import { enqueue, listQueue, removeQueued, type QueuedLabor } from "./offline/queue"
 import {
   ApiError,
@@ -355,6 +356,7 @@ export default function App() {
 
   return (
     <div className="shell">
+      <MapBoundary>
       <CampusMap
         data={data}
         visible={visible}
@@ -377,6 +379,7 @@ export default function App() {
           setNotice("")
         }}
       />
+      </MapBoundary>
       <header className="topbar">
         <div className="brand">
           <strong>Campus Verde</strong>

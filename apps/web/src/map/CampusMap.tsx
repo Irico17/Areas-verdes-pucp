@@ -49,6 +49,30 @@ function asCollection(fc: FeatureCollection | undefined): GJFeatureCollection {
   return (fc ?? EMPTY) as unknown as GJFeatureCollection
 }
 
+function nearestInventoryPoint(
+  map: Map,
+  point: { x: number; y: number },
+  data: Partial<Record<string, FeatureCollection>>,
+  on: Record<string, boolean>,
+): { id: string; props: Record<string, unknown> } | null {
+  let best: { id: string; props: Record<string, unknown>; d: number } | null = null
+  for (const layer of INVENTARIO) {
+    if (layer.kind !== "point" || !on[layer.id]) continue
+    for (const feature of data[layer.id]?.features ?? []) {
+      const geometry = feature.geometry
+      if (!geometry || geometry.type !== "Point" || !Array.isArray(geometry.coordinates)) continue
+      const [lon, lat] = geometry.coordinates as number[]
+      if (typeof lon !== "number" || typeof lat !== "number") continue
+      const projected = map.project([lon, lat])
+      const distance = Math.hypot(projected.x - point.x, projected.y - point.y)
+      if (distance <= 18 && (!best || distance < best.d)) {
+        best = { id: layer.id, props: { ...(feature.properties ?? {}) }, d: distance }
+      }
+    }
+  }
+  return best ? { id: best.id, props: best.props } : null
+}
+
 export function CampusMap({
   data,
   visible,
@@ -75,6 +99,10 @@ export function CampusMap({
   const onActividad = useRef(onSelectActividad)
   const onPinRef = useRef(onPin)
   pinRef.current = pinMode
+  const inventoryRef = useRef(inventory)
+  const inventoryOnRef = useRef(inventoryOn)
+  inventoryRef.current = inventory
+  inventoryOnRef.current = inventoryOn
   onCatastro.current = onSelectCatastro
   onActividad.current = onSelectActividad
   onPinRef.current = onPin
@@ -161,7 +189,7 @@ export function CampusMap({
             type: "circle",
             source: `inv-${layer.id}`,
             paint: {
-              "circle-radius": layer.id === "bebederos" ? 8 : 6.5,
+              "circle-radius": layer.id === "bebederos" ? 9 : 7,
               "circle-color": layer.color,
               "circle-stroke-width": 1.5,
               "circle-stroke-color": "#f6f3ec",
@@ -234,15 +262,37 @@ export function CampusMap({
         paint: { "text-color": "#f6f3ec" },
       })
       const fills = LAYERS.map((layer) => `${layer.id}-fill`)
-      const invHits = INVENTARIO.map((layer) => (layer.kind === "point" ? `inv-${layer.id}-circle` : `inv-${layer.id}-fill`))
-      const hitLayers = ["actividades-circle", ...invHits, ...fills]
+      const invFills = INVENTARIO.filter((layer) => layer.kind === "polygon").map((layer) => `inv-${layer.id}-fill`)
+      const openInventory = (lngLat: { lng: number; lat: number }, layerId: string, props: Record<string, unknown>) => {
+        popupRef.current?.remove()
+        const spec = INVENTARIO.find((layer) => layer.id === layerId)
+        onActividad.current(null)
+        onCatastro.current({ layer: spec?.label ?? "Inventario", props })
+        const foto = typeof props.foto === "string" ? props.foto : ""
+        const fotoHtml = foto
+          ? `<img alt="" src="/api/v1/geo/inventario/fotos/${encodeURIComponent(foto)}" />`
+          : spec?.id === "bebederos"
+            ? `<p class="cv-popup-meta">Sin fotografía recuperada</p>`
+            : ""
+        const popup = new Popup({ closeButton: true, maxWidth: "280px", className: "cv-popup" })
+          .setLngLat(lngLat)
+          .setHTML(
+            `<p class="cv-popup-kicker">${escapeHtml(spec?.label ?? "Inventario")}${props.subtipo ? ` · ${escapeHtml(props.subtipo)}` : ""}</p>
+             <p class="cv-popup-title">${escapeHtml(props.nombre || "Elemento")}</p>
+             <p class="cv-popup-meta">${escapeHtml(props.lugar || props.detalle || "")}</p>
+             ${fotoHtml}`,
+          )
+          .addTo(map)
+        popupRef.current = popup
+      }
       map.on("mousemove", (event: MapMouseEvent) => {
         if (pinRef.current) {
           map.getCanvas().style.cursor = "crosshair"
           return
         }
-        const hits = map.queryRenderedFeatures(event.point, { layers: hitLayers })
-        map.getCanvas().style.cursor = hits.length ? "pointer" : ""
+        const near = nearestInventoryPoint(map, event.point, inventoryRef.current, inventoryOnRef.current)
+        const hits = map.queryRenderedFeatures(event.point, { layers: ["actividades-circle", ...invFills, ...fills] })
+        map.getCanvas().style.cursor = near || hits.length ? "pointer" : ""
       })
       map.on("click", (event: MapMouseEvent) => {
         if (pinRef.current) {
@@ -267,29 +317,15 @@ export function CampusMap({
           popupRef.current = popup
           return
         }
-        const inventoryHits = map.queryRenderedFeatures(event.point, { layers: invHits })
-        if (inventoryHits.length) {
-          const hit = inventoryHits[0]
-          const props = (hit.properties ?? {}) as Record<string, unknown>
-          const spec = INVENTARIO.find((layer) => hit.source === `inv-${layer.id}`)
-          onActividad.current(null)
-          onCatastro.current({ layer: spec?.label ?? "Inventario", props })
-          const foto = typeof props.foto === "string" ? props.foto : ""
-          const fotoHtml = foto
-            ? `<img alt="" src="/api/v1/geo/inventario/fotos/${encodeURIComponent(foto)}" />`
-            : spec?.id === "bebederos"
-              ? `<p class="cv-popup-meta">Sin fotografía recuperada</p>`
-              : ""
-          const popup = new Popup({ closeButton: true, maxWidth: "280px", className: "cv-popup" })
-            .setLngLat(event.lngLat)
-            .setHTML(
-              `<p class="cv-popup-kicker">${escapeHtml(spec?.label ?? "Inventario")}${props.subtipo ? ` · ${escapeHtml(props.subtipo)}` : ""}</p>
-               <p class="cv-popup-title">${escapeHtml(props.nombre || "Elemento")}</p>
-               <p class="cv-popup-meta">${escapeHtml(props.lugar || props.detalle || "")}</p>
-               ${fotoHtml}`,
-            )
-            .addTo(map)
-          popupRef.current = popup
+        const near = nearestInventoryPoint(map, event.point, inventoryRef.current, inventoryOnRef.current)
+        if (near) {
+          openInventory(event.lngLat, near.id, near.props)
+          return
+        }
+        const polyHits = invFills.length ? map.queryRenderedFeatures(event.point, { layers: invFills }) : []
+        if (polyHits.length) {
+          const source = String(polyHits[0].source).replace(/^inv-/, "")
+          openInventory(event.lngLat, source, (polyHits[0].properties ?? {}) as Record<string, unknown>)
           return
         }
         const hits = map.queryRenderedFeatures(event.point, { layers: fills })

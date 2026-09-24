@@ -23,6 +23,18 @@ button { cursor: pointer; }
 
 .shell { position: fixed; inset: 0; }
 .map-host { position: absolute; inset: 0; }
+.map-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  background: var(--paper);
+  text-align: center;
+}
+.map-fallback p { margin: 0; max-width: 36rem; }
 
 .topbar {
   position: absolute;
