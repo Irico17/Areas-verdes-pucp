@@ -125,6 +125,8 @@ El visor crea labores con un pin (Jefatura y Coordinación), las asigna a un equ
 
 La vista **Relieve** extruye las áreas verdes según su superficie y, si se enciende la capa, las huellas de edificios OSM del recinto (`GET /api/v1/geo/edificios`). **Plano** vuelve al relleno 2D.
 
+Inventario opcional (apagado al entrar): bebederos 67, fauna 19, puertas 7, tachos 184, flora 74, cafetos 53, playas 15, vereda 1. `GET /api/v1/geo/inventario` y `GET /api/v1/geo/inventario/{capa}`. La agenda de reservas es ficticia: `GET /api/v1/geo/reservas-mock` (71 ítems, sin hoja de cálculo). No hay JPEG de bebederos en `data/raw`; el mapa lo indica en el popup.
+
 ## Fuera de este corte
 
-SSO institucional, Fase F (tachos, flora, bebederos…), Google Sheets en runtime y reservas reales (solo el mock FAKE).
+SSO institucional y reservas reales. La agenda que se ve es el mock FAKE.

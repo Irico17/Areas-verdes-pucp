@@ -22,5 +22,7 @@ Vite reenvía `/api` y `/health` a `http://127.0.0.1:8091`.
 - Interruptor de rol (Jefatura, Coordinación, Capataz) guardado en el navegador. No es SSO.
 - Labores abiertas: color = estado, letra = tipo. Pin para crear, panel para asignar y ver la bitácora.
 - Capataz solo consulta el equipo elegido. Si no hay red, el alta se encola en IndexedDB.
+- Vista Plano / Relieve. En relieve, las áreas se extruyen y se pueden encender las huellas OSM.
+- Inventario opcional (bebederos, fauna, tachos, flora, cafetos, playas, puertas, vereda) y una agenda marcada como ficticia.
 
 El manifiesto PWA y el service worker se generan con `vite-plugin-pwa`. En desarrollo el worker no intercepta la API.

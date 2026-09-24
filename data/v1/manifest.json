@@ -1,6 +1,6 @@
 {
   "crs": "EPSG:4326",
-  "generado_en": "2026-09-24T16:26:39Z",
+  "generado_en": "2026-09-24T16:53:12Z",
   "nota_pii": "zonas derivan de jefe_de_grupo.json. Se omitió el campo jefes (nombres de personas). feature_id Z-NNNN no identifica a una persona.",
   "datasets": {
     "areas_verdes": {

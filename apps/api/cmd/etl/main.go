@@ -40,5 +40,10 @@ func main() {
 		fmt.Printf(" %s=%d", name, n)
 	}
 	fmt.Println()
+	fmt.Printf("ETL_INVENTARIO")
+	for name, n := range rep.Inventario {
+		fmt.Printf(" %s=%d", name, n)
+	}
+	fmt.Println()
 	fmt.Printf("data/v1 escrito en %s\n", cfg.V1Dir)
 }

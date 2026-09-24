@@ -23,10 +23,11 @@ type Options struct {
 
 // Report son los conteos exactos escritos y, si aplica, cargados.
 type Report struct {
-	Areas    int
-	Zonas    int
-	Capas    map[string]int
-	Manifest Manifest
+	Areas      int
+	Zonas      int
+	Capas      map[string]int
+	Inventario map[string]int
+	Manifest   Manifest
 }
 
 type optionalCapa struct {
@@ -144,7 +145,28 @@ func Run(opt Options) (Report, error) {
 	for name, rows := range capas {
 		counts[name] = len(rows)
 	}
-	return Report{Areas: len(areas), Zonas: len(zonas), Capas: counts, Manifest: manifest}, nil
+
+	inv, err := CollectInventario(opt.RawDir)
+	if err != nil {
+		return Report{}, err
+	}
+	if err := WriteInventario(opt.V1Dir, inv); err != nil {
+		return Report{}, err
+	}
+	invCounts := map[string]int{}
+	for name, rows := range inv {
+		invCounts[name] = len(rows)
+	}
+	if !opt.SkipLoad {
+		if opt.DB == nil {
+			return Report{}, fmt.Errorf("no hay conexión a Postgres; usa --skip-load o define DATABASE_URL")
+		}
+		if err := LoadInventario(opt.DB, inv); err != nil {
+			return Report{}, err
+		}
+	}
+
+	return Report{Areas: len(areas), Zonas: len(zonas), Capas: counts, Inventario: invCounts, Manifest: manifest}, nil
 }
 
 func readNormalize(dir, name string, fn func([]byte) ([]Record, error)) ([]Record, string, error) {

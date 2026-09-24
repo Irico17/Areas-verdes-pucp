@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { fetchCollection } from "./api"
+import { INVENTARIO } from "./inventario"
 import { CampusMap } from "./map/CampusMap"
 import { enqueue, listQueue, removeQueued, type QueuedLabor } from "./offline/queue"
 import {
@@ -93,6 +94,9 @@ export default function App() {
   const [relieve, setRelieve] = useState(false)
   const [showEdificios, setShowEdificios] = useState(false)
   const [edificios, setEdificios] = useState<FeatureCollection>({ type: "FeatureCollection", features: [] })
+  const [inventory, setInventory] = useState<Partial<Record<string, FeatureCollection>>>({})
+  const [inventoryOn, setInventoryOn] = useState<Record<string, boolean>>({})
+  const [agenda, setAgenda] = useState<{ aviso: string; total: number; reservas: { id: string; jardin: string; fecha: string; hora: string; evento: string; estado: string }[] } | null>(null)
 
   const reloadActivities = useCallback(async () => {
     try {
@@ -146,6 +150,25 @@ export default function App() {
         if (cancelled) return
         const message = error instanceof Error ? error.message : "No se pudo leer el catastro"
         setLoad({ kind: "error", message })
+      })
+    Promise.all(
+      INVENTARIO.map(async (layer) => {
+        try {
+          return [layer.id, await fetchCollection(`/api/v1/geo/inventario/${layer.id}`)] as const
+        } catch {
+          return [layer.id, { type: "FeatureCollection" as const, features: [] }] as const
+        }
+      }),
+    ).then((rows) => {
+      if (!cancelled) setInventory(Object.fromEntries(rows))
+    })
+    fetch("/api/v1/geo/reservas-mock")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (!cancelled && body && Array.isArray(body.reservas)) setAgenda(body)
+      })
+      .catch(() => {
+        if (!cancelled) setAgenda(null)
       })
     fetchCollection("/api/v1/geo/edificios")
       .then((fc) => {
@@ -342,6 +365,8 @@ export default function App() {
         relieve={relieve}
         edificios={edificios}
         showEdificios={showEdificios}
+        inventory={inventory}
+        inventoryOn={inventoryOn}
         onSelectCatastro={(hit) => setPicked(hit ? `${hit.layer}: ${String(hit.props.nombre || hit.props.feature_id || "polígono")}` : null)}
         onSelectActividad={(id) => {
           if (id) choose(id)
@@ -467,6 +492,36 @@ export default function App() {
             <span className="count">{data[layer.id]?.features.length ?? "—"}</span>
           </div>
         ))}
+        <h2>Inventario</h2>
+        <p className="lede">Capas opcionales del recovery. Apagadas hasta que se necesiten.</p>
+        {INVENTARIO.map((layer) => (
+          <div className="layer" key={layer.id}>
+            <span className="swatch" style={{ background: layer.color }} />
+            <label>
+              <input
+                type="checkbox"
+                checked={inventoryOn[layer.id] === true}
+                onChange={() => setInventoryOn((current) => ({ ...current, [layer.id]: !current[layer.id] }))}
+              />{" "}
+              {layer.label}
+              <small>{layer.hint}</small>
+            </label>
+            <span className="count">{inventory[layer.id]?.features.length ?? "—"}</span>
+          </div>
+        ))}
+        <h2>Agenda ficticia</h2>
+        <p className="lede">{agenda?.aviso ?? "Leyendo la agenda de demostración…"}</p>
+        <ul className="labor-list">
+          {(agenda?.reservas ?? []).slice(0, 6).map((item) => (
+            <li key={item.id} className="agenda">
+              <strong>{item.jardin}</strong>
+              <small>
+                {item.fecha} · {item.hora} · {item.evento}
+              </small>
+            </li>
+          ))}
+        </ul>
+        {agenda && <p className="hint">{agenda.total} reservas de demostración. No hay hoja de cálculo en runtime.</p>}
         <p className="foot">Sin Street View. El rol es local: no hay sesión institucional.</p>
       </aside>
     </div>

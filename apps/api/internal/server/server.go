@@ -5,6 +5,7 @@ import (
 
 	"campusverde/api/internal/catastro"
 	"campusverde/api/internal/handlers"
+	"campusverde/api/internal/inventario"
 	"campusverde/api/internal/operacion"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,8 @@ type Deps struct {
 	DB            *gorm.DB
 	OpenAPIPath   string
 	EdificiosPath string
+	ReservasPath  string
+	FotosDir      string
 }
 
 // New arma el router Gin de la API.
@@ -38,9 +41,13 @@ func New(deps Deps) *gin.Engine {
 	meta := handlers.Meta{OpenAPIPath: deps.OpenAPIPath}
 
 	var op handlers.Operacion
+	var inv handlers.Inventario
+	inv.FotosDir = deps.FotosDir
 	if deps.DB != nil {
 		op.Store = operacion.NewStore(deps.DB)
+		inv.Store = inventario.NewStore(deps.DB)
 	}
+	reservas := handlers.Reservas{Path: deps.ReservasPath}
 
 	r.GET("/health", health.Get)
 	r.GET("/api/v1", meta.Index)
@@ -53,6 +60,10 @@ func New(deps Deps) *gin.Engine {
 	v1.GET("/capas", geo.Capas)
 	v1.GET("/capas/:capa", geo.Capa)
 	v1.GET("/edificios", geo.Edificios)
+	v1.GET("/inventario", inv.Index)
+	v1.GET("/inventario/fotos/:name", inv.Foto)
+	v1.GET("/inventario/:capa", inv.Capa)
+	v1.GET("/reservas-mock", reservas.Get)
 
 	lab := r.Group("/api/v1/operacion")
 	lab.GET("/capataces", op.Capataces)

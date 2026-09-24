@@ -10,8 +10,9 @@ info:
     CRS de las geometrías: **EPSG:4326** (longitud, latitud), GeoJSON RFC 7946.
     La columna `geom` admite NULL (catastro progresivo, sin GPS).
 
-    Fases A–D: salud, catastro y labores de supervisión. El rol viaja en el cuerpo
-    o en la query (`rol`, `capataz_id`); no hay SSO.
+    Fases A–F: salud, catastro, labores, relieve y overlays de inventario.
+    El rol viaja en el cuerpo o en la query (`rol`, `capataz_id`); no hay SSO.
+    La agenda de reservas es un mock ficticio y no consulta hojas de cálculo.
 servers:
   - url: http://127.0.0.1:8091
     description: Desarrollo local
@@ -215,6 +216,43 @@ paths:
           description: El rol capataz no crea labores
         "409":
           description: UUID repetido con otro contenido
+  /api/v1/geo/edificios:
+    get:
+      tags: [catastro]
+      summary: Huellas OSM del recinto para extrusión
+      responses:
+        "200":
+          description: FeatureCollection, vacía si falta el extracto
+  /api/v1/geo/inventario:
+    get:
+      tags: [catastro]
+      summary: Catálogo de overlays de inventario
+      responses:
+        "200":
+          description: Capas conocidas y conteos cargados
+  /api/v1/geo/inventario/{capa}:
+    get:
+      tags: [catastro]
+      summary: Capa opcional de inventario
+      parameters:
+        - name: capa
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [bebederos, fauna, playas_estacionamiento, puertas, area_vereda_peligro, flora, cafetos, tachos]
+      responses:
+        "200":
+          description: FeatureCollection
+        "404":
+          description: Capa desconocida
+  /api/v1/geo/reservas-mock:
+    get:
+      tags: [catastro]
+      summary: Agenda ficticia, sin identificadores de hojas de cálculo
+      responses:
+        "200":
+          description: Lista marcada como fake
 components:
   parameters:
     bbox:

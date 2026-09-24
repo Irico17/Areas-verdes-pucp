@@ -73,10 +73,10 @@ Implementar **después** (o en paralelo controlado) de tener modelo de actividad
 
 **MVP CORE:** **no.** Mejora UX post-piloto 2D.
 
-### Fase F — Paridad legacy (overlays inventario)
+### Fase F — Paridad legacy (overlays inventario) *(hecha, 2026-09-24)*
 
-- [ ] Tachos, flora/cafetos, bebederos (+ fotos), fauna, playas, puertas, etc. como capas opcionales de inventario.
-- [ ] Sustituir cualquier resto de Sheets; mantener mock reservas hasta fuente real.
+- [x] Tachos, flora, cafetos, bebederos (tipos fusionados), fauna, playas, puertas y vereda en riesgo como capas opcionales. Si el archivo no está en `data/raw`, el ETL lo omite.
+- [x] La agenda sigue siendo el mock FAKE (`GET /api/v1/geo/reservas-mock`). La API no reenvía el id de la hoja ni consulta Sheets. Las fotos JPEG no vinieron en el recovery: el popup del bebedero lo dice.
 
 **MVP CORE:** **no.** No bloquean supervisión por mapa.
 
@@ -99,8 +99,8 @@ Implementar **después** (o en paralelo controlado) de tener modelo de actividad
 | B | PostGIS: 521 áreas, 534 zonas, CRS 4326; capas opcionales 21 + 10. **Hecho.** |
 | C | Demo: OSM + 2–3 capas catastro desde API. **Hecho.** |
 | D | Demo: crear actividad con pin, verla como marcador, capataz solo ve las suyas. **Hecho.** |
-| E | Extrusión visible sin romper 2D |
-| F | Capas legacy must-have del inventario en checklist opcional |
+| E | Extrusión visible sin romper 2D. **Hecho.** |
+| F | Capas legacy must-have del inventario en checklist opcional. **Hecho.** |
 
 ## Riesgos
 

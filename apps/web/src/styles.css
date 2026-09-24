@@ -207,6 +207,10 @@ button { cursor: pointer; }
 }
 .cv-popup-title { margin: 2px 0 0; font-size: 15px; font-weight: 600; }
 .cv-popup-meta { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+.cv-popup img { display: block; width: 100%; max-height: 120px; object-fit: cover; margin-top: 8px; background: #e7e1d6; }
+.agenda { padding: 6px 0; border-top: 1px solid var(--line); }
+.agenda strong { display: block; font-size: 13px; }
+.agenda small { color: var(--muted); font-size: 11px; }
 
 @media (max-width: 820px) {
   .brand span { display: none; }

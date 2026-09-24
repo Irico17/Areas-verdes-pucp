@@ -10,6 +10,7 @@ import {
   ScaleControl,
 } from "maplibre-gl"
 import "maplibre-gl/dist/maplibre-gl.css"
+import { INVENTARIO } from "../inventario"
 import { etiquetaEstado, etiquetaTipo } from "../operacion"
 import { EMPTY, LAYERS, type FeatureCollection, type LayerId } from "../types"
 
@@ -23,6 +24,8 @@ type Props = {
   relieve: boolean
   edificios: FeatureCollection
   showEdificios: boolean
+  inventory: Partial<Record<string, FeatureCollection>>
+  inventoryOn: Record<string, boolean>
   onSelectCatastro: (hit: { layer: string; props: Record<string, unknown> } | null) => void
   onSelectActividad: (id: string | null) => void
   onPin: (lon: number, lat: number) => void
@@ -59,6 +62,8 @@ export function CampusMap({
   relieve,
   edificios,
   showEdificios,
+  inventory,
+  inventoryOn,
 }: Props) {
   const host = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Map | null>(null)
@@ -148,6 +153,35 @@ export function CampusMap({
           "fill-extrusion-height": ["coalesce", ["to-number", ["get", "altura_m"]], 8],
         },
       })
+      for (const layer of INVENTARIO) {
+        map.addSource(`inv-${layer.id}`, { type: "geojson", data: { type: "FeatureCollection", features: [] } })
+        if (layer.kind === "point") {
+          map.addLayer({
+            id: `inv-${layer.id}-circle`,
+            type: "circle",
+            source: `inv-${layer.id}`,
+            paint: {
+              "circle-radius": 5,
+              "circle-color": layer.color,
+              "circle-stroke-width": 1.25,
+              "circle-stroke-color": "#f6f3ec",
+            },
+          })
+        } else {
+          map.addLayer({
+            id: `inv-${layer.id}-fill`,
+            type: "fill",
+            source: `inv-${layer.id}`,
+            paint: { "fill-color": layer.color, "fill-opacity": 0.28 },
+          })
+          map.addLayer({
+            id: `inv-${layer.id}-line`,
+            type: "line",
+            source: `inv-${layer.id}`,
+            paint: { "line-color": layer.color, "line-width": 1.25 },
+          })
+        }
+      }
       map.addSource("actividades", { type: "geojson", data: { type: "FeatureCollection", features: [] } })
       map.addLayer({
         id: "actividades-circle",
@@ -200,7 +234,8 @@ export function CampusMap({
         paint: { "text-color": "#f6f3ec" },
       })
       const fills = LAYERS.map((layer) => `${layer.id}-fill`)
-      const hitLayers = ["actividades-circle", ...fills]
+      const invHits = INVENTARIO.map((layer) => (layer.kind === "point" ? `inv-${layer.id}-circle` : `inv-${layer.id}-fill`))
+      const hitLayers = ["actividades-circle", ...invHits, ...fills]
       map.on("mousemove", (event: MapMouseEvent) => {
         if (pinRef.current) {
           map.getCanvas().style.cursor = "crosshair"
@@ -227,6 +262,31 @@ export function CampusMap({
               `<p class="cv-popup-kicker">${escapeHtml(etiquetaTipo(String(props.tipo ?? "")))} · ${escapeHtml(etiquetaEstado(String(props.estado ?? "")))}</p>
                <p class="cv-popup-title">${escapeHtml(props.titulo || "Labor")}</p>
                <p class="cv-popup-meta">${escapeHtml(props.equipo || "Sin equipo")}</p>`,
+            )
+            .addTo(map)
+          popupRef.current = popup
+          return
+        }
+        const inventoryHits = map.queryRenderedFeatures(event.point, { layers: invHits })
+        if (inventoryHits.length) {
+          const hit = inventoryHits[0]
+          const props = (hit.properties ?? {}) as Record<string, unknown>
+          const spec = INVENTARIO.find((layer) => hit.source === `inv-${layer.id}`)
+          onActividad.current(null)
+          onCatastro.current({ layer: spec?.label ?? "Inventario", props })
+          const foto = typeof props.foto === "string" ? props.foto : ""
+          const fotoHtml = foto
+            ? `<img alt="" src="/api/v1/geo/inventario/fotos/${encodeURIComponent(foto)}" />`
+            : spec?.id === "bebederos"
+              ? `<p class="cv-popup-meta">Sin fotografía recuperada</p>`
+              : ""
+          const popup = new Popup({ closeButton: true, maxWidth: "280px", className: "cv-popup" })
+            .setLngLat(event.lngLat)
+            .setHTML(
+              `<p class="cv-popup-kicker">${escapeHtml(spec?.label ?? "Inventario")}${props.subtipo ? ` · ${escapeHtml(props.subtipo)}` : ""}</p>
+               <p class="cv-popup-title">${escapeHtml(props.nombre || "Elemento")}</p>
+               <p class="cv-popup-meta">${escapeHtml(props.lugar || props.detalle || "")}</p>
+               ${fotoHtml}`,
             )
             .addTo(map)
           popupRef.current = popup
@@ -290,7 +350,17 @@ export function CampusMap({
     if (map.getLayer("edificios-extrusion")) {
       map.setLayoutProperty("edificios-extrusion", "visibility", relieve && showEdificios ? "visible" : "none")
     }
-  }, [data, visible, activities, ready, relieve, edificios, showEdificios])
+    for (const layer of INVENTARIO) {
+      const source = map.getSource(`inv-${layer.id}`) as GeoJSONSource | undefined
+      source?.setData(asCollection(inventory[layer.id]))
+      const vis = inventoryOn[layer.id] ? "visible" : "none"
+      for (const suffix of ["circle", "fill", "line"]) {
+        if (map.getLayer(`inv-${layer.id}-${suffix}`)) {
+          map.setLayoutProperty(`inv-${layer.id}-${suffix}`, "visibility", vis)
+        }
+      }
+    }
+  }, [data, visible, activities, ready, relieve, edificios, showEdificios, inventory, inventoryOn])
 
   useEffect(() => {
     const map = mapRef.current
