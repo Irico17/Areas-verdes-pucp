@@ -1,0 +1,6 @@
+.git
+**/.git
+**/node_modules
+apps/web/dist
+data/evidencias
+**/*_test.go

@@ -1,0 +1,85 @@
+#!/bin/bash
+set -euxo pipefail
+dnf install -y docker awscli xfsprogs
+systemctl enable --now docker
+usermod -aG docker ec2-user || true
+mkdir -p /opt/campus/data/pg /opt/campus/data/app
+
+# Volumen aparte (Nitro lo presenta como nvme, no como sdf).
+for _try in 1 2 3 4 5 6; do
+  DEV="$(lsblk -dn -o NAME,TYPE | awk '${"$"}2=="disk" && ${"$"}1!="nvme0n1" {print "/dev/"${"$"}1; exit}')"
+  if [ -n "$${DEV:-}" ]; then
+    blkid "${"$"}DEV" || mkfs.xfs "${"$"}DEV"
+    grep -q "${"$"}DEV" /etc/fstab || echo "${"$"}DEV /opt/campus/data xfs defaults,nofail 0 2" >> /etc/fstab
+    mkdir -p /opt/campus/data/pg /opt/campus/data/app
+    mount -a || mount "${"$"}DEV" /opt/campus/data || true
+    mkdir -p /opt/campus/data/pg /opt/campus/data/app
+    break
+  fi
+  sleep 5
+done
+
+cat >/opt/campus/docker-compose.yml <<'YAML'
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: campus
+      POSTGRES_PASSWORD: ${db_password}
+      POSTGRES_DB: campus_verde
+    volumes:
+      - /opt/campus/data/pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campus -d campus_verde"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+  api:
+    image: ${api_image}
+    environment:
+      DATABASE_URL: postgres://campus:${db_password}@db:5432/campus_verde?sslmode=disable
+      CAMPUS_DEV_PASSWORD: pando-local
+      EVIDENCIAS_BUCKET: "${evidence_bucket}"
+      AWS_REGION: ${region}
+      AWS_DEFAULT_REGION: ${region}
+    volumes:
+      - /opt/campus/data/app:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+  web:
+    image: ${web_image}
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+YAML
+
+cat >/opt/campus/up.sh <<'SH'
+#!/bin/bash
+set -euo pipefail
+cd /opt/campus
+aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${registry} || true
+docker compose pull
+docker compose up -d
+SH
+chmod +x /opt/campus/up.sh
+
+cat >/etc/systemd/system/campus.service <<'UNIT'
+[Unit]
+Description=Campus Verde
+After=docker.service network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/campus/up.sh
+TimeoutStartSec=900
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable campus.service
+systemctl start campus.service || true

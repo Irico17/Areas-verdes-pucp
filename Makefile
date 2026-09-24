@@ -6,11 +6,12 @@ include .env
 export
 endif
 
-.PHONY: help env up down wait migrate etl api web test bootstrap counts
+.PHONY: help env up down wait migrate etl api web test bootstrap counts stack
 
 help:
 	@echo "make bootstrap   # compose + migraciones + ETL"
-	@echo "make up          # docker compose up -d (PostGIS)"
+	@echo "make up          # solo PostGIS (el desarrollo local)"
+	@echo "make stack       # postgis + api + web en compose"
 	@echo "make wait        # espera a que Postgres acepte conexiones"
 	@echo "make migrate     # aplica SQL de apps/api/migrations"
 	@echo "make etl         # data/raw → data/v1 → PostGIS"
@@ -24,7 +25,10 @@ env:
 	@test -f .env || cp .env.example .env
 
 up: env
-	docker compose up -d
+	docker compose up -d db
+
+stack: env
+	docker compose up -d --build
 
 down:
 	docker compose down
