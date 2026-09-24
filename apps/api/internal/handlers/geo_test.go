@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"campusverde/api/internal/catastro"
@@ -77,6 +78,47 @@ func TestGeoAreas(t *testing.T) {
 	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/geo/capas/fauna", nil))
 	if w.Code != 404 {
 		t.Fatalf("capa status %d", w.Code)
+	}
+}
+
+type countingGeo struct {
+	fakeGeo
+	limit int
+	areas int
+}
+
+func (c countingGeo) Areas(_ context.Context, f catastro.Filter) (geojson.FeatureCollection, error) {
+	fc := geojson.Collection("areas_verdes")
+	for i := 0; i < c.areas; i++ {
+		fc.Features = append(fc.Features, geojson.Feature{
+			Type:     "Feature",
+			ID:       strconv.Itoa(i + 1),
+			Geometry: json.RawMessage(`{"type":"Polygon","coordinates":[]}`),
+		})
+	}
+	if f.Limit != c.limit {
+		return fc, context.Canceled
+	}
+	return fc, nil
+}
+
+func TestGeoAreasSinLimite(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const n = 521
+	r := gin.New()
+	h := Geo{Source: countingGeo{areas: n, limit: 0}}
+	r.GET("/api/v1/geo/areas", h.Areas)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/geo/areas", nil))
+	if w.Code != 200 {
+		t.Fatalf("status %d body %s", w.Code, w.Body.Bytes())
+	}
+	var got geojson.FeatureCollection
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Features) != n {
+		t.Fatalf("features %d, se esperaban %d", len(got.Features), n)
 	}
 }
 

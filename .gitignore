@@ -55,6 +55,10 @@ venv/
 # Material de arranque local, no forma parte del repo
 /uploads/
 
+# Worker de MapLibre copiado en el build (no es fuente)
+apps/web/public/maplibre-gl-worker.mjs
+apps/web/public/maplibre-gl-shared.mjs
+
 # Binarios Go
 apps/api/bin/
 *.exe

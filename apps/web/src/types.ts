@@ -39,7 +39,7 @@ export const LAYERS: LayerSpec[] = [
     defaultOn: true,
     fill: "#308046",
     line: "#083465",
-    fillOpacity: 0.32,
+    fillOpacity: 0.55,
   },
   {
     id: "zonas",

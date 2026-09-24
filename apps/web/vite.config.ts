@@ -1,10 +1,30 @@
+import { cpSync } from "node:fs"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, type Plugin } from "vite"
 import { VitePWA } from "vite-plugin-pwa"
+
+function maplibreWorker(): Plugin {
+  const files = ["maplibre-gl-worker.mjs", "maplibre-gl-shared.mjs"]
+  const copy = (dir: string) => {
+    for (const name of files) {
+      cpSync(`node_modules/maplibre-gl/dist/${name}`, `${dir}/${name}`)
+    }
+  }
+  return {
+    name: "maplibre-worker",
+    buildStart() {
+      copy("public")
+    },
+    closeBundle() {
+      copy("dist")
+    },
+  }
+}
 
 export default defineConfig({
   plugins: [
     react(),
+    maplibreWorker(),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],

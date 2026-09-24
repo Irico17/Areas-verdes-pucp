@@ -8,8 +8,11 @@ import {
   NavigationControl,
   Popup,
   ScaleControl,
+  setWorkerUrl,
+  type LngLatBoundsLike,
 } from "maplibre-gl"
 import "maplibre-gl/dist/maplibre-gl.css"
+import { catastroVisible, conteoCapas } from "./coverage"
 import { INVENTARIO } from "../inventario"
 import { etiquetaEstado, etiquetaTipo } from "../operacion"
 import { EMPTY, LAYERS, type FeatureCollection, type LayerId } from "../types"
@@ -32,6 +35,14 @@ type Props = {
 }
 
 const CAMPUS: [number, number] = [-77.0796, -12.0696]
+const CAMPUS_BOUNDS: LngLatBoundsLike = [
+  [-77.0832, -12.07415],
+  [-77.07795, -12.0644],
+]
+
+// En producción el bundle busca ./maplibre-gl-worker.mjs junto al JS con hash
+// y nginx devolvía index.html. El worker y su módulo compartido viven en la raíz.
+setWorkerUrl("/maplibre-gl-worker.mjs")
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
@@ -94,6 +105,7 @@ export function CampusMap({
   const popupRef = useRef<Popup | null>(null)
   const markerRef = useRef<Marker | null>(null)
   const [ready, setReady] = useState(false)
+  const encuadrado = useRef(false)
   const pinRef = useRef(pinMode)
   const onCatastro = useRef(onSelectCatastro)
   const onActividad = useRef(onSelectActividad)
@@ -379,6 +391,11 @@ export function CampusMap({
     }
     if (map.getLayer("areas-extrusion")) {
       map.setLayoutProperty("areas-extrusion", "visibility", relieve && visible.areas ? "visible" : "none")
+    }
+    const conteo = conteoCapas(data)
+    if (!encuadrado.current && catastroVisible(conteo)) {
+      encuadrado.current = true
+      map.fitBounds(CAMPUS_BOUNDS, { padding: 36, duration: 0, maxZoom: 17 })
     }
     const acts = map.getSource("actividades") as GeoJSONSource | undefined
     acts?.setData(asCollection(activities))

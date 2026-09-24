@@ -28,6 +28,7 @@ jobs:
         run: |
           npm ci
           npm run lint
+          npm test
           npm run build
       - name: Imágenes
         run: |
