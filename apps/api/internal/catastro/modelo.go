@@ -2,11 +2,13 @@ package catastro
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"strings"
 	"unicode"
 
 	"golang.org/x/text/unicode/norm"
+	"gorm.io/gorm"
 )
 
 // ErrEntrada es una validación de catastro que no llega a la base.
@@ -425,28 +427,41 @@ func (s *Store) Recodificar(ctx context.Context, ejemplarID int64, codigoNuevo s
 		return CodigoHistorico{}, ErrEntrada
 	}
 	var out CodigoHistorico
-	err := s.db.WithContext(ctx).Raw(`
-		WITH prev AS (
-		  SELECT id, COALESCE(codigo, '') AS codigo
-		  FROM ejemplares
-		  WHERE id = $1 AND activo
-		), ins AS (
-		  INSERT INTO codigos_historicos (ejemplar_id, codigo_anterior, codigo_nuevo)
-		  SELECT id, codigo, $2 FROM prev
-		  WHERE codigo <> '' AND codigo <> $2
-		  RETURNING id, ejemplar_id, codigo_anterior, codigo_nuevo
-		), upd AS (
-		  UPDATE ejemplares SET codigo = $2, updated_at = now()
-		  WHERE id = $1 AND activo
-		  RETURNING id
-		)
-		SELECT ins.id, ins.ejemplar_id, ins.codigo_anterior, ins.codigo_nuevo
-		FROM ins`, ejemplarID, codigoNuevo).Scan(&out).Error
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var anterior sql.NullString
+		row := tx.Raw(`SELECT codigo FROM ejemplares WHERE id = $1 AND activo`, ejemplarID).Row()
+		if err := row.Scan(&anterior); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return ErrNoEncontrado
+			}
+			return err
+		}
+		previo := ""
+		if anterior.Valid {
+			previo = anterior.String
+		}
+		if previo == codigoNuevo {
+			out = CodigoHistorico{EjemplarID: ejemplarID, CodigoAnterior: previo, CodigoNuevo: codigoNuevo}
+			return nil
+		}
+		if err := tx.Raw(`
+			INSERT INTO codigos_historicos (ejemplar_id, codigo_anterior, codigo_nuevo)
+			VALUES ($1, $2, $3)
+			RETURNING id, ejemplar_id, codigo_anterior, codigo_nuevo`,
+			ejemplarID, previo, codigoNuevo).Scan(&out).Error; err != nil {
+			return err
+		}
+		res := tx.Exec(`UPDATE ejemplares SET codigo = $2, updated_at = now() WHERE id = $1 AND activo`, ejemplarID, codigoNuevo)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected != 1 {
+			return ErrNoEncontrado
+		}
+		return nil
+	})
 	if err != nil {
 		return CodigoHistorico{}, err
-	}
-	if out.ID == 0 {
-		return CodigoHistorico{}, ErrNoEncontrado
 	}
 	return out, nil
 }

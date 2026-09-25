@@ -241,6 +241,13 @@ func assertEsquema(t *testing.T, name string) {
 	if cuadrillas != 3 {
 		t.Fatalf("%s: cuadrillas de demostración = %d", name, cuadrillas)
 	}
+	var geomNull string
+	if err := gdb.Raw(`SELECT attnotnull::text FROM pg_attribute WHERE attrelid = 'poligonos_cuadrilla'::regclass AND attname = 'geom'`).Scan(&geomNull).Error; err != nil {
+		t.Fatal(err)
+	}
+	if geomNull != "true" {
+		t.Fatalf("%s: poligonos_cuadrilla.geom debería ser NOT NULL cuando la copia no tiene nulos", name)
+	}
 	if err := gdb.Exec(`
 		INSERT INTO actividades (id, tipo, estado, titulo, detalle, geom)
 		VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1', 'riego', 'pendiente', 'Sin ubicación', '', NULL)

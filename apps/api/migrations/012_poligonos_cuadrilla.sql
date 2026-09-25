@@ -71,6 +71,13 @@ FROM poligonos_cuadrilla;
 COMMENT ON VIEW zonas IS
   'Compatibilidad de lectura. Los polígonos viven en poligonos_cuadrilla.';
 
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM poligonos_cuadrilla WHERE geom IS NULL) THEN
+    ALTER TABLE poligonos_cuadrilla ALTER COLUMN geom SET NOT NULL;
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS asignaciones_poligono (
   id            BIGSERIAL PRIMARY KEY,
   poligono_id   BIGINT NOT NULL REFERENCES poligonos_cuadrilla (id),
