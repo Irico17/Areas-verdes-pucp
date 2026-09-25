@@ -59,6 +59,70 @@ func setCookie(c *gin.Context, token string, maxAge int) {
 	})
 }
 
+// RegistrarAccesos publica la sesión local. registrar(r, deps) del frente accesos.
+// 1B cierra el hueco de actor_rol en el middleware; no reescribe estas cuatro rutas.
+func RegistrarAccesos(r *gin.Engine, deps Deps) {
+	var acc *accesos.Store
+	if deps.DB != nil {
+		acc = accesos.NewStore(deps.DB)
+	}
+	ses := Sesion{Store: acc}
+	r.POST("/api/v1/sesion", ses.Entrar)
+	r.GET("/api/v1/sesion", ses.Actual)
+	r.DELETE("/api/v1/sesion", ses.Salir)
+	r.GET("/api/v1/accesos/usuarios", ses.Usuarios)
+}
+
+// RegistrarCatalogos publica el catálogo configurable. registrar(r, deps) del frente catálogos.
+func RegistrarCatalogos(r *gin.Engine, deps Deps) {
+	var cats *catalogos.Store
+	if deps.DB != nil {
+		cats = catalogos.NewStore(deps.DB)
+	}
+	cat := Catalogo{Store: cats}
+	r.GET("/api/v1/catalogos", cat.List)
+	r.POST("/api/v1/catalogos", cat.Create)
+	r.POST("/api/v1/catalogos/:id/desactivar", cat.Off)
+}
+
+// RegistrarCatastro publica las fichas de área. registrar(r, deps) del frente catastro.
+// 1A y 1C añaden paths nuevos en otra línea de server.go.
+func RegistrarCatastro(r *gin.Engine, deps Deps) {
+	var store *catastro.Store
+	if deps.DB != nil {
+		store = catastro.NewStore(deps.DB)
+	}
+	fichas := Fichas{Store: store}
+	r.GET("/api/v1/catastro/areas", fichas.List)
+	r.POST("/api/v1/catastro/areas", fichas.Create)
+	r.PATCH("/api/v1/catastro/areas/:id", fichas.Patch)
+}
+
+// RegistrarAtencion publica solicitudes, órdenes, riego, evidencias, reporte e IA.
+// registrar(r, deps) del frente atención. 1D solo edita SubirEvidencia y Archivo.
+func RegistrarAtencion(r *gin.Engine, deps Deps) {
+	var aten *atencion.Store
+	if deps.DB != nil {
+		aten = atencion.NewStore(deps.DB)
+	}
+	at := Atencion{
+		Store: aten,
+		Dir:   deps.EvidenciasDir,
+		Files: blobs.Open(deps.EvidenciasDir, deps.EvidenciasBucket),
+	}
+	r.GET("/api/v1/solicitudes", at.Solicitudes)
+	r.POST("/api/v1/solicitudes", at.CrearSolicitud)
+	r.GET("/api/v1/ordenes", at.Ordenes)
+	r.POST("/api/v1/ordenes", at.CrearOrden)
+	r.GET("/api/v1/riego", at.Riego)
+	r.POST("/api/v1/riego", at.CrearRiego)
+	r.GET("/api/v1/evidencias", at.Evidencias)
+	r.POST("/api/v1/evidencias", at.SubirEvidencia)
+	r.GET("/api/v1/evidencias/:id/archivo", at.Archivo)
+	r.GET("/api/v1/reportes/labores", at.Reporte)
+	r.POST("/api/v1/ia/sugerir-tipo", at.Sugerir)
+}
+
 // Sesion expone el ingreso local. No es el SSO de la PUCP.
 type Sesion struct {
 	Store *accesos.Store

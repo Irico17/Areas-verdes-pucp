@@ -1,0 +1,29 @@
+# Frente: 2A solicitudes, órdenes y riego. 1D evidencias si el path es nuevo.
+# Añade paths en este archivo. No edites el YAML de otro tag.
+/api/v1/solicitudes:
+  get:
+    tags: [operacion]
+    summary: Solicitudes con código externo conservado, no generado
+    responses:
+      "200":
+        description: Lista
+  post:
+    tags: [operacion]
+    summary: Alta manual (Centuria, OSG, correo o interna)
+    responses:
+      "201":
+        description: Solicitud creada
+/api/v1/ordenes:
+  post:
+    tags: [operacion]
+    summary: Orden de servicio para una labor tercerizada
+    responses:
+      "201":
+        description: Orden creada
+/api/v1/riego:
+  get:
+    tags: [operacion]
+    summary: Riego por sector y turno, sin indicador oficial
+    responses:
+      "200":
+        description: Registros

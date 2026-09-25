@@ -137,6 +137,22 @@ func parseFilter(c *gin.Context) (catastro.Filter, error) {
 	return catastro.Filter{BBox: bbox, Limit: limit}, nil
 }
 
+// RegistrarGeo publica el catastro de lectura. registrar(r, deps) del frente geo.
+// 1A añade su línea en server.go; no reescribe este bloque salvo paths nuevos de ejemplar.
+func RegistrarGeo(r *gin.Engine, deps Deps) {
+	geo := Geo{EdificiosPath: deps.EdificiosPath}
+	if deps.DB != nil {
+		geo.Source = catastro.NewStore(deps.DB)
+	}
+	v1 := r.Group("/api/v1/geo")
+	v1.GET("/resumen", geo.Resumen)
+	v1.GET("/areas", geo.Areas)
+	v1.GET("/zonas", geo.Zonas)
+	v1.GET("/capas", geo.Capas)
+	v1.GET("/capas/:capa", geo.Capa)
+	v1.GET("/edificios", geo.Edificios)
+}
+
 func parseLimit(raw string) (int, error) {
 	if raw == "" {
 		return 0, nil

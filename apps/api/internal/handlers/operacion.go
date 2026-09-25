@@ -45,6 +45,23 @@ type archiveBody struct {
 	Motivo   string `json:"motivo"`
 }
 
+// RegistrarOperacion publica labores. registrar(r, deps) del frente operación.
+// 1B puede tocar el middleware de server.go; 2A no reescribe estas rutas.
+func RegistrarOperacion(r *gin.Engine, deps Deps) {
+	var op Operacion
+	if deps.DB != nil {
+		op.Store = operacion.NewStore(deps.DB)
+	}
+	lab := r.Group("/api/v1/operacion")
+	lab.GET("/capataces", op.Capataces)
+	lab.GET("/actividades", op.List)
+	lab.POST("/actividades", op.Create)
+	lab.PATCH("/actividades/:id/asignacion", op.Assign)
+	lab.PATCH("/actividades/:id/estado", op.Estado)
+	lab.POST("/actividades/:id/archivar", op.Archive)
+	lab.GET("/actividades/:id/timeline", op.Timeline)
+}
+
 func (h Operacion) Capataces(c *gin.Context) {
 	if h.Store == nil {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})

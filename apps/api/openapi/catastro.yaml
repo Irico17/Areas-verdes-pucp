@@ -1,0 +1,126 @@
+# Frente: 1A y 1C. Áreas, zonas y fichas. No mezclar inventario.
+# Añade paths en este archivo. No edites el YAML de otro tag.
+/api/v1/geo/resumen:
+  get:
+    tags: [catastro]
+    summary: Conteos de áreas, zonas y capas auxiliares
+    operationId: resumenCatastro
+    responses:
+      "200":
+        description: Conteos
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Resumen"
+      "503":
+        description: Base no disponible
+/api/v1/geo/areas:
+  get:
+    tags: [catastro]
+    summary: Áreas verdes
+    description: FeatureCollection de `areas_verdes`. Identificador estable `AV-NNNN`.
+    operationId: areas
+    parameters:
+      - $ref: "#/components/parameters/bbox"
+      - $ref: "#/components/parameters/limit"
+    responses:
+      "200":
+        description: FeatureCollection
+        content:
+          application/geo+json:
+            schema:
+              $ref: "#/components/schemas/FeatureCollection"
+      "400":
+        description: bbox o limit inválidos
+      "503":
+        description: Base no disponible
+/api/v1/geo/zonas:
+  get:
+    tags: [catastro]
+    summary: Zonas de catastro
+    description: |
+      FeatureCollection derivada de `jefe_de_grupo.json`.
+      El campo `jefes` (nombres de personas) no se almacena ni se sirve.
+      Identificador estable `Z-NNNN`.
+    operationId: zonas
+    parameters:
+      - $ref: "#/components/parameters/bbox"
+      - $ref: "#/components/parameters/limit"
+    responses:
+      "200":
+        description: FeatureCollection
+        content:
+          application/geo+json:
+            schema:
+              $ref: "#/components/schemas/FeatureCollection"
+      "400":
+        description: bbox o limit inválidos
+      "503":
+        description: Base no disponible
+/api/v1/geo/capas:
+  get:
+    tags: [catastro]
+    summary: Catálogo de capas auxiliares
+    operationId: capas
+    responses:
+      "200":
+        description: Capas conocidas y conteos cargados
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                capas_conocidas:
+                  type: array
+                  items:
+                    type: string
+                cargadas:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/CapaCount"
+/api/v1/geo/capas/{capa}:
+  get:
+    tags: [catastro]
+    summary: Capa auxiliar
+    description: "`jardines_reserva` o `xerofitica`."
+    operationId: capa
+    parameters:
+      - name: capa
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [jardines_reserva, xerofitica]
+      - $ref: "#/components/parameters/bbox"
+      - $ref: "#/components/parameters/limit"
+    responses:
+      "200":
+        description: FeatureCollection
+        content:
+          application/geo+json:
+            schema:
+              $ref: "#/components/schemas/FeatureCollection"
+      "404":
+        description: Capa desconocida
+      "503":
+        description: Base no disponible
+/api/v1/geo/edificios:
+  get:
+    tags: [catastro]
+    summary: Huellas OSM del recinto para extrusión
+    responses:
+      "200":
+        description: FeatureCollection, vacía si falta el extracto
+/api/v1/catastro/areas:
+  get:
+    tags: [catastro]
+    summary: Fichas para editar metadatos
+    responses:
+      "200":
+        description: Hasta 40 áreas
+  post:
+    tags: [catastro]
+    summary: Crea un área sin geometría
+    responses:
+      "201":
+        description: Ficha creada

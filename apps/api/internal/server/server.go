@@ -4,13 +4,7 @@ import (
 	"net/http"
 
 	"campusverde/api/internal/accesos"
-	"campusverde/api/internal/atencion"
-	"campusverde/api/internal/blobs"
-	"campusverde/api/internal/catalogos"
-	"campusverde/api/internal/catastro"
 	"campusverde/api/internal/handlers"
-	"campusverde/api/internal/inventario"
-	"campusverde/api/internal/operacion"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -35,12 +29,8 @@ func New(deps Deps) *gin.Engine {
 	r.Use(gin.Logger(), gin.Recovery(), cors)
 
 	var acc *accesos.Store
-	var cats *catalogos.Store
-	var aten *atencion.Store
 	if deps.DB != nil {
 		acc = accesos.NewStore(deps.DB)
-		cats = catalogos.NewStore(deps.DB)
-		aten = atencion.NewStore(deps.DB)
 	}
 	r.Use(func(c *gin.Context) {
 		if acc != nil {
@@ -53,80 +43,36 @@ func New(deps Deps) *gin.Engine {
 		c.Next()
 	})
 
-	var store *catastro.Store
-	if deps.DB != nil {
-		store = catastro.NewStore(deps.DB)
+	hdeps := handlers.Deps{
+		DB:               deps.DB,
+		OpenAPIPath:      deps.OpenAPIPath,
+		EdificiosPath:    deps.EdificiosPath,
+		ReservasPath:     deps.ReservasPath,
+		FotosDir:         deps.FotosDir,
+		EvidenciasDir:    deps.EvidenciasDir,
+		EvidenciasBucket: deps.EvidenciasBucket,
 	}
 
-	health := handlers.Health{DB: deps.DB, Store: store}
-	geo := handlers.Geo{EdificiosPath: deps.EdificiosPath}
-	if store != nil {
-		geo.Source = store
-	}
-	meta := handlers.Meta{OpenAPIPath: deps.OpenAPIPath}
-
-	var op handlers.Operacion
-	var inv handlers.Inventario
-	inv.FotosDir = deps.FotosDir
-	if deps.DB != nil {
-		op.Store = operacion.NewStore(deps.DB)
-		inv.Store = inventario.NewStore(deps.DB)
-	}
-	reservas := handlers.Reservas{Path: deps.ReservasPath}
-
-	r.GET("/health", health.Get)
-	r.GET("/api/v1", meta.Index)
-	r.GET("/api/v1/openapi.yaml", meta.OpenAPI)
-
-	v1 := r.Group("/api/v1/geo")
-	v1.GET("/resumen", geo.Resumen)
-	v1.GET("/areas", geo.Areas)
-	v1.GET("/zonas", geo.Zonas)
-	v1.GET("/capas", geo.Capas)
-	v1.GET("/capas/:capa", geo.Capa)
-	v1.GET("/edificios", geo.Edificios)
-	v1.GET("/inventario", inv.Index)
-	v1.GET("/inventario/fotos/:name", inv.Foto)
-	v1.GET("/inventario/:capa", inv.Capa)
-	v1.GET("/reservas-mock", reservas.Get)
-
-	lab := r.Group("/api/v1/operacion")
-	lab.GET("/capataces", op.Capataces)
-	lab.GET("/actividades", op.List)
-	lab.POST("/actividades", op.Create)
-	lab.PATCH("/actividades/:id/asignacion", op.Assign)
-	lab.PATCH("/actividades/:id/estado", op.Estado)
-	lab.POST("/actividades/:id/archivar", op.Archive)
-	lab.GET("/actividades/:id/timeline", op.Timeline)
-
-	ses := handlers.Sesion{Store: acc}
-	r.POST("/api/v1/sesion", ses.Entrar)
-	r.GET("/api/v1/sesion", ses.Actual)
-	r.DELETE("/api/v1/sesion", ses.Salir)
-	r.GET("/api/v1/accesos/usuarios", ses.Usuarios)
-
-	cat := handlers.Catalogo{Store: cats}
-	r.GET("/api/v1/catalogos", cat.List)
-	r.POST("/api/v1/catalogos", cat.Create)
-	r.POST("/api/v1/catalogos/:id/desactivar", cat.Off)
-
-	fichas := handlers.Fichas{Store: store}
-	r.GET("/api/v1/catastro/areas", fichas.List)
-	r.POST("/api/v1/catastro/areas", fichas.Create)
-	r.PATCH("/api/v1/catastro/areas/:id", fichas.Patch)
-
-	at := handlers.Atencion{Store: aten, Dir: deps.EvidenciasDir, Files: blobs.Open(deps.EvidenciasDir, deps.EvidenciasBucket)}
-	r.GET("/api/v1/solicitudes", at.Solicitudes)
-	r.POST("/api/v1/solicitudes", at.CrearSolicitud)
-	r.GET("/api/v1/ordenes", at.Ordenes)
-	r.POST("/api/v1/ordenes", at.CrearOrden)
-	r.GET("/api/v1/riego", at.Riego)
-	r.POST("/api/v1/riego", at.CrearRiego)
-	r.GET("/api/v1/evidencias", at.Evidencias)
-	r.POST("/api/v1/evidencias", at.SubirEvidencia)
-	r.GET("/api/v1/evidencias/:id/archivo", at.Archivo)
-	r.GET("/api/v1/reportes/labores", at.Reporte)
-	r.POST("/api/v1/ia/sugerir-tipo", at.Sugerir)
+	// Registro de rutas. Cada frente añade una sola línea registrar(r, deps)
+	// y su archivo handlers/<frente>.go o openapi/<tag>.yaml.
+	// No reescribas este bloque.
+	handlers.RegistrarSistema(r, hdeps)
+	handlers.RegistrarGeo(r, hdeps)
+	handlers.RegistrarInventario(r, hdeps)
+	handlers.RegistrarReservas(r, hdeps)
+	handlers.RegistrarOperacion(r, hdeps)
+	handlers.RegistrarAccesos(r, hdeps)
+	handlers.RegistrarCatalogos(r, hdeps)
+	handlers.RegistrarCatastro(r, hdeps)
+	handlers.RegistrarAtencion(r, hdeps)
+	// 1A ejemplares:        handlers.RegistrarEjemplares(r, hdeps)
+	// 1B seguridad:         middleware de arriba; sin línea nueva de ruta
+	// 1D evidencias:        ya está en RegistrarAtencion; un path nuevo es handlers.RegistrarEvidencias(r, hdeps)
+	// 2A poda y vivero:     handlers.RegistrarPoda(r, hdeps)
+	// 2B reservas reales:   ampliar RegistrarReservas
+	// 2C auditoría:         handlers.RegistrarAuditoria(r, hdeps)
+	// 2D reportes:          ampliar RegistrarAtencion
+	// 3A importaciones:     handlers.RegistrarImportaciones(r, hdeps)
 
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ruta no encontrada"})
