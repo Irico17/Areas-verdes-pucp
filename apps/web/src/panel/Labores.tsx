@@ -10,7 +10,7 @@ import {
   type Capataz,
   type Evento,
 } from "../operacion"
-import type { CatalogoItem } from "../producto"
+import type { CatalogoItem, Evidencia } from "../producto"
 import type { Rol } from "../types"
 import { EvidenciasCampo } from "./EvidenciasCampo"
 
@@ -68,6 +68,8 @@ type Props = {
   onMotivo: (id: string) => void
   onSugerir: () => void
   sugerencia: string
+  evidencias: Evidencia[]
+  onSubir: (file: File) => void
 }
 
 export function Labores(props: Props) {

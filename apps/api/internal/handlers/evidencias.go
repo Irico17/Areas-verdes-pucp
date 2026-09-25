@@ -47,6 +47,8 @@ func guardarEvidenciaForm(c *gin.Context, db *gorm.DB, files blobs.Store, u acce
 		Exif:        exif,
 		Rol:         u.Rol,
 		CapatazID:   u.CapatazID,
+		UsuarioID:   u.ID,
+		OrdenID:     c.PostForm("orden_id"),
 		Contenido:   body,
 	})
 }

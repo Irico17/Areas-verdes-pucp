@@ -43,7 +43,9 @@
     summary: Adjuntar evidencia con hash, punto opcional y EXIF
     description: |
       Multipart. Campos: id (UUID de la evidencia, distinto de la labor),
-      actividad_id, archivo, sha256 (hex), nota, lat, lon, exif (objeto JSON).
+      actividad_id, orden_id (opcional, UUID de una orden de esa labor),
+      archivo, sha256 (hex), nota, lat, lon,
+      exif (solo fecha, lat, lon y orientacion; el resto se descarta; tope 1 KB).
       El servidor recalcula el SHA-256. El mismo id con el mismo hash es idempotente (200).
       El mismo id con otro contenido responde 409. Tope 8 MB. MIME por contenido.
     responses:

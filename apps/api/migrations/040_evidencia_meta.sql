@@ -13,4 +13,9 @@ COMMENT ON COLUMN evidencias.lat IS
 COMMENT ON COLUMN evidencias.lon IS
   'Longitud opcional, en el mismo sistema que lat.';
 COMMENT ON COLUMN evidencias.exif IS
-  'Metadatos básicos leídos en el cliente. No incluye el binario.';
+  'Solo fecha, lat, lon y orientacion. El resto se descarta.';
+
+ALTER TABLE actividad_eventos ADD COLUMN IF NOT EXISTS usuario_id BIGINT REFERENCES usuarios (id);
+
+COMMENT ON COLUMN actividad_eventos.usuario_id IS
+  'Usuario de la sesión que registró el evento. NULL en filas anteriores a esta columna.';

@@ -2,9 +2,12 @@ import { useCallback, useEffect, useState } from "react"
 import { comprimirFoto, rechazarPorTamano } from "../offline/comprimir"
 import { leerExif } from "../offline/exif"
 import {
+  clasificarEstado,
+  conBackoff,
   encolarEvidencia,
   enviarColaEvidencias,
   listarEvidencias,
+  mensajeReintento,
   type QueuedEvidencia,
   type ResultadoEnvio,
 } from "../offline/queue"
@@ -39,17 +42,15 @@ async function publicar(item: QueuedEvidencia): Promise<ResultadoEnvio> {
     data.set("lat", String(item.lat))
     data.set("lon", String(item.lon))
   }
+  if (item.ordenId) data.set("orden_id", item.ordenId)
   data.set("archivo", new Blob([item.bytes], { type: item.mime }), item.nombre)
   let res: Response
   try {
     res = await fetch("/api/v1/evidencias", { method: "POST", body: data })
   } catch {
-    return "despues"
+    return { tipo: "reintento", status: 0 }
   }
-  if (res.status === 409) return "conflicto"
-  if (res.ok) return "ok"
-  if (res.status >= 500 || res.status === 0) return "despues"
-  return "conflicto"
+  return clasificarEstado(res.status)
 }
 
 export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
@@ -75,9 +76,13 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
   const drenar = useCallback(async () => {
     if (!navigator.onLine) return
     const r = await enviarColaEvidencias(publicar)
-    if (r.enviadas.length > 0) setAviso({ tono: "ok", texto: "Foto enviada." })
-    if (r.conflictos.length > 0) {
+    if (r.reintentos.length > 0) {
+      const ultimo = r.reintentos[r.reintentos.length - 1]
+      setAviso({ tono: "pendiente", texto: mensajeReintento(ultimo.status) })
+    } else if (r.conflictos.length > 0) {
       setAviso({ tono: "error", texto: "Esa foto ya estaba registrada con otro contenido." })
+    } else if (r.enviadas.length > 0) {
+      setAviso({ tono: "ok", texto: "Foto enviada." })
     }
     await refrescar()
   }, [refrescar])
@@ -138,16 +143,13 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
         return
       }
       const resultado = await publicar(item)
-      if (resultado === "ok") {
+      if (resultado.tipo === "ok") {
         setAviso({ tono: "ok", texto: sinPunto ? "Foto enviada, sin ubicación." : "Foto enviada." })
-      } else if (resultado === "conflicto") {
+      } else if (resultado.tipo === "conflicto") {
         setAviso({ tono: "error", texto: "Esa foto ya estaba registrada con otro contenido." })
       } else {
-        await encolarEvidencia(item)
-        setAviso({
-          tono: "pendiente",
-          texto: sinPunto ? "Guardado en este equipo, sin ubicación." : "Guardado en este equipo.",
-        })
+        await encolarEvidencia(conBackoff(item))
+        setAviso({ tono: "pendiente", texto: mensajeReintento(resultado.status) })
       }
       await refrescar()
     } catch (error) {

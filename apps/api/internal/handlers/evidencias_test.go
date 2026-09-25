@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"campusverde/api/internal/accesos"
@@ -71,10 +72,23 @@ func TestSubirEvidencia409YIdempotente(t *testing.T) {
 	h := Atencion{Store: atencion.NewStore(gdb), Files: blobs.Disk{Dir: t.TempDir()}}
 	labor := "11111111-1111-4111-8111-111111111111"
 	id := "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+	orden := "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
 	foto := []byte{0xFF, 0xD8, 0xFF, 0xD9}
 	otra := []byte{0xFF, 0xD8, 0xFF, 0x00, 0xD9}
+	var uid int64
+	if err := gdb.Raw(`
+		INSERT INTO usuarios (usuario, nombre, rol, capataz_id, password_hash)
+		VALUES ('prueba-campo', 'Equipo de prueba', 'capataz', 'cap-norte', 'x')
+		RETURNING id`).Row().Scan(&uid); err != nil {
+		t.Fatal(err)
+	}
+	if err := gdb.Exec(`
+		INSERT INTO ordenes_servicio (id, actividad_id, empresa, referencia)
+		VALUES ($1, $2, 'Cuadrilla de prueba', 'OS-1')`, orden, labor).Error; err != nil {
+		t.Fatal(err)
+	}
 
-	primero := postEvidencia(t, h, id, labor, foto, "capataz", "cap-norte")
+	primero := postEvidencia(t, h, id, labor, orden, foto, "capataz", "cap-norte", uid)
 	if primero.Code != 201 {
 		t.Fatalf("alta: %d %s", primero.Code, primero.Body.String())
 	}
@@ -85,8 +99,33 @@ func TestSubirEvidencia409YIdempotente(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("eventos evidencia = %d", n)
 	}
+	var gotUser int64
+	var ruta, suma, exif string
+	var ordenGuardada string
+	if err := gdb.Raw(`
+		SELECT usuario_id FROM actividad_eventos
+		WHERE actividad_id = $1 AND tipo = 'evidencia'`, labor).Row().Scan(&gotUser); err != nil {
+		t.Fatal(err)
+	}
+	if gotUser != uid {
+		t.Fatalf("usuario_id = %d", gotUser)
+	}
+	if err := gdb.Raw(`
+		SELECT ruta, sha256, COALESCE(exif::text, ''), COALESCE(orden_id::text, '')
+		FROM evidencias WHERE id = $1`, id).Row().Scan(&ruta, &suma, &exif, &ordenGuardada); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(ruta, suma) {
+		t.Fatalf("la clave no deriva del hash: %s", ruta)
+	}
+	if strings.Contains(exif, "modelo") || !strings.Contains(exif, "fecha") {
+		t.Fatalf("exif filtrado: %s", exif)
+	}
+	if ordenGuardada != orden {
+		t.Fatalf("orden_id = %s", ordenGuardada)
+	}
 
-	igual := postEvidencia(t, h, id, labor, foto, "capataz", "cap-norte")
+	igual := postEvidencia(t, h, id, labor, "", foto, "capataz", "cap-norte", uid)
 	if igual.Code != 200 {
 		t.Fatalf("idempotente: %d %s", igual.Code, igual.Body.String())
 	}
@@ -104,28 +143,36 @@ func TestSubirEvidencia409YIdempotente(t *testing.T) {
 		t.Fatalf("el reintento duplicó la bitácora: %d", n)
 	}
 
-	conflicto := postEvidencia(t, h, id, labor, otra, "capataz", "cap-norte")
+	ajenaMismo := postEvidencia(t, h, id, labor, "", otra, "capataz", "cap-sur", uid)
+	if ajenaMismo.Code != 403 {
+		t.Fatalf("permiso antes del 409: %d %s", ajenaMismo.Code, ajenaMismo.Body.String())
+	}
+
+	conflicto := postEvidencia(t, h, id, labor, "", otra, "capataz", "cap-norte", uid)
 	if conflicto.Code != 409 {
 		t.Fatalf("409: %d %s", conflicto.Code, conflicto.Body.String())
 	}
 
-	ajena := postEvidencia(t, h, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", labor, foto, "capataz", "cap-sur")
+	ajena := postEvidencia(t, h, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", labor, "", foto, "capataz", "cap-sur", uid)
 	if ajena.Code != 403 {
 		t.Fatalf("cuadrilla: %d %s", ajena.Code, ajena.Body.String())
 	}
 }
 
-func postEvidencia(t *testing.T, h Atencion, id, labor string, foto []byte, rol, capataz string) *httptest.ResponseRecorder {
+func postEvidencia(t *testing.T, h Atencion, id, labor, orden string, foto []byte, rol, capataz string, uid int64) *httptest.ResponseRecorder {
 	t.Helper()
 	sum := sha256.Sum256(foto)
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
 	_ = w.WriteField("id", id)
 	_ = w.WriteField("actividad_id", labor)
+	if orden != "" {
+		_ = w.WriteField("orden_id", orden)
+	}
 	_ = w.WriteField("sha256", hex.EncodeToString(sum[:]))
 	_ = w.WriteField("lat", "-12.06955")
 	_ = w.WriteField("lon", "-77.07955")
-	_ = w.WriteField("exif", `{"origen":"exif"}`)
+	_ = w.WriteField("exif", `{"fecha":"2026:09:25 10:00:00","modelo":"no-guardar","lat":-12.07}`)
 	part, err := w.CreateFormFile("archivo", "foto.jpg")
 	if err != nil {
 		t.Fatal(err)
@@ -141,7 +188,7 @@ func postEvidencia(t *testing.T, h Atencion, id, labor string, foto []byte, rol,
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = req
-	c.Set("usuario", accesos.Usuario{Rol: rol, CapatazID: capataz, Nombre: "Equipo de prueba"})
+	c.Set("usuario", accesos.Usuario{ID: uid, Rol: rol, CapatazID: capataz, Nombre: "Equipo de prueba"})
 	h.SubirEvidencia(c)
 	return rec
 }

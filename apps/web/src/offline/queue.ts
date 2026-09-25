@@ -104,7 +104,10 @@ export type QueuedEvidencia = {
   lat: number | null
   lon: number | null
   exif: Record<string, string | number | null>
+  ordenId?: string
   createdAt: string
+  intentos?: number
+  proximoIntento?: string
 }
 
 export type ColaEvidencias = {
@@ -113,32 +116,64 @@ export type ColaEvidencias = {
   del: (id: string) => Promise<void>
 }
 
-export type ResultadoEnvio = "ok" | "conflicto" | "despues"
+export type ResultadoEnvio =
+  | { tipo: "ok" }
+  | { tipo: "conflicto" }
+  | { tipo: "reintento"; status: number }
+
+export function clasificarEstado(status: number): ResultadoEnvio {
+  if (status >= 200 && status < 300) return { tipo: "ok" }
+  if (status === 409) return { tipo: "conflicto" }
+  return { tipo: "reintento", status }
+}
+
+export function mensajeReintento(status: number): string {
+  if (status === 401) return "La sesión venció. La foto sigue en este equipo."
+  if (status === 403) return "Sin permiso para esta labor. La foto sigue en este equipo."
+  if (status === 404) return "La labor aún no está sincronizada. La foto sigue en este equipo."
+  if (status === 400) return "No se pudo enviar la foto. Se reintentará."
+  return "No se pudo enviar la foto. Se reintentará."
+}
+
+export function conBackoff(item: QueuedEvidencia, ahora = Date.now()): QueuedEvidencia {
+  const intentos = (item.intentos ?? 0) + 1
+  const espera = Math.min(60_000, 2_000 * 2 ** Math.min(intentos - 1, 5))
+  return { ...item, intentos, proximoIntento: new Date(ahora + espera).toISOString() }
+}
 
 export async function drenarEvidencias(
   cola: ColaEvidencias,
   post: (item: QueuedEvidencia) => Promise<ResultadoEnvio>,
   curso: Set<string> = new Set(),
-): Promise<{ enviadas: string[]; conflictos: string[] }> {
+  ahora: () => number = Date.now,
+): Promise<{ enviadas: string[]; conflictos: string[]; reintentos: { id: string; status: number }[] }> {
   const items = [...(await cola.all())].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   const enviadas: string[] = []
   const conflictos: string[] = []
+  const reintentos: { id: string; status: number }[] = []
+  const reloj = new Date(ahora()).toISOString()
   for (const item of items) {
     if (curso.has(item.id)) continue
+    if (item.proximoIntento && item.proximoIntento > reloj) continue
     curso.add(item.id)
     try {
       const resultado = await post(item)
-      if (resultado === "despues") continue
+      if (resultado.tipo === "reintento") {
+        await cola.put(conBackoff(item, ahora()))
+        reintentos.push({ id: item.id, status: resultado.status })
+        continue
+      }
       await cola.del(item.id)
-      if (resultado === "ok") enviadas.push(item.id)
+      if (resultado.tipo === "ok") enviadas.push(item.id)
       else conflictos.push(item.id)
     } catch {
-      /* sin red: el registro sigue en la cola */
+      await cola.put(conBackoff(item, ahora()))
+      reintentos.push({ id: item.id, status: 0 })
     } finally {
       curso.delete(item.id)
     }
   }
-  return { enviadas, conflictos }
+  return { enviadas, conflictos, reintentos }
 }
 
 function colaIndexed(): ColaEvidencias {
@@ -183,7 +218,7 @@ export function vaciarEnvioEnCurso(): void {
 
 export async function enviarColaEvidencias(
   post: (item: QueuedEvidencia) => Promise<ResultadoEnvio>,
-): Promise<{ enviadas: string[]; conflictos: string[] }> {
+): Promise<{ enviadas: string[]; conflictos: string[]; reintentos: { id: string; status: number }[] }> {
   return drenarEvidencias(colaIndexed(), post, envioEnCurso)
 }
 

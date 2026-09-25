@@ -21,7 +21,7 @@ import {
 } from "./operacion"
 import { Labores, type LaborItem } from "./panel/Labores"
 import { AdminPanel, CatalogosPanel, CatastroPanel, Login, ReportesPanel, RiegoPanel, SolicitudesPanel } from "./panel/Modulos"
-import { fetchCatalogo, fetchSesion, salir, sugerirTipo, type CatalogoItem, type Usuario } from "./producto"
+import { fetchCatalogo, fetchEvidencias, fetchSesion, salir, subirEvidencia, sugerirTipo, type CatalogoItem, type Evidencia, type Usuario } from "./producto"
 import { readEquipo, writeEquipo } from "./session"
 import { LAYERS, type FeatureCollection, type GeoFeature, type LayerId, type Rol } from "./types"
 
@@ -116,6 +116,7 @@ export default function App() {
   const [tiposCat, setTiposCat] = useState<CatalogoItem[]>([])
   const [motivos, setMotivos] = useState<CatalogoItem[]>([])
   const [sugerencia, setSugerencia] = useState("")
+  const [evidencias, setEvidencias] = useState<Evidencia[]>([])
   const [creating, setCreating] = useState(false)
   const [notice, setNotice] = useState("")
   const [timeline, setTimeline] = useState<Evento[]>([])
@@ -300,6 +301,7 @@ export default function App() {
   const seleccionEnCola = selectedId != null && queue.some((item) => item.id === selectedId)
   const timelineVisible = selectedId && !seleccionEnCola ? timeline : []
   const timelineErrorVisible = selectedId && !seleccionEnCola ? timelineError : ""
+  const evidenciasVisible = selectedId ? evidencias : []
 
   useEffect(() => {
     if (!selectedId || queue.some((item) => item.id === selectedId)) return
@@ -340,6 +342,21 @@ export default function App() {
       cancelled = true
     }
   }, [sesion])
+
+  useEffect(() => {
+    if (!selectedId) return
+    let cancelled = false
+    fetchEvidencias(selectedId)
+      .then((rows) => {
+        if (!cancelled) setEvidencias(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setEvidencias([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedId, activities])
 
   const items = useMemo(() => {
     const fromApi = activities.features
@@ -665,6 +682,15 @@ export default function App() {
                   .catch((error: unknown) => setSugerencia(error instanceof Error ? error.message : "Sin sugerencia"))
               }}
               sugerencia={sugerencia}
+              evidencias={evidenciasVisible}
+              onSubir={(file) => {
+                if (!selected) return
+                void subirEvidencia(selected.id, file, "")
+                  .then(() => fetchEvidencias(selected.id))
+                  .then(setEvidencias)
+                  .then(() => setNotice("Evidencia guardada en disco local."))
+                  .catch((error: unknown) => setNotice(error instanceof Error ? error.message : "No se pudo adjuntar"))
+              }}
             />
             <RiegoPanel capatazId={rol === "capataz" ? equipoId : formEquipo} />
           </>
