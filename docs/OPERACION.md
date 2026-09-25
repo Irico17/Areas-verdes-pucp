@@ -70,7 +70,9 @@ Terraform no recibe la clave en un recurso. No hace falta `apply` para rotar.
 
 ## Healthcheck
 
-`scripts/healthcheck.sh` (y `/usr/local/bin/campus-healthcheck` en la instancia) pide `GET /health`. Si no responde o `status` no es `ok`, escribe `ALERTA` y sale con código 1. En la EC2 el timer `campus-health.timer` lo corre cada cinco minutos y manda el fallo al journal (`journalctl -t campus-health`).
+`scripts/healthcheck.sh` (y `/usr/local/bin/campus-healthcheck` en la instancia) pide `GET http://127.0.0.1/health` sin seguir redirecciones. Si no responde o `status` no es `ok`, escribe `ALERTA` y sale con código 1. En la EC2 el timer `campus-health.timer` lo corre cada cinco minutos y manda el fallo al journal (`journalctl -t campus-health`).
+
+Con certificado, el resto del puerto 80 redirige a HTTPS. `/health` no entra en esa redirección: el timer sigue recibiendo 200 y el cuerpo con `"status":"ok"`.
 
 ```bash
 HEALTH_URL=http://127.0.0.1/health bash scripts/healthcheck.sh
