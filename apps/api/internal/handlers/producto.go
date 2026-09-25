@@ -23,15 +23,17 @@ func usuarioEn(c *gin.Context) (accesos.Usuario, bool) {
 	return u, ok
 }
 
-func sesionOCuerpo(c *gin.Context, rol, capataz string) (string, string) {
+// actorDeSesion ignora el rol que venga en el cuerpo. Sin cookie no hay actor.
+func actorDeSesion(c *gin.Context, capatazCuerpo string) (accesos.Usuario, string, bool) {
 	u, ok := usuarioEn(c)
 	if !ok {
-		return rol, capataz
+		return accesos.Usuario{}, "", false
 	}
+	capataz := capatazCuerpo
 	if u.Rol == "capataz" && u.CapatazID != "" {
 		capataz = u.CapatazID
 	}
-	return u.Rol, capataz
+	return u, capataz, true
 }
 
 func exige(c *gin.Context, accion string) (accesos.Usuario, bool) {
@@ -48,14 +50,7 @@ func exige(c *gin.Context, accion string) (accesos.Usuario, bool) {
 }
 
 func setCookie(c *gin.Context, token string, maxAge int) {
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     accesos.Cookie,
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   maxAge,
-	})
+	accesos.EscribirCookie(c.Writer, cookieDe(c), token, maxAge)
 }
 
 // RegistrarAccesos publica la sesión local. registrar(r, deps) del frente accesos.
