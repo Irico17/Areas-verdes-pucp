@@ -363,16 +363,18 @@ type Conteo struct {
 }
 
 type Reporte struct {
-	Aviso     string   `json:"aviso"`
-	PorEstado []Conteo `json:"por_estado"`
-	Filas     []Fila   `json:"filas"`
+	Aviso      string   `json:"aviso"`
+	PorEstado  []Conteo `json:"por_estado"`
+	Filas      []Fila   `json:"filas"`
+	Pendientes []Hueco  `json:"pendientes"`
 }
 
 func (s *Store) Reporte(ctx context.Context, f FiltroReporte) (Reporte, error) {
 	out := Reporte{
-		Aviso:     "Conteos de labores. No son el indicador oficial de cobertura: esa definición sigue pendiente de validación.",
-		PorEstado: []Conteo{},
-		Filas:     []Fila{},
+		Aviso:      "Conteos de labores del filtro. Cobertura, rendimiento y métricas de proveedor: definición pendiente.",
+		PorEstado:  []Conteo{},
+		Filas:      []Fila{},
+		Pendientes: HuecosIndicador(),
 	}
 	where, args, err := clausulasReporte(f, false)
 	if err != nil {
