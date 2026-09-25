@@ -49,12 +49,15 @@ resource "aws_security_group" "app" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.ssh_cidr]
+  dynamic "ingress" {
+    for_each = var.ssh_cidr == "" ? [] : [var.ssh_cidr]
+    content {
+      description = "SSH restringido a una red"
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = [ingress.value]
+    }
   }
 
   egress {
@@ -82,11 +85,16 @@ resource "aws_instance" "app" {
     web_image       = local.web_image
     registry        = local.registry
     region          = var.aws_region
-    db_password     = var.db_password
     evidence_bucket = var.create_evidence_bucket ? aws_s3_bucket.evidencias[0].id : ""
   })
 
-  user_data_replace_on_change = true
+  # Un cambio de user_data (por ejemplo el tag de la imagen) se aplica in-place.
+  # cloud-init no se repite: el despliegue es docker compose pull, no un reemplazo.
+  user_data_replace_on_change = false
+
+  lifecycle {
+    ignore_changes = [ami]
+  }
 
   metadata_options {
     http_endpoint = "enabled"
@@ -130,6 +138,14 @@ resource "aws_eip_association" "app" {
 resource "aws_s3_bucket" "evidencias" {
   count  = var.create_evidence_bucket ? 1 : 0
   bucket = "campus-verde-ev-${data.aws_caller_identity.current.account_id}"
+}
+
+resource "aws_s3_bucket_versioning" "evidencias" {
+  count  = var.create_evidence_bucket ? 1 : 0
+  bucket = aws_s3_bucket.evidencias[0].id
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "evidencias" {

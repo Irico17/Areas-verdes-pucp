@@ -25,3 +25,8 @@ output "evidence_bucket" {
 output "region" {
   value = var.aws_region
 }
+
+# Bool, no el secreto: así Terraform exige las variables y el estado no guarda la clave.
+output "secretos_presentes" {
+  value = nonsensitive(length(var.db_password) >= 16 && length(var.dev_password) >= 16)
+}

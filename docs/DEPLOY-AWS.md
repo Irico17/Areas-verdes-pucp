@@ -53,7 +53,7 @@ aws s3api put-bucket-versioning --bucket campus-verde-tfstate-890991908027 \
   --versioning-configuration Status=Enabled
 ```
 
-5. Abra la URL que imprime el script (`http://<elastic-ip>`). Entre con `coordinacion` / `pando-local`, o `norte` para el capataz.
+5. Abra la URL que imprime el script (`http://<elastic-ip>`). Entre con `coordinacion` y la clave que exportó en `TF_VAR_dev_password` (u otra cuenta semilla: `norte` para el capataz). No hay clave de laboratorio en la instancia.
 
 La primera vez la instancia puede tardar unos minutos: cloud-init instala Docker y el binario de Compose v2 (Amazon Linux 2023 no trae el paquete `docker-compose-plugin`), formatea el volumen de datos y arranca el compose. Si el pull ocurre antes de que las imágenes estén en ECR, `systemctl restart campus.service` lo repite.
 
@@ -119,6 +119,8 @@ Cifras de lista us-east-1, **aproximadas**, si se dejara todo encendido un mes e
 
 Cabe en los 50 USD del curso con margen, siempre que no se deje el IP huérfano ni se prenda la variante ECS.
 
+Fuera del Learner Lab el orden de magnitud es **25–45 USD al mes** (t3.small, disco y snapshots, S3 de evidencias, sin NAT ni ALB). El desglose está en `docs/OPERACION.md`. El lab no sirve como esa cuenta: el saldo es del curso y la instancia se apaga al cerrar la sesión.
+
 ## Terraform a mano
 
 ```bash
@@ -130,7 +132,9 @@ terraform plan
 terraform apply
 ```
 
-Variables útiles: `instance_type` (`t3.micro` o `t3.small`), `ssh_cidr` (estreche a `x.x.x.x/32`), `ssh_key_name`, `create_evidence_bucket` (el cubo lo lee la API con `LabRole`, sin política nueva).
+Variables útiles: `instance_type` (`t3.micro` o `t3.small`), `ssh_cidr` (vacío cierra el 22; si hace falta, `x.x.x.x/32`), `ssh_key_name`, `create_evidence_bucket` (el cubo lo lee la API con `LabRole`, sin política nueva; si se crea, queda versionado y sin acceso público). `TF_VAR_db_password` y `TF_VAR_dev_password` son obligatorias, sensibles y sin default. No se interpolan en el user data.
+
+Un apply que solo cambia la imagen no reemplaza la EC2 (`user_data_replace_on_change = false`). Lo demuestra `terraform test` en `infra/terraform` (`reemplazo.tftest.hcl`), sin llamar a AWS. El encendido, el backup y el costo de una cuenta propia están en `docs/OPERACION.md`.
 
 ## CI
 

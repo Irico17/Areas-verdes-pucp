@@ -73,7 +73,7 @@ func Ensure(db *gorm.DB, password string) error {
 	}
 	password = strings.TrimSpace(password)
 	if password == "" {
-		password = "pando-local"
+		return errors.New("falta CAMPUS_DEV_PASSWORD")
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
