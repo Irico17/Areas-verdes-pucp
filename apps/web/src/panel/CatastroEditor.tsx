@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type FormEvent, type KeyboardEvent } from "react"
-import { listarVertices, moverVertice, type ModoDibujo, type Position, type VerticeRef } from "../map/draw"
+import { listarVertices, medirGeom, moverVertice, type ModoDibujo, type Position, type VerticeRef } from "../map/draw"
 import {
   areaNueva,
   areasDeFixture,
@@ -69,8 +69,25 @@ function tituloArea(row: AreaVerde): string {
   return row.nombre?.trim() || row.feature_id
 }
 
-function motivoDe(errores: ErrorCampo[], campo: string): string {
-  return errores.find((item) => item.campo === campo)?.motivo ?? ""
+function motivosDe(errores: ErrorCampo[], campo: string): string[] {
+  return errores.filter((item) => item.campo === campo).map((item) => item.motivo)
+}
+
+function resumenErrores(errores: ErrorCampo[]): string {
+  return `No se guardó. ${errores.map((item) => item.motivo).join(" ")}`
+}
+
+function ErroresCampo(props: { mensajes: string[] }) {
+  if (props.mensajes.length === 0) return null
+  return (
+    <ul className="errores-campo">
+      {props.mensajes.map((mensaje) => (
+        <li key={mensaje} className="status error">
+          {mensaje}
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 function descargar(nombre: string, texto: string) {
@@ -194,6 +211,8 @@ export function CatastroEditor({
   const medidas = area?.geom ? medidasArea(area) : null
   const avisoPerimetro = area && medidas ? avisoMedidas(area.perimetro_m, medidas.perimetro_m) : null
   const avisoArea = area && medidas ? avisoMedidas(area.area_m2, medidas.area_m2) : null
+  const medidasZona = zona?.geom ? medirGeom(zona.geom) : null
+  const avisoAreaZona = zona && medidasZona ? avisoMedidas(zona.area_m2, medidasZona.area_m2) : null
   const vertices = geomActiva ? listarVertices(geomActiva) : []
   const refActiva: VerticeRef | null = vertices[vertice] ?? null
 
@@ -223,7 +242,10 @@ export function CatastroEditor({
     const vistos = altaArea ? areas : areas.filter((row) => row.feature_id !== area.feature_id)
     const fallos = validarArea(payload, vistos)
     setErrores(fallos)
-    if (fallos.length) return
+    if (fallos.length) {
+      setAviso(resumenErrores(fallos))
+      return
+    }
     if (fixture) {
       setAreas((rows) => (altaArea ? [payload, ...rows] : rows.map((row) => (row.feature_id === payload.feature_id ? payload : row))))
       setAltaArea(false)
@@ -251,7 +273,10 @@ export function CatastroEditor({
     const vistos = altaZona ? zonas : zonas.filter((row) => row.codigo !== zona.codigo)
     const fallos = validarZona(payload, vistos)
     setErrores(fallos)
-    if (fallos.length) return
+    if (fallos.length) {
+      setAviso(resumenErrores(fallos))
+      return
+    }
     if (fixture) {
       setZonas((rows) => (altaZona ? [payload, ...rows] : rows.map((row) => (row.codigo === payload.codigo ? payload : row))))
       setAltaZona(false)
@@ -415,15 +440,15 @@ export function CatastroEditor({
                 readOnly={!altaArea}
                 required
                 onChange={(event) => setArea({ ...area, feature_id: event.target.value })}
-                aria-invalid={Boolean(motivoDe(errores, "feature_id"))}
+                aria-invalid={motivosDe(errores, "feature_id").length > 0}
               />
             </label>
-            {motivoDe(errores, "feature_id") && <p className="status error">{motivoDe(errores, "feature_id")}</p>}
+            <ErroresCampo mensajes={motivosDe(errores, "feature_id")} />
             <label className="field" htmlFor={`${baseId}-codigo`}>
               {ETIQUETA_AREA.codigo}
-              <input id={`${baseId}-codigo`} name="codigo" value={area.codigo ?? ""} onChange={(event) => setArea({ ...area, codigo: event.target.value || null })} />
+              <input id={`${baseId}-codigo`} name="codigo" value={area.codigo ?? ""} onChange={(event) => setArea({ ...area, codigo: event.target.value || null })} aria-invalid={motivosDe(errores, "codigo").length > 0} />
             </label>
-            {motivoDe(errores, "codigo") && <p className="status error">{motivoDe(errores, "codigo")}</p>}
+            <ErroresCampo mensajes={motivosDe(errores, "codigo")} />
             <label className="field" htmlFor={`${baseId}-nombre`}>
               {ETIQUETA_AREA.nombre}
               <input id={`${baseId}-nombre`} name="nombre" value={area.nombre ?? ""} onChange={(event) => setArea({ ...area, nombre: event.target.value || null })} />
@@ -439,6 +464,7 @@ export function CatastroEditor({
                 ))}
               </select>
             </label>
+            <ErroresCampo mensajes={motivosDe(errores, "uso")} />
             <label className="field" htmlFor={`${baseId}-proy`}>
               {ETIQUETA_AREA.proy_riego}
               <select id={`${baseId}-proy`} name="proy_riego" value={area.proy_riego ?? ""} onChange={(event) => setArea({ ...area, proy_riego: event.target.value || null })}>
@@ -450,6 +476,7 @@ export function CatastroEditor({
                 ))}
               </select>
             </label>
+            <ErroresCampo mensajes={motivosDe(errores, "proy_riego")} />
             <label className="field" htmlFor={`${baseId}-riego`}>
               {ETIQUETA_AREA.riego_act}
               <select id={`${baseId}-riego`} name="riego_act" value={area.riego_act ?? ""} onChange={(event) => setArea({ ...area, riego_act: event.target.value || null })}>
@@ -461,6 +488,7 @@ export function CatastroEditor({
                 ))}
               </select>
             </label>
+            <ErroresCampo mensajes={motivosDe(errores, "riego_act")} />
             <label className="field" htmlFor={`${baseId}-ref`}>
               {ETIQUETA_AREA.referencia}
               <textarea
@@ -471,6 +499,7 @@ export function CatastroEditor({
                 onChange={(event) => setArea({ ...area, referencia: event.target.value || null })}
               />
             </label>
+            <ErroresCampo mensajes={motivosDe(errores, "referencia")} />
             <label className="field" htmlFor={`${baseId}-peri`}>
               {ETIQUETA_AREA.perimetro_m}
               <input
@@ -481,6 +510,7 @@ export function CatastroEditor({
                 onChange={(event) => setArea({ ...area, perimetro_m: event.target.value === "" ? null : Number(event.target.value) })}
               />
             </label>
+            <ErroresCampo mensajes={motivosDe(errores, "perimetro_m")} />
             {avisoPerimetro && <p className="hint">{avisoPerimetro}</p>}
             <label className="field" htmlFor={`${baseId}-am2`}>
               {ETIQUETA_AREA.area_m2}
@@ -492,6 +522,7 @@ export function CatastroEditor({
                 onChange={(event) => setArea({ ...area, area_m2: event.target.value === "" ? null : Number(event.target.value) })}
               />
             </label>
+            <ErroresCampo mensajes={motivosDe(errores, "area_m2")} />
             {avisoArea && <p className="hint">{avisoArea}</p>}
             <label className="field" htmlFor={`${baseId}-zona`}>
               {ETIQUETA_AREA.zona_supervision_id}
@@ -509,10 +540,11 @@ export function CatastroEditor({
                 ))}
               </select>
             </label>
+            <ErroresCampo mensajes={motivosDe(errores, "zona_supervision_id")} />
             <fieldset className="geom-box">
               <legend>{ETIQUETA_AREA.geom}</legend>
               <p className="hint">{area.geom ? "MultiPolygon listo para guardar." : "Sin geometría. Puede dibujarla en el mapa."}</p>
-              {motivoDe(errores, "geom") && <p className="status error">{motivoDe(errores, "geom")}</p>}
+              <ErroresCampo mensajes={motivosDe(errores, "geom")} />
               <button
                 type="button"
                 className={editandoGeom ? "primary" : undefined}
@@ -523,6 +555,11 @@ export function CatastroEditor({
               </button>
             </fieldset>
             {editandoGeom && <ControlVertices vertices={vertices} vertice={vertice} onVertice={setVertice} onTecla={onTeclaVertice} onNudge={nudgir} />}
+            {errores.length > 0 && (
+              <p className="status error" role="alert">
+                {resumenErrores(errores)}
+              </p>
+            )}
             <button type="submit" className="primary">
               Guardar área
             </button>
@@ -572,7 +609,7 @@ export function CatastroEditor({
                 ))}
               </select>
             </label>
-            {motivoDe(errores, "codigo") && <p className="status error">{motivoDe(errores, "codigo")}</p>}
+            <ErroresCampo mensajes={motivosDe(errores, "codigo")} />
             <label className="field" htmlFor={`${baseId}-znombre`}>
               {ETIQUETA_ZONA.nombre}
               <input
@@ -583,7 +620,7 @@ export function CatastroEditor({
                 onChange={(event) => setZona({ ...zona, nombre: event.target.value })}
               />
             </label>
-            {motivoDe(errores, "nombre") && <p className="status error">{motivoDe(errores, "nombre")}</p>}
+            <ErroresCampo mensajes={motivosDe(errores, "nombre")} />
             <label className="field" htmlFor={`${baseId}-zam2`}>
               {ETIQUETA_ZONA.area_m2}
               <input
@@ -594,15 +631,22 @@ export function CatastroEditor({
                 onChange={(event) => setZona({ ...zona, area_m2: event.target.value === "" ? null : Number(event.target.value) })}
               />
             </label>
+            <ErroresCampo mensajes={motivosDe(errores, "area_m2")} />
+            {avisoAreaZona && <p className="hint">{avisoAreaZona}</p>}
             <fieldset className="geom-box">
               <legend>{ETIQUETA_ZONA.geom}</legend>
               <p className="hint">{zona.geom ? "MultiPolygon de la zona." : "La zona necesita polígono para guardarse."}</p>
-              {motivoDe(errores, "geom") && <p className="status error">{motivoDe(errores, "geom")}</p>}
+              <ErroresCampo mensajes={motivosDe(errores, "geom")} />
               <button type="button" className={editandoGeom ? "primary" : undefined} aria-pressed={editandoGeom} onClick={() => setEditandoGeom((on) => !on)}>
                 {editandoGeom ? "Cerrar edición de vértices" : "Editar geometría"}
               </button>
             </fieldset>
             {editandoGeom && <ControlVertices vertices={vertices} vertice={vertice} onVertice={setVertice} onTecla={onTeclaVertice} onNudge={nudgir} />}
+            {errores.length > 0 && (
+              <p className="status error" role="alert">
+                {resumenErrores(errores)}
+              </p>
+            )}
             <button type="submit" className="primary">
               Guardar zona
             </button>

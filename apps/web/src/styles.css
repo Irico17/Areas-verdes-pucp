@@ -317,6 +317,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   color: var(--alerta);
   border-color: var(--alerta);
 }
+.errores-campo { list-style: none; margin: -4px 0 12px; padding: 0; }
 
 .gate {
   min-height: 100dvh;
