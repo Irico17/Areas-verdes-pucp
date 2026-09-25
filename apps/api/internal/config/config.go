@@ -65,15 +65,11 @@ func origenesCORS(raw string) []string {
 	return out
 }
 
+// cookieSecure solo es true si se pide. CAMPUS_ENV=production no basta:
+// el lab y la IP pública van por HTTP y el navegador tira la cookie Secure.
 func cookieSecure() bool {
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("CAMPUS_COOKIE_SECURE"))) {
 	case "1", "true", "yes", "si", "sí":
-		return true
-	case "0", "false", "no":
-		return false
-	}
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("CAMPUS_ENV"))) {
-	case "production", "prod":
 		return true
 	default:
 		return false

@@ -61,7 +61,7 @@ func Apply(gdb *gorm.DB, dir string) error {
 		for i, stmt := range splitSQL(string(body)) {
 			if _, err := tx.Exec(stmt); err != nil {
 				_ = tx.Rollback()
-				return fmt.Errorf("aplicar %s sentencia %d: %w", name, i+1, err)
+				return fmt.Errorf("aplicar %s sentencia %d: %w\n\n%s", name, i+1, err, ayudaMigracion(name))
 			}
 		}
 		if _, err := tx.Exec(`INSERT INTO schema_migrations (version) VALUES ($1)`, name); err != nil {
@@ -111,4 +111,15 @@ func splitSQL(sql string) []string {
 		stmts = append(stmts, s)
 	}
 	return stmts
+}
+
+// ayudaMigracion es el texto que tiene que verse en el log cuando el contenedor
+// entra en bucle: reintentar no aplica la migración que acaba de revertirse.
+func ayudaMigracion(name string) string {
+	return fmt.Sprintf(
+		"FALLO DE MIGRACION %s: la transaccion se revirtio y esa version no quedo en schema_migrations. "+
+			"Reiniciar el contenedor repite el mismo error y la API sigue en 502. "+
+			"Lea el SQLSTATE de arriba, corrija el SQL o el dato que cita (sin TRUNCATE ni borrar filas) y vuelva a desplegar.",
+		name,
+	)
 }

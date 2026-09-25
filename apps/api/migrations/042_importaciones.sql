@@ -9,4 +9,4 @@ ALTER TABLE lotes_importacion ADD CONSTRAINT lotes_estado_chk
   CHECK (estado IN ('vista_previa', 'confirmado', 'revertido'));
 
 COMMENT ON COLUMN lotes_importacion.contenido IS
-  'Archivo de la vista previa. Confirmar lo vuelve a leer; revertir no lo necesita.';
+  'Archivo de la vista previa. Confirmar lo vuelve a leer. Revertir no lo necesita.';
