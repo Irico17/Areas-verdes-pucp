@@ -13,6 +13,7 @@ import {
 } from "maplibre-gl"
 import "maplibre-gl/dist/maplibre-gl.css"
 import { catastroVisible, conteoCapas } from "./coverage"
+import { activarDibujo, type ModoDibujo } from "./draw"
 import { INVENTARIO } from "../inventario"
 import { etiquetaEstado, etiquetaTipo } from "../operacion"
 import { EMPTY, LAYERS, type FeatureCollection, type LayerId } from "../types"
@@ -32,6 +33,7 @@ type Props = {
   onSelectCatastro: (hit: { layer: string; props: Record<string, unknown> } | null) => void
   onSelectActividad: (id: string | null) => void
   onPin: (lon: number, lat: number) => void
+  modoDibujo?: ModoDibujo | null
 }
 
 const CAMPUS: [number, number] = [-77.0796, -12.0696]
@@ -99,6 +101,7 @@ export function CampusMap({
   showEdificios,
   inventory,
   inventoryOn,
+  modoDibujo = null,
 }: Props) {
   const host = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Map | null>(null)
@@ -112,15 +115,17 @@ export function CampusMap({
   const onPinRef = useRef(onPin)
   const inventoryRef = useRef(inventory)
   const inventoryOnRef = useRef(inventoryOn)
+  const dibujoRef = useRef(modoDibujo)
 
   useEffect(() => {
     pinRef.current = pinMode
+    dibujoRef.current = modoDibujo
     inventoryRef.current = inventory
     inventoryOnRef.current = inventoryOn
     onCatastro.current = onSelectCatastro
     onActividad.current = onSelectActividad
     onPinRef.current = onPin
-  }, [pinMode, inventory, inventoryOn, onSelectCatastro, onSelectActividad, onPin])
+  }, [pinMode, modoDibujo, inventory, inventoryOn, onSelectCatastro, onSelectActividad, onPin])
 
   useEffect(() => {
     if (!host.current || mapRef.current) return
@@ -301,8 +306,8 @@ export function CampusMap({
         popupRef.current = popup
       }
       map.on("mousemove", (event: MapMouseEvent) => {
-        if (pinRef.current) {
-          map.getCanvas().style.cursor = "crosshair"
+        if (pinRef.current || dibujoRef.current) {
+          map.getCanvas().style.cursor = pinRef.current ? "crosshair" : ""
           return
         }
         const near = nearestInventoryPoint(map, event.point, inventoryRef.current, inventoryOnRef.current)
@@ -310,6 +315,7 @@ export function CampusMap({
         map.getCanvas().style.cursor = near || hits.length ? "pointer" : ""
       })
       map.on("click", (event: MapMouseEvent) => {
+        if (dibujoRef.current) return
         if (pinRef.current) {
           onPinRef.current(event.lngLat.lng, event.lngLat.lat)
           return
@@ -452,6 +458,22 @@ export function CampusMap({
     if (quiet) map.jumpTo({ center: [focus.lon, focus.lat], zoom })
     else map.flyTo({ center: [focus.lon, focus.lat], zoom, duration: 900, essential: true })
   }, [focus, ready])
+
+  const dibujoId = modoDibujo ? `${modoDibujo.entidad}:${modoDibujo.id}` : ""
+  const sesionDibujo = useRef<ReturnType<typeof activarDibujo> | null>(null)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
+    sesionDibujo.current?.cerrar()
+    sesionDibujo.current = dibujoRef.current ? activarDibujo(map, dibujoRef.current) : null
+    return () => {
+      sesionDibujo.current?.cerrar()
+      sesionDibujo.current = null
+    }
+  }, [dibujoId, ready])
+  useEffect(() => {
+    sesionDibujo.current?.actualizar(modoDibujo?.geom ?? null)
+  }, [modoDibujo?.geom])
 
   return <div ref={host} className="map-host" />
 }

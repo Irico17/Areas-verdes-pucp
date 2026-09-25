@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { fetchCollection } from "./api"
 import { INVENTARIO } from "./inventario"
 import { CampusMap } from "./map/CampusMap"
+import type { ModoDibujo } from "./map/draw"
 import { MapBoundary } from "./map/MapBoundary"
 import { enqueue, enqueueEstado, listEstados, listQueue, loadLabores, removeEstado, removeQueued, saveLabores, type QueuedLabor } from "./offline/queue"
 import {
@@ -20,7 +21,8 @@ import {
   type Evento,
 } from "./operacion"
 import { Labores, type LaborItem } from "./panel/Labores"
-import { AdminPanel, CatalogosPanel, CatastroPanel, Login, ReportesPanel, RiegoPanel, SolicitudesPanel } from "./panel/Modulos"
+import { CatastroEditor } from "./panel/CatastroEditor"
+import { AdminPanel, CatalogosPanel, Login, ReportesPanel, RiegoPanel, SolicitudesPanel } from "./panel/Modulos"
 import { fetchCatalogo, fetchEvidencias, fetchSesion, salir, subirEvidencia, sugerirTipo, type CatalogoItem, type Evidencia, type Usuario } from "./producto"
 import { readEquipo, writeEquipo } from "./session"
 import { LAYERS, type FeatureCollection, type GeoFeature, type LayerId, type Rol } from "./types"
@@ -105,6 +107,7 @@ export default function App() {
   const [picked, setPicked] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pinMode, setPinMode] = useState(false)
+  const [modoDibujo, setModoDibujo] = useState<ModoDibujo | null>(null)
   const [draft, setDraft] = useState<{ lon: number; lat: number } | null>(null)
   const [focus, setFocus] = useState<{ lon: number; lat: number; token: number } | null>(null)
   const [formTipo, setFormTipo] = useState("riego")
@@ -695,7 +698,7 @@ export default function App() {
             <RiegoPanel capatazId={rol === "capataz" ? equipoId : formEquipo} />
           </>
         )}
-        {moduloActivo === "catastro" && <CatastroPanel />}
+        {moduloActivo === "catastro" && <CatastroEditor onModoDibujo={setModoDibujo} />}
         {moduloActivo === "solicitudes" && <SolicitudesPanel actividadId={selected?.queued ? "" : selected?.id ?? ""} />}
         {moduloActivo === "reportes" && <ReportesPanel />}
         {moduloActivo === "catalogos" && <CatalogosPanel editable={rol === "admin"} />}
@@ -709,6 +712,7 @@ export default function App() {
             visible={visible}
             activities={mapActivities}
             pinMode={pinMode && rol !== "capataz" && moduloActivo === "labores"}
+            modoDibujo={moduloActivo === "catastro" ? modoDibujo : null}
             draft={draft}
             focus={focus}
             relieve={relieve}

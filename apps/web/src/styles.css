@@ -303,6 +303,20 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   padding: 12px;
 }
 .split-detail { box-shadow: var(--sombra); }
+.catastro-editor .roles { margin: 0 0 12px; width: 100%; }
+.catastro-editor .roles button { flex: 1; }
+.geom-box, .vertice-box {
+  margin: 0 0 12px;
+  padding: 8px 10px 4px;
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  background: var(--papel);
+}
+.geom-box legend { padding: 0 4px; font-size: 13px; font-weight: 600; }
+.danger {
+  color: var(--alerta);
+  border-color: var(--alerta);
+}
 
 .gate {
   min-height: 100dvh;
