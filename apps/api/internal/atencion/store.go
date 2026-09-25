@@ -384,7 +384,7 @@ func (s *Store) Reporte(ctx context.Context, f FiltroReporte) (Reporte, error) {
 		LEFT JOIN lugares l ON l.id = a.lugar_id
 		LEFT JOIN zonas_supervision z ON z.id = COALESCE(a.zona_supervision_id, l.zona_supervision_id)
 		LEFT JOIN cuadrillas q ON q.id = a.cuadrilla_id
-		WHERE a.archivada_en IS NULL AND ` + strings.Join(where, " AND ") + `
+		WHERE ` + strings.Join(where, " AND ") + `
 		GROUP BY a.estado ORDER BY a.estado`
 	if err := s.db.WithContext(ctx).Raw(conteo, args...).Scan(&out.PorEstado).Error; err != nil {
 		return out, err
@@ -443,7 +443,7 @@ func (s *Store) Reporte(ctx context.Context, f FiltroReporte) (Reporte, error) {
 // Las fechas usan el intervalo de la labor (solicitud y atención) y, si no hay
 // ninguna, la fecha de alta.
 func clausulasReporte(f FiltroReporte, conEstado bool) ([]string, []any, error) {
-	where := []string{"1=1"}
+	where := []string{"a.archivada_en IS NULL"}
 	args := []any{}
 	n := 1
 	add := func(clause string, val any) {
@@ -464,7 +464,7 @@ func clausulasReporte(f FiltroReporte, conEstado bool) ([]string, []any, error) 
 		if _, err := time.Parse("2006-01-02", f.Hasta); err != nil {
 			return nil, nil, operacion.InputError{Reason: "hasta usa AAAA-MM-DD"}
 		}
-		add(`COALESCE(a.fecha_solicitud, a.created_at::date) <= $?::date`, f.Hasta)
+		add(`COALESCE(a.fecha_atencion, a.fecha_solicitud, a.created_at::date) <= $?::date`, f.Hasta)
 	}
 	if zona := strings.TrimSpace(f.Zona); zona != "" {
 		add(`(

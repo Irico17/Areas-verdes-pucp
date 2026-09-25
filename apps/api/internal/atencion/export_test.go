@@ -51,3 +51,37 @@ func TestFiltroFechasYZona(t *testing.T) {
 		t.Fatal("desde inválido debe fallar")
 	}
 }
+
+// TestHastaUsaElMismoIntervaloQueDesde exige el COALESCE completo de hasta.
+// El bug anterior filtraba solo fecha_solicitud y created_at, e ignoraba fecha_atencion.
+func TestHastaUsaElMismoIntervaloQueDesde(t *testing.T) {
+	const intervalo = "COALESCE(a.fecha_atencion, a.fecha_solicitud, a.created_at::date)"
+
+	where, args, err := clausulasReporte(FiltroReporte{Hasta: "2026-05-31"}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sql := strings.Join(where, " AND ")
+	wantHasta := intervalo + " <= $1::date"
+	if !strings.Contains(sql, wantHasta) {
+		t.Fatalf("hasta = %q, quiero %q", sql, wantHasta)
+	}
+	if strings.Contains(sql, "COALESCE(a.fecha_solicitud, a.created_at::date)") {
+		t.Fatal("hasta ignora fecha_atencion")
+	}
+	if !strings.Contains(sql, "a.archivada_en IS NULL") {
+		t.Fatalf("el filtro compartido no excluye archivadas: %s", sql)
+	}
+	if len(args) != 1 || args[0] != "2026-05-31" {
+		t.Fatalf("args = %#v", args)
+	}
+
+	where, _, err = clausulasReporte(FiltroReporte{Desde: "2026-05-01", Hasta: "2026-05-31"}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sql = strings.Join(where, " AND ")
+	if !strings.Contains(sql, intervalo+" >= $1::date") || !strings.Contains(sql, intervalo+" <= $2::date") {
+		t.Fatalf("desde y hasta no comparten el intervalo: %s", sql)
+	}
+}
