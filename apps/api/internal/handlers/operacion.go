@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 
+	"campusverde/api/internal/accesos"
 	"campusverde/api/internal/operacion"
 
 	"github.com/gin-gonic/gin"
@@ -78,15 +79,18 @@ func (h Operacion) Capataces(c *gin.Context) {
 
 func (h Operacion) List(c *gin.Context) {
 	q := operacion.Query{
-		Rol:          c.Query("rol"),
-		CapatazID:    c.Query("capataz_id"),
 		Estado:       c.Query("estado"),
 		Tipo:         c.Query("tipo"),
 		SoloAbiertas: c.DefaultQuery("abiertas", "1") != "0",
 	}
-	if u, ok := usuarioEn(c); ok && u.Rol == "capataz" {
-		q.Rol = operacion.RolCapataz
-		q.CapatazID = u.CapatazID
+	if u, ok := usuarioEn(c); ok {
+		if u.Rol == "capataz" {
+			q.Rol = operacion.RolCapataz
+			q.CapatazID = u.CapatazID
+		} else {
+			q.Rol = c.Query("rol")
+			q.CapatazID = c.Query("capataz_id")
+		}
 	}
 	if err := operacion.ValidateQuery(q); err != nil {
 		writeOperacionErr(c, err)
@@ -106,17 +110,24 @@ func (h Operacion) List(c *gin.Context) {
 }
 
 func (h Operacion) Create(c *gin.Context) {
+	if _, ok := exige(c, "validar"); !ok {
+		return
+	}
 	var body createBody
 	if err := c.ShouldBindJSON(&body); err != nil && !errors.Is(err, io.EOF) {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
 		return
 	}
-	rol, capataz := sesionOCuerpo(c, body.ActorRol, body.AssignedCapatazID)
+	u, capataz, ok := actorDeSesion(c, body.AssignedCapatazID)
+	if !ok {
+		c.JSON(401, gin.H{"error": "inicie sesión"})
+		return
+	}
 	in := operacion.CreateInput{
 		ID: body.ID, Tipo: body.Tipo, Titulo: body.Titulo, Detalle: body.Detalle,
 		Lon: body.Lon, Lat: body.Lat, AreaFeatureID: body.AreaFeatureID,
 		ZonaFeatureID: body.ZonaFeatureID, AssignedCapatazID: capataz,
-		ActorRol: rol, Ejecutor: body.Ejecutor,
+		ActorRol: u.Rol, Ejecutor: body.Ejecutor,
 	}
 	if err := operacion.ValidateCreate(in); err != nil {
 		writeOperacionErr(c, err)
@@ -139,12 +150,20 @@ func (h Operacion) Create(c *gin.Context) {
 }
 
 func (h Operacion) Assign(c *gin.Context) {
+	if _, ok := exige(c, "validar"); !ok {
+		return
+	}
 	var body assignBody
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
 		return
 	}
-	rol, capataz := sesionOCuerpo(c, body.ActorRol, body.CapatazID)
+	u, capataz, ok := actorDeSesion(c, body.CapatazID)
+	if !ok {
+		c.JSON(401, gin.H{"error": "inicie sesión"})
+		return
+	}
+	rol := u.Rol
 	if err := operacion.ValidateAsignacion(rol, capataz); err != nil {
 		writeOperacionErr(c, err)
 		return
@@ -162,12 +181,26 @@ func (h Operacion) Assign(c *gin.Context) {
 }
 
 func (h Operacion) Estado(c *gin.Context) {
+	u, ok := usuarioEn(c)
+	if !ok {
+		c.JSON(401, gin.H{"error": "inicie sesión"})
+		return
+	}
+	if !accesos.PermiteAlguno(u.Rol, "registrar", "validar") {
+		c.JSON(403, gin.H{"error": "su rol no tiene ese permiso"})
+		return
+	}
 	var body estadoBody
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
 		return
 	}
-	rol, capataz := sesionOCuerpo(c, body.ActorRol, body.CapatazID)
+	_, capataz, ok := actorDeSesion(c, body.CapatazID)
+	if !ok {
+		c.JSON(401, gin.H{"error": "inicie sesión"})
+		return
+	}
+	rol := u.Rol
 	if err := operacion.ValidateEstado(body.Estado, rol, capataz); err != nil {
 		writeOperacionErr(c, err)
 		return
@@ -185,12 +218,20 @@ func (h Operacion) Estado(c *gin.Context) {
 }
 
 func (h Operacion) Archive(c *gin.Context) {
+	if _, ok := exige(c, "validar"); !ok {
+		return
+	}
 	var body archiveBody
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
 		return
 	}
-	rol, _ := sesionOCuerpo(c, body.ActorRol, "")
+	u, _, ok := actorDeSesion(c, "")
+	if !ok {
+		c.JSON(401, gin.H{"error": "inicie sesión"})
+		return
+	}
+	rol := u.Rol
 	if err := operacion.ValidateArchivo(rol); err != nil {
 		writeOperacionErr(c, err)
 		return

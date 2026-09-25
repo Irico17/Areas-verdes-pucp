@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"campusverde/api/internal/accesos"
 	"campusverde/api/internal/handlers"
@@ -19,6 +20,7 @@ type Deps struct {
 	FotosDir         string
 	EvidenciasDir    string
 	EvidenciasBucket string
+	Seguridad        handlers.OpcionesDeSeguridad
 }
 
 // New arma el router Gin de la API.
@@ -26,7 +28,14 @@ func New(deps Deps) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	_ = r.SetTrustedProxies([]string{})
-	r.Use(gin.Logger(), gin.Recovery(), cors)
+	seg := deps.Seguridad
+	if seg.LoginCada < 1 {
+		seg.LoginCada = 8
+	}
+	if seg.LoginVentana <= 0 {
+		seg.LoginVentana = time.Minute
+	}
+	r.Use(gin.Logger(), gin.Recovery(), handlers.CORS(seg.CORSOrigins), handlers.ConCookie(seg.Cookie), handlers.LimiteLogin(seg.LoginCada, seg.LoginVentana))
 
 	var acc *accesos.Store
 	if deps.DB != nil {
@@ -78,15 +87,4 @@ func New(deps Deps) *gin.Engine {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ruta no encontrada"})
 	})
 	return r
-}
-
-func cors(c *gin.Context) {
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
-	c.Header("Access-Control-Allow-Headers", "Content-Type")
-	if c.Request.Method == http.MethodOptions {
-		c.AbortWithStatus(http.StatusNoContent)
-		return
-	}
-	c.Next()
 }

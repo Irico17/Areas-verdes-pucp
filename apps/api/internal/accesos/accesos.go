@@ -55,6 +55,16 @@ func Permite(rol, accion string) bool {
 	return false
 }
 
+// PermiteAlguno basta con una de las acciones.
+func PermiteAlguno(rol string, acciones ...string) bool {
+	for _, accion := range acciones {
+		if Permite(rol, accion) {
+			return true
+		}
+	}
+	return false
+}
+
 // Ensure crea las cuentas locales si faltan y reescribe la matriz de permisos.
 // La clave es la de desarrollo; no se registra en el log.
 func Ensure(db *gorm.DB, password string) error {

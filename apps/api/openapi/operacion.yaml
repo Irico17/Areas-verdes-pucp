@@ -33,7 +33,9 @@
         description: Creada
       "200":
         description: El mismo UUID ya existía con el mismo contenido
+      "401":
+        description: Sin cookie de sesión
       "403":
-        description: El rol capataz no crea labores
+        description: La sesión no tiene el permiso validar
       "409":
         description: UUID repetido con otro contenido

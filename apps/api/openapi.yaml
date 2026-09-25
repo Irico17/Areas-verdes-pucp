@@ -12,8 +12,8 @@ info:
 
     Fases A–F: salud, catastro, labores, relieve y overlays de inventario.
     La sesión de la PWA es una cookie HttpOnly de cuentas locales.
-    Si la cookie viene, el rol del cuerpo se ignora. Sin cookie, `actor_rol` sigue valiendo
-    para las labores (compatibilidad del piloto). No hay SSO.
+    Las mutaciones exigen esa cookie y el permiso del rol. El servidor ignora `actor_rol` del cuerpo.
+    No hay SSO.
     La agenda de reservas es un mock ficticio y no consulta hojas de cálculo.
 servers:
   - url: http://127.0.0.1:8091

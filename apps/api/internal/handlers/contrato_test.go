@@ -37,6 +37,29 @@ func TestContratoUneLosTags(t *testing.T) {
 	}
 }
 
+func TestContratoRechazaPathRepetido(t *testing.T) {
+	dir := t.TempDir()
+	root := filepath.Join(dir, "openapi.yaml")
+	if err := os.WriteFile(root, []byte("openapi: 3.0.3\npaths: {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	part := filepath.Join(dir, "openapi")
+	if err := os.Mkdir(part, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := "/api/v1/sesion:\n  post:\n    summary: uno\n"
+	if err := os.WriteFile(filepath.Join(part, "a.yaml"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(part, "b.yaml"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := UnirContrato(root)
+	if err == nil || !strings.Contains(err.Error(), "repetido") {
+		t.Fatalf("se esperaba error de path repetido, fue %v", err)
+	}
+}
+
 func TestMigracionesNuevasSinTruncate(t *testing.T) {
 	dir := filepath.Join("..", "..", "migrations")
 	for _, name := range []string{"007_auditoria.sql", "008_fk_minimas.sql"} {
