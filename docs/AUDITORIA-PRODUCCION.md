@@ -27,16 +27,16 @@ Severidad: Alta (bloquea producción o pierde datos), Media (degrada la operaci�
 | Inventario auxiliar | Bebederos 67, fauna 19, puertas 7, playas 15, vereda 1, cafetos 53, tachos 184. Conteos en `data/v1/inventario/`. | Tachos sin conteos por tipo (en el CSV local: no aprovechables 294, papel 142, plástico 260, vidrio 242, pilas 56, peligrosos 0, RAEE 12, metales 2, Aniquem 38, intermedios plástico 26, intermedios metal 4). Bebederos sin estado ni sede como columnas. Palmeras sin altura, fuste, DAP, radio ni zunchado. Cero JPEG en `data/raw/drive_fotos/` (solo `_index.json`). | Alta | L |
 | Labores | 7 filas semilla en `003_operacion.sql` y `006_limpieza.sql`. Estados, pin, asignación, bitácora, ejecutor propia/tercerizada. | No están las 283 filas de monitoreo 2026 (102 con coordenadas, 219 con foto, 52 «Cerrado», 110 sin responsable; tres responsables con 69, 56 y 48). Catálogo real: 45 tipos en 7 clases (`data/raw/sheets/actividades.csv`), no los 5 tipos semilla. `geom` es `Point NOT NULL`: no se puede registrar por zona sin GPS, en contra de la propuesta DP2. | Alta | L |
 | Poda, vivero, lugares, puntos, reservas | Jardines de reserva 21 y xerofítica 10 en `capas_auxiliares`. Mock de agenda: 71 reservas y 21 polígonos en `data/mocks/reservas_agenda.mock.json`. | Poda 25, vivero vivo 689 filas no vacías (la copia local tiene 683), lugares 76, puntos PUCP 153: no hay tablas ni ETL. La hoja de reservas sigue en HTTP 401. | Alta | L |
-| Accesos | Cuentas semilla, bcrypt, cookie `cv_sesion` HttpOnly, 12 h, token solo como SHA-256 (`internal/accesos/accesos.go`). Matriz en código. | Misma clave `pando-local` (`CAMPUS_DEV_PASSWORD`). Cookie sin `Secure`. CORS `*` (`internal/server/server.go`). Sin CSRF, sin rate limit. Rutas de labores y geo no llaman a `exige`. `actor_rol` del JSON basta para mutar si no hay cookie (`handlers/operacion.go`). `permisos.rol` no tiene FK. | Alta | M |
+| Accesos | Cuentas semilla, bcrypt, cookie `cv_sesion` HttpOnly, 12 h, token solo como SHA-256 (`internal/accesos/accesos.go`). Matriz en código. En la instancia la clave sale de `CAMPUS_DEV_PASSWORD` (sin default de laboratorio) y la cookie va `Secure` porque el compose fija `CAMPUS_ENV=production`. CORS no refleja `*`. | Sigue sin CSRF. El límite de intentos cubre el login, no la subida de archivos. | Alta | M |
 | Catálogos | Tabla `catalogos`, alta y baja lógica. Clases: tipo, estado, prioridad, lugar, especie, motivo, turno, fuente (`internal/catalogos/store.go`). | Sin plagas, frecuencias, roles ni sedes (RF-24). Los CHECK de SQL no leen el catálogo. Lugares semilla son 4 textos, no los 76. Sin FK desde labores. | Media | M |
 | Evidencias | `POST /api/v1/evidencias`, tope 8 MB, jpg/png/webp/pdf, disco o S3 (`internal/blobs/`). | Sin compresión, sin GPS de la foto, sin cola offline de archivos, sin vínculo al evento de la bitácora. El cubo S3 está apagado (`create_evidence_bucket` default false). Nginx permite 10 MB (`apps/web/nginx.conf`) y la API corta en 8 MB. | Alta | L |
 | Offline | IndexedDB: alta de labor, cambio de estado y caché de lista (`apps/web/src/offline/queue.ts`). | No cubre riego, fotos, catálogos ni conflictos de versión. No hay Background Sync. DP2 pide UUID por evidencia y UNIQUE por operación. | Alta | L |
 | Reportes e indicadores | `GET /api/v1/reportes/labores` en CSV con BOM y SpreadsheetML (`internal/atencion/export.go`). | Sin PDF, sin niveles intermedio/avanzado, sin historial por ejemplar. Indicadores oficiales explícitamente no definidos. | Media | M |
 | IA | `POST /api/v1/ia/sugerir-tipo`: reglas locales, `requiere_humano` (`internal/atencion/ia.go`). | El caso de uso no está validado con el cliente (RF-25). No sustituye un modelo; no debe ampliarse a un proveedor externo sin acuerdo. | Baja | S |
-| Seguridad de plataforma | IMDSv2 obligatorio, bucket de evidencias con acceso público bloqueado si se crea, Postgres no publicado en el compose de la EC2. | HTTP en el puerto 80. SSH `0.0.0.0/0` por defecto (`infra/terraform/variables.tf`). Clave de Postgres `campus-lab` y `pando-local` dentro de `user_data.sh.tftpl`. Sin cabeceras de seguridad en nginx. | Alta | M |
-| Datos y backups | Volumen EBS de 20 GB para Postgres (`infra/terraform/main.tf`). | Sin `pg_dump` ni prueba de restauración. `user_data_replace_on_change = true` (línea 89): un `apply` que cambie el user data reemplaza la EC2. El disco de datos puede sobrevivir, pero el arranque no es un despliegue in-place. | Alta | M |
-| Observabilidad | `gin.Logger()` y `/health`. | Sin métricas, alertas, correlación de petición ni tablero. RNF de logs no está cubierto. | Media | M |
-| Pruebas | `go test` de validación, ETL, accesos, blobs y handlers sin base. Un test de cobertura de capas en `apps/web/src/map/coverage.test.ts`. CI en `.github/workflows/ci.yml`. | Sin tests de integración contra PostGIS, sin e2e, sin prueba móvil. | Alta | L |
+| Seguridad de plataforma | IMDSv2 obligatorio, bucket de evidencias con acceso público bloqueado y versionado si se crea, Postgres no publicado, SSH cerrado por defecto, cabeceras en nginx y TLS si hay certificado. | Sin dominio el lab sigue en HTTP. Falta el certificado de la universidad. | Alta | M |
+| Datos y backups | Volumen EBS de 20 GB. `scripts/backup-postgis.sh` y `scripts/restore-postgis.sh`. `user_data_replace_on_change = false`. | El volcado diario hay que programarlo en la instancia; RPO/RTO no están acordados. | Alta | M |
+| Observabilidad | Log con `request_id` (sin cuerpo ni cookie) y timer que alerta si `/health` falla. | Sin métricas ni tablero. La alerta queda en el journal. | Media | M |
+| Pruebas | `go test`, test Node y `scripts/probar-restauracion.sh` contra PostGIS. CI en `.github/workflows/ci.yml`. | Sin e2e del flujo entrar → editar → importar → revertir, sin prueba móvil. | Alta | L |
 | Migraciones | `001`–`006` aplicadas por `internal/migrate`. | No hay expansión compatible ni plan de numeración para varios agentes. El ETL no es una migración de datos editable. | Media | M |
 | Accesibilidad | Algunas etiquetas `aria` en `App.tsx` y `FechaCampo.tsx`. UI en español. | Sin auditoría WCAG. Controles de mapa y checks densos. DP2 pide botones de campo y mensajes claros (RNF-06 en la historia de interfaz simple, que en el Excel está corrida de columna). | Media | M |
 | Despliegue | Learner Lab documentado en `docs/DEPLOY-AWS.md`. CI de deploy solo `workflow_dispatch` y sale en verde si faltan secretos. | Credenciales del lab ~4 h. Sin dominio ni TLS. Salir del lab exige cuenta, red y costo propios. | Alta | L |
@@ -106,44 +106,44 @@ Cada fila del Excel está aquí. Prioridad = columna *Prioridad del Product Owne
 | 35 | J Mapa | Should | RF-35 | hecho | `PATCH .../asignacion`, evento `reasignada` en `003_operacion.sql` | El cambio queda en la bitácora. Falta que el actor sea el usuario de sesión (se arrastra con HUID 30) |
 | 36 | RNF | Must | RNF-01 | parcial | Misma cola que HUID 12; texto de pendientes en la PWA | Indicador sí, de forma básica. Falta la promesa verificable de DP2 §4 (corte, reapertura, pérdida de respuesta, fotos) |
 | 37 | RNF | Must | RNF-02 | parcial | `vite-plugin-pwa` en `apps/web/vite.config.ts`, riel en `App.tsx` | PWA y riel responsive existen. No hay evidencia de prueba en Android ni tablet |
-| 38 | RNF | Must | RNF-03 | parcial | Historia: tiempos de respuesta. Celda: «full cloud en AWS» | Hay `limit` en geo y un EC2 del Learner Lab (`docs/DEPLOY-AWS.md`). No hay paginación de listados grandes, ni meta de tiempo, ni hosting institucional. El lab no es el despliegue de producción |
+| 38 | RNF | Must | RNF-03 | parcial | Historia: tiempos de respuesta. Celda: «full cloud en AWS» | Hay `limit` en geo, EC2 del Learner Lab y runbook de cuenta propia (`docs/OPERACION.md`, 25–45 USD/mes). No hay paginación de listados grandes, ni meta de tiempo, ni hosting institucional. El lab no es producción |
 | 39 | RNF | Must | RNF-04 | parcial | Historia: interfaz clara. Celda: autenticación, secretos, auditoría | La UI de guardia está (riel, español, sesión). No hay auditoría de operaciones críticas (tabla de cambios). Auth incompleta: ver HUID 01 |
-| 40 | RNF | Must | RNF-05 | parcial | Historia: proteger comunicaciones. Celda: catálogos sin hardcode | HTTP, CORS `*`, sin HSTS ni cabeceras. Catálogos a medias: los CHECK de tipo y estado siguen en SQL |
-| 41 | RNF | Must | RNF-06 | parcial | Historia: secretos fuera del código. Celda: interfaz de campo simple | `.env` no se versiona (`.env.example`, `.gitignore`). `user_data.sh.tftpl` incrusta `pando-local` y la clave de Postgres. Interfaz de campo: formularios existen; faltan controles grandes y mensajes de error por campo en el mapa |
-| 42 | RNF | Should | RNF-07 | falta | Historia: logs. Celda: tiempos, paginación y caché | Solo log de Gin. Sin agregación ni alertas. Sin paginación de labores ni caché de lecturas |
+| 40 | RNF | Must | RNF-05 | parcial | Historia: proteger comunicaciones. Celda: catálogos sin hardcode | CORS ya no es `*`. Cabeceras en nginx; HSTS y redirección HTTP→HTTPS si hay certificado. Catálogos a medias: los CHECK de tipo y estado siguen en SQL |
+| 41 | RNF | Must | RNF-06 | parcial | Historia: secretos fuera del código. Celda: interfaz de campo simple | `.env` no se versiona. La clave de Postgres y la de las cuentas salen por variable sensible, sin default, y no van en el user data. Interfaz de campo: faltan controles grandes y mensajes de error por campo en el mapa |
+| 42 | RNF | Should | RNF-07 | parcial | Historia: logs. Celda: tiempos, paginación y caché | Log con `request_id`, sin cuerpo ni cookie. Timer de `/health` con alerta en el journal. Sin agregación, sin paginación de labores ni caché de lecturas |
 | 43 | RNF | Should | RNF-08 | parcial | Historia: pruebas. Celda: capas separadas | Paquetes Go por módulo (monolito, como pide DP2: RNF-08 «sin añadir despliegues»). Pruebas: ver HUID 45 |
 | 44 | RNF | Should | RNF-09 | parcial | Historia: español. Celda: Excel y REST | UI en español. Excel solo en el reporte básico. REST sí (`openapi.yaml`, incompleto respecto a sesión y reportes) |
-| 45 | RNF | Must | RNF-10 | parcial | Historia: arquitectura por responsabilidades. Celda: pruebas web y móvil | Arquitectura de un solo API: sí. Pruebas: `go test` sin Postgres y un test Node. Sin e2e ni evidencia móvil |
+| 45 | RNF | Must | RNF-10 | parcial | Historia: arquitectura por responsabilidades. Celda: pruebas web y móvil | Arquitectura de un solo API: sí. `go test`, un test Node y `scripts/probar-restauracion.sh` (volcado PostGIS a una base vacía). Sin e2e del flujo completo ni evidencia móvil |
 | 46 | RNF | Should | RNF-11 | parcial | `CampusMap.tsx`, edificios OSM `GET /api/v1/geo/edificios` | OSM y capas sí. Ortofoto diferida (sin acuerdo con OSG). Tecnología de visor ya decidida: MapLibre, no queda pendiente |
-| 47 | RNF | Must | RNF-12 | parcial | Historia: desplegar. Celda: mensajes en español | Español cubierto. Despliegue: Learner Lab, no infraestructura acordada con TI. `user_data_replace_on_change` impide un apply seguro |
+| 47 | RNF | Must | RNF-12 | parcial | Historia: desplegar. Celda: mensajes en español | Español cubierto. `user_data_replace_on_change = false`: un apply que solo cambia la imagen no reemplaza la EC2. Sigue siendo Learner Lab, no la cuenta acordada con TI |
 | 48 | RNF | Must | RNF-13 | parcial | Historia: API definida. Celda: IA responsable | OpenAPI en `apps/api/openapi.yaml` no lista todas las rutas de `server.go`. La IA local no envía datos fuera: cumple el espíritu de la celda, no cierra el contrato |
 | 49 | RNF | Must | RNF-14 | parcial | Historia: límites de IA. Celda: conservar trazabilidad | Trazabilidad de eventos sí, sin política de retención. IA con confirmación humana sí. Retención, RPO y volumen: pendientes con jefatura, no se inventan |
 
-Conteo de la matriz: 4 hecho (09, 21, 29, 35), 2 diferido de producto (16, 17) más indicadores oficiales dentro de 26, 1 falta neta marcada falta en varias filas de Should/Must (05, 07, 10, 19, 24, 42), y el resto parcial. Ningún HUID Must está cerrado del todo salvo 09, 21, 29 y 35, y esos cuatro arrastran huecos de actor o de datos.
+Conteo de la matriz: 4 hecho (09, 21, 29, 35), 2 diferido de producto (16, 17) más indicadores oficiales dentro de 26, faltas en filas Should/Must (05, 07, 10, 19, 24), y el resto parcial. Ningún HUID Must está cerrado del todo salvo 09, 21, 29 y 35, y esos cuatro arrastran huecos de actor o de datos.
 
 ## 5. Checklist de salida a producción
 
 No se marca nada como cumplido si el código no lo sostiene.
 
-- [ ] Claves semilla fuera del artefacto: nada de `pando-local` ni `campus-lab` en imágenes ni user data.
-- [ ] HTTPS en el mismo dominio para la PWA y la API; HTTP redirige.
+- [x] Claves semilla fuera del artefacto: nada de `pando-local` ni `campus-lab` en imágenes ni user data.
+- [x] HTTPS en el mismo dominio para la PWA y la API; HTTP redirige. (cuando hay certificado en `/opt/campus/certs`; sin él el lab sigue en HTTP)
 - [ ] Cookie `Secure`, `HttpOnly`, `SameSite`, y CSRF en las mutaciones con cookie.
-- [ ] CORS acotado al origen de la PWA, no `*`.
+- [x] CORS acotado al origen de la PWA, no `*`.
 - [ ] Rate limit en `POST /api/v1/sesion` y en subida de archivos.
-- [ ] Cabeceras: `Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy`, HSTS.
+- [x] Cabeceras: `Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy`, HSTS. (HSTS solo en el server de TLS)
 - [ ] Todas las mutaciones exigen sesión y `Permite`. Geo de escritura también.
-- [ ] Postgres sin puerto público. SSH cerrado o restringido a una IP.
-- [ ] Secretos en un almacén, no en `user_data` ni en el estado de Terraform en claro.
-- [ ] Backup diario de PostGIS (`pg_dump` custom, con extensión) y prueba de restauración anotada.
-- [ ] Versionado del volumen de evidencias (S3) y bloqueo de acceso público.
-- [ ] `terraform apply` no reemplaza la EC2 (`user_data_replace_on_change` en false; cloud-init solo en el primer arranque; despliegue = pull de imágenes).
-- [ ] Healthcheck con alerta si `/health` falla.
-- [ ] Logs con identificador de petición, sin claves ni cuerpos de archivos.
+- [x] Postgres sin puerto público. SSH cerrado o restringido a una IP.
+- [x] Secretos en un almacén, no en `user_data` ni en el estado de Terraform en claro. (variables sensibles sin default; el archivo vive en la instancia, escrito por SSM)
+- [x] Backup diario de PostGIS (`pg_dump` custom, con extensión) y prueba de restauración anotada.
+- [x] Versionado del volumen de evidencias (S3) y bloqueo de acceso público. (si `create_evidence_bucket`; sigue apagado por defecto)
+- [x] `terraform apply` no reemplaza la EC2 (`user_data_replace_on_change` en false; cloud-init solo en el primer arranque; despliegue = pull de imágenes).
+- [x] Healthcheck con alerta si `/health` falla.
+- [x] Logs con identificador de petición, sin claves ni cuerpos de archivos.
 - [ ] Migraciones solo hacia adelante, numeración reservada, sin `TRUNCATE` de tablas ya editadas.
 - [ ] Importación con vista previa, informe de errores y lote reversible.
 - [ ] Datos faltantes cargados y anonimizados (lista en `MAPA-DATOS-Y-EDICION.md`).
 - [ ] Pruebas de integración PostGIS y un e2e del flujo entrar → editar área → importar → revertir.
-- [ ] Documentación de operación: encender, backup, restaurar, rotar clave, leer logs.
+- [x] Documentación de operación: encender, backup, restaurar, rotar clave, leer logs. (`docs/OPERACION.md`)
 - [ ] Acuerdo escrito de RPO/RTO, retención y de lo que la universidad debe entregar (sección 6).
 
 ## 6. Qué hay que pedir a la universidad

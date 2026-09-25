@@ -35,7 +35,7 @@ func New(deps Deps) *gin.Engine {
 	if seg.LoginVentana <= 0 {
 		seg.LoginVentana = time.Minute
 	}
-	r.Use(gin.Logger(), gin.Recovery(), handlers.CORS(seg.CORSOrigins), handlers.ConCookie(seg.Cookie), handlers.LimiteLogin(seg.LoginCada, seg.LoginVentana))
+	r.Use(Bitacora(), gin.Recovery(), handlers.CORS(seg.CORSOrigins), handlers.ConCookie(seg.Cookie), handlers.LimiteLogin(seg.LoginCada, seg.LoginVentana))
 
 	var acc *accesos.Store
 	if deps.DB != nil {

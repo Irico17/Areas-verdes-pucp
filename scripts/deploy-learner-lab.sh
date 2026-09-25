@@ -7,6 +7,8 @@ set -euo pipefail
 : "${AWS_ACCESS_KEY_ID:?falta AWS_ACCESS_KEY_ID}"
 : "${AWS_SECRET_ACCESS_KEY:?falta AWS_SECRET_ACCESS_KEY}"
 : "${AWS_SESSION_TOKEN:?falta AWS_SESSION_TOKEN}"
+: "${TF_VAR_db_password:?defina TF_VAR_db_password (16+ caracteres, no la clave de laboratorio)}"
+: "${TF_VAR_dev_password:?defina TF_VAR_dev_password (16+ caracteres, no la clave de laboratorio)}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
@@ -33,6 +35,8 @@ docker build -f "$ROOT/apps/api/Dockerfile" -t "$API_REPO:latest" "$ROOT"
 docker build -f "$ROOT/apps/web/Dockerfile" -t "$WEB_REPO:latest" "$ROOT"
 docker push "$API_REPO:latest"
 docker push "$WEB_REPO:latest"
+
+bash "$ROOT/scripts/poner-secretos.sh" "$INSTANCE"
 
 aws ssm send-command \
   --instance-ids "$INSTANCE" \

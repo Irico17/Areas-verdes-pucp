@@ -8,7 +8,7 @@ curl -fsSL -o /usr/libexec/docker/cli-plugins/docker-compose \
 chmod +x /usr/libexec/docker/cli-plugins/docker-compose
 docker compose version
 usermod -aG docker ec2-user || true
-mkdir -p /opt/campus/data/pg /opt/campus/data/app
+mkdir -p /opt/campus/data/pg /opt/campus/data/app /opt/campus/certs /opt/campus/backups
 
 # Volumen aparte (Nitro lo presenta como nvme, no como sdf).
 for _try in 1 2 3 4 5 6; do
@@ -24,13 +24,15 @@ for _try in 1 2 3 4 5 6; do
   sleep 5
 done
 
+# Sin claves. El despliegue escribe /opt/campus/secrets.env (modo 600) por SSM.
 cat >/opt/campus/docker-compose.yml <<'YAML'
 services:
   db:
     image: postgis/postgis:16-3.4
+    env_file:
+      - /opt/campus/secrets.env
     environment:
       POSTGRES_USER: campus
-      POSTGRES_PASSWORD: ${db_password}
       POSTGRES_DB: campus_verde
     volumes:
       - /opt/campus/data/pg:/var/lib/postgresql/data
@@ -41,12 +43,13 @@ services:
     restart: unless-stopped
   api:
     image: ${api_image}
+    env_file:
+      - /opt/campus/secrets.env
     environment:
-      DATABASE_URL: postgres://campus:${db_password}@db:5432/campus_verde?sslmode=disable
-      CAMPUS_DEV_PASSWORD: pando-local
       EVIDENCIAS_BUCKET: "${evidence_bucket}"
       AWS_REGION: ${region}
       AWS_DEFAULT_REGION: ${region}
+      CAMPUS_ENV: production
     volumes:
       - /opt/campus/data/app:/data
     depends_on:
@@ -57,6 +60,9 @@ services:
     image: ${web_image}
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - /opt/campus/certs:/etc/nginx/certs:ro
     depends_on:
       - api
     restart: unless-stopped
@@ -66,11 +72,50 @@ cat >/opt/campus/up.sh <<'SH'
 #!/bin/bash
 set -euo pipefail
 cd /opt/campus
+if [ ! -f /opt/campus/secrets.env ]; then
+  echo "falta /opt/campus/secrets.env; no se arranca sin las claves" >&2
+  exit 1
+fi
+chmod 600 /opt/campus/secrets.env
 aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${registry} || true
 docker compose pull
 docker compose up -d
 SH
 chmod +x /opt/campus/up.sh
+
+cat >/usr/local/bin/campus-healthcheck <<'SH'
+#!/bin/bash
+set -euo pipefail
+url="$${HEALTH_URL:-http://127.0.0.1/health}"
+if ! body="$(curl -fsS --max-time 8 "$url")"; then
+  logger -t campus-health -p user.err "ALERTA: /health no responde ($url)"
+  exit 1
+fi
+case "$body" in
+  *'"status":"ok"'*) logger -t campus-health "ok" ;;
+  *) logger -t campus-health -p user.err "ALERTA: /health no está ok"; exit 1 ;;
+esac
+SH
+chmod +x /usr/local/bin/campus-healthcheck
+
+cat >/etc/systemd/system/campus-health.service <<'UNIT'
+[Unit]
+Description=Alerta si /health de Campus Verde falla
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/campus-healthcheck
+UNIT
+
+cat >/etc/systemd/system/campus-health.timer <<'UNIT'
+[Unit]
+Description=Revisa /health cada cinco minutos
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+AccuracySec=30s
+[Install]
+WantedBy=timers.target
+UNIT
 
 cat >/etc/systemd/system/campus.service <<'UNIT'
 [Unit]
@@ -86,5 +131,6 @@ TimeoutStartSec=900
 WantedBy=multi-user.target
 UNIT
 systemctl daemon-reload
-systemctl enable campus.service
+systemctl enable campus.service campus-health.timer
+systemctl start campus-health.timer || true
 systemctl start campus.service || true

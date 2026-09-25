@@ -33,9 +33,14 @@ variable "lab_role_name" {
 }
 
 variable "ssh_cidr" {
-  description = "Quién puede entrar por SSH. Estreche a su IP/32 cuando la conozca."
+  description = "SSH solo si indica una IP/32. Vacío cierra el puerto 22. 0.0.0.0/0 no se acepta."
   type        = string
-  default     = "0.0.0.0/0"
+  default     = ""
+
+  validation {
+    condition     = var.ssh_cidr == "" || (can(cidrhost(var.ssh_cidr, 0)) && var.ssh_cidr != "0.0.0.0/0")
+    error_message = "Deje ssh_cidr vacío o use una red que no sea 0.0.0.0/0."
+  }
 }
 
 variable "ssh_key_name" {
@@ -45,10 +50,25 @@ variable "ssh_key_name" {
 }
 
 variable "db_password" {
-  description = "Clave de Postgres dentro de la instancia. No es un secreto de producción."
+  description = "Clave de Postgres. Sensible, sin default. No entra al user data ni al estado: el despliegue la escribe en /opt/campus/secrets.env."
   type        = string
-  default     = "campus-lab"
   sensitive   = true
+
+  validation {
+    condition     = length(var.db_password) >= 16 && !contains(["campus-lab", "pando-local"], var.db_password)
+    error_message = "TF_VAR_db_password debe tener al menos 16 caracteres y no puede ser una clave de laboratorio."
+  }
+}
+
+variable "dev_password" {
+  description = "Clave de las cuentas locales (CAMPUS_DEV_PASSWORD). Sensible, sin default. No entra al user data."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(var.dev_password) >= 16 && !contains(["campus-lab", "pando-local"], var.dev_password)
+    error_message = "TF_VAR_dev_password debe tener al menos 16 caracteres y no puede ser una clave de laboratorio."
+  }
 }
 
 variable "create_ecr" {

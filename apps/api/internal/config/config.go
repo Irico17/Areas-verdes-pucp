@@ -42,7 +42,7 @@ func Load() Config {
 		OpenAPIPath:      env("OPENAPI_PATH", filepath.Join(root, "apps", "api", "openapi.yaml")),
 		EdificiosPath:    env("EDIFICIOS_PATH", filepath.Join(root, "data", "osm", "edificios_pando.geojson")),
 		ReservasPath:     env("RESERVAS_MOCK_PATH", filepath.Join(root, "data", "mocks", "reservas_agenda.mock.json")),
-		DevPassword:      env("CAMPUS_DEV_PASSWORD", "pando-local"),
+		DevPassword:      env("CAMPUS_DEV_PASSWORD", ""),
 		EvidenciasDir:    env("EVIDENCIAS_DIR", filepath.Join(root, "data", "evidencias")),
 		EvidenciasBucket: env("EVIDENCIAS_BUCKET", ""),
 		CORSOrigins:      origenesCORS(os.Getenv("CAMPUS_CORS_ORIGINS")),
