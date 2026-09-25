@@ -1,0 +1,25 @@
+# Frente: 2B inventario. Tachos, bebederos y capas de punto.
+# Añade paths en este archivo. No edites el YAML de otro tag.
+/api/v1/geo/inventario:
+  get:
+    tags: [catastro]
+    summary: Catálogo de overlays de inventario
+    responses:
+      "200":
+        description: Capas conocidas y conteos cargados
+/api/v1/geo/inventario/{capa}:
+  get:
+    tags: [catastro]
+    summary: Capa opcional de inventario
+    parameters:
+      - name: capa
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [bebederos, fauna, playas_estacionamiento, puertas, area_vereda_peligro, flora, cafetos, tachos]
+    responses:
+      "200":
+        description: FeatureCollection
+      "404":
+        description: Capa desconocida

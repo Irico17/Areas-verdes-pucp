@@ -1,0 +1,9 @@
+# Frente: 2B reservas. La agenda ficticia y, después, la real.
+# Añade paths en este archivo. No edites el YAML de otro tag.
+/api/v1/geo/reservas-mock:
+  get:
+    tags: [catastro]
+    summary: Agenda ficticia, sin identificadores de hojas de cálculo
+    responses:
+      "200":
+        description: Lista marcada como fake

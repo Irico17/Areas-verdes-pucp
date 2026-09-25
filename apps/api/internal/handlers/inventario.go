@@ -51,6 +51,19 @@ func (h Inventario) Capa(c *gin.Context) {
 	c.JSON(200, fc)
 }
 
+// RegistrarInventario publica overlays. registrar(r, deps) del frente inventario.
+// 2B amplía este archivo. El orden fotos antes de :capa se conserva.
+func RegistrarInventario(r *gin.Engine, deps Deps) {
+	inv := Inventario{FotosDir: deps.FotosDir}
+	if deps.DB != nil {
+		inv.Store = inventario.NewStore(deps.DB)
+	}
+	g := r.Group("/api/v1/geo")
+	g.GET("/inventario", inv.Index)
+	g.GET("/inventario/fotos/:name", inv.Foto)
+	g.GET("/inventario/:capa", inv.Capa)
+}
+
 // Foto entrega un JPEG recuperado. No publica el índice ni ids de Drive.
 func (h Inventario) Foto(c *gin.Context) {
 	name := filepath.Base(c.Param("name"))

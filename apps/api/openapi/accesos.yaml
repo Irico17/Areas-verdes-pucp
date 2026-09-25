@@ -1,0 +1,25 @@
+# Frente: 1B sesión. Añade paths de acceso aquí.
+# Añade paths en este archivo. No edites el YAML de otro tag.
+/api/v1/sesion:
+  post:
+    tags: [sistema]
+    summary: Ingreso con cuenta local. Responde Set-Cookie HttpOnly
+    responses:
+      "200":
+        description: Sesión abierta
+      "401":
+        description: Credenciales incorrectas
+  get:
+    tags: [sistema]
+    summary: Usuario de la cookie
+    responses:
+      "200":
+        description: Sesión vigente
+      "401":
+        description: Sin sesión
+  delete:
+    tags: [sistema]
+    summary: Cierra la sesión
+    responses:
+      "200":
+        description: Cookie retirada

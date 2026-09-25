@@ -1,0 +1,29 @@
+# Frente: 2D reportes y 3B sugerencia local. Sin PDF ni KPI nuevo.
+# Añade paths en este archivo. No edites el YAML de otro tag.
+/api/v1/reportes/labores:
+  get:
+    tags: [operacion]
+    summary: Reporte básico. formato=csv o formato=xls exporta el mismo filtro
+    parameters:
+      - name: formato
+        in: query
+        schema: { type: string, enum: [csv, xls] }
+      - name: estado
+        in: query
+        schema: { type: string }
+      - name: desde
+        in: query
+        schema: { type: string, example: "2026-09-01" }
+      - name: hasta
+        in: query
+        schema: { type: string }
+    responses:
+      "200":
+        description: JSON, CSV o SpreadsheetML
+/api/v1/ia/sugerir-tipo:
+  post:
+    tags: [operacion]
+    summary: Regla local sobre el título. No llama a un modelo externo
+    responses:
+      "200":
+        description: Sugerencia que una persona debe confirmar

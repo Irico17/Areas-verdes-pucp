@@ -26,6 +26,12 @@ type reservaItem struct {
 	Fake              bool   `json:"fake"`
 }
 
+// RegistrarReservas publica la agenda ficticia. registrar(r, deps) del frente reservas.
+func RegistrarReservas(r *gin.Engine, deps Deps) {
+	reservas := Reservas{Path: deps.ReservasPath}
+	r.GET("/api/v1/geo/reservas-mock", reservas.Get)
+}
+
 func (h Reservas) Get(c *gin.Context) {
 	aviso := "Agenda ficticia de demostración. No está conectada a una hoja de cálculo ni a una fuente institucional."
 	body, err := os.ReadFile(h.Path)

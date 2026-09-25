@@ -1,0 +1,56 @@
+# Frente: sistema (ola 0). Salud e índice. No lo reordenes.
+# Añade paths en este archivo. No edites el YAML de otro tag.
+/health:
+  get:
+    tags: [sistema]
+    summary: Salud del proceso, Postgres y PostGIS
+    operationId: health
+    responses:
+      "200":
+        description: Base y PostGIS disponibles
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Health"
+      "503":
+        description: Base o PostGIS no disponibles
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Health"
+/api/v1:
+  get:
+    tags: [sistema]
+    summary: Índice de rutas
+    operationId: indice
+    responses:
+      "200":
+        description: Índice
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                servicio:
+                  type: string
+                version:
+                  type: string
+                crs:
+                  type: string
+                  example: EPSG:4326
+                rutas:
+                  type: array
+                  items:
+                    type: object
+/api/v1/openapi.yaml:
+  get:
+    tags: [sistema]
+    summary: Este contrato
+    operationId: openapi
+    responses:
+      "200":
+        description: OpenAPI YAML
+        content:
+          application/yaml:
+            schema:
+              type: string

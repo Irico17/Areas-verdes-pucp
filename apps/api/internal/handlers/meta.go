@@ -3,6 +3,8 @@ package handlers
 import (
 	"os"
 
+	"campusverde/api/internal/catastro"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -71,10 +73,26 @@ func (m Meta) Index(c *gin.Context) {
 }
 
 func (m Meta) OpenAPI(c *gin.Context) {
-	body, err := os.ReadFile(m.OpenAPIPath)
-	if err != nil {
+	if _, err := os.Stat(m.OpenAPIPath); err != nil {
 		c.JSON(404, gin.H{"error": "openapi.yaml no disponible"})
 		return
 	}
+	body, err := UnirContrato(m.OpenAPIPath)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "no se pudo armar el contrato"})
+		return
+	}
 	c.Data(200, "application/yaml; charset=utf-8", body)
+}
+
+// RegistrarSistema publica salud, índice y el contrato. registrar(r, deps) del frente sistema.
+func RegistrarSistema(r *gin.Engine, deps Deps) {
+	health := Health{DB: deps.DB}
+	if deps.DB != nil {
+		health.Store = catastro.NewStore(deps.DB)
+	}
+	meta := Meta{OpenAPIPath: deps.OpenAPIPath}
+	r.GET("/health", health.Get)
+	r.GET("/api/v1", meta.Index)
+	r.GET("/api/v1/openapi.yaml", meta.OpenAPI)
 }

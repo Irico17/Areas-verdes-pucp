@@ -1,0 +1,39 @@
+# Frente: 1B y 2A labores. Actividades y bitácora.
+# Añade paths en este archivo. No edites el YAML de otro tag.
+/api/v1/operacion/actividades:
+  get:
+    tags: [operacion]
+    summary: Labores como FeatureCollection (Point EPSG:4326)
+    parameters:
+      - in: query
+        name: rol
+        schema: { type: string, enum: [jefatura, coordinacion, capataz] }
+      - in: query
+        name: capataz_id
+        schema: { type: string }
+        description: Obligatorio si rol=capataz. Solo ve las asignadas a ese equipo.
+      - in: query
+        name: abiertas
+        schema: { type: string, default: "1" }
+        description: 1 excluye cerradas, canceladas y archivadas.
+    responses:
+      "200":
+        description: FeatureCollection
+        content:
+          application/geo+json:
+            schema:
+              $ref: "#/components/schemas/FeatureCollection"
+      "400":
+        description: Filtro inválido
+  post:
+    tags: [operacion]
+    summary: Crear labor desde un pin. El UUID del cliente es idempotente.
+    responses:
+      "201":
+        description: Creada
+      "200":
+        description: El mismo UUID ya existía con el mismo contenido
+      "403":
+        description: El rol capataz no crea labores
+      "409":
+        description: UUID repetido con otro contenido

@@ -1,0 +1,15 @@
+# Frente: catálogos. Alta de clases nuevas en este archivo.
+# Añade paths en este archivo. No edites el YAML de otro tag.
+/api/v1/catalogos:
+  get:
+    tags: [sistema]
+    summary: Ítems de catálogo. Query clase y activos=1
+    responses:
+      "200":
+        description: Lista
+  post:
+    tags: [sistema]
+    summary: Alta o reactivación. Requiere permiso catalogos
+    responses:
+      "201":
+        description: Ítem guardado

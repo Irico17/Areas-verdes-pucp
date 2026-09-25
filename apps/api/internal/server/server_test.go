@@ -38,3 +38,116 @@ func TestHealthYIndiceSinDB(t *testing.T) {
 		t.Fatalf("areas sin db %d", w.Code)
 	}
 }
+
+// rutasCongeladas es el contrato HTTP de la ola 0. Un frente nuevo suma una ruta;
+// no cambia el código de las que ya estaban.
+var rutasCongeladas = []struct {
+	metodo string
+	ruta   string
+	codigo int
+}{
+	{http.MethodGet, "/health", 503},
+	{http.MethodGet, "/api/v1", 200},
+	{http.MethodGet, "/api/v1/openapi.yaml", 404},
+	{http.MethodGet, "/api/v1/geo/resumen", 503},
+	{http.MethodGet, "/api/v1/geo/areas", 503},
+	{http.MethodGet, "/api/v1/geo/zonas", 503},
+	{http.MethodGet, "/api/v1/geo/capas", 503},
+	{http.MethodGet, "/api/v1/geo/capas/jardines_reserva", 503},
+	{http.MethodGet, "/api/v1/geo/edificios", 200},
+	{http.MethodGet, "/api/v1/geo/inventario", 503},
+	{http.MethodGet, "/api/v1/geo/inventario/fotos/x.jpg", 404},
+	{http.MethodGet, "/api/v1/geo/inventario/bebederos", 503},
+	{http.MethodGet, "/api/v1/geo/reservas-mock", 200},
+	{http.MethodGet, "/api/v1/operacion/capataces", 503},
+	{http.MethodGet, "/api/v1/operacion/actividades", 503},
+	{http.MethodPost, "/api/v1/operacion/actividades", 400},
+	{http.MethodPatch, "/api/v1/operacion/actividades/1/asignacion", 400},
+	{http.MethodPatch, "/api/v1/operacion/actividades/1/estado", 400},
+	{http.MethodPost, "/api/v1/operacion/actividades/1/archivar", 400},
+	{http.MethodGet, "/api/v1/operacion/actividades/1/timeline", 503},
+	{http.MethodPost, "/api/v1/sesion", 503},
+	{http.MethodGet, "/api/v1/sesion", 401},
+	{http.MethodDelete, "/api/v1/sesion", 200},
+	{http.MethodGet, "/api/v1/accesos/usuarios", 403},
+	{http.MethodGet, "/api/v1/catalogos", 401},
+	{http.MethodPost, "/api/v1/catalogos", 401},
+	{http.MethodPost, "/api/v1/catalogos/1/desactivar", 401},
+	{http.MethodGet, "/api/v1/catastro/areas", 401},
+	{http.MethodPost, "/api/v1/catastro/areas", 401},
+	{http.MethodPatch, "/api/v1/catastro/areas/AV-1", 401},
+	{http.MethodGet, "/api/v1/solicitudes", 401},
+	{http.MethodPost, "/api/v1/solicitudes", 401},
+	{http.MethodGet, "/api/v1/ordenes", 401},
+	{http.MethodPost, "/api/v1/ordenes", 401},
+	{http.MethodGet, "/api/v1/riego", 401},
+	{http.MethodPost, "/api/v1/riego", 401},
+	{http.MethodGet, "/api/v1/evidencias", 401},
+	{http.MethodPost, "/api/v1/evidencias", 401},
+	{http.MethodGet, "/api/v1/evidencias/1/archivo", 401},
+	{http.MethodGet, "/api/v1/reportes/labores", 401},
+	{http.MethodPost, "/api/v1/ia/sugerir-tipo", 401},
+	{http.MethodGet, "/api/v1/no-existe", 404},
+}
+
+func TestRutasActualesRespondenIgual(t *testing.T) {
+	r := New(Deps{OpenAPIPath: "no-existe.yaml"})
+
+	vistas := map[string]bool{}
+	for _, rt := range r.Routes() {
+		vistas[rt.Method+" "+rt.Path] = true
+	}
+	for _, want := range rutasCongeladas {
+		if want.codigo == 404 && want.ruta == "/api/v1/no-existe" {
+			continue
+		}
+		key := want.metodo + " " + plantilla(want.ruta)
+		if !vistas[key] {
+			t.Errorf("falta la ruta registrada %s", key)
+		}
+	}
+	if len(vistas) != 41 {
+		t.Fatalf("rutas registradas = %d, se esperaban 41: %v", len(vistas), vistas)
+	}
+
+	for _, want := range rutasCongeladas {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(want.metodo, want.ruta, nil))
+		if w.Code != want.codigo {
+			t.Errorf("%s %s -> %d, se esperaba %d (%s)", want.metodo, want.ruta, w.Code, want.codigo, w.Body.String())
+		}
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodOptions, "/health", nil))
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("options %d", w.Code)
+	}
+}
+
+func plantilla(ruta string) string {
+	switch ruta {
+	case "/api/v1/geo/capas/jardines_reserva":
+		return "/api/v1/geo/capas/:capa"
+	case "/api/v1/geo/inventario/fotos/x.jpg":
+		return "/api/v1/geo/inventario/fotos/:name"
+	case "/api/v1/geo/inventario/bebederos":
+		return "/api/v1/geo/inventario/:capa"
+	case "/api/v1/operacion/actividades/1/asignacion":
+		return "/api/v1/operacion/actividades/:id/asignacion"
+	case "/api/v1/operacion/actividades/1/estado":
+		return "/api/v1/operacion/actividades/:id/estado"
+	case "/api/v1/operacion/actividades/1/archivar":
+		return "/api/v1/operacion/actividades/:id/archivar"
+	case "/api/v1/operacion/actividades/1/timeline":
+		return "/api/v1/operacion/actividades/:id/timeline"
+	case "/api/v1/catalogos/1/desactivar":
+		return "/api/v1/catalogos/:id/desactivar"
+	case "/api/v1/catastro/areas/AV-1":
+		return "/api/v1/catastro/areas/:id"
+	case "/api/v1/evidencias/1/archivo":
+		return "/api/v1/evidencias/:id/archivo"
+	default:
+		return ruta
+	}
+}
