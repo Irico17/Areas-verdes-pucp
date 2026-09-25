@@ -17,9 +17,110 @@
         required: true
         schema:
           type: string
-          enum: [bebederos, fauna, playas_estacionamiento, puertas, area_vereda_peligro, flora, cafetos, tachos]
+          enum: [bebederos, fauna, playas_estacionamiento, puertas, area_vereda_peligro, flora, cafetos, tachos, xerofitica, jardines_reserva, puntos_pucp]
     responses:
       "200":
         description: FeatureCollection
       "404":
         description: Capa desconocida
+/api/v1/inventario/tachos:
+  get:
+    tags: [catastro]
+    summary: Tachos con los 11 conteos
+    responses:
+      "200":
+        description: Lista
+      "401":
+        description: Sin sesión
+  post:
+    tags: [catastro]
+    summary: Alta o edición de un tacho
+    responses:
+      "201":
+        description: Guardado
+      "401":
+        description: Sin sesión
+/api/v1/inventario/bebederos:
+  get:
+    tags: [catastro]
+    summary: Bebederos con estado y sede
+    responses:
+      "200":
+        description: Lista
+/api/v1/inventario/puntos:
+  get:
+    tags: [catastro]
+    summary: Puntos PUCP sin teléfono ni placeId
+    parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Lista filtrable por título
+  post:
+    tags: [catastro]
+    summary: Alta de un punto. Rechaza teléfono, placeId y website
+    responses:
+      "201":
+        description: Guardado
+      "400":
+        description: Datos de contacto
+/api/v1/inventario/formato/puntos:
+  post:
+    tags: [catastro]
+    summary: Formato CSV de puntos. Omite columnas de contacto. La herramienta genérica es el frente 3A.
+    responses:
+      "200":
+        description: Filas y columnas omitidas por datos personales
+/api/v1/inventario/reservas:
+  get:
+    tags: [catastro]
+    summary: Reservas ficticias. No abre la hoja institucional.
+    parameters:
+      - name: desde
+        in: query
+        schema:
+          type: string
+      - name: hasta
+        in: query
+        schema:
+          type: string
+    responses:
+      "200":
+        description: origen ficticio
+  post:
+    tags: [catastro]
+    summary: Alta ficticia. Rechaza origen distinto de ficticio.
+    responses:
+      "201":
+        description: Guardada
+      "400":
+        description: Origen no ficticio
+/api/v1/inventario/capas/{capa}:
+  get:
+    tags: [catastro]
+    summary: Fauna, puertas, playas, vereda, xerofítica o jardín de reserva
+    parameters:
+      - name: capa
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [fauna, puertas, playas_estacionamiento, veredas_riesgo, xerofiticas, jardines_reserva]
+    responses:
+      "200":
+        description: Fichas editables
+  post:
+    tags: [catastro]
+    summary: Alta o edición de geometría y atributos
+    parameters:
+      - name: capa
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "201":
+        description: Guardada

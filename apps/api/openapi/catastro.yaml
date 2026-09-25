@@ -283,11 +283,25 @@
   get:
     tags: [catastro]
     summary: Ejemplares de flora
-    description: salud permanece null. El historial de códigos es /codigos.
+    description: |
+      salud permanece null. Sin query `limit` devuelve el total completo y el campo `total`.
+      Con `limit` (1 a 2000) y `offset` pagina. El historial de códigos es /codigos.
     operationId: listarEjemplares
+    parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 2000
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
     responses:
       "200":
-        description: Hasta 100 ejemplares
+        description: Lista usable. `total` es el conteo completo, no el tamaño de la página.
       "401":
         description: Sin sesión
   post:

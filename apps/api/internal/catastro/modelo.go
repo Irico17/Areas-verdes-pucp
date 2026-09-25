@@ -344,18 +344,31 @@ func (s *Store) CrearEspecie(ctx context.Context, cientifico, comun string) (Esp
 	return Especie{ID: id, NombreCientifico: cientifico, NombreComun: comun, Activo: true}, nil
 }
 
-// ListarEjemplares devuelve ejemplares activos, hasta 100.
-func (s *Store) ListarEjemplares(ctx context.Context) ([]Ejemplar, error) {
-	rows, err := s.db.WithContext(ctx).Raw(`
+// ListarEjemplares devuelve ejemplares activos.
+// limit <= 0 devuelve el total completo. limit > 0 pagina con offset.
+func (s *Store) ListarEjemplares(ctx context.Context, limit, offset int) ([]Ejemplar, int, error) {
+	var total int
+	if err := s.db.WithContext(ctx).Raw(`SELECT count(*) FROM ejemplares WHERE activo`).Scan(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	q := `
 		SELECT id, numero_origen, COALESCE(codigo, ''), especie_id, COALESCE(nombre_comun, ''),
 		       COALESCE(tipo_vegetacion, ''), cantidad, ubicacion_lugar_id, COALESCE(referencia, ''),
 		       lat, lon, COALESCE(observacion_fen_2026, ''), salud, activo
 		FROM ejemplares
 		WHERE activo
-		ORDER BY numero_origen NULLS LAST, id
-		LIMIT 100`).Rows()
+		ORDER BY numero_origen NULLS LAST, id`
+	args := []any{}
+	if limit > 0 {
+		if offset < 0 {
+			offset = 0
+		}
+		q += ` LIMIT $1 OFFSET $2`
+		args = []any{limit, offset}
+	}
+	rows, err := s.db.WithContext(ctx).Raw(q, args...).Rows()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 	out := []Ejemplar{}
@@ -366,11 +379,11 @@ func (s *Store) ListarEjemplares(ctx context.Context) ([]Ejemplar, error) {
 			&e.TipoVegetacion, &e.Cantidad, &e.UbicacionLugarID, &e.Referencia,
 			&e.Lat, &e.Lon, &e.ObservacionFen2026, &e.Salud, &e.Activo,
 		); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		out = append(out, e)
 	}
-	return out, rows.Err()
+	return out, total, rows.Err()
 }
 
 // CrearEjemplar registra un ejemplar. salud no se acepta: queda NULL.
