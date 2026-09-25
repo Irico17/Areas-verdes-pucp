@@ -25,6 +25,7 @@ export function BottomSheet({
   const [arrastre, setArrastre] = useState<number | null>(null)
   const [vistoAbierto, setVistoAbierto] = useState(open)
   const inicio = useRef({ y: 0, alto: 0 })
+  const arrastreRef = useRef<number | null>(null)
   if (open !== vistoAbierto) {
     setVistoAbierto(open)
     if (open) setAnclaje(0.55)
@@ -58,13 +59,17 @@ export function BottomSheet({
   function alMover(event: ReactPointerEvent<HTMLElement>) {
     if (!movil || !event.currentTarget.hasPointerCapture(event.pointerId)) return
     const delta = inicio.current.y - event.clientY
-    setArrastre(Math.max(48, inicio.current.alto + delta))
+    const alto = Math.max(48, inicio.current.alto + delta)
+    arrastreRef.current = alto
+    setArrastre(alto)
   }
 
   function alSoltar(event: ReactPointerEvent<HTMLElement>) {
-    if (!movil || arrastre == null) return
+    const alto = arrastreRef.current
+    if (!movil || alto == null) return
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
-    const ratio = arrastre / window.innerHeight
+    arrastreRef.current = null
+    const ratio = alto / window.innerHeight
     const destino = anclajeCercano(ratio)
     setArrastre(null)
     if (destino == null) onClose()

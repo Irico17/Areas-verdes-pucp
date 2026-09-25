@@ -26,6 +26,33 @@ func TestReporteNoRecortaEn300(t *testing.T) {
 	}
 }
 
+func TestExportacionEscribeCadaFila(t *testing.T) {
+	filas := []Fila{
+		{ID: "1", Titulo: "Poda", Estado: "cerrada"},
+		{ID: "2", Titulo: "Riego", Estado: "pendiente"},
+	}
+	var csvBuf, xlsBuf strings.Builder
+	if err := EscribirCSV(&csvBuf, filas); err != nil {
+		t.Fatal(err)
+	}
+	if err := EscribirExcelXML(&xlsBuf, filas); err != nil {
+		t.Fatal(err)
+	}
+	if csvBuf.String() != CSV(filas) || xlsBuf.String() != ExcelXML(filas) {
+		t.Fatal("el escritor por filas no coincide con el archivo completo")
+	}
+	if strings.Count(csvBuf.String(), "\n") < 4 {
+		t.Fatal("el CSV no escribió las dos filas")
+	}
+	handler, err := os.ReadFile("../handlers/producto.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(handler), "CSV(rep.Filas)") || strings.Contains(string(handler), "ExcelXML(rep.Filas)") {
+		t.Fatal("el handler sigue armando el archivo en memoria")
+	}
+}
+
 func TestExportacionBasica(t *testing.T) {
 	filas := []Fila{{
 		ID: "1", Titulo: "Poda", Tipo: "poda", Estado: "sin_estado", Ejecutor: "propia",

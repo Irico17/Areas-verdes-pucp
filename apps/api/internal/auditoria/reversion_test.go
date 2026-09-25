@@ -235,6 +235,26 @@ func TestAltaInsertaYReimportacionPosteriorNoSePisa(t *testing.T) {
 	if loteAlta < 1 {
 		t.Fatal("lote de alta")
 	}
+	var seq, maxID int64
+	if err := gdb.Raw(`SELECT last_value FROM catalogos_id_seq`).Row().Scan(&seq); err != nil {
+		t.Fatal(err)
+	}
+	if err := gdb.Raw(`SELECT MAX(id) FROM catalogos`).Row().Scan(&maxID); err != nil {
+		t.Fatal(err)
+	}
+	if seq < maxID {
+		t.Fatalf("la secuencia %d quedó detrás del id %d", seq, maxID)
+	}
+	var siguiente int64
+	if err := gdb.Raw(`
+		INSERT INTO catalogos (clase, codigo, nombre, activo, orden)
+		VALUES ('lugar', 'seq-ok', 'Después del alta', true, 5)
+		RETURNING id`).Row().Scan(&siguiente); err != nil {
+		t.Fatal(err)
+	}
+	if siguiente <= 88001 {
+		t.Fatalf("el alta normal chocó con el id explícito: %d", siguiente)
+	}
 }
 
 func abrirLotes(t *testing.T) *gorm.DB {

@@ -70,18 +70,17 @@ if (-not $creds) {
 
 if (-not $creds) {
     Write-Host "No hay tres claves en el portapapeles ni en ~/.aws/credentials."
-    Write-Host "Pegue el bloque de AWS CLI > Show y termine con una línea vacía."
-    $lineas = New-Object System.Collections.Generic.List[string]
+    Write-Host "Copie el bloque de AWS CLI > Show y pulse Enter. No se muestra."
     while ($true) {
-        $linea = [Console]::ReadLine()
-        if ([string]::IsNullOrEmpty($linea)) {
-            if ($lineas.Count -gt 0) { break }
-            continue
-        }
-        $lineas.Add($linea)
+        $tecla = [Console]::ReadKey($true)
+        if ($tecla.Key -eq "Enter") { break }
     }
-    $creds = Extraer ($lineas -join "`n")
-    $fuente = "pegado"
+    $oculto = $null
+    try { $oculto = Get-Clipboard -Raw -ErrorAction SilentlyContinue } catch { $oculto = $null }
+    if ($oculto) {
+        $creds = Extraer $oculto
+        $fuente = "portapapeles"
+    }
 }
 
 if (-not (Completas $creds)) {
@@ -89,8 +88,16 @@ if (-not (Completas $creds)) {
 }
 
 function Subir([string]$Nombre, [string]$Valor) {
-    & gh secret set $Nombre --body $Valor
-    if ($LASTEXITCODE -ne 0) {
+    $inicio = New-Object System.Diagnostics.ProcessStartInfo
+    $inicio.FileName = "gh"
+    $inicio.Arguments = "secret set $Nombre"
+    $inicio.RedirectStandardInput = $true
+    $inicio.UseShellExecute = $false
+    $proc = [System.Diagnostics.Process]::Start($inicio)
+    $proc.StandardInput.Write($Valor)
+    $proc.StandardInput.Close()
+    $proc.WaitForExit()
+    if ($proc.ExitCode -ne 0) {
         throw "gh secret set $Nombre falló"
     }
 }

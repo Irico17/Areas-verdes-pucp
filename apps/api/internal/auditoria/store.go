@@ -460,9 +460,16 @@ func aplicarCatalogo(tx *gorm.DB, id, accion string, s snap) error {
 	if strings.TrimSpace(s.Clase) == "" || strings.TrimSpace(s.Codigo) == "" || strings.TrimSpace(s.Nombre) == "" {
 		return InputError{Reason: "el alta de catálogo exige clase, código y nombre"}
 	}
-	return tx.Exec(`
+	if err := tx.Exec(`
 		INSERT INTO catalogos (id, clase, codigo, nombre, activo, orden)
-		VALUES ($1::bigint, $2, $3, $4, $5, $6)`, id, s.Clase, s.Codigo, s.Nombre, activo, orden).Error
+		VALUES ($1::bigint, $2, $3, $4, $5, $6)`, id, s.Clase, s.Codigo, s.Nombre, activo, orden).Error; err != nil {
+		return err
+	}
+	return tx.Exec(`
+		SELECT setval(
+			pg_get_serial_sequence('catalogos', 'id'),
+			(SELECT MAX(id) FROM catalogos)
+		)`).Error
 }
 
 func aplicarActividad(tx *gorm.DB, id, accion string, s snap) error {
@@ -483,18 +490,23 @@ func aplicarActividad(tx *gorm.DB, id, accion string, s snap) error {
 	if accion != "alta" {
 		return InputError{Reason: "labor no encontrada"}
 	}
-	titulo := strings.TrimSpace(s.Titulo)
-	if titulo == "" {
-		titulo = "Labor importada"
-	}
-	estado := strings.TrimSpace(s.Estado)
-	if estado == "" {
-		estado = "pendiente"
+	titulo, estado, err := camposAltaActividad(s)
+	if err != nil {
+		return err
 	}
 	return tx.Exec(`
 		INSERT INTO actividades (id, tipo, estado, titulo, detalle, zona_feature_id, origen_ref, ejecutor)
 		VALUES ($1::uuid, 'inspeccion', $2, $3, $4, NULLIF($5, ''), $1, 'propia')`,
 		id, estado, titulo, s.Detalle, s.Zona).Error
+}
+
+func camposAltaActividad(s snap) (string, string, error) {
+	titulo := strings.TrimSpace(s.Titulo)
+	estado := strings.TrimSpace(s.Estado)
+	if titulo == "" || estado == "" {
+		return "", "", InputError{Reason: "el alta de una labor exige título y estado"}
+	}
+	return titulo, estado, nil
 }
 
 func aplicarArea(tx *gorm.DB, featureID, accion string, s snap) error {

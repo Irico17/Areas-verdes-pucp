@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -12,34 +13,37 @@ import (
 	"gorm.io/gorm"
 )
 
-// clavesPatch lista las claves del JSON. Un cuerpo vacío actualiza todo el registro.
-func clavesPatch(doc json.RawMessage) map[string]bool {
-	out := map[string]bool{}
+// ErrPatchVacio es un PATCH sin campos. No se escribe nada.
+var ErrPatchVacio = errors.New("patch vacío")
+
+// clavesPatch lista las claves que sí vienen del cliente. _todo se ignora.
+// Un cuerpo vacío, null o sin claves devuelve ErrPatchVacio.
+func clavesPatch(doc json.RawMessage) (map[string]bool, string, error) {
 	limpio := bytes.TrimSpace(doc)
-	if len(limpio) == 0 || string(limpio) == "null" {
-		out["_todo"] = true
-		return out
+	if len(limpio) == 0 || string(limpio) == "null" || string(limpio) == "{}" {
+		return nil, "", ErrPatchVacio
 	}
 	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(limpio, &raw); err != nil || len(raw) == 0 {
-		out["_todo"] = true
-		return out
+	if err := json.Unmarshal(limpio, &raw); err != nil {
+		return nil, "", fmt.Errorf("JSON inválido")
 	}
+	delete(raw, "_todo")
+	if len(raw) == 0 {
+		return nil, "", ErrPatchVacio
+	}
+	out := make(map[string]bool, len(raw))
 	for k := range raw {
 		out[k] = true
 	}
-	return out
-}
-
-func documentoPatch(doc json.RawMessage) string {
-	if clavesPatch(doc)["_todo"] {
-		return `{"_todo":true}`
+	cuerpo, err := json.Marshal(raw)
+	if err != nil {
+		return nil, "", err
 	}
-	return string(bytes.TrimSpace(doc))
+	return out, string(cuerpo), nil
 }
 
 func toca(claves map[string]bool, campo string) bool {
-	return claves["_todo"] || claves[campo]
+	return claves[campo]
 }
 
 // Store edita las capas del frente 2B. La baja es lógica.
@@ -500,7 +504,10 @@ func (s *Store) GuardarFicha(ctx context.Context, capa string, f Ficha) (Ficha, 
 }
 
 func (s *Store) ActualizarTacho(ctx context.Context, id int64, t Tacho, doc json.RawMessage) (Tacho, error) {
-	claves := clavesPatch(doc)
+	claves, cuerpo, err := clavesPatch(doc)
+	if err != nil {
+		return Tacho{}, err
+	}
 	if id < 1 {
 		return Tacho{}, fmt.Errorf("tacho inválido")
 	}
@@ -512,38 +519,40 @@ func (s *Store) ActualizarTacho(ctx context.Context, id int64, t Tacho, doc json
 	}
 	nid, err := s.devolverID(ctx, `
 		UPDATE tachos SET
-		  codigo = CASE WHEN $23::jsonb ? 'codigo' OR $23::jsonb ? '_todo' THEN $1 ELSE codigo END,
-		  lat = CASE WHEN $23::jsonb ? 'lat' OR $23::jsonb ? '_todo' THEN $2 ELSE lat END,
-		  lon = CASE WHEN $23::jsonb ? 'lon' OR $23::jsonb ? '_todo' THEN $3 ELSE lon END,
-		  nota = CASE WHEN $23::jsonb ? 'nota' OR $23::jsonb ? '_todo' THEN NULLIF($4,'') ELSE nota END,
-		  lugar = CASE WHEN $23::jsonb ? 'lugar' OR $23::jsonb ? '_todo' THEN NULLIF($5,'') ELSE lugar END,
-		  espacios = CASE WHEN $23::jsonb ? 'espacios' OR $23::jsonb ? '_todo' THEN NULLIF($6,'') ELSE espacios END,
-		  accion = CASE WHEN $23::jsonb ? 'accion' OR $23::jsonb ? '_todo' THEN NULLIF($7,'') ELSE accion END,
-		  tacho_actual = CASE WHEN $23::jsonb ? 'tacho_actual' OR $23::jsonb ? '_todo' THEN NULLIF($8,'') ELSE tacho_actual END,
-		  tacho_nuevo = CASE WHEN $23::jsonb ? 'tacho_nuevo' OR $23::jsonb ? '_todo' THEN NULLIF($9,'') ELSE tacho_nuevo END,
-		  recomendaciones = CASE WHEN $23::jsonb ? 'recomendaciones' OR $23::jsonb ? '_todo' THEN NULLIF($10,'') ELSE recomendaciones END,
-		  no_aprovechables = CASE WHEN $23::jsonb ? 'no_aprovechables' OR $23::jsonb ? '_todo' THEN $11 ELSE no_aprovechables END,
-		  papel_carton = CASE WHEN $23::jsonb ? 'papel_carton' OR $23::jsonb ? '_todo' THEN $12 ELSE papel_carton END,
-		  plastico = CASE WHEN $23::jsonb ? 'plastico' OR $23::jsonb ? '_todo' THEN $13 ELSE plastico END,
-		  vidrio = CASE WHEN $23::jsonb ? 'vidrio' OR $23::jsonb ? '_todo' THEN $14 ELSE vidrio END,
-		  pilas = CASE WHEN $23::jsonb ? 'pilas' OR $23::jsonb ? '_todo' THEN $15 ELSE pilas END,
-		  peligrosos = CASE WHEN $23::jsonb ? 'peligrosos' OR $23::jsonb ? '_todo' THEN $16 ELSE peligrosos END,
-		  raee = CASE WHEN $23::jsonb ? 'raee' OR $23::jsonb ? '_todo' THEN $17 ELSE raee END,
-		  metales = CASE WHEN $23::jsonb ? 'metales' OR $23::jsonb ? '_todo' THEN $18 ELSE metales END,
-		  aniquem = CASE WHEN $23::jsonb ? 'aniquem' OR $23::jsonb ? '_todo' THEN $19 ELSE aniquem END,
-		  intermedios_plastico = CASE WHEN $23::jsonb ? 'intermedios_plastico' OR $23::jsonb ? '_todo' THEN $20 ELSE intermedios_plastico END,
-		  intermedios_metal = CASE WHEN $23::jsonb ? 'intermedios_metal' OR $23::jsonb ? '_todo' THEN $21 ELSE intermedios_metal END,
+		  codigo = CASE WHEN $23::jsonb ? 'codigo' THEN $1 ELSE codigo END,
+		  lat = CASE WHEN $23::jsonb ? 'lat' THEN $2 ELSE lat END,
+		  lon = CASE WHEN $23::jsonb ? 'lon' THEN $3 ELSE lon END,
+		  nota = CASE WHEN $23::jsonb ? 'nota' THEN NULLIF($4,'') ELSE nota END,
+		  lugar = CASE WHEN $23::jsonb ? 'lugar' THEN NULLIF($5,'') ELSE lugar END,
+		  espacios = CASE WHEN $23::jsonb ? 'espacios' THEN NULLIF($6,'') ELSE espacios END,
+		  accion = CASE WHEN $23::jsonb ? 'accion' THEN NULLIF($7,'') ELSE accion END,
+		  tacho_actual = CASE WHEN $23::jsonb ? 'tacho_actual' THEN NULLIF($8,'') ELSE tacho_actual END,
+		  tacho_nuevo = CASE WHEN $23::jsonb ? 'tacho_nuevo' THEN NULLIF($9,'') ELSE tacho_nuevo END,
+		  recomendaciones = CASE WHEN $23::jsonb ? 'recomendaciones' THEN NULLIF($10,'') ELSE recomendaciones END,
+		  no_aprovechables = CASE WHEN $23::jsonb ? 'no_aprovechables' THEN $11 ELSE no_aprovechables END,
+		  papel_carton = CASE WHEN $23::jsonb ? 'papel_carton' THEN $12 ELSE papel_carton END,
+		  plastico = CASE WHEN $23::jsonb ? 'plastico' THEN $13 ELSE plastico END,
+		  vidrio = CASE WHEN $23::jsonb ? 'vidrio' THEN $14 ELSE vidrio END,
+		  pilas = CASE WHEN $23::jsonb ? 'pilas' THEN $15 ELSE pilas END,
+		  peligrosos = CASE WHEN $23::jsonb ? 'peligrosos' THEN $16 ELSE peligrosos END,
+		  raee = CASE WHEN $23::jsonb ? 'raee' THEN $17 ELSE raee END,
+		  metales = CASE WHEN $23::jsonb ? 'metales' THEN $18 ELSE metales END,
+		  aniquem = CASE WHEN $23::jsonb ? 'aniquem' THEN $19 ELSE aniquem END,
+		  intermedios_plastico = CASE WHEN $23::jsonb ? 'intermedios_plastico' THEN $20 ELSE intermedios_plastico END,
+		  intermedios_metal = CASE WHEN $23::jsonb ? 'intermedios_metal' THEN $21 ELSE intermedios_metal END,
 		  geom = CASE
-		    WHEN NOT ($23::jsonb ? 'lat' OR $23::jsonb ? 'lon' OR $23::jsonb ? '_todo') THEN geom
-		    WHEN $2::float8 IS NULL THEN NULL
-		    ELSE ST_SetSRID(ST_MakePoint($3,$2),4326)
+		    WHEN NOT ($23::jsonb ? 'lat' OR $23::jsonb ? 'lon') THEN geom
+		    ELSE ST_SetSRID(ST_MakePoint(
+		      CASE WHEN $23::jsonb ? 'lon' THEN $3 ELSE lon END,
+		      CASE WHEN $23::jsonb ? 'lat' THEN $2 ELSE lat END
+		    ), 4326)
 		  END,
 		  updated_at = now()
 		WHERE id = $22 AND activo
 		RETURNING id`,
 		strings.TrimSpace(t.Codigo), t.Lat, t.Lon, t.Nota, t.Lugar, t.Espacios, t.Accion, t.TachoActual, t.TachoNuevo, t.Recomendaciones,
 		t.NoAprovechables, t.PapelCarton, t.Plastico, t.Vidrio, t.Pilas, t.Peligrosos, t.RAEE, t.Metales, t.Aniquem, t.IntermediosPlastico, t.IntermediosMetal,
-		id, documentoPatch(doc))
+		id, cuerpo)
 	if err != nil {
 		return Tacho{}, err
 	}
@@ -553,7 +562,10 @@ func (s *Store) ActualizarTacho(ctx context.Context, id int64, t Tacho, doc json
 }
 
 func (s *Store) ActualizarBebedero(ctx context.Context, id int64, b Bebedero, doc json.RawMessage) (Bebedero, error) {
-	claves := clavesPatch(doc)
+	claves, cuerpo, err := clavesPatch(doc)
+	if err != nil {
+		return Bebedero{}, err
+	}
 	if toca(claves, "subtipo") {
 		switch b.Subtipo {
 		case "fuente", "llenador", "nuevo", "deterioro", "baja":
@@ -566,21 +578,23 @@ func (s *Store) ActualizarBebedero(ctx context.Context, id int64, b Bebedero, do
 	}
 	nid, err := s.devolverID(ctx, `
 		UPDATE bebederos SET
-		  codigo = CASE WHEN $8::jsonb ? 'codigo' OR $8::jsonb ? '_todo' THEN $1 ELSE codigo END,
-		  subtipo = CASE WHEN $8::jsonb ? 'subtipo' OR $8::jsonb ? '_todo' THEN $2 ELSE subtipo END,
-		  estado = CASE WHEN $8::jsonb ? 'estado' OR $8::jsonb ? '_todo' THEN $3 ELSE estado END,
-		  sede = CASE WHEN $8::jsonb ? 'sede' OR $8::jsonb ? '_todo' THEN NULLIF($4,'') ELSE sede END,
-		  lat = CASE WHEN $8::jsonb ? 'lat' OR $8::jsonb ? '_todo' THEN $5 ELSE lat END,
-		  lon = CASE WHEN $8::jsonb ? 'lon' OR $8::jsonb ? '_todo' THEN $6 ELSE lon END,
+		  codigo = CASE WHEN $8::jsonb ? 'codigo' THEN $1 ELSE codigo END,
+		  subtipo = CASE WHEN $8::jsonb ? 'subtipo' THEN $2 ELSE subtipo END,
+		  estado = CASE WHEN $8::jsonb ? 'estado' THEN $3 ELSE estado END,
+		  sede = CASE WHEN $8::jsonb ? 'sede' THEN NULLIF($4,'') ELSE sede END,
+		  lat = CASE WHEN $8::jsonb ? 'lat' THEN $5 ELSE lat END,
+		  lon = CASE WHEN $8::jsonb ? 'lon' THEN $6 ELSE lon END,
 		  geom = CASE
-		    WHEN NOT ($8::jsonb ? 'lat' OR $8::jsonb ? 'lon' OR $8::jsonb ? '_todo') THEN geom
-		    WHEN $5::float8 IS NULL THEN NULL
-		    ELSE ST_SetSRID(ST_MakePoint($6,$5),4326)
+		    WHEN NOT ($8::jsonb ? 'lat' OR $8::jsonb ? 'lon') THEN geom
+		    ELSE ST_SetSRID(ST_MakePoint(
+		      CASE WHEN $8::jsonb ? 'lon' THEN $6 ELSE lon END,
+		      CASE WHEN $8::jsonb ? 'lat' THEN $5 ELSE lat END
+		    ), 4326)
 		  END,
 		  updated_at = now()
 		WHERE id = $7 AND activo
 		RETURNING id`,
-		b.Codigo, b.Subtipo, b.Estado, b.Sede, b.Lat, b.Lon, id, documentoPatch(doc))
+		b.Codigo, b.Subtipo, b.Estado, b.Sede, b.Lat, b.Lon, id, cuerpo)
 	if err != nil {
 		return Bebedero{}, err
 	}
@@ -590,29 +604,38 @@ func (s *Store) ActualizarBebedero(ctx context.Context, id int64, b Bebedero, do
 }
 
 func (s *Store) ActualizarPunto(ctx context.Context, id int64, p Punto, doc json.RawMessage) (Punto, error) {
-	claves := clavesPatch(doc)
+	claves, cuerpo, err := clavesPatch(doc)
+	if err != nil {
+		return Punto{}, err
+	}
 	p.Titulo = strings.TrimSpace(p.Titulo)
 	p.URL = urlLimpia(p.URL)
 	if id < 1 || (toca(claves, "titulo") && p.Titulo == "") {
 		return Punto{}, fmt.Errorf("punto")
 	}
-	if (toca(claves, "lat") || toca(claves, "lon")) && (p.Lat < -12.20 || p.Lat > -11.90 || p.Lon < -77.30 || p.Lon > -76.90) {
+	if toca(claves, "lat") && (p.Lat < -12.20 || p.Lat > -11.90) {
+		return Punto{}, fmt.Errorf("punto")
+	}
+	if toca(claves, "lon") && (p.Lon < -77.30 || p.Lon > -76.90) {
 		return Punto{}, fmt.Errorf("punto")
 	}
 	nid, err := s.devolverID(ctx, `
 		UPDATE puntos_pucp SET
-		  titulo = CASE WHEN $6::jsonb ? 'titulo' OR $6::jsonb ? '_todo' THEN $1 ELSE titulo END,
-		  lat = CASE WHEN $6::jsonb ? 'lat' OR $6::jsonb ? '_todo' THEN $2 ELSE lat END,
-		  lon = CASE WHEN $6::jsonb ? 'lon' OR $6::jsonb ? '_todo' THEN $3 ELSE lon END,
-		  url = CASE WHEN $6::jsonb ? 'url' OR $6::jsonb ? '_todo' THEN NULLIF($4,'') ELSE url END,
+		  titulo = CASE WHEN $6::jsonb ? 'titulo' THEN $1 ELSE titulo END,
+		  lat = CASE WHEN $6::jsonb ? 'lat' THEN $2 ELSE lat END,
+		  lon = CASE WHEN $6::jsonb ? 'lon' THEN $3 ELSE lon END,
+		  url = CASE WHEN $6::jsonb ? 'url' THEN NULLIF($4,'') ELSE url END,
 		  geom = CASE
-		    WHEN NOT ($6::jsonb ? 'lat' OR $6::jsonb ? 'lon' OR $6::jsonb ? '_todo') THEN geom
-		    ELSE ST_SetSRID(ST_MakePoint($3,$2),4326)
+		    WHEN NOT ($6::jsonb ? 'lat' OR $6::jsonb ? 'lon') THEN geom
+		    ELSE ST_SetSRID(ST_MakePoint(
+		      CASE WHEN $6::jsonb ? 'lon' THEN $3 ELSE lon END,
+		      CASE WHEN $6::jsonb ? 'lat' THEN $2 ELSE lat END
+		    ), 4326)
 		  END,
 		  updated_at = now()
 		WHERE id = $5 AND activo
 		RETURNING id`,
-		p.Titulo, p.Lat, p.Lon, p.URL, id, documentoPatch(doc))
+		p.Titulo, p.Lat, p.Lon, p.URL, id, cuerpo)
 	if err != nil {
 		return Punto{}, err
 	}
@@ -622,7 +645,10 @@ func (s *Store) ActualizarPunto(ctx context.Context, id int64, p Punto, doc json
 }
 
 func (s *Store) ActualizarReserva(ctx context.Context, id int64, r Reserva, doc json.RawMessage) (Reserva, error) {
-	claves := clavesPatch(doc)
+	claves, cuerpo, err := clavesPatch(doc)
+	if err != nil {
+		return Reserva{}, err
+	}
 	if id < 1 || (toca(claves, "origen") && r.Origen != "" && r.Origen != "ficticio") {
 		return Reserva{}, fmt.Errorf("origen")
 	}
@@ -646,17 +672,17 @@ func (s *Store) ActualizarReserva(ctx context.Context, id int64, r Reserva, doc 
 	}
 	nid, err := s.devolverID(ctx, `
 		UPDATE reservas_jardin SET
-		  jardin_id = CASE WHEN $9::jsonb ? 'jardin_id' OR $9::jsonb ? '_todo' THEN $1 ELSE jardin_id END,
-		  fecha = CASE WHEN $9::jsonb ? 'fecha' OR $9::jsonb ? '_todo' THEN $2 ELSE fecha END,
-		  hora_inicio = CASE WHEN $9::jsonb ? 'hora_inicio' OR $9::jsonb ? '_todo' THEN $3 ELSE hora_inicio END,
-		  hora_fin = CASE WHEN $9::jsonb ? 'hora_fin' OR $9::jsonb ? '_todo' THEN $4 ELSE hora_fin END,
-		  estado = CASE WHEN $9::jsonb ? 'estado' OR $9::jsonb ? '_todo' THEN $5 ELSE estado END,
-		  evento = CASE WHEN $9::jsonb ? 'evento' OR $9::jsonb ? '_todo' THEN $6 ELSE evento END,
-		  unidad = CASE WHEN $9::jsonb ? 'unidad' OR $9::jsonb ? '_todo' THEN NULLIF($7,'') ELSE unidad END,
+		  jardin_id = CASE WHEN $9::jsonb ? 'jardin_id' THEN $1 ELSE jardin_id END,
+		  fecha = CASE WHEN $9::jsonb ? 'fecha' THEN $2 ELSE fecha END,
+		  hora_inicio = CASE WHEN $9::jsonb ? 'hora_inicio' THEN $3 ELSE hora_inicio END,
+		  hora_fin = CASE WHEN $9::jsonb ? 'hora_fin' THEN $4 ELSE hora_fin END,
+		  estado = CASE WHEN $9::jsonb ? 'estado' THEN $5 ELSE estado END,
+		  evento = CASE WHEN $9::jsonb ? 'evento' THEN $6 ELSE evento END,
+		  unidad = CASE WHEN $9::jsonb ? 'unidad' THEN NULLIF($7,'') ELSE unidad END,
 		  origen = 'ficticio', updated_at = now()
 		WHERE id = $8 AND activo
 		RETURNING id`,
-		r.JardinID, r.Fecha, r.HoraInicio, r.HoraFin, r.Estado, r.Evento, r.Unidad, id, documentoPatch(doc))
+		r.JardinID, r.Fecha, r.HoraInicio, r.HoraFin, r.Estado, r.Evento, r.Unidad, id, cuerpo)
 	if err != nil {
 		return Reserva{}, err
 	}
@@ -667,7 +693,10 @@ func (s *Store) ActualizarReserva(ctx context.Context, id int64, r Reserva, doc 
 }
 
 func (s *Store) ActualizarFicha(ctx context.Context, capa string, id int64, f Ficha, doc json.RawMessage) (Ficha, error) {
-	claves := clavesPatch(doc)
+	claves, docJSON, err := clavesPatch(doc)
+	if err != nil {
+		return Ficha{}, err
+	}
 	if id < 1 || !tablaPermitida(capa) {
 		return Ficha{}, fmt.Errorf("capa")
 	}
@@ -676,61 +705,60 @@ func (s *Store) ActualizarFicha(ctx context.Context, capa string, id int64, f Fi
 		return Ficha{}, fmt.Errorf("feature")
 	}
 	geomFn := geomFnCapa(capa)
-	docJSON := documentoPatch(doc)
 	var q string
 	var args []any
 	switch capa {
 	case "fauna":
 		q = fmt.Sprintf(`UPDATE fauna SET
-		  feature_id = CASE WHEN $5::jsonb ? 'feature_id' OR $5::jsonb ? '_todo' THEN $1 ELSE feature_id END,
-		  nombre = CASE WHEN $5::jsonb ? 'nombre' OR $5::jsonb ? '_todo' THEN NULLIF($2,'') ELSE nombre END,
-		  geom = CASE WHEN $5::jsonb ? 'geojson' OR $5::jsonb ? '_todo' THEN COALESCE(%s(NULLIF($3,'')), geom) ELSE geom END,
+		  feature_id = CASE WHEN $5::jsonb ? 'feature_id' THEN $1 ELSE feature_id END,
+		  nombre = CASE WHEN $5::jsonb ? 'nombre' THEN NULLIF($2,'') ELSE nombre END,
+		  geom = CASE WHEN $5::jsonb ? 'geojson' THEN COALESCE(%s(NULLIF($3,'')), geom) ELSE geom END,
 		  updated_at = now() WHERE id = $4 AND activo RETURNING id`, geomFn)
 		args = []any{f.FeatureID, f.Nombre, f.GeoJSON, id, docJSON}
 	case "puertas":
 		q = fmt.Sprintf(`UPDATE puertas SET
-		  feature_id = CASE WHEN $6::jsonb ? 'feature_id' OR $6::jsonb ? '_todo' THEN $1 ELSE feature_id END,
-		  codigo = CASE WHEN $6::jsonb ? 'codigo' OR $6::jsonb ? '_todo' THEN NULLIF($2,'') ELSE codigo END,
-		  nombre = CASE WHEN $6::jsonb ? 'nombre' OR $6::jsonb ? '_todo' THEN NULLIF($3,'') ELSE nombre END,
-		  geom = CASE WHEN $6::jsonb ? 'geojson' OR $6::jsonb ? '_todo' THEN COALESCE(%s(NULLIF($4,'')), geom) ELSE geom END,
+		  feature_id = CASE WHEN $6::jsonb ? 'feature_id' THEN $1 ELSE feature_id END,
+		  codigo = CASE WHEN $6::jsonb ? 'codigo' THEN NULLIF($2,'') ELSE codigo END,
+		  nombre = CASE WHEN $6::jsonb ? 'nombre' THEN NULLIF($3,'') ELSE nombre END,
+		  geom = CASE WHEN $6::jsonb ? 'geojson' THEN COALESCE(%s(NULLIF($4,'')), geom) ELSE geom END,
 		  updated_at = now() WHERE id = $5 AND activo RETURNING id`, geomFn)
 		args = []any{f.FeatureID, f.Codigo, f.Nombre, f.GeoJSON, id, docJSON}
 	case "playas_estacionamiento":
 		q = fmt.Sprintf(`UPDATE playas_estacionamiento SET
-		  feature_id = CASE WHEN $5::jsonb ? 'feature_id' OR $5::jsonb ? '_todo' THEN $1 ELSE feature_id END,
-		  codigo = CASE WHEN $5::jsonb ? 'codigo' OR $5::jsonb ? '_todo' THEN NULLIF($2,'') ELSE codigo END,
-		  geom = CASE WHEN $5::jsonb ? 'geojson' OR $5::jsonb ? '_todo' THEN COALESCE(%s(NULLIF($3,'')), geom) ELSE geom END,
+		  feature_id = CASE WHEN $5::jsonb ? 'feature_id' THEN $1 ELSE feature_id END,
+		  codigo = CASE WHEN $5::jsonb ? 'codigo' THEN NULLIF($2,'') ELSE codigo END,
+		  geom = CASE WHEN $5::jsonb ? 'geojson' THEN COALESCE(%s(NULLIF($3,'')), geom) ELSE geom END,
 		  updated_at = now() WHERE id = $4 AND activo RETURNING id`, geomFn)
 		args = []any{f.FeatureID, f.Codigo, f.GeoJSON, id, docJSON}
 	case "veredas_riesgo":
 		q = fmt.Sprintf(`UPDATE veredas_riesgo SET
-		  feature_id = CASE WHEN $5::jsonb ? 'feature_id' OR $5::jsonb ? '_todo' THEN $1 ELSE feature_id END,
-		  nota = CASE WHEN $5::jsonb ? 'nota' OR $5::jsonb ? '_todo' THEN NULLIF($2,'') ELSE nota END,
-		  geom = CASE WHEN $5::jsonb ? 'geojson' OR $5::jsonb ? '_todo' THEN COALESCE(%s(NULLIF($3,'')), geom) ELSE geom END,
+		  feature_id = CASE WHEN $5::jsonb ? 'feature_id' THEN $1 ELSE feature_id END,
+		  nota = CASE WHEN $5::jsonb ? 'nota' THEN NULLIF($2,'') ELSE nota END,
+		  geom = CASE WHEN $5::jsonb ? 'geojson' THEN COALESCE(%s(NULLIF($3,'')), geom) ELSE geom END,
 		  updated_at = now() WHERE id = $4 AND activo RETURNING id`, geomFn)
 		args = []any{f.FeatureID, f.Nota, f.GeoJSON, id, docJSON}
 	case "xerofiticas":
 		q = fmt.Sprintf(`UPDATE xerofiticas SET
-		  feature_id = CASE WHEN $8::jsonb ? 'feature_id' OR $8::jsonb ? '_todo' THEN $1 ELSE feature_id END,
-		  clase = CASE WHEN $8::jsonb ? 'clase' OR $8::jsonb ? '_todo' THEN NULLIF($2,'') ELSE clase END,
-		  riego = CASE WHEN $8::jsonb ? 'riego' OR $8::jsonb ? '_todo' THEN NULLIF($3,'') ELSE riego END,
-		  area_m2 = CASE WHEN $8::jsonb ? 'area_m2' OR $8::jsonb ? '_todo' THEN $4 ELSE area_m2 END,
-		  perimetro_m = CASE WHEN $8::jsonb ? 'perimetro_m' OR $8::jsonb ? '_todo' THEN $5 ELSE perimetro_m END,
-		  geom = CASE WHEN $8::jsonb ? 'geojson' OR $8::jsonb ? '_todo' THEN COALESCE(%s(NULLIF($6,'')), geom) ELSE geom END,
+		  feature_id = CASE WHEN $8::jsonb ? 'feature_id' THEN $1 ELSE feature_id END,
+		  clase = CASE WHEN $8::jsonb ? 'clase' THEN NULLIF($2,'') ELSE clase END,
+		  riego = CASE WHEN $8::jsonb ? 'riego' THEN NULLIF($3,'') ELSE riego END,
+		  area_m2 = CASE WHEN $8::jsonb ? 'area_m2' THEN $4 ELSE area_m2 END,
+		  perimetro_m = CASE WHEN $8::jsonb ? 'perimetro_m' THEN $5 ELSE perimetro_m END,
+		  geom = CASE WHEN $8::jsonb ? 'geojson' THEN COALESCE(%s(NULLIF($6,'')), geom) ELSE geom END,
 		  updated_at = now() WHERE id = $7 AND activo RETURNING id`, geomFn)
 		args = []any{f.FeatureID, f.Clase, f.Riego, f.AreaM2, f.PerimetroM, f.GeoJSON, id, docJSON}
 	case "jardines_reserva":
 		q = fmt.Sprintf(`UPDATE jardines_reserva SET
-		  feature_id = CASE WHEN $12::jsonb ? 'feature_id' OR $12::jsonb ? '_todo' THEN $1 ELSE feature_id END,
-		  codigo = CASE WHEN $12::jsonb ? 'codigo' OR $12::jsonb ? '_todo' THEN NULLIF($2,'') ELSE codigo END,
-		  nombre = CASE WHEN $12::jsonb ? 'nombre' OR $12::jsonb ? '_todo' THEN NULLIF($3,'') ELSE nombre END,
-		  uso = CASE WHEN $12::jsonb ? 'uso' OR $12::jsonb ? '_todo' THEN NULLIF($4,'') ELSE uso END,
-		  riego_act = CASE WHEN $12::jsonb ? 'riego' OR $12::jsonb ? '_todo' THEN NULLIF($5,'') ELSE riego_act END,
-		  referencia = CASE WHEN $12::jsonb ? 'nota' OR $12::jsonb ? '_todo' THEN NULLIF($6,'') ELSE referencia END,
-		  pertenecen = CASE WHEN $12::jsonb ? 'pertenecen' OR $12::jsonb ? '_todo' THEN NULLIF($7,'') ELSE pertenecen END,
-		  area_m2 = CASE WHEN $12::jsonb ? 'area_m2' OR $12::jsonb ? '_todo' THEN $8 ELSE area_m2 END,
-		  perimetro_m = CASE WHEN $12::jsonb ? 'perimetro_m' OR $12::jsonb ? '_todo' THEN $9 ELSE perimetro_m END,
-		  geom = CASE WHEN $12::jsonb ? 'geojson' OR $12::jsonb ? '_todo' THEN COALESCE(%s(NULLIF($10,'')), geom) ELSE geom END,
+		  feature_id = CASE WHEN $12::jsonb ? 'feature_id' THEN $1 ELSE feature_id END,
+		  codigo = CASE WHEN $12::jsonb ? 'codigo' THEN NULLIF($2,'') ELSE codigo END,
+		  nombre = CASE WHEN $12::jsonb ? 'nombre' THEN NULLIF($3,'') ELSE nombre END,
+		  uso = CASE WHEN $12::jsonb ? 'uso' THEN NULLIF($4,'') ELSE uso END,
+		  riego_act = CASE WHEN $12::jsonb ? 'riego' THEN NULLIF($5,'') ELSE riego_act END,
+		  referencia = CASE WHEN $12::jsonb ? 'nota' THEN NULLIF($6,'') ELSE referencia END,
+		  pertenecen = CASE WHEN $12::jsonb ? 'pertenecen' THEN NULLIF($7,'') ELSE pertenecen END,
+		  area_m2 = CASE WHEN $12::jsonb ? 'area_m2' THEN $8 ELSE area_m2 END,
+		  perimetro_m = CASE WHEN $12::jsonb ? 'perimetro_m' THEN $9 ELSE perimetro_m END,
+		  geom = CASE WHEN $12::jsonb ? 'geojson' THEN COALESCE(%s(NULLIF($10,'')), geom) ELSE geom END,
 		  updated_at = now() WHERE id = $11 AND activo RETURNING id`, geomFn)
 		args = []any{f.FeatureID, f.Codigo, f.Nombre, f.Uso, f.Riego, f.Nota, f.Pertenecen, f.AreaM2, f.PerimetroM, f.GeoJSON, id, docJSON}
 	default:

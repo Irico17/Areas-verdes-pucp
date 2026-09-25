@@ -40,9 +40,8 @@ export function rangoDe(vista: VistaCalendario, cursor: Date): { desde: string; 
     const fin = new Date(inicio.getTime() + 6 * DIA)
     return { desde: aISO(inicio), hasta: aISO(fin) }
   }
-  const inicio = new Date(cursor.getFullYear(), cursor.getMonth(), 1)
-  const fin = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0)
-  return { desde: aISO(inicio), hasta: aISO(fin) }
+  const dias = diasDelMes(cursor)
+  return { desde: aISO(dias[0]), hasta: aISO(dias[dias.length - 1]) }
 }
 
 export function diasDelMes(cursor: Date): Date[] {

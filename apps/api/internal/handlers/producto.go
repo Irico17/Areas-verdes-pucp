@@ -571,26 +571,33 @@ func (h Atencion) Reporte(c *gin.Context) {
 	if !h.ready(c) {
 		return
 	}
-	rep, err := h.Store.Reporte(c.Request.Context(), atencion.FiltroReporte{
+	filtro := atencion.FiltroReporte{
 		Estado:    c.Query("estado"),
 		Desde:     c.Query("desde"),
 		Hasta:     c.Query("hasta"),
 		Zona:      c.Query("zona"),
 		Cuadrilla: c.Query("cuadrilla"),
 		Origen:    c.Query("origen"),
-	})
-	if err != nil {
-		writeAtencion(c, err)
-		return
 	}
 	switch c.Query("formato") {
 	case "csv":
+		c.Header("Content-Type", "text/csv; charset=utf-8")
 		c.Header("Content-Disposition", `attachment; filename="labores.csv"`)
-		c.Data(200, "text/csv; charset=utf-8", []byte(atencion.CSV(rep.Filas)))
+		if err := h.Store.Exportar(c.Request.Context(), filtro, "csv", c.Writer); err != nil {
+			writeAtencion(c, err)
+		}
 	case "xls":
+		c.Header("Content-Type", "application/vnd.ms-excel")
 		c.Header("Content-Disposition", `attachment; filename="labores.xls"`)
-		c.Data(200, "application/vnd.ms-excel", []byte(atencion.ExcelXML(rep.Filas)))
+		if err := h.Store.Exportar(c.Request.Context(), filtro, "xls", c.Writer); err != nil {
+			writeAtencion(c, err)
+		}
 	default:
+		rep, err := h.Store.Reporte(c.Request.Context(), filtro)
+		if err != nil {
+			writeAtencion(c, err)
+			return
+		}
 		c.JSON(200, rep)
 	}
 }

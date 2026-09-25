@@ -16,9 +16,9 @@ test("el mes, la semana y el día acotan el filtro de la API", () => {
   assert.deepEqual(rangoDe("dia", cursor), { desde: "2026-09-22", hasta: "2026-09-22" })
   const semana = rangoDe("semana", cursor)
   assert.equal(semana.desde <= "2026-09-22" && semana.hasta >= "2026-09-22", true)
-  assert.equal(rangoDe("mes", cursor).desde, "2026-09-01")
-  assert.equal(rangoDe("mes", cursor).hasta, "2026-09-30")
-  assert.equal(queryReservas("2026-09-01", "2026-09-30"), "/api/v1/inventario/reservas?desde=2026-09-01&hasta=2026-09-30")
+  assert.equal(rangoDe("mes", cursor).desde, "2026-08-31")
+  assert.equal(rangoDe("mes", cursor).hasta, "2026-10-11")
+  assert.equal(queryReservas("2026-08-31", "2026-10-11"), "/api/v1/inventario/reservas?desde=2026-08-31&hasta=2026-10-11")
   assert.equal(mover("mes", cursor, 1).getMonth(), 9)
 })
 
