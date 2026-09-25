@@ -67,6 +67,83 @@
         description: Guardado
       "400":
         description: Datos de contacto
+/api/v1/inventario/tachos/{id}:
+  patch:
+    tags: [catastro]
+    summary: Edita un tacho, su geometría y los 11 conteos
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Actualizado
+  delete:
+    tags: [catastro]
+    summary: Baja lógica de un tacho
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Inactivo
+/api/v1/inventario/bebederos/{id}:
+  patch:
+    tags: [catastro]
+    summary: Edita estado, sede y geometría de un bebedero
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Actualizado
+  delete:
+    tags: [catastro]
+    summary: Baja lógica de un bebedero
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Inactivo
+/api/v1/inventario/puntos/{id}:
+  patch:
+    tags: [catastro]
+    summary: Edita un punto. Rechaza teléfono, placeId y website
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Actualizado
+      "400":
+        description: Datos de contacto
+  delete:
+    tags: [catastro]
+    summary: Baja lógica de un punto
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Inactivo
 /api/v1/inventario/formato/puntos:
   post:
     tags: [catastro]
@@ -77,7 +154,7 @@
 /api/v1/inventario/reservas:
   get:
     tags: [catastro]
-    summary: Reservas ficticias. No abre la hoja institucional.
+    summary: Reservas ficticias. desde y hasta vacíos no se castean a date. No abre la hoja institucional.
     parameters:
       - name: desde
         in: query
@@ -98,6 +175,33 @@
         description: Guardada
       "400":
         description: Origen no ficticio
+/api/v1/inventario/reservas/{id}:
+  patch:
+    tags: [catastro]
+    summary: Edita una reserva ficticia
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Actualizada
+      "400":
+        description: Origen no ficticio
+  delete:
+    tags: [catastro]
+    summary: Baja lógica de una reserva ficticia
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Inactiva
 /api/v1/inventario/capas/{capa}:
   get:
     tags: [catastro]
@@ -124,3 +228,39 @@
     responses:
       "201":
         description: Guardada
+/api/v1/inventario/capas/{capa}/{id}:
+  patch:
+    tags: [catastro]
+    summary: Edita geometría y campos 4.13 (código, nota, clase, riego, área, perímetro, pertenecen)
+    parameters:
+      - name: capa
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [fauna, puertas, playas_estacionamiento, veredas_riesgo, xerofiticas, jardines_reserva]
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Actualizada
+  delete:
+    tags: [catastro]
+    summary: Baja lógica de una ficha 4.13
+    parameters:
+      - name: capa
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Inactiva

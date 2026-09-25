@@ -4,7 +4,7 @@ export const CAPAS_EDITABLES = [
   { id: "playas_estacionamiento", label: "Playas", campos: ["codigo"] },
   { id: "veredas_riesgo", label: "Vereda en riesgo", campos: ["nota"] },
   { id: "xerofiticas", label: "Xerofítica", campos: ["clase", "riego", "area_m2", "perimetro_m"] },
-  { id: "jardines_reserva", label: "Jardines de reserva", campos: ["codigo", "nombre", "uso", "riego", "pertenecen", "area_m2", "perimetro_m"] },
+  { id: "jardines_reserva", label: "Jardines de reserva", campos: ["codigo", "nombre", "nota", "uso", "riego", "pertenecen", "area_m2", "perimetro_m"] },
 ] as const
 
 export type CapaId = (typeof CAPAS_EDITABLES)[number]["id"]
@@ -97,4 +97,58 @@ export function csvFichas(filas: { feature_id: string; nombre: string; codigo: s
   const lineas = ["feature_id,nombre,codigo"]
   for (const fila of filas) lineas.push([fila.feature_id, fila.nombre, fila.codigo].join(","))
   return lineas.join("\n") + "\n"
+}
+
+export type EntidadInventario = "tachos" | "bebederos" | "puntos" | "reservas" | CapaId
+
+const CAPA_IDS = new Set<string>(CAPAS_EDITABLES.map((capa) => capa.id))
+
+export function esCapa(entidad: string): entidad is CapaId {
+  return CAPA_IDS.has(entidad)
+}
+
+export type Solicitud = { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; body?: unknown }
+
+export function rutaListar(entidad: EntidadInventario): string {
+  if (esCapa(entidad)) return `/api/v1/inventario/capas/${entidad}`
+  return `/api/v1/inventario/${entidad}`
+}
+
+export function solicitudGuardar(entidad: EntidadInventario, id: number | null, body: unknown): Solicitud {
+  if (id == null) return { method: "POST", path: rutaListar(entidad), body }
+  if (esCapa(entidad)) return { method: "PATCH", path: `/api/v1/inventario/capas/${entidad}/${id}`, body }
+  return { method: "PATCH", path: `/api/v1/inventario/${entidad}/${id}`, body }
+}
+
+export function solicitudBaja(entidad: EntidadInventario, id: number): Solicitud {
+  if (esCapa(entidad)) return { method: "DELETE", path: `/api/v1/inventario/capas/${entidad}/${id}` }
+  return { method: "DELETE", path: `/api/v1/inventario/${entidad}/${id}` }
+}
+
+export function cuerpoPunto(row: { titulo: string; lat: number; lon: number; url: string }): { titulo: string; lat: number; lon: number; url: string } {
+  return { titulo: row.titulo.trim(), lat: row.lat, lon: row.lon, url: row.url.trim() }
+}
+
+export async function enviarInventario(cliente: typeof fetch, solicitud: Solicitud): Promise<unknown> {
+  const res = await cliente(solicitud.path, {
+    method: solicitud.method,
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+      ...(solicitud.body === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    body: solicitud.body === undefined ? undefined : JSON.stringify(solicitud.body),
+  })
+  if (!res.ok) {
+    let detalle = ""
+    try {
+      detalle = await res.text()
+    } catch {
+      detalle = ""
+    }
+    throw new Error(detalle || `La API respondió ${res.status}`)
+  }
+  const tipo = res.headers.get("content-type") ?? ""
+  if (!tipo.includes("json")) return null
+  return res.json()
 }
