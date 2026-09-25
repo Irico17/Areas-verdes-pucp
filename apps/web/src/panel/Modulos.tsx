@@ -404,12 +404,16 @@ export function ReportesPanel() {
   const [estado, setEstado] = useState("")
   const [desde, setDesde] = useState("")
   const [hasta, setHasta] = useState("")
+  const [zona, setZona] = useState("")
+  const [cuadrilla, setCuadrilla] = useState("")
+  const [origen, setOrigen] = useState("")
   const [data, setData] = useState<Awaited<ReturnType<typeof fetchReporte>> | null>(null)
   const [error, setError] = useState("")
+  const filtro = { estado, desde, hasta, zona, cuadrilla, origen }
 
   async function load() {
     try {
-      setData(await fetchReporte(estado, desde, hasta))
+      setData(await fetchReporte(filtro))
       setError("")
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo armar el reporte")
@@ -418,7 +422,7 @@ export function ReportesPanel() {
 
   useEffect(() => {
     let cancelled = false
-    fetchReporte("", "", "")
+    fetchReporte({})
       .then((report) => {
         if (cancelled) return
         setData(report)
@@ -435,7 +439,7 @@ export function ReportesPanel() {
   return (
     <section className="block">
       <h2>Reportes</h2>
-      <p className="lede">Un reporte básico de labores, con el historial filtrable por estado y fecha.</p>
+      <p className="lede">Reporte básico de labores, filtrable por zona, cuadrilla, origen y fechas.</p>
       <form
         className="form"
         onSubmit={(event) => {
@@ -453,6 +457,18 @@ export function ReportesPanel() {
               </option>
             ))}
           </select>
+        </label>
+        <label className="field">
+          Zona
+          <input value={zona} onChange={(event) => setZona(event.target.value)} placeholder="Z1" />
+        </label>
+        <label className="field">
+          Cuadrilla
+          <input value={cuadrilla} onChange={(event) => setCuadrilla(event.target.value)} placeholder="Nombre ficticio" />
+        </label>
+        <label className="field">
+          Origen
+          <input value={origen} onChange={(event) => setOrigen(event.target.value)} placeholder="monitoreo" />
         </label>
         <label className="field">
           Desde
@@ -479,8 +495,8 @@ export function ReportesPanel() {
             ))}
           </ul>
           <p className="row-actions">
-            <a href={reporteHref("csv", estado, desde, hasta)}>Descargar CSV</a>
-            <a href={reporteHref("xls", estado, desde, hasta)}>Descargar Excel</a>
+            <a href={reporteHref("csv", filtro)}>Descargar CSV</a>
+            <a href={reporteHref("xls", filtro)}>Descargar Excel</a>
           </p>
           {data.filas.length === 0 && <p className="empty">No hay labores en ese rango.</p>}
           <ul className="labor-list">
@@ -488,8 +504,10 @@ export function ReportesPanel() {
               <li key={row.id} className="agenda">
                 <strong>{row.titulo}</strong>
                 <small>
-                  {etiquetaTipo(row.tipo)} · {etiquetaEstado(row.estado)} · {row.ejecutor}
-                  {row.codigo_externo ? ` · ${row.codigo_externo}` : ""}
+                  {row.clase || etiquetaTipo(row.tipo)} · {etiquetaEstado(row.estado)}
+                  {row.lugar ? ` · ${row.lugar}` : ""}
+                  {row.cuadrilla ? ` · ${row.cuadrilla}` : ""}
+                  {row.fecha_solicitud ? ` · ${row.fecha_solicitud}` : ""}
                 </small>
               </li>
             ))}

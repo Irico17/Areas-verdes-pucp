@@ -54,7 +54,7 @@ var RutasV1 = []Route{
 	{Metodo: "POST", Ruta: "/api/v1/riego", Descripcion: "Registrar un turno de riego"},
 	{Metodo: "GET", Ruta: "/api/v1/evidencias", Descripcion: "Metadatos de evidencias"},
 	{Metodo: "POST", Ruta: "/api/v1/evidencias", Descripcion: "Adjuntar archivo a una labor"},
-	{Metodo: "GET", Ruta: "/api/v1/reportes/labores", Descripcion: "Reporte básico. formato=csv o formato=xls"},
+	{Metodo: "GET", Ruta: "/api/v1/reportes/labores", Descripcion: "Reporte básico. Filtros zona, cuadrilla, origen, desde y hasta. formato=csv o formato=xls"},
 	{Metodo: "POST", Ruta: "/api/v1/ia/sugerir-tipo", Descripcion: "Sugerencia local de tipo a partir del título"},
 }
 
