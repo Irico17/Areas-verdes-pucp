@@ -125,6 +125,7 @@ export default function App() {
   const [tiposCat, setTiposCat] = useState<CatalogoItem[]>([])
   const [motivos, setMotivos] = useState<CatalogoItem[]>([])
   const [sugerencia, setSugerencia] = useState("")
+  const [pista, setPista] = useState<{ codigo: string; etiqueta: string } | null>(null)
   const [evidencias, setEvidencias] = useState<Evidencia[]>([])
   const [creating, setCreating] = useState(false)
   const [notice, setNotice] = useState("")
@@ -655,7 +656,11 @@ export default function App() {
               formEquipo={formEquipo}
               onForm={(patch) => {
                 if (patch.tipo) setFormTipo(patch.tipo)
-                if (patch.titulo != null) setFormTitulo(patch.titulo)
+                if (patch.titulo != null) {
+                  setFormTitulo(patch.titulo)
+                  setPista(null)
+                  setSugerencia("")
+                }
                 if (patch.detalle != null) setFormDetalle(patch.detalle)
                 if (patch.equipo != null) setFormEquipo(patch.equipo)
                 if (patch.ejecutor) setFormEjecutor(patch.ejecutor)
@@ -686,10 +691,17 @@ export default function App() {
                 void sugerirTipo(formTitulo)
                   .then((s) => {
                     setSugerencia(s.explicacion)
-                    if (s.codigo) setFormTipo(s.codigo)
+                    setPista(s.codigo ? { codigo: s.codigo, etiqueta: s.etiqueta } : null)
                   })
-                  .catch((error: unknown) => setSugerencia(error instanceof Error ? error.message : "Sin sugerencia"))
+                  .catch((error: unknown) => {
+                    setPista(null)
+                    setSugerencia(error instanceof Error ? error.message : "Sin sugerencia")
+                  })
               }}
+              onConfirmarPista={() => {
+                if (pista?.codigo) setFormTipo(pista.codigo)
+              }}
+              pista={pista}
               sugerencia={sugerencia}
               evidencias={evidenciasVisible}
               onSubir={(file) => {
