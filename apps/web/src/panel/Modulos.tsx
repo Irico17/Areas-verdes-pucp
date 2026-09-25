@@ -18,6 +18,7 @@ import {
   fetchRiego,
   fetchSolicitudes,
   guardarFicha,
+  HUECOS,
   reporteHref,
   type CatalogoItem,
   type Ficha,
@@ -351,6 +352,9 @@ export function SolicitudesPanel(props: { actividadId: string }) {
       </form>
       <h3>Órdenes de servicio</h3>
       <p className="lede">Solo se vinculan a una labor marcada como tercerizada. Sin orden, esa labor no se cierra.</p>
+      <p className="hint">
+        {ordenes.length} {ordenes.length === 1 ? "orden registrada" : "órdenes registradas"}. Métricas de proveedor: definición pendiente.
+      </p>
       {ordenes.length === 0 && <p className="empty">Todavía no hay órdenes. Una labor tercerizada no se cierra hasta que exista una.</p>}
       <ul className="labor-list">
         {ordenes.map((row) => (
@@ -439,7 +443,19 @@ export function ReportesPanel() {
   return (
     <section className="block">
       <h2>Reportes</h2>
-      <p className="lede">Reporte básico de labores, filtrable por zona, cuadrilla, origen y fechas.</p>
+      <p className="lede">Reporte básico de labores, filtrable por zona, cuadrilla, origen y fechas. Los conteos no son indicadores oficiales.</p>
+      <h3>Sin fórmula acordada</h3>
+      <ul className="huecos">
+        {HUECOS.map((hueco) => (
+          <li key={hueco.clave}>
+            <div>
+              <span>{hueco.nombre}</span>
+              <p>{hueco.nota}</p>
+            </div>
+            <strong>{hueco.estado}</strong>
+          </li>
+        ))}
+      </ul>
       <form
         className="form"
         onSubmit={(event) => {
@@ -485,6 +501,7 @@ export function ReportesPanel() {
       {error && <p className="status error">{error}</p>}
       {data && (
         <>
+          <h3>Conteos operativos</h3>
           <p className="hint">{data.aviso}</p>
           <ul className="counts">
             {data.por_estado.map((row) => (
@@ -713,7 +730,10 @@ export function RiegoPanel(props: { capatazId: string }) {
   return (
     <section className="block">
       <h2>Riego</h2>
-      <p className="lede">{aviso || "Sector, turno y equipo. Sin porcentaje oficial de cobertura."}</p>
+      <p className="lede">{aviso || "Sector, turno y equipo. Cobertura: definición pendiente."}</p>
+      <p className="hint">
+        {rows.length} {rows.length === 1 ? "turno registrado" : "turnos registrados"}. Cobertura: definición pendiente.
+      </p>
       {error && <p className="status error">{error}</p>}
       {rows.length === 0 && !error && <p className="empty">Todavía no hay turnos registrados.</p>}
       <ul className="labor-list">

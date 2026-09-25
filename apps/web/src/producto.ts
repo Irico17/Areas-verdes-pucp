@@ -79,9 +79,39 @@ export type FiltroReporte = {
   origen?: string
 }
 
+export type Hueco = {
+  clave: string
+  nombre: string
+  estado: string
+  nota: string
+}
+
+/** Huecos de HUID 16, 24 y 26. La frase es el estado: no hay fórmula ni meta. */
+export const HUECOS: Hueco[] = [
+  {
+    clave: "cobertura",
+    nombre: "Cobertura",
+    estado: "definición pendiente",
+    nota: "El registro de riego no produce un porcentaje.",
+  },
+  {
+    clave: "rendimiento",
+    nombre: "Rendimiento",
+    estado: "definición pendiente",
+    nota: "No hay horas, personal ni superficie para un reporte de proceso.",
+  },
+  {
+    clave: "metricas_proveedor",
+    nombre: "Métricas de proveedor",
+    estado: "definición pendiente",
+    nota: "Jefatura no ha acordado la fórmula. No hay portal del proveedor.",
+  },
+]
+
 export type Reporte = {
   aviso: string
   por_estado: { estado: string; n: number }[]
+  pendientes?: Hueco[]
   filas: {
     id: string
     titulo: string
@@ -289,9 +319,16 @@ export function reporteHref(formato: "csv" | "xls", filtro: FiltroReporte): stri
   return `/api/v1/reportes/labores?${reporteQuery(filtro, formato)}`
 }
 
-export async function sugerirTipo(titulo: string): Promise<{ codigo: string; etiqueta: string; explicacion: string }> {
+export type SugerenciaTipo = {
+  codigo: string
+  etiqueta: string
+  explicacion: string
+  requiere_humano: boolean
+}
+
+export async function sugerirTipo(titulo: string): Promise<SugerenciaTipo> {
   const res = await send("/api/v1/ia/sugerir-tipo", "POST", { titulo })
-  return res.json() as Promise<{ codigo: string; etiqueta: string; explicacion: string }>
+  return res.json() as Promise<SugerenciaTipo>
 }
 
 export async function fetchCuentas(): Promise<{
