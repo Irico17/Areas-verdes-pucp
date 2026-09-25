@@ -143,11 +143,11 @@ func (s *Store) Create(ctx context.Context, in CreateInput) (geojson.Feature, bo
 		).Error; err != nil {
 			return err
 		}
-		if err := insertEvento(tx, in.ID, "creada", "pendiente", in.AssignedCapatazID, in.ActorRol, "Alta desde el mapa"); err != nil {
+		if err := insertEvento(tx, in.ID, "creada", "pendiente", in.AssignedCapatazID, in.ActorRol, "Alta desde el mapa", in.UsuarioID); err != nil {
 			return err
 		}
 		if in.AssignedCapatazID != "" {
-			if err := insertEvento(tx, in.ID, "asignada", "pendiente", in.AssignedCapatazID, in.ActorRol, "Asignación en el alta"); err != nil {
+			if err := insertEvento(tx, in.ID, "asignada", "pendiente", in.AssignedCapatazID, in.ActorRol, "Asignación en el alta", in.UsuarioID); err != nil {
 				return err
 			}
 		}
@@ -172,7 +172,7 @@ func (s *Store) Create(ctx context.Context, in CreateInput) (geojson.Feature, bo
 	return f, created, err
 }
 
-func (s *Store) Assign(ctx context.Context, id, capatazID, actorRol string) (geojson.Feature, error) {
+func (s *Store) Assign(ctx context.Context, id, capatazID, actorRol string, usuarioID int64) (geojson.Feature, error) {
 	var zero geojson.Feature
 	if err := ValidateAsignacion(actorRol, capatazID); err != nil {
 		return zero, err
@@ -208,7 +208,7 @@ func (s *Store) Assign(ctx context.Context, id, capatazID, actorRol string) (geo
 			WHERE id = $1`, id, capatazID).Error; err != nil {
 			return err
 		}
-		return insertEvento(tx, id, tipo, row.estado, capatazID, actorRol, nota)
+		return insertEvento(tx, id, tipo, row.estado, capatazID, actorRol, nota, usuarioID)
 	})
 	if err != nil {
 		return zero, err
@@ -216,7 +216,7 @@ func (s *Store) Assign(ctx context.Context, id, capatazID, actorRol string) (geo
 	return s.one(ctx, id)
 }
 
-func (s *Store) SetEstado(ctx context.Context, id, estado, actorRol, capatazID string) (geojson.Feature, error) {
+func (s *Store) SetEstado(ctx context.Context, id, estado, actorRol, capatazID string, usuarioID int64) (geojson.Feature, error) {
 	var zero geojson.Feature
 	if err := ValidateEstado(estado, actorRol, capatazID); err != nil {
 		return zero, err
@@ -248,7 +248,7 @@ func (s *Store) SetEstado(ctx context.Context, id, estado, actorRol, capatazID s
 			UPDATE actividades SET estado = $2, updated_at = now() WHERE id = $1`, id, estado).Error; err != nil {
 			return err
 		}
-		return insertEvento(tx, id, eventoEstado(estado), estado, row.capataz, actorRol, "Cambio de estado")
+		return insertEvento(tx, id, eventoEstado(estado), estado, row.capataz, actorRol, "Cambio de estado", usuarioID)
 	})
 	if err != nil {
 		return zero, err
@@ -256,7 +256,7 @@ func (s *Store) SetEstado(ctx context.Context, id, estado, actorRol, capatazID s
 	return s.one(ctx, id)
 }
 
-func (s *Store) Archive(ctx context.Context, id, actorRol, motivo string) error {
+func (s *Store) Archive(ctx context.Context, id, actorRol, motivo string, usuarioID int64) error {
 	if err := ValidateArchivo(actorRol); err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func (s *Store) Archive(ctx context.Context, id, actorRol, motivo string) error 
 			UPDATE actividades SET archivada_en = now(), motivo_archivo = NULLIF($2, ''), updated_at = now() WHERE id = $1`, id, motivo).Error; err != nil {
 			return err
 		}
-		return insertEvento(tx, id, "archivada", row.estado, row.capataz, actorRol, nota)
+		return insertEvento(tx, id, "archivada", row.estado, row.capataz, actorRol, nota, usuarioID)
 	})
 }
 
@@ -294,9 +294,11 @@ func (s *Store) Timeline(ctx context.Context, id string) (Timeline, error) {
 		return out, ErrNoEncontrada
 	}
 	rows, err := s.db.WithContext(ctx).Raw(`
-		SELECT e.id, e.tipo, e.estado, e.capataz_id, c.equipo, e.actor_rol, e.nota, e.created_at
+		SELECT e.id, e.tipo, e.estado, e.capataz_id, c.equipo, e.actor_rol, e.nota, e.created_at,
+		       e.usuario_id, u.usuario, u.nombre
 		FROM actividad_eventos e
 		LEFT JOIN capataces c ON c.id = e.capataz_id
+		LEFT JOIN usuarios u ON u.id = e.usuario_id
 		WHERE e.actividad_id = $1
 		ORDER BY e.id`, id).Rows()
 	if err != nil {
@@ -311,14 +313,27 @@ func (s *Store) Timeline(ctx context.Context, id string) (Timeline, error) {
 			equipo  sql.NullString
 			nota    string
 			when    time.Time
+			usuario sql.NullInt64
+			login   sql.NullString
+			nombre  sql.NullString
 		)
-		if err := rows.Scan(&ev.ID, &ev.Tipo, &estado, &capataz, &equipo, &ev.ActorRol, &nota, &when); err != nil {
+		if err := rows.Scan(&ev.ID, &ev.Tipo, &estado, &capataz, &equipo, &ev.ActorRol, &nota, &when, &usuario, &login, &nombre); err != nil {
 			return out, err
 		}
 		ev.Estado = nullString(estado)
 		ev.CapatazID = nullString(capataz)
 		ev.Equipo = nullString(equipo)
 		ev.Nota = nota
+		if usuario.Valid {
+			id := usuario.Int64
+			ev.UsuarioID = &id
+		}
+		if login.Valid {
+			ev.Usuario = login.String
+		}
+		if nombre.Valid {
+			ev.Nombre = nombre.String
+		}
 		ev.CreatedAt = when.UTC().Format(time.RFC3339)
 		out.Eventos = append(out.Eventos, ev)
 	}
@@ -400,11 +415,11 @@ func capatazExiste(tx *gorm.DB, id string) (bool, error) {
 	return n == 1, err
 }
 
-func insertEvento(tx *gorm.DB, id, tipo, estado, capataz, actor, nota string) error {
+func insertEvento(tx *gorm.DB, id, tipo, estado, capataz, actor, nota string, usuarioID int64) error {
 	return tx.Exec(`
-		INSERT INTO actividad_eventos (actividad_id, tipo, estado, capataz_id, actor_rol, nota)
-		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), $5, $6)`,
-		id, tipo, estado, capataz, actor, nota,
+		INSERT INTO actividad_eventos (actividad_id, tipo, estado, capataz_id, actor_rol, nota, usuario_id)
+		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), $5, $6, NULLIF($7, 0))`,
+		id, tipo, estado, capataz, actor, nota, usuarioID,
 	).Error
 }
 

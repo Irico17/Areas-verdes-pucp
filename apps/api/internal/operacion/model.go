@@ -55,7 +55,10 @@ type Evento struct {
 	Estado    *string `json:"estado,omitempty"`
 	CapatazID *string `json:"capataz_id,omitempty"`
 	Equipo    *string `json:"equipo,omitempty"`
-	ActorRol  string  `json:"actor_rol"`
+	ActorRol  string  `json:"actor_rol,omitempty"`
+	UsuarioID *int64  `json:"usuario_id,omitempty"`
+	Usuario   string  `json:"usuario,omitempty"`
+	Nombre    string  `json:"usuario_nombre,omitempty"`
 	Nota      string  `json:"nota,omitempty"`
 	CreatedAt string  `json:"created_at"`
 }
@@ -79,6 +82,7 @@ type CreateInput struct {
 	AssignedCapatazID string
 	ActorRol          string
 	Ejecutor          string
+	UsuarioID         int64
 }
 
 // Query filtra el listado GeoJSON.

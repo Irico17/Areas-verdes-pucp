@@ -1,0 +1,63 @@
+# Frente 2C. Historial filtrable y reversión de lote.
+# El actor del timeline es el usuario de sesión.
+/api/v1/lotes:
+  post:
+    tags: [auditoria]
+    summary: Importa filas en un lote reversible
+    responses:
+      "201":
+        description: Lote confirmado
+      "401":
+        description: Sin cookie de sesión
+/api/v1/lotes/{id}/revertir:
+  post:
+    tags: [auditoria]
+    summary: Revierte el lote. No pisa una fila editada después.
+    responses:
+      "200":
+        description: Reversión aplicada, con filas excluidas si las hubo
+      "409":
+        description: Hay ediciones posteriores y falta confirmar
+/api/v1/auditoria/ediciones:
+  post:
+    tags: [auditoria]
+    summary: Edición posterior al lote. La reversión no la pisa.
+    responses:
+      "200":
+        description: Cambio registrado con el usuario de sesión
+      "401":
+        description: Sin cookie de sesión
+/api/v1/auditoria/cambios:
+  get:
+    tags: [auditoria]
+    summary: Historial filtrable por zona, origen y fechas
+    parameters:
+      - in: query
+        name: zona
+        schema: { type: string }
+      - in: query
+        name: origen
+        schema: { type: string }
+      - in: query
+        name: desde
+        schema: { type: string }
+      - in: query
+        name: hasta
+        schema: { type: string }
+    responses:
+      "200":
+        description: Cambios con el usuario de sesión
+/api/v1/auditoria/timeline:
+  get:
+    tags: [auditoria]
+    summary: Timeline de una fila. El actor es el usuario de sesión.
+    parameters:
+      - in: query
+        name: entidad
+        schema: { type: string }
+      - in: query
+        name: entidad_id
+        schema: { type: string }
+    responses:
+      "200":
+        description: Eventos con usuario, sin actor_rol

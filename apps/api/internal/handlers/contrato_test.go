@@ -23,7 +23,7 @@ func TestContratoUneLosTags(t *testing.T) {
 	if err := yaml.Unmarshal(body, &doc); err != nil {
 		t.Fatal(err)
 	}
-	if len(doc.Paths) != 21 {
+	if len(doc.Paths) != 26 {
 		t.Fatalf("paths = %d", len(doc.Paths))
 	}
 	for _, key := range []string{"/health", "/api/v1/geo/areas", "/api/v1/operacion/actividades", "/api/v1/sesion", "/api/v1/ia/sugerir-tipo"} {
@@ -62,7 +62,7 @@ func TestContratoRechazaPathRepetido(t *testing.T) {
 
 func TestMigracionesNuevasSinTruncate(t *testing.T) {
 	dir := filepath.Join("..", "..", "migrations")
-	for _, name := range []string{"007_auditoria.sql", "008_fk_minimas.sql"} {
+	for _, name := range []string{"007_auditoria.sql", "008_fk_minimas.sql", "041_lotes.sql"} {
 		body, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {
 			t.Fatal(err)
