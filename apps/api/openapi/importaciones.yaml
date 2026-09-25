@@ -1,0 +1,49 @@
+# Frente 3A. Importador único. La vista previa no escribe; confirmar sí.
+# Revertir usa POST /api/v1/lotes/{id}/revertir del frente 2C.
+/api/v1/importaciones/entidades:
+  get:
+    tags: [importaciones]
+    summary: Entidades del mapa de datos que aceptan un archivo
+    responses:
+      "200":
+        description: Lista de entidades
+/api/v1/importaciones:
+  post:
+    tags: [importaciones]
+    summary: Vista previa CSV, XLSX o GeoJSON. No escribe filas de la entidad.
+    parameters:
+      - in: query
+        name: entidad
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              archivo:
+                type: string
+                format: binary
+    responses:
+      "200":
+        description: Primeras 20 filas, conteo de válidas y errores por fila. escrito es false.
+      "400":
+        description: Entidad o archivo no admitido
+/api/v1/importaciones/{id}/confirmar:
+  post:
+    tags: [importaciones]
+    summary: Segundo paso. Escribe las filas válidas en el lote reversible.
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    responses:
+      "201":
+        description: Lote confirmado. Se revierte con /api/v1/lotes/{id}/revertir.
+      "422":
+        description: Ninguna fila válida. No se escribió.

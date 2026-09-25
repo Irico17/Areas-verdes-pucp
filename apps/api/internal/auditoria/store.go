@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -382,14 +383,50 @@ func bajaLogica(tx *gorm.DB, entidad, entidadID string) error {
 			UPDATE actividades
 			SET archivada_en = COALESCE(archivada_en, now()), updated_at = now()
 			WHERE id = $1`, entidadID).Error
+	case "podas":
+		return tx.Exec(`
+			UPDATE podas
+			SET archivada_en = COALESCE(archivada_en, now()), updated_at = now()
+			WHERE id::text = $1`, entidadID).Error
+	case "vivero_registros":
+		return tx.Exec(`
+			UPDATE vivero_registros
+			SET archivada_en = COALESCE(archivada_en, now()), updated_at = now()
+			WHERE id::text = $1`, entidadID).Error
 	case "areas_verdes":
 		return tx.Exec(`
 			UPDATE areas_verdes
-			SET referencia = COALESCE(referencia, 'baja lógica'), updated_at = now()
+			SET activo = false, referencia = COALESCE(referencia, 'baja lógica'), updated_at = now()
 			WHERE feature_id = $1`, entidadID).Error
+	case "medidas_palmera":
+		return tx.Exec(`DELETE FROM medidas_palmera WHERE ejemplar_id::text = $1`, entidadID).Error
 	default:
+		if spec, ok := bajaPorActivo[entidad]; ok {
+			q := fmt.Sprintf(`UPDATE %s SET activo = false WHERE %s = $1`, spec.tabla, spec.col)
+			return tx.Exec(q, entidadID).Error
+		}
 		return InputError{Reason: "entidad no importable"}
 	}
+}
+
+// bajaPorActivo deshace un alta del importador (frente 3A) sin borrar la fila.
+var bajaPorActivo = map[string]struct{ tabla, col string }{
+	"lugares":                {"lugares", "id::text"},
+	"zonas_supervision":      {"zonas_supervision", "id::text"},
+	"poligonos_cuadrilla":    {"poligonos_cuadrilla", "id::text"},
+	"cuadrillas":             {"cuadrillas", "id"},
+	"ejemplares":             {"ejemplares", "id::text"},
+	"especies":               {"especies", "id::text"},
+	"tachos":                 {"tachos", "id::text"},
+	"bebederos":              {"bebederos", "id::text"},
+	"puntos_pucp":            {"puntos_pucp", "id::text"},
+	"reservas_jardin":        {"reservas_jardin", "id::text"},
+	"fauna":                  {"fauna", "feature_id"},
+	"puertas":                {"puertas", "feature_id"},
+	"playas_estacionamiento": {"playas_estacionamiento", "feature_id"},
+	"veredas_riesgo":         {"veredas_riesgo", "feature_id"},
+	"xerofiticas":            {"xerofiticas", "feature_id"},
+	"jardines_reserva":       {"jardines_reserva", "feature_id"},
 }
 
 func aplicarCatalogo(tx *gorm.DB, id string, s snap) error {
