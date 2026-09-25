@@ -170,6 +170,116 @@ func TestRevertirLoteRestauraElAntesYNoPisaEdicionPosterior(t *testing.T) {
 	}
 }
 
+func TestAltaInsertaYReimportacionPosteriorNoSePisa(t *testing.T) {
+	gdb := abrirLotes(t)
+	ctx := context.Background()
+	var sesion int64
+	if err := gdb.Raw(`
+		INSERT INTO usuarios (usuario, nombre, rol, password_hash)
+		VALUES ('alta.coord', 'Coordinación de alta', 'coordinacion', 'no-es-clave')
+		RETURNING id`).Row().Scan(&sesion); err != nil {
+		t.Fatal(err)
+	}
+	store := NewStore(gdb)
+	nuevo := "88001"
+	loteAlta, err := store.Importar(ctx, sesion, "catalogos", []Fila{{
+		EntidadID: nuevo,
+		Accion:    "alta",
+		Antes:     json.RawMessage("null"),
+		Despues:   json.RawMessage(`{"clase":"lugar","codigo":"alta-nueva","nombre":"Fila nueva","activo":true,"orden":3}`),
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nombre(t, gdb, 88001) != "Fila nueva" {
+		t.Fatal("el alta hizo UPDATE sobre una fila que no existía")
+	}
+
+	var id int64
+	if err := gdb.Raw(`
+		INSERT INTO catalogos (clase, codigo, nombre, activo, orden)
+		VALUES ('lugar', 'reimp', 'Original', true, 4)
+		RETURNING id`).Row().Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	primero, err := store.Importar(ctx, sesion, "catalogos", []Fila{{
+		EntidadID: fmt.Sprint(id),
+		Accion:    "edicion",
+		Antes:     json.RawMessage(`{"clase":"lugar","codigo":"reimp","nombre":"Original","activo":true,"orden":4}`),
+		Despues:   json.RawMessage(`{"clase":"lugar","codigo":"reimp","nombre":"Lote uno","activo":true,"orden":4}`),
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Importar(ctx, sesion, "catalogos", []Fila{{
+		EntidadID: fmt.Sprint(id),
+		Accion:    "edicion",
+		Antes:     json.RawMessage(`{"clase":"lugar","codigo":"reimp","nombre":"Lote uno","activo":true,"orden":4}`),
+		Despues:   json.RawMessage(`{"clase":"lugar","codigo":"reimp","nombre":"Lote dos","activo":true,"orden":4}`),
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Revertir(ctx, primero, sesion, false); !errors.Is(err, ErrConfirmacion) {
+		t.Fatalf("la reimportación posterior debía frenar el revert, fue %v", err)
+	}
+	rep, err := store.Revertir(ctx, primero, sesion, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nombre(t, gdb, id) != "Lote dos" {
+		t.Fatalf("el revert del primer lote pisó la reimportación: %q", nombre(t, gdb, id))
+	}
+	if len(rep.Excluidas) != 1 {
+		t.Fatalf("excluidas %+v", rep.Excluidas)
+	}
+	if loteAlta < 1 {
+		t.Fatal("lote de alta")
+	}
+}
+
+func abrirLotes(t *testing.T) *gorm.DB {
+	t.Helper()
+	base := os.Getenv("MIGRATE_TEST_URL")
+	if base == "" {
+		base = "postgres://campus:campus@127.0.0.1:5432/postgres?sslmode=disable"
+	}
+	admin, err := sql.Open("pgx", base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { admin.Close() })
+	if err := admin.Ping(); err != nil {
+		t.Skipf("sin postgres de prueba: %v", err)
+	}
+	name := "campus_verde_lotes_alta"
+	if _, err := admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := admin.Exec("DROP DATABASE IF EXISTS " + name); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := admin.Exec("CREATE DATABASE " + name); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name)
+		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + name)
+	})
+	gdb, err := db.Open(fmt.Sprintf("postgres://campus:campus@127.0.0.1:5432/%s?sslmode=disable", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { sqlDB.Close() })
+	if err := migrate.Apply(gdb, filepath.Join("..", "..", "migrations")); err != nil {
+		t.Fatal(err)
+	}
+	return gdb
+}
+
 func nombre(t *testing.T, gdb *gorm.DB, id int64) string {
 	t.Helper()
 	var n string

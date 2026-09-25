@@ -272,7 +272,7 @@ func (s *Store) EditarSolicitud(ctx context.Context, in SolicitudInput) (Solicit
 	}
 	res := s.db.WithContext(ctx).Exec(`
 		UPDATE solicitudes SET
-		  codigo_externo = NULLIF($2, ''),
+		  codigo_externo = CASE WHEN btrim($2) = '' THEN codigo_externo ELSE $2 END,
 		  titulo = $3,
 		  detalle = $4,
 		  prioridad = $5,

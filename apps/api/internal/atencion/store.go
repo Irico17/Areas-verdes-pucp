@@ -412,7 +412,7 @@ func (s *Store) Reporte(ctx context.Context, f FiltroReporte) (Reporte, error) {
 		LEFT JOIN cuadrillas q ON q.id = a.cuadrilla_id
 		LEFT JOIN catalogos cl ON cl.clase = 'clase_actividad' AND cl.codigo = a.clase_codigo
 		WHERE ` + strings.Join(where, " AND ") + `
-		ORDER BY a.created_at DESC LIMIT 300`
+		ORDER BY a.created_at DESC`
 	rows, err := s.db.WithContext(ctx).Raw(q, args...).Rows()
 	if err != nil {
 		return out, err

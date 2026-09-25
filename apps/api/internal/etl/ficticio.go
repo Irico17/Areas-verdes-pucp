@@ -1,14 +1,12 @@
 package etl
 
 import (
-	"sort"
 	"strings"
 )
 
 // Ficticios de campus, en el orden de la sección 2 del mapa de datos.
 // La clave interna es el hash; el nombre real no se guarda.
 var ficticiosJefes = []string{"Valeria Quispe", "Mateo Salazar", "Renato Cárdenas"}
-var conteosJefes = []int{259, 168, 104}
 
 var ficticiosMonitoreo = []string{"Nora Beltrán", "Iván Paredes", "Lucía Mendoza"}
 
@@ -44,53 +42,30 @@ func ConservarEtiqueta(nombre string) string {
 	return ""
 }
 
-type grupo struct {
-	hash  string
-	norma string
-	n     int
-}
+// ficticiosEstables es la lista completa. El índice sale del hash, no del conteo del lote.
+var ficticiosEstables = append(append([]string{}, ficticiosJefes...), ficticiosMonitoreo...)
 
-// Aplicar asigna ficticios. Los conteos 259, 168 y 104 usan la terna de jefes.
-// El resto sale del hash del nombre, así el mismo responsable no cambia entre lotes.
+// Aplicar asigna un ficticio por hash del nombre. El mismo responsable
+// recibe el mismo nombre en cualquier lote, aunque cambie cuántas filas trae.
 func (t *Tabla) Aplicar(nombres []string) {
-	counts := map[string]*grupo{}
 	for _, nombre := range nombres {
 		norma := normalizarPersona(nombre)
 		if norma == "" || EsEtiqueta(nombre) {
 			continue
 		}
 		h := hashPersona(norma)
-		g, ok := counts[h]
-		if !ok {
-			g = &grupo{hash: h, norma: norma}
-			counts[h] = g
-		}
-		g.n++
-	}
-	var grupos []grupo
-	for _, g := range counts {
-		if _, ya := t.porHash[g.hash]; ya {
+		if _, ya := t.porHash[h]; ya {
 			continue
 		}
-		grupos = append(grupos, *g)
+		t.porHash[h] = ficticioDeHash(h)
 	}
-	sort.Slice(grupos, func(i, j int) bool {
-		if grupos[i].n != grupos[j].n {
-			return grupos[i].n > grupos[j].n
-		}
-		return grupos[i].hash < grupos[j].hash
-	})
-	jefes := map[int]string{}
-	for i, n := range conteosJefes {
-		jefes[n] = ficticiosJefes[i]
+}
+
+func ficticioDeHash(hash string) string {
+	if len(ficticiosEstables) == 0 {
+		return ""
 	}
-	for _, g := range grupos {
-		if nombre, ok := jefes[g.n]; ok {
-			t.porHash[g.hash] = nombre
-			continue
-		}
-		t.porHash[g.hash] = ficticiosMonitoreo[indiceEstable(g.hash)]
-	}
+	return ficticiosEstables[indiceEstable(hash)%len(ficticiosEstables)]
 }
 
 // indiceEstable elige el ficticio con el hash del nombre, no con el orden del lote.
@@ -109,7 +84,7 @@ func indiceEstable(hash string) int {
 	if n < 0 {
 		n = -n
 	}
-	return n % len(ficticiosMonitoreo)
+	return n
 }
 
 // Ficticio sustituye un nombre de persona. Vacío sigue vacío.

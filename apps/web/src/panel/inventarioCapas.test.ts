@@ -14,6 +14,7 @@ import {
   validarBebedero,
   validarPunto,
   validarReserva,
+  formularioDesdeFila,
 } from "./inventarioCapas.ts"
 
 test("las seis capas de la sección 4.13 son editables", () => {
@@ -91,6 +92,31 @@ test("enviarInventario usa la cookie y no manda contacto", async () => {
   assert.equal(visto?.init.credentials, "include")
   assert.match(String(visto?.init.body), /ficticio/)
   assert.equal(/phone|placeId/i.test(String(visto?.init.body)), false)
+})
+
+test("elegir una fila recupera los datos reales, no un formulario en blanco", () => {
+  const form = formularioDesdeFila({
+    id: 7,
+    codigo: "PT_bb12",
+    lat: -12.069,
+    lon: -77.081,
+    nota: "junto al comedor",
+    plastico: 4,
+    evento: "Taller de compost",
+    fecha: "2026-09-22",
+    hora_inicio: "09:00",
+    hora_fin: "11:00",
+    estado: "reservado",
+    feature_id: "JR-0004",
+    nombre: "Jardín norte",
+  })
+  assert.equal(form.codigo, "PT_bb12")
+  assert.equal(form.lat, "-12.069")
+  assert.equal(form.nota, "junto al comedor")
+  assert.equal(form.conteos.plastico, 4)
+  assert.equal(form.reserva.evento, "Taller de compost")
+  assert.equal(form.ficha.feature_id, "JR-0004")
+  assert.equal(form.ficha.nombre, "Jardín norte")
 })
 
 test("la ficha de jardín muestra geometría y los campos 4.13", () => {

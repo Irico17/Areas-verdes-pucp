@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
@@ -98,11 +99,11 @@ func (h Frente2B) patchTacho(c *gin.Context) {
 		return
 	}
 	var body capas.Tacho
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(400, gin.H{"error": "JSON inválido"})
+	raw, okBody := cuerpoJSON(c, &body)
+	if !okBody {
 		return
 	}
-	item, err := h.Store.ActualizarTacho(c.Request.Context(), id, body)
+	item, err := h.Store.ActualizarTacho(c.Request.Context(), id, body, raw)
 	if err != nil {
 		c.JSON(400, gin.H{"error": "no se pudo actualizar el tacho"})
 		return
@@ -161,11 +162,11 @@ func (h Frente2B) patchBebedero(c *gin.Context) {
 		return
 	}
 	var body capas.Bebedero
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(400, gin.H{"error": "JSON inválido"})
+	raw, okBody := cuerpoJSON(c, &body)
+	if !okBody {
 		return
 	}
-	item, err := h.Store.ActualizarBebedero(c.Request.Context(), id, body)
+	item, err := h.Store.ActualizarBebedero(c.Request.Context(), id, body, raw)
 	if err != nil {
 		c.JSON(400, gin.H{"error": "no se pudo actualizar el bebedero"})
 		return
@@ -229,13 +230,12 @@ func (h Frente2B) patchPunto(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "no se guardan teléfono, placeId ni website", "columnas_omitidas": []string{"phone", "placeId", "website"}})
 		return
 	}
-	c.Request.Body = io.NopCloser(strings.NewReader(string(raw)))
 	var body capas.Punto
-	if err := c.ShouldBindJSON(&body); err != nil {
+	if err := json.Unmarshal(raw, &body); err != nil {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
 		return
 	}
-	item, err := h.Store.ActualizarPunto(c.Request.Context(), id, body)
+	item, err := h.Store.ActualizarPunto(c.Request.Context(), id, body, raw)
 	if err != nil {
 		c.JSON(400, gin.H{"error": "no se pudo actualizar el punto"})
 		return
@@ -307,15 +307,15 @@ func (h Frente2B) patchReserva(c *gin.Context) {
 		return
 	}
 	var body capas.Reserva
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(400, gin.H{"error": "JSON inválido"})
+	raw, okBody := cuerpoJSON(c, &body)
+	if !okBody {
 		return
 	}
 	if body.Origen != "" && body.Origen != "ficticio" {
 		c.JSON(400, gin.H{"error": "mientras la hoja responda 401 solo se acepta origen ficticio"})
 		return
 	}
-	item, err := h.Store.ActualizarReserva(c.Request.Context(), id, body)
+	item, err := h.Store.ActualizarReserva(c.Request.Context(), id, body, raw)
 	if err != nil {
 		c.JSON(400, gin.H{"error": "no se pudo actualizar la reserva"})
 		return
@@ -361,11 +361,11 @@ func (h Frente2B) patchCapa(c *gin.Context) {
 		return
 	}
 	var body capas.Ficha
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(400, gin.H{"error": "JSON inválido"})
+	raw, okBody := cuerpoJSON(c, &body)
+	if !okBody {
 		return
 	}
-	item, err := h.Store.ActualizarFicha(c.Request.Context(), c.Param("capa"), id, body)
+	item, err := h.Store.ActualizarFicha(c.Request.Context(), c.Param("capa"), id, body, raw)
 	if err != nil {
 		c.JSON(400, gin.H{"error": "no se pudo actualizar la ficha"})
 		return
@@ -389,6 +389,15 @@ func (h Frente2B) csvCapa(c *gin.Context) {
 	}
 	c.Header("Content-Type", "text/csv; charset=utf-8")
 	c.String(200, b.String())
+}
+
+func cuerpoJSON(c *gin.Context, dest any) (json.RawMessage, bool) {
+	raw, err := io.ReadAll(c.Request.Body)
+	if err != nil || json.Unmarshal(raw, dest) != nil {
+		c.JSON(400, gin.H{"error": "JSON inválido"})
+		return nil, false
+	}
+	return raw, true
 }
 
 func idParam(c *gin.Context) (int64, bool) {

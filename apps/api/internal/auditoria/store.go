@@ -191,8 +191,10 @@ func (s *Store) Revertir(ctx context.Context, loteID, usuarioID int64, confirmar
 			if err := tx.Raw(`
 				SELECT count(*) FROM cambios
 				WHERE entidad = $1 AND entidad_id = $2 AND id > $3
-				  AND accion IN ('alta', 'edicion', 'baja')
-				  AND (lote_id IS NULL OR lote_id <> $4)`,
+				  AND (
+				    accion IN ('alta', 'edicion', 'baja')
+				    OR (accion = 'importacion' AND lote_id IS DISTINCT FROM $4)
+				  )`,
 				entidad, c.entidadID, c.id, loteID).Scan(&n).Error; err != nil {
 				return err
 			}
@@ -364,11 +366,11 @@ func aplicar(tx *gorm.DB, entidad, entidadID, accion string, doc json.RawMessage
 	}
 	switch entidad {
 	case "catalogos":
-		return aplicarCatalogo(tx, entidadID, s)
+		return aplicarCatalogo(tx, entidadID, accion, s)
 	case "actividades":
-		return aplicarActividad(tx, entidadID, s)
+		return aplicarActividad(tx, entidadID, accion, s)
 	case "areas_verdes":
-		return aplicarArea(tx, entidadID, s)
+		return aplicarArea(tx, entidadID, accion, s)
 	default:
 		return InputError{Reason: "entidad no importable"}
 	}
@@ -429,7 +431,7 @@ var bajaPorActivo = map[string]struct{ tabla, col string }{
 	"jardines_reserva":       {"jardines_reserva", "feature_id"},
 }
 
-func aplicarCatalogo(tx *gorm.DB, id string, s snap) error {
+func aplicarCatalogo(tx *gorm.DB, id, accion string, s snap) error {
 	activo := true
 	if s.Activo != nil {
 		activo = *s.Activo
@@ -449,13 +451,21 @@ func aplicarCatalogo(tx *gorm.DB, id string, s snap) error {
 	if res.Error != nil {
 		return res.Error
 	}
-	if res.RowsAffected == 0 {
+	if res.RowsAffected > 0 {
+		return nil
+	}
+	if accion != "alta" {
 		return InputError{Reason: "fila de catálogo no encontrada"}
 	}
-	return nil
+	if strings.TrimSpace(s.Clase) == "" || strings.TrimSpace(s.Codigo) == "" || strings.TrimSpace(s.Nombre) == "" {
+		return InputError{Reason: "el alta de catálogo exige clase, código y nombre"}
+	}
+	return tx.Exec(`
+		INSERT INTO catalogos (id, clase, codigo, nombre, activo, orden)
+		VALUES ($1::bigint, $2, $3, $4, $5, $6)`, id, s.Clase, s.Codigo, s.Nombre, activo, orden).Error
 }
 
-func aplicarActividad(tx *gorm.DB, id string, s snap) error {
+func aplicarActividad(tx *gorm.DB, id, accion string, s snap) error {
 	res := tx.Exec(`
 		UPDATE actividades
 		SET titulo = COALESCE(NULLIF($2, ''), titulo),
@@ -467,13 +477,27 @@ func aplicarActividad(tx *gorm.DB, id string, s snap) error {
 	if res.Error != nil {
 		return res.Error
 	}
-	if res.RowsAffected == 0 {
+	if res.RowsAffected > 0 {
+		return nil
+	}
+	if accion != "alta" {
 		return InputError{Reason: "labor no encontrada"}
 	}
-	return nil
+	titulo := strings.TrimSpace(s.Titulo)
+	if titulo == "" {
+		titulo = "Labor importada"
+	}
+	estado := strings.TrimSpace(s.Estado)
+	if estado == "" {
+		estado = "pendiente"
+	}
+	return tx.Exec(`
+		INSERT INTO actividades (id, tipo, estado, titulo, detalle, zona_feature_id, origen_ref, ejecutor)
+		VALUES ($1::uuid, 'inspeccion', $2, $3, $4, NULLIF($5, ''), $1, 'propia')`,
+		id, estado, titulo, s.Detalle, s.Zona).Error
 }
 
-func aplicarArea(tx *gorm.DB, featureID string, s snap) error {
+func aplicarArea(tx *gorm.DB, featureID, accion string, s snap) error {
 	res := tx.Exec(`
 		UPDATE areas_verdes
 		SET nombre = COALESCE(NULLIF($2, ''), nombre),
@@ -483,10 +507,21 @@ func aplicarArea(tx *gorm.DB, featureID string, s snap) error {
 	if res.Error != nil {
 		return res.Error
 	}
-	if res.RowsAffected == 0 {
+	if res.RowsAffected > 0 {
+		return nil
+	}
+	if accion != "alta" {
 		return InputError{Reason: "área no encontrada"}
 	}
-	return nil
+	nombre := strings.TrimSpace(s.Nombre)
+	if nombre == "" {
+		nombre = featureID
+	}
+	return tx.Exec(`
+		INSERT INTO areas_verdes (feature_id, source_index, nombre, referencia, origen_ref, activo)
+		SELECT $1, COALESCE((SELECT MAX(source_index) FROM areas_verdes), 0) + 1,
+		       $2, NULLIF($3, ''), $1, TRUE`,
+		featureID, nombre, s.Detalle).Error
 }
 
 func leerActual(tx *gorm.DB, entidad, entidadID string) (json.RawMessage, error) {

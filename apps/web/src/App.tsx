@@ -25,6 +25,8 @@ import { PodaPanel } from "./panel/Poda"
 import { ViveroPanel } from "./panel/Vivero"
 import { CatastroEditor } from "./panel/CatastroEditor"
 import { InventarioCapas } from "./panel/InventarioCapas"
+import { CalendarioReservas } from "./panel/CalendarioReservas"
+import { BottomSheet } from "./ui/BottomSheet"
 import { ImportacionesPanel } from "./panel/Importaciones"
 import { AdminPanel, CatalogosPanel, Login, ReportesPanel, RiegoPanel, SolicitudesPanel } from "./panel/Modulos"
 import { fetchCatalogo, fetchEvidencias, fetchSesion, salir, subirEvidencia, sugerirTipo, type CatalogoItem, type Evidencia, type Usuario } from "./producto"
@@ -139,8 +141,6 @@ export default function App() {
   const [edificios, setEdificios] = useState<FeatureCollection>({ type: "FeatureCollection", features: [] })
   const [inventory, setInventory] = useState<Partial<Record<string, FeatureCollection>>>({})
   const [inventoryOn, setInventoryOn] = useState<Record<string, boolean>>({})
-  const [agenda, setAgenda] = useState<{ aviso: string; total: number; reservas: { id: string; jardin: string; fecha: string; hora: string; evento: string; estado: string }[] } | null>(null)
-
   const reloadActivities = useCallback(async () => {
     try {
       const fc = await fetchActividades(rol, equipoId)
@@ -247,14 +247,6 @@ export default function App() {
     ).then((rows) => {
       if (!cancelled) setInventory(Object.fromEntries(rows))
     })
-    fetch("/api/v1/geo/reservas-mock")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body) => {
-        if (!cancelled && body && Array.isArray(body.reservas)) setAgenda(body)
-      })
-      .catch(() => {
-        if (!cancelled) setAgenda(null)
-      })
     fetchCollection("/api/v1/geo/edificios")
       .then((fc) => {
         if (!cancelled) setEdificios(fc)
@@ -570,11 +562,8 @@ export default function App() {
           </button>
         ))}
       </nav>
-      <aside className="panel" id="panel">
-        <button type="button" className="sheet-close" onClick={() => setRailOpen(false)}>
-          Cerrar hoja
-        </button>
-        <div key={moduloActivo} className="panel-view">
+      <BottomSheet open={railOpen} onClose={() => setRailOpen(false)}>
+        <div key={moduloActivo}>
         <p className={load.kind === "error" || activityError ? "status error" : "status"}>
           {load.kind === "error" ? load.message : summary}
           {activityError ? ` · ${activityError}` : ""}
@@ -615,17 +604,7 @@ export default function App() {
                 <span className="count">{inventory[layer.id]?.features.length ?? "—"}</span>
               </div>
             ))}
-            <h2>Agenda ficticia</h2>
-            <p className="lede">{agenda?.aviso ?? "Leyendo la agenda de demostración…"}</p>
-            {(agenda?.reservas ?? []).length === 0 && <p className="empty">No hay reservas de demostración.</p>}
-            <ul className="labor-list">
-              {(agenda?.reservas ?? []).slice(0, 6).map((item) => (
-                <li key={item.id} className="agenda">
-                  <strong>{item.jardin}</strong>
-                  <small>{item.fecha} · {item.hora} · {item.evento}</small>
-                </li>
-              ))}
-            </ul>
+            <CalendarioReservas />
           </section>
         )}
         {moduloActivo === "labores" && (
@@ -726,7 +705,7 @@ export default function App() {
         {moduloActivo === "importaciones" && <ImportacionesPanel />}
         {moduloActivo === "admin" && <AdminPanel />}
         </div>
-      </aside>
+      </BottomSheet>
       <div className="stage">
         <MapBoundary>
           <CampusMap

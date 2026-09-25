@@ -1,9 +1,30 @@
 package atencion
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
+
+func TestReporteNoRecortaEn300(t *testing.T) {
+	body, err := os.ReadFile("store.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(body)
+	inicio := strings.Index(src, "func (s *Store) Reporte")
+	fin := strings.Index(src, "func clausulasReporte")
+	if inicio < 0 || fin < inicio {
+		t.Fatal("no está el reporte")
+	}
+	bloque := src[inicio:fin]
+	if strings.Contains(bloque, "LIMIT 300") {
+		t.Fatal("la exportación no puede cortar en 300 si los conteos incluyen todo el filtro")
+	}
+	if !strings.Contains(bloque, "ORDER BY a.created_at DESC") {
+		t.Fatal("el reporte perdió el orden")
+	}
+}
 
 func TestExportacionBasica(t *testing.T) {
 	filas := []Fila{{

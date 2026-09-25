@@ -3,7 +3,6 @@ package etl
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"sort"
 	"strings"
 	"unicode"
 )
@@ -101,8 +100,8 @@ type cuadrillaFicticia struct {
 	Etiqueta bool
 }
 
-// asignarCuadrillas reparte ficticios por frecuencia del hash.
-// 259, 168 y 104 usan la tabla fija. El resto, en orden de frecuencia.
+// asignarCuadrillas asigna el ficticio con el hash de la persona.
+// No usa la frecuencia del lote: el mismo hash siempre cae en el mismo nombre.
 func asignarCuadrillas(valores []string) map[string]cuadrillaFicticia {
 	type grupo struct {
 		clave string
@@ -125,24 +124,9 @@ func asignarCuadrillas(valores []string) map[string]cuadrillaFicticia {
 	for clave, n := range counts {
 		grupos = append(grupos, grupo{clave: clave, n: n})
 	}
-	sort.Slice(grupos, func(i, j int) bool {
-		if grupos[i].n != grupos[j].n {
-			return grupos[i].n > grupos[j].n
-		}
-		return grupos[i].clave < grupos[j].clave
-	})
 	out := map[string]cuadrillaFicticia{}
-	resto := 0
 	for _, g := range grupos {
-		nombre := ficticioPorConteo(g.n)
-		if nombre == "" {
-			if resto < len(ficticiosPorFrecuencia) {
-				nombre = ficticiosPorFrecuencia[resto]
-				resto++
-			} else {
-				nombre = "Cuadrilla sin serie"
-			}
-		}
+		nombre := ficticioDeHash(g.clave)
 		id := "cf-" + g.clave[:12]
 		out[g.clave] = cuadrillaFicticia{ID: id, Nombre: nombre, Clave: g.clave}
 	}

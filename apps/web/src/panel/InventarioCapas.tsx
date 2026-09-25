@@ -6,6 +6,7 @@ import {
   csvFichas,
   enviarInventario,
   esCapa,
+  formularioDesdeFila,
   rutaListar,
   solicitudBaja,
   solicitudGuardar,
@@ -19,7 +20,7 @@ import {
   type ErrorCampo,
 } from "./inventarioCapas"
 
-type Fila = { id: number; etiqueta: string }
+type Fila = { id: number; etiqueta: string; raw: Record<string, unknown> }
 
 const ceros = Object.fromEntries(CONTEOS_TACHO.map((campo) => [campo, 0])) as Conteos
 
@@ -42,7 +43,7 @@ function listaDe(body: unknown, entidad: EntidadInventario): Fila[] {
     const id = Number(row.id)
     if (!Number.isInteger(id) || id < 1) return []
     const etiqueta = String(row.codigo || row.titulo || row.evento || row.feature_id || row.nombre || id)
-    return [{ id, etiqueta }]
+    return [{ id, etiqueta, raw: row }]
   })
 }
 
@@ -105,6 +106,26 @@ export function InventarioCapas({
       vivo = false
     }
   }, [cliente, entidad])
+
+  function cargarFila(raw: Record<string, unknown>) {
+    const form = formularioDesdeFila(raw)
+    setId(Number(raw.id))
+    setCodigo(form.codigo)
+    setLat(form.lat || "-12.07")
+    setLon(form.lon || "-77.08")
+    setConteos(form.conteos)
+    setRecomendacion(form.recomendaciones)
+    setNotaTacho(form.nota)
+    setEstado(form.estado)
+    setSede(form.sede)
+    setSubtipo(form.subtipo)
+    setTitulo(form.titulo)
+    setUrl(form.url)
+    setReserva(form.reserva)
+    setFicha(form.ficha)
+    setErrores([])
+    setAviso("")
+  }
 
   function elegir(siguiente: EntidadInventario) {
     setEntidad(siguiente)
@@ -215,7 +236,7 @@ export function InventarioCapas({
           ))}
           {filas.map((fila) => (
             <li key={fila.id}>
-              <button type="button" onClick={() => setId(fila.id)}>
+              <button type="button" onClick={() => cargarFila(fila.raw)}>
                 {fila.etiqueta}
               </button>
             </li>
