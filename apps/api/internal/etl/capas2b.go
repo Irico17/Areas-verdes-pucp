@@ -248,8 +248,8 @@ func LeerPuntosPUCP(body []byte) ([]puntoCarga, []Rechazo, []string, error) {
 	for i, rec := range records[1:] {
 		fila := i + 2
 		titulo := cell(rec, header, "title")
-		lat := parseCoord(cell(rec, header, "location/lat"))
-		lon := parseCoord(cell(rec, header, "location/lng"))
+		lat := coordDecimal(cell(rec, header, "location/lat"))
+		lon := coordDecimal(cell(rec, header, "location/lng"))
 		if titulo == "" || !puntoEnCampus(lat, lon) {
 			rech = append(rech, Rechazo{Fuente: "puntos_pucp", Fila: fila, Campo: "latitud", Motivo: "sin título o fuera del campus"})
 			continue
@@ -776,7 +776,7 @@ func puntoEnCampus(lat, lon float64) bool {
 	return lat <= -11.90 && lat >= -12.20 && lon <= -76.90 && lon >= -77.30
 }
 
-func parseCoord(raw string) float64 {
+func coordDecimal(raw string) float64 {
 	v, ok := commaFloat(raw)
 	if !ok {
 		return 0
