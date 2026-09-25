@@ -91,6 +91,17 @@ var rutasCongeladas = []struct {
 	{http.MethodGet, "/api/v1/evidencias/1/archivo", 401},
 	{http.MethodGet, "/api/v1/reportes/labores", 401},
 	{http.MethodPost, "/api/v1/ia/sugerir-tipo", 401},
+	{http.MethodGet, "/api/v1/podas", 401},
+	{http.MethodPost, "/api/v1/podas", 401},
+	{http.MethodPatch, "/api/v1/podas/1", 401},
+	{http.MethodPost, "/api/v1/podas/1/archivar", 401},
+	{http.MethodGet, "/api/v1/vivero", 401},
+	{http.MethodPost, "/api/v1/vivero", 401},
+	{http.MethodPatch, "/api/v1/vivero/1", 401},
+	{http.MethodPost, "/api/v1/vivero/1/archivar", 401},
+	{http.MethodPatch, "/api/v1/solicitudes/1", 401},
+	{http.MethodPatch, "/api/v1/ordenes/1", 401},
+	{http.MethodPost, "/api/v1/operacion/actividades/1/avances", 401},
 	{http.MethodGet, "/api/v1/no-existe", 404},
 }
 
@@ -110,8 +121,8 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 			t.Errorf("falta la ruta registrada %s", key)
 		}
 	}
-	if len(vistas) != 65 {
-		t.Fatalf("rutas registradas = %d, se esperaban 65: %v", len(vistas), vistas)
+	if len(vistas) != 76 {
+		t.Fatalf("rutas registradas = %d, se esperaban 76: %v", len(vistas), vistas)
 	}
 
 	for _, want := range rutasCongeladas {
@@ -195,6 +206,20 @@ func plantilla(ruta string) string {
 		return "/api/v1/catastro/areas/:id"
 	case "/api/v1/evidencias/1/archivo":
 		return "/api/v1/evidencias/:id/archivo"
+	case "/api/v1/podas/1":
+		return "/api/v1/podas/:id"
+	case "/api/v1/podas/1/archivar":
+		return "/api/v1/podas/:id/archivar"
+	case "/api/v1/vivero/1":
+		return "/api/v1/vivero/:id"
+	case "/api/v1/vivero/1/archivar":
+		return "/api/v1/vivero/:id/archivar"
+	case "/api/v1/solicitudes/1":
+		return "/api/v1/solicitudes/:id"
+	case "/api/v1/ordenes/1":
+		return "/api/v1/ordenes/:id"
+	case "/api/v1/operacion/actividades/1/avances":
+		return "/api/v1/operacion/actividades/:id/avances"
 	default:
 		return ruta
 	}

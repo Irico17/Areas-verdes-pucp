@@ -21,6 +21,8 @@ import {
   type Evento,
 } from "./operacion"
 import { Labores, type LaborItem } from "./panel/Labores"
+import { PodaPanel } from "./panel/Poda"
+import { ViveroPanel } from "./panel/Vivero"
 import { CatastroEditor } from "./panel/CatastroEditor"
 import { AdminPanel, CatalogosPanel, Login, ReportesPanel, RiegoPanel, SolicitudesPanel } from "./panel/Modulos"
 import { fetchCatalogo, fetchEvidencias, fetchSesion, salir, subirEvidencia, sugerirTipo, type CatalogoItem, type Evidencia, type Usuario } from "./producto"
@@ -696,6 +698,8 @@ export default function App() {
               }}
             />
             <RiegoPanel capatazId={rol === "capataz" ? equipoId : formEquipo} />
+            <PodaPanel />
+            <ViveroPanel delta="La copia local trae 683 filas; la hoja viva del 2026-09-25 trae 689." />
           </>
         )}
         {moduloActivo === "catastro" && <CatastroEditor onModoDibujo={setModoDibujo} />}

@@ -79,6 +79,21 @@ func (s *Store) List(ctx context.Context, q Query) (geojson.FeatureCollection, e
 		args = append(args, q.Tipo)
 		n++
 	}
+	if q.ZonaSupervisionID != "" {
+		where = append(where, fmt.Sprintf("a.zona_supervision_id = $%d", n))
+		args = append(args, q.ZonaSupervisionID)
+		n++
+	}
+	if q.CuadrillaID != "" {
+		where = append(where, fmt.Sprintf("a.cuadrilla_id = $%d", n))
+		args = append(args, q.CuadrillaID)
+		n++
+	}
+	if q.Origen != "" {
+		where = append(where, fmt.Sprintf("a.origen = $%d", n))
+		args = append(args, q.Origen)
+		n++
+	}
 	_ = n
 	query := selectFeature + " WHERE " + strings.Join(where, " AND ") + " ORDER BY a.created_at DESC"
 	rows, err := s.db.WithContext(ctx).Raw(query, args...).Rows()
@@ -136,16 +151,19 @@ func (s *Store) Create(ctx context.Context, in CreateInput) (geojson.Feature, bo
 		if nTipo != 1 {
 			return InputError{Reason: "tipo no está en el catálogo activo"}
 		}
+		sinPunto := strings.TrimSpace(in.LugarID) != "" || strings.TrimSpace(in.ZonaSupervisionID) != ""
 		if err := tx.Exec(`
 			INSERT INTO actividades (
 			  id, tipo, estado, titulo, detalle, area_feature_id, zona_feature_id,
-			  assigned_capataz_id, geom, ejecutor
+			  assigned_capataz_id, geom, ejecutor, lugar_id, zona_supervision_id
 			) VALUES (
 			  $1, $2, 'pendiente', $3, $4, NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''),
-			  ST_SetSRID(ST_MakePoint($8, $9), 4326), $10
+			  CASE WHEN $11 THEN NULL ELSE ST_SetSRID(ST_MakePoint($8, $9), 4326) END,
+			  $10, NULLIF($12, ''), NULLIF($13, '')
 			)`,
 			in.ID, in.Tipo, in.Titulo, in.Detalle, in.AreaFeatureID, in.ZonaFeatureID,
-			in.AssignedCapatazID, in.Lon, in.Lat, ejecutorDe(in.Ejecutor),
+			in.AssignedCapatazID, in.Lon, in.Lat, ejecutorDe(in.Ejecutor), sinPunto && in.Lon == 0 && in.Lat == 0,
+			strings.TrimSpace(in.LugarID), strings.TrimSpace(in.ZonaSupervisionID),
 		).Error; err != nil {
 			return err
 		}
@@ -241,13 +259,20 @@ func (s *Store) SetEstado(ctx context.Context, id, estado, actorRol, capatazID s
 		if row.estado == estado {
 			return nil
 		}
-		if estado == "cerrada" && row.ejecutor == "tercerizada" {
-			var n int
-			if err := tx.Raw(`SELECT count(*) FROM ordenes_servicio WHERE actividad_id = $1`, id).Scan(&n).Error; err != nil {
+		if estado == "cerrada" {
+			var ordenes, avances int
+			var fecha sql.NullTime
+			if err := tx.Raw(`SELECT count(*) FROM ordenes_servicio WHERE actividad_id = $1`, id).Scan(&ordenes).Error; err != nil {
 				return err
 			}
-			if n == 0 {
-				return InputError{Reason: "una labor tercerizada no se cierra sin una orden de servicio"}
+			if err := tx.Raw(`SELECT fecha_atencion FROM actividades WHERE id = $1`, id).Scan(&fecha).Error; err != nil {
+				return err
+			}
+			if err := tx.Raw(`SELECT count(*) FROM actividad_avances WHERE actividad_id = $1`, id).Scan(&avances).Error; err != nil {
+				return err
+			}
+			if err := PuedeCerrar(row.ejecutor, ordenes > 0, fecha.Valid || avances > 0); err != nil {
+				return err
 			}
 		}
 		if err := tx.Exec(`
@@ -393,7 +418,7 @@ func loadSaved(tx *gorm.DB, id string) (Saved, bool, error) {
 	var cap, area, zona sql.NullString
 	err := tx.Raw(`
 		SELECT tipo, titulo, detalle, assigned_capataz_id, area_feature_id, zona_feature_id,
-		       ST_X(geom), ST_Y(geom), created_at, COALESCE(ejecutor, 'propia')
+		       COALESCE(ST_X(geom), 0), COALESCE(ST_Y(geom), 0), created_at, COALESCE(ejecutor, 'propia')
 		FROM actividades WHERE id = $1`, id).Row().Scan(
 		&saved.Tipo, &saved.Titulo, &saved.Detalle, &cap, &area, &zona, &saved.Lon, &saved.Lat, &saved.CreatedAt, &saved.Ejecutor,
 	)
@@ -463,9 +488,9 @@ func scanFeature(rows scanner) (geojson.Feature, error) {
 	raw := json.RawMessage("null")
 	if geom.Valid && strings.TrimSpace(geom.String) != "" {
 		raw = json.RawMessage(geom.String)
-		if !json.Valid(raw) {
-			return geojson.Feature{}, fmt.Errorf("geometría inválida para %s", id)
-		}
+	}
+	if !json.Valid(raw) {
+		return geojson.Feature{}, fmt.Errorf("geometría inválida para %s", id)
 	}
 	return geojson.Feature{Type: "Feature", ID: id, Geometry: raw, Properties: props}, nil
 }

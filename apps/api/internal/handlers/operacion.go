@@ -79,9 +79,12 @@ func (h Operacion) Capataces(c *gin.Context) {
 
 func (h Operacion) List(c *gin.Context) {
 	q := operacion.Query{
-		Estado:       c.Query("estado"),
-		Tipo:         c.Query("tipo"),
-		SoloAbiertas: c.DefaultQuery("abiertas", "1") != "0",
+		Estado:            c.Query("estado"),
+		Tipo:              c.Query("tipo"),
+		ZonaSupervisionID: c.Query("zona_supervision_id"),
+		CuadrillaID:       c.Query("cuadrilla_id"),
+		Origen:            c.Query("origen"),
+		SoloAbiertas:      c.DefaultQuery("abiertas", "1") != "0",
 	}
 	if u, ok := usuarioEn(c); ok {
 		if u.Rol == "capataz" {

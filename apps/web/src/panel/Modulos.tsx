@@ -659,6 +659,7 @@ export function RiegoPanel(props: { capatazId: string }) {
   const [rows, setRows] = useState<Awaited<ReturnType<typeof fetchRiego>>["registros"]>([])
   const [error, setError] = useState("")
   const [sector, setSector] = useState("Eje central")
+  const [zona, setZona] = useState("Z1")
   const [turno, setTurno] = useState("manana")
   const [fecha, setFecha] = useState(hoyISO)
   const [nota, setNota] = useState("")
@@ -718,6 +719,7 @@ export function RiegoPanel(props: { capatazId: string }) {
             capataz_id: props.capatazId,
             fecha,
             nota,
+            zona_supervision_id: zona,
           })
             .then(() => {
               setNota("")
@@ -726,6 +728,15 @@ export function RiegoPanel(props: { capatazId: string }) {
             .catch((err: unknown) => setError(err instanceof Error ? err.message : "No se pudo registrar"))
         }}
       >
+        <label className="field">
+          Zona de supervisión
+          <select value={zona} onChange={(event) => setZona(event.target.value)}>
+            <option value="Z1">Z1</option>
+            <option value="Z2">Z2</option>
+            <option value="Z3">Z3</option>
+            <option value="Z4">Z4</option>
+          </select>
+        </label>
         <label className="field">
           Sector
           <input value={sector} onChange={(event) => setSector(event.target.value)} required />

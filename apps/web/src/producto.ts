@@ -213,6 +213,9 @@ export async function crearRiego(body: {
   capataz_id: string
   fecha: string
   nota: string
+  zona_supervision_id: string
+  ciclo?: string
+  superficie_m2?: number
 }): Promise<void> {
   await send("/api/v1/riego", "POST", body)
 }

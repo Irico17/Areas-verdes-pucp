@@ -19,6 +19,7 @@ export const TIPOS = [
 ] as const
 
 export const ESTADOS = [
+  { id: "sin_estado", label: "Sin estado", color: "#8d8478" },
   { id: "pendiente", label: "Pendiente", color: "#8a6410" },
   { id: "en_proceso", label: "En proceso", color: "#1a5c44" },
   { id: "bloqueada", label: "Bloqueada", color: "#8c3832" },
