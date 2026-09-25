@@ -468,7 +468,7 @@ func (h Atencion) Riego(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"aviso":     "Registro por sector, turno y equipo. La cobertura oficial no está definida.",
+		"aviso":     "Registro por sector, turno y equipo. Cobertura: definición pendiente.",
 		"registros": rows,
 	})
 }

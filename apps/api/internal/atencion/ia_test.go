@@ -17,4 +17,7 @@ func TestSugerirSinPista(t *testing.T) {
 	if s.Codigo != "" {
 		t.Fatalf("no debía sugerir %q", s.Codigo)
 	}
+	if !s.RequiereHumano {
+		t.Fatal("sin pista también exige a una persona")
+	}
 }

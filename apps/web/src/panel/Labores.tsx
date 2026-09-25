@@ -68,6 +68,8 @@ type Props = {
   onMotivo: (id: string) => void
   onSugerir: () => void
   sugerencia: string
+  pista?: { codigo: string; etiqueta: string } | null
+  onConfirmarPista?: () => void
   evidencias: Evidencia[]
   onSubir: (file: File) => void
 }
@@ -150,10 +152,16 @@ export function Labores(props: Props) {
             Título
             <input value={props.formTitulo} maxLength={160} onChange={(event) => props.onForm({ titulo: event.target.value })} required />
           </label>
+          <p className="hint">Regla local, en proceso. No sale de este equipo. Confirme el tipo antes de guardar.</p>
           {props.sugerencia && <p className="hint">{props.sugerencia}</p>}
           <button type="button" onClick={props.onSugerir}>
             Sugerir tipo
           </button>
+          {props.pista?.codigo && (
+            <button type="button" onClick={props.onConfirmarPista}>
+              Confirmar {props.pista.etiqueta || props.pista.codigo}
+            </button>
+          )}
           <label className="field">
             Quién ejecuta
             <select value={props.formEjecutor} onChange={(event) => props.onForm({ ejecutor: event.target.value })}>

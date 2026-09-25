@@ -81,13 +81,17 @@ test("la ficha de labores conserva el pin y muestra los campos de escritorio", (
       motivo: "",
       onMotivo: () => {},
       onSugerir: () => {},
-      sugerencia: "",
+      sugerencia: "Regla local sobre el título. No es un modelo externo: confirme antes de guardar.",
+      pista: { codigo: "poda", etiqueta: "Poda" },
+      onConfirmarPista: () => {},
       evidencias: [],
       onSubir: () => {},
     }),
   )
   assert.match(html, /Marcar labor|Cancelar marca/)
   assert.match(html, /Servicio tercerizado/)
+  assert.match(html, /en proceso/)
+  assert.match(html, /Confirmar Poda/)
   for (const etiqueta of ["Clase", "Fecha de solicitud", "Fecha de atención", "Lugar", "Comentario", "Sin estado"]) {
     assert.ok(html.includes(etiqueta), etiqueta)
   }
