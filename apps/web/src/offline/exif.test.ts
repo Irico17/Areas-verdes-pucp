@@ -13,7 +13,40 @@ test("un archivo sin EXIF no trae punto", () => {
   const punto = leerExif(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]))
   assert.equal(punto.lat, null)
   assert.equal(punto.lon, null)
+  assert.equal(punto.orientacion, null)
 })
+
+test("lee la orientación del JPEG", () => {
+  assert.equal(leerExif(jpegConOrientacion(6)).orientacion, 6)
+})
+
+function jpegConOrientacion(valor: number): Uint8Array {
+  const tiff = new Uint8Array(26)
+  const v = new DataView(tiff.buffer)
+  v.setUint8(0, 0x49)
+  v.setUint8(1, 0x49)
+  v.setUint16(2, 42, true)
+  v.setUint32(4, 8, true)
+  v.setUint16(8, 1, true)
+  v.setUint16(10, 0x0112, true)
+  v.setUint16(12, 3, true)
+  v.setUint32(14, 1, true)
+  v.setUint16(18, valor, true)
+  const body = new Uint8Array(6 + tiff.length)
+  body.set(ascii("Exif\0\0"), 0)
+  body.set(tiff, 6)
+  const out = new Uint8Array(6 + body.length + 2)
+  out[0] = 0xff
+  out[1] = 0xd8
+  out[2] = 0xff
+  out[3] = 0xe1
+  out[4] = (body.length + 2) >> 8
+  out[5] = (body.length + 2) & 0xff
+  out.set(body, 6)
+  out[out.length - 2] = 0xff
+  out[out.length - 1] = 0xd9
+  return out
+}
 
 function jpegConGps(): Uint8Array {
   const fecha = ascii("2026:09:25 10:00:00")

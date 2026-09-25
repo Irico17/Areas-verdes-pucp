@@ -33,7 +33,8 @@ INSERT INTO capas_auxiliares (
 // Load reemplaza el catastro semilla en una transacción.
 func Load(db *gorm.DB, areas, zonas []Record, capas map[string][]Record) error {
 	return db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Exec(`TRUNCATE areas_verdes, zonas, capas_auxiliares RESTART IDENTITY`).Error; err != nil {
+		// zonas es una vista sobre poligonos_cuadrilla. zonas_origen no se toca.
+		if err := tx.Exec(`TRUNCATE areas_verdes, poligonos_cuadrilla, capas_auxiliares RESTART IDENTITY CASCADE`).Error; err != nil {
 			return fmt.Errorf("truncar catastro: %w", err)
 		}
 		for _, r := range areas {

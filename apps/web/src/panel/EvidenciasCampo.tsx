@@ -129,7 +129,12 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
         sha256: await sha256Hex(bytes),
         lat,
         lon,
-        exif: { fecha: exif.fecha, lat, lon },
+        exif: {
+          fecha: exif.fecha,
+          lat,
+          lon,
+          ...(exif.orientacion != null ? { orientacion: exif.orientacion } : {}),
+        },
         createdAt: new Date().toISOString(),
       }
       const sinPunto = lat == null || lon == null

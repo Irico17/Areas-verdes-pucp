@@ -4,10 +4,11 @@ export type ExifBasico = {
   fecha: string | null
   lat: number | null
   lon: number | null
+  orientacion: number | null
 }
 
 export function leerExif(bytes: Uint8Array): ExifBasico {
-  const vacio: ExifBasico = { fecha: null, lat: null, lon: null }
+  const vacio: ExifBasico = { fecha: null, lat: null, lon: null, orientacion: null }
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return vacio
   let i = 2
   while (i + 4 < bytes.length) {
@@ -19,7 +20,7 @@ export function leerExif(bytes: Uint8Array): ExifBasico {
     if (marker === 0xe1) {
       const segment = bytes.subarray(i + 4, i + 2 + size)
       const gps = leerApp1(segment)
-      if (gps.fecha || gps.lat != null) return gps
+      if (gps.fecha || gps.lat != null || gps.orientacion != null) return gps
     }
     i += 2 + size
   }
@@ -27,7 +28,7 @@ export function leerExif(bytes: Uint8Array): ExifBasico {
 }
 
 function leerApp1(seg: Uint8Array): ExifBasico {
-  const vacio: ExifBasico = { fecha: null, lat: null, lon: null }
+  const vacio: ExifBasico = { fecha: null, lat: null, lon: null, orientacion: null }
   if (seg.length < 14) return vacio
   const head = String.fromCharCode(...seg.subarray(0, 6))
   if (head !== "Exif\0\0") return vacio
@@ -41,8 +42,9 @@ function leerApp1(seg: Uint8Array): ExifBasico {
   if (u16(2) !== 42) return vacio
   const ifd = u32(4)
   const fecha = buscarTexto(tiff, ifd, 0x0132, u16, u32)
+  const orientacion = buscarCorto(tiff, ifd, 0x0112, u16, u32)
   const gpsOff = buscarLargo(tiff, ifd, 0x8825, u16, u32)
-  if (gpsOff == null) return { fecha, lat: null, lon: null }
+  if (gpsOff == null) return { fecha, lat: null, lon: null, orientacion }
   const lat = racionalGps(tiff, gpsOff, 0x0002, u16, u32)
   const lon = racionalGps(tiff, gpsOff, 0x0004, u16, u32)
   const latRef = buscarTexto(tiff, gpsOff, 0x0001, u16, u32)
@@ -51,7 +53,26 @@ function leerApp1(seg: Uint8Array): ExifBasico {
     fecha,
     lat: lat == null ? null : latRef === "S" ? -lat : lat,
     lon: lon == null ? null : lonRef === "W" ? -lon : lon,
+    orientacion,
   }
+}
+
+function buscarCorto(
+  tiff: Uint8Array,
+  ifd: number,
+  tag: number,
+  u16: (o: number) => number,
+  u32: (o: number) => number,
+): number | null {
+  if (ifd + 2 > tiff.length) return null
+  const n = u16(ifd)
+  for (let i = 0; i < n; i++) {
+    const o = ifd + 2 + i * 12
+    if (o + 12 > tiff.length) return null
+    if (u16(o) !== tag || u16(o + 2) !== 3 || u32(o + 4) !== 1) continue
+    return u16(o + 8)
+  }
+  return null
 }
 
 function buscarLargo(
