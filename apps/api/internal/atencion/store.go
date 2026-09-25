@@ -328,16 +328,33 @@ func (s *Store) RutaEvidencia(ctx context.Context, id string) (string, string, e
 }
 
 type Fila struct {
-	ID            string `json:"id"`
-	Titulo        string `json:"titulo"`
-	Tipo          string `json:"tipo"`
-	Estado        string `json:"estado"`
-	Ejecutor      string `json:"ejecutor"`
-	Equipo        string `json:"equipo,omitempty"`
-	Zona          string `json:"zona,omitempty"`
-	CodigoExterno string `json:"codigo_externo,omitempty"`
-	Fuente        string `json:"fuente,omitempty"`
-	CreatedAt     string `json:"created_at"`
+	ID             string `json:"id"`
+	Titulo         string `json:"titulo"`
+	Tipo           string `json:"tipo"`
+	Estado         string `json:"estado"`
+	Ejecutor       string `json:"ejecutor"`
+	Equipo         string `json:"equipo,omitempty"`
+	Zona           string `json:"zona,omitempty"`
+	CodigoExterno  string `json:"codigo_externo,omitempty"`
+	Fuente         string `json:"fuente,omitempty"`
+	CreatedAt      string `json:"created_at"`
+	Clase          string `json:"clase,omitempty"`
+	Lugar          string `json:"lugar,omitempty"`
+	Cuadrilla      string `json:"cuadrilla,omitempty"`
+	FechaSolicitud string `json:"fecha_solicitud,omitempty"`
+	FechaAtencion  string `json:"fecha_atencion,omitempty"`
+}
+
+// FiltroReporte acota el reporte básico. Zona es el código Z1–Z4, el id de
+// supervisión o el zona_feature_id ya guardado. Cuadrilla es el id o el nombre
+// ficticio. Origen es actividades.origen.
+type FiltroReporte struct {
+	Estado    string
+	Desde     string
+	Hasta     string
+	Zona      string
+	Cuadrilla string
+	Origen    string
 }
 
 type Conteo struct {
@@ -351,49 +368,47 @@ type Reporte struct {
 	Filas     []Fila   `json:"filas"`
 }
 
-func (s *Store) Reporte(ctx context.Context, estado, desde, hasta string) (Reporte, error) {
+func (s *Store) Reporte(ctx context.Context, f FiltroReporte) (Reporte, error) {
 	out := Reporte{
 		Aviso:     "Conteos de labores. No son el indicador oficial de cobertura: esa definición sigue pendiente de validación.",
 		PorEstado: []Conteo{},
 		Filas:     []Fila{},
 	}
-	if err := s.db.WithContext(ctx).Raw(`
-		SELECT estado, count(*)::int AS n FROM actividades
-		WHERE archivada_en IS NULL GROUP BY estado ORDER BY estado`).Scan(&out.PorEstado).Error; err != nil {
+	where, args, err := clausulasReporte(f, false)
+	if err != nil {
 		return out, err
 	}
-	where := []string{"1=1"}
-	args := []any{}
-	n := 1
-	if estado != "" {
-		where = append(where, "$"+strconv.Itoa(n)+" = a.estado")
-		args = append(args, estado)
-		n++
+	conteo := `
+		SELECT a.estado, count(*)::int AS n
+		FROM actividades a
+		LEFT JOIN lugares l ON l.id = a.lugar_id
+		LEFT JOIN zonas_supervision z ON z.id = COALESCE(a.zona_supervision_id, l.zona_supervision_id)
+		LEFT JOIN cuadrillas q ON q.id = a.cuadrilla_id
+		WHERE ` + strings.Join(where, " AND ") + `
+		GROUP BY a.estado ORDER BY a.estado`
+	if err := s.db.WithContext(ctx).Raw(conteo, args...).Scan(&out.PorEstado).Error; err != nil {
+		return out, err
 	}
-	if desde != "" {
-		if _, err := time.Parse("2006-01-02", desde); err != nil {
-			return out, operacion.InputError{Reason: "desde usa AAAA-MM-DD"}
-		}
-		where = append(where, "a.created_at::date >= $"+strconv.Itoa(n)+"::date")
-		args = append(args, desde)
-		n++
+	where, args, err = clausulasReporte(f, true)
+	if err != nil {
+		return out, err
 	}
-	if hasta != "" {
-		if _, err := time.Parse("2006-01-02", hasta); err != nil {
-			return out, operacion.InputError{Reason: "hasta usa AAAA-MM-DD"}
-		}
-		where = append(where, "a.created_at::date <= $"+strconv.Itoa(n)+"::date")
-		args = append(args, hasta)
-		n++
-	}
-	_ = n
 	q := `
 		SELECT a.id::text, a.titulo, a.tipo, a.estado, a.ejecutor,
-		       COALESCE(c.equipo, ''), COALESCE(a.zona_feature_id, ''),
-		       COALESCE(s.codigo_externo, ''), COALESCE(s.fuente, ''), a.created_at
+		       COALESCE(c.equipo, ''),
+		       COALESCE(z.codigo, a.zona_feature_id, ''),
+		       COALESCE(s.codigo_externo, ''), COALESCE(s.fuente, ''), a.created_at,
+		       COALESCE(cl.nombre, a.clase_codigo, ''),
+		       COALESCE(NULLIF(l.nombre, ''), a.lugar_libre, ''),
+		       COALESCE(q.nombre_ficticio, ''),
+		       a.fecha_solicitud, a.fecha_atencion
 		FROM actividades a
 		LEFT JOIN capataces c ON c.id = a.assigned_capataz_id
 		LEFT JOIN solicitudes s ON s.actividad_id = a.id
+		LEFT JOIN lugares l ON l.id = a.lugar_id
+		LEFT JOIN zonas_supervision z ON z.id = COALESCE(a.zona_supervision_id, l.zona_supervision_id)
+		LEFT JOIN cuadrillas q ON q.id = a.cuadrilla_id
+		LEFT JOIN catalogos cl ON cl.clase = 'clase_actividad' AND cl.codigo = a.clase_codigo
 		WHERE ` + strings.Join(where, " AND ") + `
 		ORDER BY a.created_at DESC LIMIT 300`
 	rows, err := s.db.WithContext(ctx).Raw(q, args...).Rows()
@@ -404,13 +419,68 @@ func (s *Store) Reporte(ctx context.Context, estado, desde, hasta string) (Repor
 	for rows.Next() {
 		var f Fila
 		var when time.Time
-		if err := rows.Scan(&f.ID, &f.Titulo, &f.Tipo, &f.Estado, &f.Ejecutor, &f.Equipo, &f.Zona, &f.CodigoExterno, &f.Fuente, &when); err != nil {
+		var solicitud, atencion sql.NullTime
+		if err := rows.Scan(
+			&f.ID, &f.Titulo, &f.Tipo, &f.Estado, &f.Ejecutor, &f.Equipo, &f.Zona,
+			&f.CodigoExterno, &f.Fuente, &when, &f.Clase, &f.Lugar, &f.Cuadrilla,
+			&solicitud, &atencion,
+		); err != nil {
 			return out, err
 		}
 		f.CreatedAt = when.UTC().Format(time.RFC3339)
+		if solicitud.Valid {
+			f.FechaSolicitud = solicitud.Time.Format("2006-01-02")
+		}
+		if atencion.Valid {
+			f.FechaAtencion = atencion.Time.Format("2006-01-02")
+		}
 		out.Filas = append(out.Filas, f)
 	}
 	return out, rows.Err()
+}
+
+// clausulasReporte arma el WHERE. conEstado incluye el filtro de estado de las filas.
+// Las fechas usan el intervalo de la labor (solicitud y atención) y, si no hay
+// ninguna, la fecha de alta.
+func clausulasReporte(f FiltroReporte, conEstado bool) ([]string, []any, error) {
+	where := []string{"a.archivada_en IS NULL"}
+	args := []any{}
+	n := 1
+	add := func(clause string, val any) {
+		where = append(where, strings.ReplaceAll(clause, "$?", "$"+strconv.Itoa(n)))
+		args = append(args, val)
+		n++
+	}
+	if conEstado && f.Estado != "" {
+		add("$? = a.estado", f.Estado)
+	}
+	if f.Desde != "" {
+		if _, err := time.Parse("2006-01-02", f.Desde); err != nil {
+			return nil, nil, operacion.InputError{Reason: "desde usa AAAA-MM-DD"}
+		}
+		add(`COALESCE(a.fecha_atencion, a.fecha_solicitud, a.created_at::date) >= $?::date`, f.Desde)
+	}
+	if f.Hasta != "" {
+		if _, err := time.Parse("2006-01-02", f.Hasta); err != nil {
+			return nil, nil, operacion.InputError{Reason: "hasta usa AAAA-MM-DD"}
+		}
+		add(`COALESCE(a.fecha_atencion, a.fecha_solicitud, a.created_at::date) <= $?::date`, f.Hasta)
+	}
+	if zona := strings.TrimSpace(f.Zona); zona != "" {
+		add(`(
+			z.codigo = $?
+			OR a.zona_supervision_id::text = $?
+			OR l.zona_supervision_id::text = $?
+			OR a.zona_feature_id = $?
+		)`, zona)
+	}
+	if cuad := strings.TrimSpace(f.Cuadrilla); cuad != "" {
+		add(`(a.cuadrilla_id = $? OR q.nombre_ficticio = $?)`, cuad)
+	}
+	if origen := strings.TrimSpace(f.Origen); origen != "" {
+		add("a.origen = $?", origen)
+	}
+	return where, args, nil
 }
 
 func (s *Store) unaSolicitud(ctx context.Context, id string) (Solicitud, error) {

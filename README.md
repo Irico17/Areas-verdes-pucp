@@ -105,7 +105,7 @@ La contraseña de `.env.example` es solo para desarrollo local. `.env` no se ver
 | GET/POST | `/api/v1/ordenes` | Órdenes de una labor tercerizada |
 | GET/POST | `/api/v1/riego` | Riego por sector y turno |
 | POST | `/api/v1/evidencias` | Archivo ligado a una labor |
-| GET | `/api/v1/reportes/labores` | Reporte básico. `formato=csv` o `formato=xls` |
+| GET | `/api/v1/reportes/labores` | Reporte básico. Filtros `zona`, `cuadrilla`, `origen`, `desde`, `hasta`. `formato=csv` o `formato=xls` |
 | POST | `/api/v1/ia/sugerir-tipo` | Regla local sobre el título. No sale del proceso |
 
 Filtro opcional `bbox=minLon,minLat,maxLon,maxLat` (EPSG:4326) y `limit`.

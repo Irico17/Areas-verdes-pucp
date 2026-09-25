@@ -70,6 +70,15 @@ export type Evidencia = {
   created_at: string
 }
 
+export type FiltroReporte = {
+  estado?: string
+  desde?: string
+  hasta?: string
+  zona?: string
+  cuadrilla?: string
+  origen?: string
+}
+
 export type Reporte = {
   aviso: string
   por_estado: { estado: string; n: number }[]
@@ -84,7 +93,28 @@ export type Reporte = {
     codigo_externo?: string
     fuente?: string
     created_at: string
+    clase?: string
+    lugar?: string
+    cuadrilla?: string
+    fecha_solicitud?: string
+    fecha_atencion?: string
   }[]
+}
+
+export function reporteQuery(filtro: FiltroReporte, formato?: "csv" | "xls"): string {
+  const q = new URLSearchParams()
+  if (formato) q.set("formato", formato)
+  for (const [clave, valor] of [
+    ["estado", filtro.estado],
+    ["desde", filtro.desde],
+    ["hasta", filtro.hasta],
+    ["zona", filtro.zona],
+    ["cuadrilla", filtro.cuadrilla],
+    ["origen", filtro.origen],
+  ] as const) {
+    if (valor) q.set(clave, valor)
+  }
+  return q.toString()
 }
 
 async function send(path: string, method: string, body?: unknown): Promise<Response> {
@@ -250,21 +280,13 @@ export async function subirEvidencia(actividadId: string, archivo: File, nota: s
   }
 }
 
-export async function fetchReporte(estado: string, desde: string, hasta: string): Promise<Reporte> {
-  const q = new URLSearchParams()
-  if (estado) q.set("estado", estado)
-  if (desde) q.set("desde", desde)
-  if (hasta) q.set("hasta", hasta)
-  const res = await send(`/api/v1/reportes/labores?${q.toString()}`, "GET")
+export async function fetchReporte(filtro: FiltroReporte): Promise<Reporte> {
+  const res = await send(`/api/v1/reportes/labores?${reporteQuery(filtro)}`, "GET")
   return res.json() as Promise<Reporte>
 }
 
-export function reporteHref(formato: "csv" | "xls", estado: string, desde: string, hasta: string): string {
-  const q = new URLSearchParams({ formato })
-  if (estado) q.set("estado", estado)
-  if (desde) q.set("desde", desde)
-  if (hasta) q.set("hasta", hasta)
-  return `/api/v1/reportes/labores?${q.toString()}`
+export function reporteHref(formato: "csv" | "xls", filtro: FiltroReporte): string {
+  return `/api/v1/reportes/labores?${reporteQuery(filtro, formato)}`
 }
 
 export async function sugerirTipo(titulo: string): Promise<{ codigo: string; etiqueta: string; explicacion: string }> {

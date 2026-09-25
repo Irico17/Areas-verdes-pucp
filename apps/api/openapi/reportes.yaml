@@ -3,7 +3,20 @@
 /api/v1/reportes/labores:
   get:
     tags: [operacion]
-    summary: Reporte básico. formato=csv o formato=xls exporta el mismo filtro
+    summary: Reporte básico de labores. formato=csv o formato=xls exporta el mismo filtro
+    description: |
+      Nivel básico (HUID 23 y 25). CSV con BOM y SpreadsheetML, no xlsx y no PDF.
+      Columnas que ya existen: id, titulo, tipo, estado, ejecutor, equipo, zona,
+      codigo_externo, fuente, creada, clase, lugar, cuadrilla (nombre ficticio),
+      fecha_solicitud y fecha_atencion.
+      Fuera de este reporte, pendientes de validación en el backlog y por eso
+      ausentes: horas de personal, superficie, cobertura, rendimiento, métricas
+      de proveedor, responsable real, mes derivado, y los niveles intermedio y
+      avanzado. No hay indicador oficial.
+      Filtros: estado, zona (código Z1–Z4, id de supervisión o zona_feature_id;
+      también la zona del lugar), cuadrilla (id o nombre ficticio), origen
+      (actividades.origen) y fechas desde/hasta (AAAA-MM-DD) sobre el intervalo
+      solicitud–atención, o la fecha de alta si la labor no tiene esas fechas.
     parameters:
       - name: formato
         in: query
@@ -11,6 +24,16 @@
       - name: estado
         in: query
         schema: { type: string }
+      - name: zona
+        in: query
+        schema: { type: string, example: Z1 }
+      - name: cuadrilla
+        in: query
+        description: Id de cuadrilla o nombre ficticio. No filtra por persona real.
+        schema: { type: string }
+      - name: origen
+        in: query
+        schema: { type: string, example: monitoreo }
       - name: desde
         in: query
         schema: { type: string, example: "2026-09-01" }
@@ -19,7 +42,9 @@
         schema: { type: string }
     responses:
       "200":
-        description: JSON, CSV o SpreadsheetML
+        description: JSON, CSV o SpreadsheetML del nivel básico
+      "400":
+        description: Fecha que no usa AAAA-MM-DD
 /api/v1/ia/sugerir-tipo:
   post:
     tags: [operacion]

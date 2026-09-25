@@ -10,27 +10,15 @@ func CSV(filas []Fila) string {
 	var b strings.Builder
 	b.WriteString("\uFEFF")
 	b.WriteString("VerdePUCP — Gestión de Áreas Verdes\n")
-	b.WriteString("id,titulo,tipo,estado,ejecutor,equipo,zona,codigo_externo,fuente,creada\n")
+	b.WriteString(strings.Join(ColumnasBasicas(), ","))
+	b.WriteByte('\n')
 	for _, f := range filas {
-		b.WriteString(csv(f.ID))
-		b.WriteByte(',')
-		b.WriteString(csv(f.Titulo))
-		b.WriteByte(',')
-		b.WriteString(csv(f.Tipo))
-		b.WriteByte(',')
-		b.WriteString(csv(f.Estado))
-		b.WriteByte(',')
-		b.WriteString(csv(f.Ejecutor))
-		b.WriteByte(',')
-		b.WriteString(csv(f.Equipo))
-		b.WriteByte(',')
-		b.WriteString(csv(f.Zona))
-		b.WriteByte(',')
-		b.WriteString(csv(f.CodigoExterno))
-		b.WriteByte(',')
-		b.WriteString(csv(f.Fuente))
-		b.WriteByte(',')
-		b.WriteString(csv(f.CreatedAt))
+		for i, v := range valoresFila(f) {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(csv(v))
+		}
 		b.WriteByte('\n')
 	}
 	return b.String()
@@ -50,14 +38,14 @@ func ExcelXML(filas []Fila) string {
 	b.WriteString(`<?mso-application progid="Excel.Sheet"?>` + "\n")
 	b.WriteString(`<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Labores" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Table>`)
 	b.WriteString(`<Row><Cell><Data ss:Type="String">VerdePUCP — Gestión de Áreas Verdes</Data></Cell></Row>`)
-	cabeceras := []string{"id", "titulo", "tipo", "estado", "ejecutor", "equipo", "zona", "codigo_externo", "fuente", "creada"}
+	cabeceras := ColumnasBasicas()
 	b.WriteString("<Row>")
 	for _, h := range cabeceras {
 		b.WriteString("<Cell><Data ss:Type=\"String\">" + xmlEscape(h) + "</Data></Cell>")
 	}
 	b.WriteString("</Row>")
 	for _, f := range filas {
-		vals := []string{f.ID, f.Titulo, f.Tipo, f.Estado, f.Ejecutor, f.Equipo, f.Zona, f.CodigoExterno, f.Fuente, f.CreatedAt}
+		vals := valoresFila(f)
 		b.WriteString("<Row>")
 		for _, v := range vals {
 			b.WriteString("<Cell><Data ss:Type=\"String\">" + xmlEscape(v) + "</Data></Cell>")
@@ -66,6 +54,24 @@ func ExcelXML(filas []Fila) string {
 	}
 	b.WriteString("</Table></Worksheet></Workbook>")
 	return b.String()
+}
+
+// ColumnasBasicas son las del reporte básico ya definidas. No incluye horas,
+// superficie, cobertura ni el nombre real de una persona.
+func ColumnasBasicas() []string {
+	return []string{
+		"id", "titulo", "tipo", "estado", "ejecutor", "equipo", "zona",
+		"codigo_externo", "fuente", "creada", "clase", "lugar", "cuadrilla",
+		"fecha_solicitud", "fecha_atencion",
+	}
+}
+
+func valoresFila(f Fila) []string {
+	return []string{
+		f.ID, f.Titulo, f.Tipo, f.Estado, f.Ejecutor, f.Equipo, f.Zona,
+		f.CodigoExterno, f.Fuente, f.CreatedAt, f.Clase, f.Lugar, f.Cuadrilla,
+		f.FechaSolicitud, f.FechaAtencion,
+	}
 }
 
 func xmlEscape(s string) string {

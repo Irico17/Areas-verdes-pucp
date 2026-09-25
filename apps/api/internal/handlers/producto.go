@@ -571,7 +571,14 @@ func (h Atencion) Reporte(c *gin.Context) {
 	if !h.ready(c) {
 		return
 	}
-	rep, err := h.Store.Reporte(c.Request.Context(), c.Query("estado"), c.Query("desde"), c.Query("hasta"))
+	rep, err := h.Store.Reporte(c.Request.Context(), atencion.FiltroReporte{
+		Estado:    c.Query("estado"),
+		Desde:     c.Query("desde"),
+		Hasta:     c.Query("hasta"),
+		Zona:      c.Query("zona"),
+		Cuadrilla: c.Query("cuadrilla"),
+		Origen:    c.Query("origen"),
+	})
 	if err != nil {
 		writeAtencion(c, err)
 		return
