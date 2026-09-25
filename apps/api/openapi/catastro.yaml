@@ -1,4 +1,4 @@
-# Frente: 1A y 1C. Áreas, zonas y fichas. No mezclar inventario.
+# Frente: 1A
 # Añade paths en este archivo. No edites el YAML de otro tag.
 /api/v1/geo/resumen:
   get:
@@ -124,3 +124,158 @@
     responses:
       "201":
         description: Ficha creada
+/api/v1/catastro/zonas-supervision:
+  get:
+    tags: [catastro]
+    summary: Zonas de supervisión Z1–Z4
+    operationId: listarZonasSupervision
+    responses:
+      "200":
+        description: Zonas activas
+      "401":
+        description: Sin sesión
+/api/v1/catastro/poligonos:
+  get:
+    tags: [catastro]
+    summary: Polígonos de cuadrilla
+    description: La vista `zonas` sigue sirviendo la misma geometría.
+    operationId: listarPoligonos
+    responses:
+      "200":
+        description: Polígonos activos
+      "401":
+        description: Sin sesión
+/api/v1/catastro/cuadrillas:
+  get:
+    tags: [catastro]
+    summary: Cuadrillas ficticias
+    operationId: listarCuadrillas
+    responses:
+      "200":
+        description: Equipos activos
+      "401":
+        description: Sin sesión
+/api/v1/catastro/lugares:
+  get:
+    tags: [catastro]
+    summary: Lugares del campus
+    operationId: listarLugares
+    responses:
+      "200":
+        description: Lugares activos
+      "401":
+        description: Sin sesión
+/api/v1/catastro/especies:
+  get:
+    tags: [catastro]
+    summary: Especies
+    operationId: listarEspecies
+    responses:
+      "200":
+        description: Especies activas
+      "401":
+        description: Sin sesión
+/api/v1/catastro/ejemplares:
+  get:
+    tags: [catastro]
+    summary: Ejemplares de flora
+    description: salud permanece null. El historial de códigos es /codigos.
+    operationId: listarEjemplares
+    responses:
+      "200":
+        description: Hasta 100 ejemplares
+      "401":
+        description: Sin sesión
+/api/v1/catastro/ejemplares/{id}/codigos:
+  get:
+    tags: [catastro]
+    summary: Códigos anteriores de un ejemplar
+    operationId: listarCodigosEjemplar
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Historial
+      "401":
+        description: Sin sesión
+  post:
+    tags: [catastro]
+    summary: Conserva el código anterior y escribe el nuevo
+    operationId: recodificarEjemplar
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "201":
+        description: Código anterior guardado
+      "401":
+        description: Sin sesión
+      "404":
+        description: Sin código anterior distinto
+/api/v1/catastro/fauna:
+  get:
+    tags: [catastro]
+    summary: Fauna editable
+    operationId: listarFauna
+    responses:
+      "200":
+        description: Filas
+      "401":
+        description: Sin sesión
+/api/v1/catastro/puertas:
+  get:
+    tags: [catastro]
+    summary: Puertas editables
+    operationId: listarPuertas
+    responses:
+      "200":
+        description: Filas
+      "401":
+        description: Sin sesión
+/api/v1/catastro/playas:
+  get:
+    tags: [catastro]
+    summary: Playas de estacionamiento
+    operationId: listarPlayas
+    responses:
+      "200":
+        description: Filas
+      "401":
+        description: Sin sesión
+/api/v1/catastro/veredas:
+  get:
+    tags: [catastro]
+    summary: Veredas en riesgo
+    operationId: listarVeredas
+    responses:
+      "200":
+        description: Filas
+      "401":
+        description: Sin sesión
+/api/v1/catastro/xerofiticas:
+  get:
+    tags: [catastro]
+    summary: Áreas xerofíticas
+    operationId: listarXerofiticas
+    responses:
+      "200":
+        description: Filas
+      "401":
+        description: Sin sesión
+/api/v1/catastro/jardines-reserva:
+  get:
+    tags: [catastro]
+    summary: Jardines de reserva
+    operationId: listarJardinesReserva
+    responses:
+      "200":
+        description: Filas
+      "401":
+        description: Sin sesión

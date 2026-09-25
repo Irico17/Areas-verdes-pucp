@@ -12,7 +12,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func TestMigraciones001a008EnVacioYEnActual(t *testing.T) {
+func TestMigraciones001a019EnVacioYSobre008(t *testing.T) {
 	base := os.Getenv("MIGRATE_TEST_URL")
 	if base == "" {
 		base = "postgres://campus:campus@127.0.0.1:5432/postgres?sslmode=disable"
@@ -27,8 +27,8 @@ func TestMigraciones001a008EnVacioYEnActual(t *testing.T) {
 	}
 
 	dir := filepath.Join("..", "..", "migrations")
-	vacia := "campus_verde_ola0_vacia"
-	actual := "campus_verde_ola0_actual"
+	vacia := "campus_verde_ola1a_vacia"
+	actual := "campus_verde_ola1a_actual"
 	recrear(t, admin, vacia)
 	recrear(t, admin, actual)
 	defer func() {
@@ -51,7 +51,7 @@ func TestMigraciones001a008EnVacioYEnActual(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, e := range entries {
-		if e.IsDir() || e.Name() >= "007" {
+		if e.IsDir() || e.Name() >= "009" {
 			continue
 		}
 		body, err := os.ReadFile(filepath.Join(dir, e.Name()))
@@ -63,12 +63,16 @@ func TestMigraciones001a008EnVacioYEnActual(t *testing.T) {
 		}
 	}
 	if err := aplicar(actual, previas); err != nil {
-		t.Fatalf("001-006 sobre base vacía: %v", err)
+		t.Fatalf("001-008 sobre base vacía: %v", err)
+	}
+	if err := sembrarZona(actual); err != nil {
+		t.Fatalf("semilla de zona: %v", err)
 	}
 	if err := aplicar(actual, dir); err != nil {
-		t.Fatalf("007-008 sobre la base actual: %v", err)
+		t.Fatalf("010-019 sobre la base con 001-008: %v", err)
 	}
 	assertEsquema(t, actual)
+	assertCopiaZona(t, actual)
 
 	gdb, err := db.Open(urlDe(actual))
 	if err != nil {
@@ -89,8 +93,52 @@ func TestMigraciones001a008EnVacioYEnActual(t *testing.T) {
 	if err := gdb.Raw(`SELECT count(*) FROM schema_migrations`).Scan(&aplicadas).Error; err != nil {
 		t.Fatal(err)
 	}
-	if aplicadas != 8 {
+	if aplicadas != 18 {
 		t.Fatalf("migraciones aplicadas = %d", aplicadas)
+	}
+}
+
+func sembrarZona(name string) error {
+	gdb, err := db.Open(urlDe(name))
+	if err != nil {
+		return err
+	}
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		return err
+	}
+	defer sqlDB.Close()
+	return gdb.Exec(`
+		INSERT INTO zonas (feature_id, source_index, nombre, geom)
+		VALUES (
+		  'Z-9001', 9001, 'Polígono de prueba',
+		  ST_SetSRID(ST_GeomFromText('MULTIPOLYGON(((-77.08 -12.07, -77.079 -12.07, -77.079 -12.069, -77.08 -12.069, -77.08 -12.07)))'), 4326)
+		)`).Error
+}
+
+func assertCopiaZona(t *testing.T, name string) {
+	t.Helper()
+	gdb, err := db.Open(urlDe(name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sqlDB.Close()
+	var n int
+	if err := gdb.Raw(`SELECT count(*) FROM poligonos_cuadrilla WHERE feature_id = 'Z-9001'`).Scan(&n).Error; err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("%s: la copia del polígono no está en poligonos_cuadrilla", name)
+	}
+	if err := gdb.Raw(`SELECT count(*) FROM zonas WHERE feature_id = 'Z-9001'`).Scan(&n).Error; err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("%s: la vista zonas no devuelve el polígono", name)
 	}
 }
 
@@ -159,5 +207,59 @@ func assertEsquema(t *testing.T, name string) {
 	}
 	if err := gdb.Exec(`INSERT INTO permisos (rol, accion) VALUES ('rol_inexistente', 'consultar')`).Error; err == nil {
 		t.Fatalf("%s: la FK aceptó un rol fuera del catálogo", name)
+	}
+	var relkind string
+	if err := gdb.Raw(`SELECT relkind FROM pg_class WHERE relname = 'zonas'`).Scan(&relkind).Error; err != nil {
+		t.Fatal(err)
+	}
+	if relkind != "v" {
+		t.Fatalf("%s: zonas debe ser una vista, relkind=%s", name, relkind)
+	}
+	if err := gdb.Raw(`SELECT relkind FROM pg_class WHERE relname = 'zonas_origen'`).Scan(&relkind).Error; err != nil {
+		t.Fatal(err)
+	}
+	if relkind != "r" {
+		t.Fatalf("%s: zonas_origen debe seguir siendo tabla, relkind=%s", name, relkind)
+	}
+	for _, tabla := range []string{
+		"zonas_supervision", "cuadrillas", "poligonos_cuadrilla", "asignaciones_poligono",
+		"lugares", "especies", "ejemplares", "codigos_historicos", "medidas_palmera",
+		"fauna", "puertas", "playas_estacionamiento", "veredas_riesgo", "xerofiticas", "jardines_reserva",
+	} {
+		var n int
+		if err := gdb.Raw(`SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ?`, tabla).Scan(&n).Error; err != nil {
+			t.Fatal(err)
+		}
+		if n != 1 {
+			t.Fatalf("%s: falta la tabla %s", name, tabla)
+		}
+	}
+	var cuadrillas int
+	if err := gdb.Raw(`SELECT count(*) FROM cuadrillas`).Scan(&cuadrillas).Error; err != nil {
+		t.Fatal(err)
+	}
+	if cuadrillas != 3 {
+		t.Fatalf("%s: cuadrillas de demostración = %d", name, cuadrillas)
+	}
+	if err := gdb.Exec(`
+		INSERT INTO actividades (id, tipo, estado, titulo, detalle, geom)
+		VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1', 'riego', 'pendiente', 'Sin ubicación', '', NULL)
+	`).Error; err == nil {
+		t.Fatalf("%s: actividades aceptó geom NULL sin lugar ni zona", name)
+	}
+	if err := gdb.Exec(`
+		INSERT INTO lugares (nombre, nombre_norm, lat, lon)
+		VALUES ('Eje de prueba', 'eje de prueba', -12.07, -77.08)
+	`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := gdb.Exec(`
+		INSERT INTO actividades (id, tipo, estado, titulo, detalle, geom, lugar_id)
+		VALUES (
+		  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2', 'riego', 'pendiente', 'Con lugar', '', NULL,
+		  (SELECT id FROM lugares WHERE nombre_norm = 'eje de prueba')
+		)
+	`).Error; err != nil {
+		t.Fatalf("%s: actividades no aceptó geom NULL con lugar: %v", name, err)
 	}
 }

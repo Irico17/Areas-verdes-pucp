@@ -65,7 +65,7 @@ func New(deps Deps) *gin.Engine {
 	handlers.RegistrarCatalogos(r, hdeps)
 	handlers.RegistrarCatastro(r, hdeps)
 	handlers.RegistrarAtencion(r, hdeps)
-	// 1A ejemplares:        handlers.RegistrarEjemplares(r, hdeps)
+	handlers.RegistrarEjemplares(r, hdeps)
 	// 1B seguridad:         middleware de arriba; sin línea nueva de ruta
 	// 1D evidencias:        ya está en RegistrarAtencion; un path nuevo es handlers.RegistrarEvidencias(r, hdeps)
 	// 2A poda y vivero:     handlers.RegistrarPoda(r, hdeps)
