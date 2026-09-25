@@ -1,44 +1,5 @@
-import { useMemo, useState } from "react"
-
-export type ViveroItem = {
-  id: string
-  fecha: string
-  area: string
-  subproceso: string
-  etapa: string
-  descripcion: string
-  observaciones: string
-  responsables: string
-  lugar: string
-}
-
-export const AREAS = ["Fauna", "Flora", "Ambiental", "Otros"] as const
-
-const VACIO: ViveroItem = {
-  id: "",
-  fecha: "",
-  area: "Flora",
-  subproceso: "",
-  etapa: "",
-  descripcion: "",
-  observaciones: "",
-  responsables: "",
-  lugar: "",
-}
-
-export function validarVivero(item: ViveroItem, catalogo: { subproceso: string[]; etapa: string[] }): { campo: string; motivo: string }[] {
-  const fallos: { campo: string; motivo: string }[] = []
-  if (item.area && !AREAS.includes(item.area as (typeof AREAS)[number])) {
-    fallos.push({ campo: "area", motivo: "El área tiene que estar en el catálogo." })
-  }
-  if (item.subproceso && catalogo.subproceso.length > 0 && !catalogo.subproceso.includes(item.subproceso)) {
-    fallos.push({ campo: "subproceso", motivo: "El subproceso se da de alta al importar; después no es texto libre." })
-  }
-  if (item.etapa && catalogo.etapa.length > 0 && !catalogo.etapa.includes(item.etapa)) {
-    fallos.push({ campo: "etapa", motivo: "La etapa se da de alta al importar; después no es texto libre." })
-  }
-  return fallos
-}
+import { useEffect, useMemo, useState } from "react"
+import { AREAS, VIVERO_VACIO, validarVivero, type ViveroItem } from "./vivero"
 
 type Props = {
   iniciales?: ViveroItem[]
@@ -50,9 +11,24 @@ type Props = {
 export function ViveroPanel(props: Props) {
   const [mes, setMes] = useState("")
   const [items, setItems] = useState<ViveroItem[]>(props.iniciales ?? [])
-  const [form, setForm] = useState<ViveroItem>(VACIO)
+  const [form, setForm] = useState<ViveroItem>(VIVERO_VACIO)
   const [aviso, setAviso] = useState("")
   const catalogo = { subproceso: props.subprocesos ?? [], etapa: props.etapas ?? [] }
+  useEffect(() => {
+    if (props.iniciales) return
+    void fetch("/api/v1/vivero", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { registros?: (ViveroItem & { lugar_libre?: string })[] } | null) => {
+        if (!body?.registros) return
+        setItems(
+          body.registros.map((item) => ({
+            ...item,
+            lugar: item.lugar || item.lugar_libre || "",
+          })),
+        )
+      })
+      .catch(() => {})
+  }, [props.iniciales])
   const visibles = useMemo(
     () => items.filter((item) => !mes || item.fecha.startsWith(mes)),
     [items, mes],
@@ -89,9 +65,32 @@ export function ViveroPanel(props: Props) {
             return
           }
           const guardado = { ...form, id: form.id || crypto.randomUUID() }
-          setItems((current) => [...current, guardado])
-          setAviso("Registro de vivero guardado.")
-          setForm(VACIO)
+          void fetch("/api/v1/vivero", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: guardado.id,
+              fecha: guardado.fecha,
+              area: guardado.area,
+              subproceso: guardado.subproceso,
+              etapa: guardado.etapa,
+              descripcion: guardado.descripcion,
+              observaciones: guardado.observaciones,
+              responsables: guardado.responsables,
+              lugar_libre: guardado.lugar,
+            }),
+          })
+            .then((res) => {
+              if (!res.ok) {
+                setAviso("No se pudo guardar el registro de vivero.")
+                return
+              }
+              setItems((current) => [...current, guardado])
+              setAviso("Registro de vivero guardado.")
+              setForm(VIVERO_VACIO)
+            })
+            .catch(() => setAviso("Sin conexión con la API."))
         }}
       >
         <label className="field">

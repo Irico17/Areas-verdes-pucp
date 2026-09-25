@@ -24,14 +24,17 @@ const (
 )
 
 type fuentesLote struct {
-	Zonas    []byte
-	Jefes    []byte
-	Lugares  []byte
-	Gviz     []byte
-	Palmeras []byte
-	Cafetos  []byte
-	Tipos    []byte
-	Origen   map[string]string
+	Zonas     []byte
+	Jefes     []byte
+	Lugares   []byte
+	Gviz      []byte
+	Palmeras  []byte
+	Cafetos   []byte
+	Tipos     []byte
+	Monitoreo []byte
+	Poda      []byte
+	Vivero    []byte
+	Origen    map[string]string
 }
 
 // ResolverFuentes lee cada fuente en vivo una vez y la deja en data/raw/lote.
@@ -93,7 +96,27 @@ func ResolverFuentes(rawDir string, client *http.Client) (fuentesLote, error) {
 			return fuentesLote{}, err
 		}
 	}
+	out.Monitoreo = leerCopia(filepath.Join(rawDir, "sheets", "monitoreo_2026.csv"))
+	out.Poda = leerCopia(filepath.Join(rawDir, "sheets", "poda.csv"))
+	out.Vivero = leerCopia(filepath.Join(rawDir, "sheets", "vivero.csv"))
+	if len(out.Monitoreo) > 0 {
+		out.Origen["monitoreo"] = "baseline"
+	}
+	if len(out.Poda) > 0 {
+		out.Origen["poda"] = "baseline"
+	}
+	if len(out.Vivero) > 0 {
+		out.Origen["vivero"] = "baseline"
+	}
 	return out, nil
+}
+
+func leerCopia(path string) []byte {
+	b, err := os.ReadFile(path)
+	if err != nil || len(bytes.TrimSpace(b)) == 0 {
+		return nil
+	}
+	return b
 }
 
 // recortarCatalogo deja clase, tipo y descripción. El bloque derecho trae roles y no se guarda.

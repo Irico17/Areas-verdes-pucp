@@ -1,8 +1,6 @@
 package etl
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"sort"
 	"strings"
 )
@@ -32,19 +30,6 @@ func NuevaTabla() *Tabla {
 	return &Tabla{porHash: map[string]string{}}
 }
 
-func normalizarPersona(s string) string {
-	s = strings.TrimSpace(strings.ToLower(s))
-	r := strings.NewReplacer(
-		"á", "a", "é", "e", "í", "i", "ó", "o", "ú", "u", "ü", "u", "ñ", "n",
-	)
-	return strings.Join(strings.Fields(r.Replace(s)), " ")
-}
-
-func hashPersona(normalizado string) string {
-	sum := sha256.Sum256([]byte(normalizado))
-	return hex.EncodeToString(sum[:])
-}
-
 // EsEtiqueta indica un rótulo que se conserva tal cual.
 func EsEtiqueta(nombre string) bool {
 	_, ok := etiquetasConservadas[normalizarPersona(nombre)]
@@ -65,9 +50,8 @@ type grupo struct {
 	n     int
 }
 
-// Aplicar asigna ficticios por frecuencia. Los conteos 259, 168 y 104
-// usan la terna de jefes. El resto, la terna de monitoreo, en ese orden.
-// El mismo hash siempre cae en el mismo ficticio dentro de la tabla.
+// Aplicar asigna ficticios. Los conteos 259, 168 y 104 usan la terna de jefes.
+// El resto sale del hash del nombre, así el mismo responsable no cambia entre lotes.
 func (t *Tabla) Aplicar(nombres []string) {
 	counts := map[string]*grupo{}
 	for _, nombre := range nombres {
@@ -100,19 +84,32 @@ func (t *Tabla) Aplicar(nombres []string) {
 	for i, n := range conteosJefes {
 		jefes[n] = ficticiosJefes[i]
 	}
-	usoMon := 0
 	for _, g := range grupos {
 		if nombre, ok := jefes[g.n]; ok {
 			t.porHash[g.hash] = nombre
 			continue
 		}
-		if usoMon < len(ficticiosMonitoreo) {
-			t.porHash[g.hash] = ficticiosMonitoreo[usoMon]
-			usoMon++
-			continue
-		}
-		t.porHash[g.hash] = ficticiosMonitoreo[len(ficticiosMonitoreo)-1]
+		t.porHash[g.hash] = ficticiosMonitoreo[indiceEstable(g.hash)]
 	}
+}
+
+// indiceEstable elige el ficticio con el hash del nombre, no con el orden del lote.
+func indiceEstable(hash string) int {
+	n := 0
+	for i := 0; i < len(hash) && i < 8; i++ {
+		c := hash[i]
+		n *= 16
+		switch {
+		case c >= '0' && c <= '9':
+			n += int(c - '0')
+		case c >= 'a' && c <= 'f':
+			n += int(c-'a') + 10
+		}
+	}
+	if n < 0 {
+		n = -n
+	}
+	return n % len(ficticiosMonitoreo)
 }
 
 // Ficticio sustituye un nombre de persona. Vacío sigue vacío.

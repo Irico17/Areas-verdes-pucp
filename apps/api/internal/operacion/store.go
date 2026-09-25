@@ -159,7 +159,9 @@ func (s *Store) Create(ctx context.Context, in CreateInput) (geojson.Feature, bo
 			) VALUES (
 			  $1, $2, 'pendiente', $3, $4, NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''),
 			  CASE WHEN $11 THEN NULL ELSE ST_SetSRID(ST_MakePoint($8, $9), 4326) END,
-			  $10, NULLIF($12, ''), NULLIF($13, '')
+			  $10,
+			  CASE WHEN $12 ~ '^[0-9]+$' THEN $12::bigint ELSE NULL END,
+			  (SELECT id FROM zonas_supervision WHERE codigo = NULLIF($13, '') LIMIT 1)
 			)`,
 			in.ID, in.Tipo, in.Titulo, in.Detalle, in.AreaFeatureID, in.ZonaFeatureID,
 			in.AssignedCapatazID, in.Lon, in.Lat, ejecutorDe(in.Ejecutor), sinPunto && in.Lon == 0 && in.Lat == 0,
@@ -194,6 +196,47 @@ func (s *Store) Create(ctx context.Context, in CreateInput) (geojson.Feature, bo
 	}
 	f, err := s.one(ctx, in.ID)
 	return f, created, err
+}
+
+func (s *Store) GuardarFicha(ctx context.Context, in FichaInput) error {
+	if !uuidRe.MatchString(in.ID) {
+		return InputError{Reason: "id debe ser un UUID"}
+	}
+	if in.FechaSolicitud != "" && in.FechaAtencion != "" && in.FechaAtencion < in.FechaSolicitud {
+		return InputError{Reason: "la atención no puede ser anterior a la solicitud"}
+	}
+	var lugarID any
+	lugar := strings.TrimSpace(in.Lugar)
+	if lugar != "" {
+		var id int64
+		err := s.db.WithContext(ctx).Raw(`SELECT COALESCE((SELECT id FROM lugares WHERE id::text = $1 LIMIT 1), 0)`, lugar).Scan(&id).Error
+		if err != nil {
+			return err
+		}
+		if id != 0 {
+			lugarID = id
+		}
+	}
+	res := s.db.WithContext(ctx).Exec(`
+		UPDATE actividades SET
+		  clase_codigo = NULLIF($2, ''),
+		  fecha_solicitud = NULLIF($3, '')::date,
+		  fecha_atencion = NULLIF($4, '')::date,
+		  lugar_id = $5,
+		  lugar_libre = $6,
+		  comentario = $7,
+		  updated_at = now()
+		WHERE id = $1 AND archivada_en IS NULL`,
+		in.ID, strings.TrimSpace(in.Clase), strings.TrimSpace(in.FechaSolicitud), strings.TrimSpace(in.FechaAtencion),
+		lugarID, lugar, strings.TrimSpace(in.Comentario),
+	)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return ErrNoEncontrada
+	}
+	return nil
 }
 
 func (s *Store) Assign(ctx context.Context, id, capatazID, actorRol string, usuarioID int64) (geojson.Feature, error) {

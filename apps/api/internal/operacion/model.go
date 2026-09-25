@@ -88,6 +88,16 @@ type CreateInput struct {
 	ZonaSupervisionID string
 }
 
+// FichaInput es la edición de escritorio de una labor ya creada.
+type FichaInput struct {
+	ID             string
+	Clase          string `json:"clase"`
+	FechaSolicitud string `json:"fecha_solicitud"`
+	FechaAtencion  string `json:"fecha_atencion"`
+	Lugar          string `json:"lugar"`
+	Comentario     string `json:"comentario"`
+}
+
 // Query filtra el listado GeoJSON.
 type Query struct {
 	Rol               string

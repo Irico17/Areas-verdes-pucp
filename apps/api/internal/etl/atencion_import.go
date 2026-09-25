@@ -114,6 +114,23 @@ func CodigoExterno(valor string) string {
 	return ""
 }
 
+// ConservarCodigoSolicitud normaliza OSG- y vacía los marcadores.
+// Un código que no empieza por OSG- se deja igual: el PATCH no lo borra.
+func ConservarCodigoSolicitud(valor string) string {
+	if codigo := CodigoExterno(valor); codigo != "" {
+		return codigo
+	}
+	v := strings.TrimSpace(valor)
+	if v == "" {
+		return ""
+	}
+	switch strings.ToLower(normalizarPersona(v)) {
+	case "aun no tiene codigo", "no aplica", "sin codigo", "s/c":
+		return ""
+	}
+	return v
+}
+
 func uuidOrigen(kind, ref string) string {
 	sum := sha256.Sum256([]byte(kind + ":" + ref))
 	h := hex.EncodeToString(sum[:16])
@@ -161,10 +178,6 @@ func parseCoord(valor string) (*float64, error) {
 		return nil, err
 	}
 	return &n, nil
-}
-
-func enCampus(lat, lon float64) bool {
-	return lat <= -11.90 && lat >= -12.20 && lon <= -76.90 && lon >= -77.30
 }
 
 func leerCSV(path string) ([][]string, error) {

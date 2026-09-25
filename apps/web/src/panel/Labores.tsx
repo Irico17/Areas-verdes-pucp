@@ -219,7 +219,7 @@ export function Labores(props: Props) {
             {props.selected.ejecutor === "tercerizada" ? " · tercerizada" : " · personal propio"}
           </p>
           {props.selected.detalle && <p className="lede">{props.selected.detalle}</p>}
-          <FichaLabor />
+          <FichaLabor actividadId={props.selected.queued ? "" : props.selected.id} />
           {props.selected.queued ? (
             <p className="hint">Aún no está en el servidor. El id ya quedó reservado para el reintento.</p>
           ) : (
@@ -294,13 +294,44 @@ export function Labores(props: Props) {
   )
 }
 
-function FichaLabor() {
+function FichaLabor(props: { actividadId?: string }) {
   const [clase, setClase] = useState("Mantenimiento de jardines")
   const [solicitud, setSolicitud] = useState("")
   const [atencion, setAtencion] = useState("")
   const [lugar, setLugar] = useState("")
   const [comentario, setComentario] = useState("")
   const [aviso, setAviso] = useState("")
+  async function guardar() {
+    if (solicitud && atencion && atencion < solicitud) {
+      setAviso("La atención no puede ser anterior a la solicitud.")
+      return
+    }
+    if (!props.actividadId) {
+      setAviso("Cree la labor en el mapa para poder guardar la ficha.")
+      return
+    }
+    try {
+      const res = await fetch(`/api/v1/operacion/actividades/${props.actividadId}/ficha`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clase,
+          fecha_solicitud: solicitud,
+          fecha_atencion: atencion,
+          lugar,
+          comentario,
+        }),
+      })
+      if (!res.ok) {
+        setAviso("No se pudo guardar la ficha.")
+        return
+      }
+      setAviso(lugar || "Ficha guardada. El pin del mapa no cambia.")
+    } catch {
+      setAviso("Sin conexión con la API.")
+    }
+  }
   return (
     <fieldset className="form">
       <legend>Ficha de la labor</legend>
@@ -324,16 +355,7 @@ function FichaLabor() {
         Comentario
         <textarea value={comentario} rows={2} maxLength={2000} onChange={(event) => setComentario(event.target.value)} />
       </label>
-      <button
-        type="button"
-        onClick={() => {
-          if (solicitud && atencion && atencion < solicitud) {
-            setAviso("La atención no puede ser anterior a la solicitud.")
-            return
-          }
-          setAviso(lugar || "La ficha queda en la labor. El pin del mapa no cambia.")
-        }}
-      >
+      <button type="button" onClick={() => void guardar()}>
         Guardar ficha
       </button>
       {aviso && <p className="hint">{aviso}</p>}

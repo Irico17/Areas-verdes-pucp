@@ -197,9 +197,10 @@ type Riego struct {
 func consultaRiego(capatazID string) (string, []any) {
 	q := `
 		SELECT r.id::text, r.sector, r.turno, COALESCE(r.capataz_id, ''), COALESCE(c.equipo, ''),
-		       to_char(r.fecha, 'YYYY-MM-DD'), r.nota, COALESCE(r.zona_supervision_id, ''), COALESCE(r.ciclo, '')
+		       to_char(r.fecha, 'YYYY-MM-DD'), r.nota, COALESCE(z.codigo, ''), COALESCE(r.ciclo, '')
 		FROM riego_registros r
-		LEFT JOIN capataces c ON c.id = r.capataz_id`
+		LEFT JOIN capataces c ON c.id = r.capataz_id
+		LEFT JOIN zonas_supervision z ON z.id = r.zona_supervision_id`
 	var args []any
 	if id := strings.TrimSpace(capatazID); id != "" {
 		q += ` WHERE r.capataz_id = $1`
@@ -243,17 +244,17 @@ func (s *Store) CrearRiego(ctx context.Context, id, sector, turno, capatazID, fe
 	if !operacionUUID(id) {
 		return operacion.InputError{Reason: "id debe ser un UUID"}
 	}
-	var n int
-	if err := s.db.WithContext(ctx).Raw(`SELECT count(*) FROM zonas_supervision WHERE id = $1`, zonaID).Scan(&n).Error; err != nil {
+	var zonaNum int64
+	if err := s.db.WithContext(ctx).Raw(`SELECT COALESCE((SELECT id FROM zonas_supervision WHERE codigo = $1), 0)`, zonaID).Scan(&zonaNum).Error; err != nil {
 		return err
 	}
-	if n != 1 {
+	if zonaNum == 0 {
 		return operacion.InputError{Reason: "la zona de supervisión no existe"}
 	}
 	err := s.db.WithContext(ctx).Exec(`
 		INSERT INTO riego_registros (id, sector, turno, capataz_id, fecha, nota, zona_supervision_id, ciclo, superficie_m2)
 		VALUES ($1, $2, $3, NULLIF($4, ''), $5::date, $6, $7, $8, NULLIF($9, 0))`,
-		id, sector, turno, strings.TrimSpace(capatazID), fecha, strings.TrimSpace(nota), zonaID, strings.TrimSpace(ciclo), superficie,
+		id, sector, turno, strings.TrimSpace(capatazID), fecha, strings.TrimSpace(nota), zonaNum, strings.TrimSpace(ciclo), superficie,
 	).Error
 	if err != nil && (strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique")) {
 		return operacion.InputError{Reason: "ya hay un riego de esa zona, turno y fecha"}

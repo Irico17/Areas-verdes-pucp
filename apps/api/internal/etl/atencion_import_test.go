@@ -101,6 +101,12 @@ func TestImportarPoda25(t *testing.T) {
 	if CodigoExterno("aun no tiene codigo") != "" || CodigoExterno("") != "" {
 		t.Fatal("el código OSG no debe autogenerarse")
 	}
+	if ConservarCodigoSolicitud("INT-12") != "INT-12" {
+		t.Fatal("el PATCH no debe borrar un código que no empieza por OSG-")
+	}
+	if ConservarCodigoSolicitud("osg-9") != "OSG-9" || ConservarCodigoSolicitud("sin codigo") != "" {
+		t.Fatal("la conservación no normalizó OSG ni el marcador vacío")
+	}
 }
 
 func TestImportarViveroDelta(t *testing.T) {
@@ -137,5 +143,10 @@ func TestFicticioEstable(t *testing.T) {
 	}
 	if a.Ficticio("Ana Ejemplo") == "Ana Ejemplo" {
 		t.Fatal("se conservó un nombre de persona")
+	}
+	otro := NuevaTabla()
+	otro.Aplicar([]string{"Ana Ejemplo", "Pedro Ejemplo", "Pedro Ejemplo"})
+	if otro.Ficticio("Ana Ejemplo") != a.Ficticio("Ana Ejemplo") {
+		t.Fatal("el mismo responsable cambió de ficticio entre lotes")
 	}
 }

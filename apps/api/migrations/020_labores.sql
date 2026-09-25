@@ -3,23 +3,24 @@
 
 ALTER TABLE actividades ADD COLUMN IF NOT EXISTS fecha_solicitud DATE;
 ALTER TABLE actividades ADD COLUMN IF NOT EXISTS fecha_atencion DATE;
-ALTER TABLE actividades ADD COLUMN IF NOT EXISTS lugar_id TEXT;
-ALTER TABLE actividades ADD COLUMN IF NOT EXISTS zona_supervision_id TEXT;
+-- lugar_id y zona_supervision_id ya son BIGINT con FK (016). No se recrean como TEXT.
 ALTER TABLE actividades ADD COLUMN IF NOT EXISTS cuadrilla_id TEXT;
 ALTER TABLE actividades ADD COLUMN IF NOT EXISTS clase_codigo TEXT;
 ALTER TABLE actividades ADD COLUMN IF NOT EXISTS tipo_codigo TEXT;
 ALTER TABLE actividades ADD COLUMN IF NOT EXISTS comentario TEXT NOT NULL DEFAULT '';
+ALTER TABLE actividades ADD COLUMN IF NOT EXISTS lugar_libre TEXT NOT NULL DEFAULT '';
 ALTER TABLE actividades ADD COLUMN IF NOT EXISTS origen_ref TEXT;
 ALTER TABLE actividades ADD COLUMN IF NOT EXISTS origen TEXT NOT NULL DEFAULT 'interna';
 
 ALTER TABLE actividades ALTER COLUMN geom DROP NOT NULL;
 
+ALTER TABLE actividades DROP CONSTRAINT IF EXISTS actividades_ubicacion_chk;
 ALTER TABLE actividades DROP CONSTRAINT IF EXISTS actividades_geom_lugar_chk;
-ALTER TABLE actividades ADD CONSTRAINT actividades_geom_lugar_chk CHECK (
+ALTER TABLE actividades ADD CONSTRAINT actividades_ubicacion_chk CHECK (
   geom IS NOT NULL
   OR lugar_id IS NOT NULL
   OR zona_supervision_id IS NOT NULL
-  OR origen_ref IS NOT NULL
+  OR (origen_ref IS NOT NULL AND origen_ref <> '')
 );
 
 ALTER TABLE actividades DROP CONSTRAINT IF EXISTS actividades_fechas_chk;

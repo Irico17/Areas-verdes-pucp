@@ -55,6 +55,9 @@ func CargarLote(db *gorm.DB, fuentes fuentesLote) (ReporteLote, error) {
 		if err := cargarTipos(tx, leido.Tipos, loteID, &rep); err != nil {
 			return err
 		}
+		if err := cargarAtencion(tx, fuentes, loteID, &rep); err != nil {
+			return err
+		}
 		return nil
 	})
 	return rep, err

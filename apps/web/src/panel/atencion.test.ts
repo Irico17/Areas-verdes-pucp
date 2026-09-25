@@ -3,8 +3,10 @@ import { test } from "node:test"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { Labores, type LaborItem } from "./Labores.tsx"
-import { PodaPanel, codigoExterno, validarPoda, type PodaItem } from "./Poda.tsx"
-import { ViveroPanel, validarVivero } from "./Vivero.tsx"
+import { PodaPanel } from "./Poda.tsx"
+import { codigoExterno, validarPoda, type PodaItem } from "./poda.ts"
+import { ViveroPanel } from "./Vivero.tsx"
+import { validarVivero } from "./vivero.ts"
 
 const labor: LaborItem = {
   id: "1",

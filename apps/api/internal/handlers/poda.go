@@ -198,7 +198,7 @@ func (h PodaVivero) EditarSolicitud(c *gin.Context) {
 		return
 	}
 	body.ID = c.Param("id")
-	body.CodigoExterno = etl.CodigoExterno(body.CodigoExterno)
+	body.CodigoExterno = etl.ConservarCodigoSolicitud(body.CodigoExterno)
 	item, err := h.Store.EditarSolicitud(c.Request.Context(), body)
 	if err != nil {
 		writeAtencion(c, err)
