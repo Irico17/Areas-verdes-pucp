@@ -18,6 +18,14 @@ type Store struct{ db *gorm.DB }
 
 func NewStore(db *gorm.DB) *Store { return &Store{db: db} }
 
+// DB expone la conexión para el paquete de evidencias.
+func (s *Store) DB() *gorm.DB {
+	if s == nil {
+		return nil
+	}
+	return s.db
+}
+
 type Solicitud struct {
 	ID            string  `json:"id"`
 	CodigoExterno *string `json:"codigo_externo,omitempty"`

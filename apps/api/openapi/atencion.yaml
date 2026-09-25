@@ -27,3 +27,43 @@
     responses:
       "200":
         description: Registros
+/api/v1/evidencias:
+  get:
+    tags: [atencion]
+    summary: Metadatos de evidencias de una labor
+    parameters:
+      - name: actividad_id
+        in: query
+        schema: { type: string, format: uuid }
+    responses:
+      "200":
+        description: Lista
+  post:
+    tags: [atencion]
+    summary: Adjuntar evidencia con hash, punto opcional y EXIF
+    description: |
+      Multipart. Campos: id (UUID de la evidencia, distinto de la labor),
+      actividad_id, archivo, sha256 (hex), nota, lat, lon, exif (objeto JSON).
+      El servidor recalcula el SHA-256. El mismo id con el mismo hash es idempotente (200).
+      El mismo id con otro contenido responde 409. Tope 8 MB. MIME por contenido.
+    responses:
+      "201":
+        description: Evidencia guardada y evento de bitácora tipo evidencia
+      "200":
+        description: El mismo archivo ya estaba registrado
+      "409":
+        description: Ese UUID ya existe con otro contenido
+/api/v1/evidencias/{id}/archivo:
+  get:
+    tags: [atencion]
+    summary: Descarga el archivo con sesión y permiso consultar
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    responses:
+      "200":
+        description: Binario
+      "404":
+        description: No existe

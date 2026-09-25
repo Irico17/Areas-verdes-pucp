@@ -10,8 +10,9 @@ import {
   type Capataz,
   type Evento,
 } from "../operacion"
-import type { CatalogoItem, Evidencia } from "../producto"
+import type { CatalogoItem } from "../producto"
 import type { Rol } from "../types"
+import { EvidenciasCampo } from "./EvidenciasCampo"
 
 export type LaborItem = {
   id: string
@@ -67,8 +68,6 @@ type Props = {
   onMotivo: (id: string) => void
   onSugerir: () => void
   sugerencia: string
-  evidencias: Evidencia[]
-  onSubir: (file: File) => void
 }
 
 export function Labores(props: Props) {
@@ -267,28 +266,7 @@ export function Labores(props: Props) {
                   </div>
                 </>
               )}
-              <h3>Evidencias</h3>
-              {props.evidencias.length === 0 && <p className="empty">Esta labor no tiene archivos.</p>}
-              <ul className="labor-list">
-                {props.evidencias.map((item) => (
-                  <li key={item.id} className="agenda">
-                    <a href={`/api/v1/evidencias/${item.id}/archivo`}>{item.nombre}</a>
-                    <small>{item.nota}</small>
-                  </li>
-                ))}
-              </ul>
-              <label className="field sheet-action">
-                Adjuntar foto o PDF
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0]
-                    if (file) props.onSubir(file)
-                    event.target.value = ""
-                  }}
-                />
-              </label>
+              <EvidenciasCampo actividadId={props.selected.queued ? "" : props.selected.id} />
               <h3>Bitácora</h3>
               {props.timelineError && <p className="status error">{props.timelineError}</p>}
               <ol className="timeline">

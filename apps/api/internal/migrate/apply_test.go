@@ -89,7 +89,7 @@ func TestMigraciones001a008EnVacioYEnActual(t *testing.T) {
 	if err := gdb.Raw(`SELECT count(*) FROM schema_migrations`).Scan(&aplicadas).Error; err != nil {
 		t.Fatal(err)
 	}
-	if aplicadas != 8 {
+	if aplicadas != 9 {
 		t.Fatalf("migraciones aplicadas = %d", aplicadas)
 	}
 }

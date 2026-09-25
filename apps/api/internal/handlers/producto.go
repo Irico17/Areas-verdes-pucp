@@ -3,7 +3,6 @@ package handlers
 import (
 	"io"
 	"net/http"
-	"path/filepath"
 	"strings"
 
 	"campusverde/api/internal/accesos"
@@ -522,50 +521,23 @@ func (h Atencion) Evidencias(c *gin.Context) {
 }
 
 func (h Atencion) SubirEvidencia(c *gin.Context) {
-	if _, ok := exige(c, "registrar"); !ok {
+	u, ok := exige(c, "registrar")
+	if !ok {
 		return
 	}
 	if !h.ready(c) {
 		return
 	}
-	actividadID := c.PostForm("actividad_id")
-	nota := c.PostForm("nota")
-	file, err := c.FormFile("archivo")
+	res, err := guardarEvidenciaForm(c, h.Store.DB(), h.files(), u)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "falta el archivo"})
-		return
-	}
-	if file.Size > 8<<20 {
-		c.JSON(400, gin.H{"error": "el archivo supera 8 MB"})
-		return
-	}
-	mime := file.Header.Get("Content-Type")
-	ext := extDe(mime, file.Filename)
-	if ext == "" {
-		c.JSON(400, gin.H{"error": "se admite jpg, png, webp o pdf"})
-		return
-	}
-	id := c.PostForm("id")
-	if id == "" {
-		c.JSON(400, gin.H{"error": "falta el id"})
-		return
-	}
-	src, err := file.Open()
-	if err != nil {
-		c.JSON(400, gin.H{"error": "no se pudo leer el archivo"})
-		return
-	}
-	defer src.Close()
-	ref, err := h.files().Put(c.Request.Context(), id+ext, src, mime)
-	if err != nil {
-		c.JSON(500, gin.H{"error": "no se pudo guardar el archivo"})
-		return
-	}
-	if err := h.Store.GuardarEvidencia(c.Request.Context(), id, actividadID, filepath.Base(file.Filename), mime, ref, nota, int(file.Size)); err != nil {
 		writeAtencion(c, err)
 		return
 	}
-	c.JSON(201, gin.H{"id": id})
+	code := 201
+	if res.Idempotente {
+		code = 200
+	}
+	c.JSON(code, gin.H{"id": res.ID, "idempotente": res.Idempotente})
 }
 
 func (h Atencion) Archivo(c *gin.Context) {
