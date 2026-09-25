@@ -197,6 +197,41 @@ func col(row []string, i int) string {
 	return strings.TrimSpace(row[i])
 }
 
+// TipoCatalogo es una fila del catálogo de actividades. El bloque derecho del CSV,
+// donde aparece un rol genérico, no se lee.
+type TipoCatalogo struct {
+	Clase       string
+	Tipo        string
+	Descripcion string
+}
+
+// ImportarCatalogo lee las 45 actividades. Ignora cualquier columna después de la descripción.
+func ImportarCatalogo(path string) ([]TipoCatalogo, error) {
+	rows, err := leerCSV(path)
+	if err != nil {
+		return nil, err
+	}
+	var out []TipoCatalogo
+	clase := ""
+	vistos := map[string]bool{}
+	for i, row := range rows[1:] {
+		if c := col(row, 0); c != "" {
+			clase = c
+		}
+		tipo := col(row, 1)
+		if clase == "" || tipo == "" {
+			continue
+		}
+		clave := normalizarPersona(clase) + "|" + normalizarPersona(tipo)
+		if vistos[clave] {
+			return nil, fmt.Errorf("tipo repetido en la fila %d", i+2)
+		}
+		vistos[clave] = true
+		out = append(out, TipoCatalogo{Clase: clase, Tipo: tipo, Descripcion: col(row, 2)})
+	}
+	return out, nil
+}
+
 // ImportarMonitoreo lee la hoja de 2026. El estado vacío queda en sin_estado.
 func ImportarMonitoreo(path string, tabla *Tabla) ([]LaborImportada, ReporteImportacion, error) {
 	rows, err := leerCSV(path)

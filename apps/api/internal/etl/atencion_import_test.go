@@ -16,6 +16,26 @@ func rawSheets(t *testing.T) string {
 	return filepath.Join(filepath.Dir(file), "..", "..", "..", "..", "data", "raw", "sheets")
 }
 
+func TestImportarCatalogo45(t *testing.T) {
+	rows, err := ImportarCatalogo(filepath.Join(rawSheets(t), "actividades.csv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 45 {
+		t.Fatalf("tipos %d", len(rows))
+	}
+	clases := map[string]int{}
+	for _, row := range rows {
+		clases[row.Clase]++
+		if strings.Contains(row.Descripcion, "@") {
+			t.Fatal("la descripción no debe traer un correo")
+		}
+	}
+	if len(clases) != 7 {
+		t.Fatalf("clases %d", len(clases))
+	}
+}
+
 func TestImportarMonitoreo283(t *testing.T) {
 	tabla := NuevaTabla()
 	rows, rep, err := ImportarMonitoreo(filepath.Join(rawSheets(t), "monitoreo_2026.csv"), tabla)
