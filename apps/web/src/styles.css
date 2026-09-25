@@ -544,4 +544,47 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   button:active, .row-actions a:active { transform: none; }
 }
 
+.evidencia-campo { margin-top: 4px; }
+.evidencia-ayuda { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.evidencia-acciones { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.evidencia-captura, .evidencia-archivo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.evidencia-archivo {
+  border: 1px solid var(--linea);
+  background: var(--hoja);
+}
+.evidencia-captura input, .evidencia-archivo input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0;
+}
+.evidencia-lista { list-style: none; padding: 0; margin: 0; }
+.evidencia-lista li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--linea);
+}
+.chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border: 1px solid var(--linea);
+}
+.chip.pendiente { color: var(--pendiente); }
+.chip.enviada { color: var(--verde); }
+
 * { scrollbar-color: var(--linea) transparent; }

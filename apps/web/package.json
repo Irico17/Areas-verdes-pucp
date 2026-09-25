@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint --max-warnings 0",
-    "test": "node --experimental-strip-types --import ./src/test/register.mjs --test src/map/coverage.test.ts src/map/draw.test.ts src/panel/catastro.test.ts src/panel/CatastroEditor.test.ts",
+    "test": "node --experimental-strip-types --import ./src/test/register.mjs --test src/map/coverage.test.ts src/map/draw.test.ts src/panel/catastro.test.ts src/panel/CatastroEditor.test.ts src/offline/cola.test.ts src/offline/comprimir.test.ts src/offline/exif.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {
