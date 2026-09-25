@@ -149,4 +149,13 @@ func TestFicticioEstable(t *testing.T) {
 	if otro.Ficticio("Ana Ejemplo") != a.Ficticio("Ana Ejemplo") {
 		t.Fatal("el mismo responsable cambió de ficticio entre lotes")
 	}
+	lleno := NuevaTabla()
+	var muchas []string
+	for i := 0; i < 259; i++ {
+		muchas = append(muchas, "Ana Ejemplo")
+	}
+	lleno.Aplicar(muchas)
+	if lleno.Ficticio("Ana Ejemplo") != a.Ficticio("Ana Ejemplo") {
+		t.Fatal("el conteo del lote cambió el ficticio de la misma persona")
+	}
 }

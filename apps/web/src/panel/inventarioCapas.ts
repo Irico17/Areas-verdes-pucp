@@ -125,6 +125,85 @@ export function solicitudBaja(entidad: EntidadInventario, id: number): Solicitud
   return { method: "DELETE", path: `/api/v1/inventario/${entidad}/${id}` }
 }
 
+export type RegistroInventario = Record<string, unknown>
+
+export function textoFila(fila: RegistroInventario, clave: string, respaldo = ""): string {
+  const valor = fila[clave]
+  if (valor == null) return respaldo
+  const texto = String(valor).trim()
+  return texto === "" ? respaldo : String(valor)
+}
+
+/** Copia los campos reales de la fila al formulario. No inventa blancos. */
+export function formularioDesdeFila(fila: RegistroInventario): {
+  codigo: string
+  lat: string
+  lon: string
+  conteos: Conteos
+  nota: string
+  recomendaciones: string
+  estado: string
+  sede: string
+  subtipo: string
+  titulo: string
+  url: string
+  reserva: { origen: string; fecha: string; hora_inicio: string; hora_fin: string; estado: string; evento: string; unidad: string }
+  ficha: {
+    feature_id: string
+    nombre: string
+    codigo: string
+    nota: string
+    clase: string
+    riego: string
+    area_m2: string
+    perimetro_m: string
+    pertenecen: string
+    uso: string
+    geojson: string
+  }
+} {
+  const conteos = { ...SUMAS_PUBLICADAS }
+  for (const campo of CONTEOS_TACHO) {
+    const n = Number(fila[campo])
+    conteos[campo] = Number.isFinite(n) ? n : 0
+  }
+  return {
+    codigo: textoFila(fila, "codigo"),
+    lat: textoFila(fila, "lat"),
+    lon: textoFila(fila, "lon"),
+    conteos,
+    nota: textoFila(fila, "nota"),
+    recomendaciones: textoFila(fila, "recomendaciones"),
+    estado: textoFila(fila, "estado", "operativo"),
+    sede: textoFila(fila, "sede"),
+    subtipo: textoFila(fila, "subtipo", "fuente"),
+    titulo: textoFila(fila, "titulo"),
+    url: textoFila(fila, "url"),
+    reserva: {
+      origen: "ficticio",
+      fecha: textoFila(fila, "fecha"),
+      hora_inicio: textoFila(fila, "hora_inicio"),
+      hora_fin: textoFila(fila, "hora_fin"),
+      estado: textoFila(fila, "estado", "reservado"),
+      evento: textoFila(fila, "evento"),
+      unidad: textoFila(fila, "unidad"),
+    },
+    ficha: {
+      feature_id: textoFila(fila, "feature_id"),
+      nombre: textoFila(fila, "nombre"),
+      codigo: textoFila(fila, "codigo"),
+      nota: textoFila(fila, "nota"),
+      clase: textoFila(fila, "clase"),
+      riego: textoFila(fila, "riego"),
+      area_m2: textoFila(fila, "area_m2"),
+      perimetro_m: textoFila(fila, "perimetro_m"),
+      pertenecen: textoFila(fila, "pertenecen"),
+      uso: textoFila(fila, "uso"),
+      geojson: textoFila(fila, "geojson"),
+    },
+  }
+}
+
 export function cuerpoPunto(row: { titulo: string; lat: number; lon: number; url: string }): { titulo: string; lat: number; lon: number; url: string } {
   return { titulo: row.titulo.trim(), lat: row.lat, lon: row.lon, url: row.url.trim() }
 }

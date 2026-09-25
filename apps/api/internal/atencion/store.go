@@ -3,6 +3,8 @@ package atencion
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -391,9 +393,46 @@ func (s *Store) Reporte(ctx context.Context, f FiltroReporte) (Reporte, error) {
 	if err := s.db.WithContext(ctx).Raw(conteo, args...).Scan(&out.PorEstado).Error; err != nil {
 		return out, err
 	}
-	where, args, err = clausulasReporte(f, true)
+	err = s.recorrerFilas(ctx, f, func(fila Fila) error {
+		out.Filas = append(out.Filas, fila)
+		return nil
+	})
+	return out, err
+}
+
+// Exportar escribe CSV o XLS fila a fila mientras lee la base. Los conteos del
+// JSON siguen cubriendo el filtro entero; este camino no arma el archivo en un string.
+func (s *Store) Exportar(ctx context.Context, f FiltroReporte, formato string, w io.Writer) error {
+	if _, _, err := clausulasReporte(f, true); err != nil {
+		return err
+	}
+	switch formato {
+	case "csv":
+		if err := abrirCSV(w); err != nil {
+			return err
+		}
+		return s.recorrerFilas(ctx, f, func(fila Fila) error {
+			return escribirFilaCSV(w, fila)
+		})
+	case "xls":
+		if err := abrirExcel(w); err != nil {
+			return err
+		}
+		if err := s.recorrerFilas(ctx, f, func(fila Fila) error {
+			return escribirFilaExcel(w, fila)
+		}); err != nil {
+			return err
+		}
+		return cerrarExcel(w)
+	default:
+		return fmt.Errorf("formato")
+	}
+}
+
+func (s *Store) recorrerFilas(ctx context.Context, f FiltroReporte, fn func(Fila) error) error {
+	where, args, err := clausulasReporte(f, true)
 	if err != nil {
-		return out, err
+		return err
 	}
 	q := `
 		SELECT a.id::text, a.titulo, a.tipo, a.estado, a.ejecutor,
@@ -412,33 +451,45 @@ func (s *Store) Reporte(ctx context.Context, f FiltroReporte) (Reporte, error) {
 		LEFT JOIN cuadrillas q ON q.id = a.cuadrilla_id
 		LEFT JOIN catalogos cl ON cl.clase = 'clase_actividad' AND cl.codigo = a.clase_codigo
 		WHERE ` + strings.Join(where, " AND ") + `
-		ORDER BY a.created_at DESC LIMIT 300`
+		ORDER BY a.created_at DESC`
 	rows, err := s.db.WithContext(ctx).Raw(q, args...).Rows()
 	if err != nil {
-		return out, err
+		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var f Fila
-		var when time.Time
-		var solicitud, atencion sql.NullTime
-		if err := rows.Scan(
-			&f.ID, &f.Titulo, &f.Tipo, &f.Estado, &f.Ejecutor, &f.Equipo, &f.Zona,
-			&f.CodigoExterno, &f.Fuente, &when, &f.Clase, &f.Lugar, &f.Cuadrilla,
-			&solicitud, &atencion,
-		); err != nil {
-			return out, err
+		fila, err := scanFilaReporte(rows)
+		if err != nil {
+			return err
 		}
-		f.CreatedAt = when.UTC().Format(time.RFC3339)
-		if solicitud.Valid {
-			f.FechaSolicitud = solicitud.Time.Format("2006-01-02")
+		if err := fn(fila); err != nil {
+			return err
 		}
-		if atencion.Valid {
-			f.FechaAtencion = atencion.Time.Format("2006-01-02")
-		}
-		out.Filas = append(out.Filas, f)
 	}
-	return out, rows.Err()
+	return rows.Err()
+}
+
+func scanFilaReporte(rows interface {
+	Scan(dest ...any) error
+}) (Fila, error) {
+	var f Fila
+	var when time.Time
+	var solicitud, atencion sql.NullTime
+	if err := rows.Scan(
+		&f.ID, &f.Titulo, &f.Tipo, &f.Estado, &f.Ejecutor, &f.Equipo, &f.Zona,
+		&f.CodigoExterno, &f.Fuente, &when, &f.Clase, &f.Lugar, &f.Cuadrilla,
+		&solicitud, &atencion,
+	); err != nil {
+		return Fila{}, err
+	}
+	f.CreatedAt = when.UTC().Format(time.RFC3339)
+	if solicitud.Valid {
+		f.FechaSolicitud = solicitud.Time.Format("2006-01-02")
+	}
+	if atencion.Valid {
+		f.FechaAtencion = atencion.Time.Format("2006-01-02")
+	}
+	return f, nil
 }
 
 // clausulasReporte arma el WHERE. conEstado incluye el filtro de estado de las filas.

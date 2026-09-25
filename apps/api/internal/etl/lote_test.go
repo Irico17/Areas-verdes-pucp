@@ -103,8 +103,18 @@ func TestAnonimizaSinFragmentosPersonales(t *testing.T) {
 			t.Fatalf("fragmento personal %q en %q", frag, texto)
 		}
 	}
-	if !strings.Contains(texto, "Valeria Quispe") || !strings.Contains(texto, "campo depo") || !strings.Contains(texto, "Bosque húme") {
+	clavePersona0, _, _ := clavePersona(personas[0])
+	nombre0 := tabla[clavePersona0].Nombre
+	permitidos := map[string]bool{
+		"Valeria Quispe": true, "Mateo Salazar": true, "Renato Cárdenas": true,
+		"Nora Beltrán": true, "Iván Paredes": true, "Lucía Mendoza": true,
+	}
+	if !permitidos[nombre0] || !strings.Contains(texto, "campo depo") || !strings.Contains(texto, "Bosque húme") {
 		t.Fatalf("faltan ficticio o etiquetas: %s", texto)
+	}
+	pocas := asignarCuadrillas([]string{personas[0], personas[0]})
+	if pocas[clavePersona0].Nombre != nombre0 {
+		t.Fatal("el mismo responsable cambió de ficticio al cambiar el tamaño del lote")
 	}
 	clave, etiqueta, _ := clavePersona(personas[0])
 	if etiqueta || !esHashPersona(clave) {

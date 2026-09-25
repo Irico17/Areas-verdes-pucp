@@ -403,7 +403,9 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   to { background-position: -100% 0; }
 }
 
+.sheet-chrome { display: none; }
 .sheet-close { display: none; }
+.sheet-handle { display: none; }
 .sheet-action { width: 100%; }
 
 @media (min-width: 821px) and (max-width: 1199px) {
@@ -480,28 +482,51 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
     background: var(--papel);
     animation: sheet 180ms var(--ease);
   }
+  .panel.sheet {
+    height: auto;
+    max-height: calc(100dvh - 64px - env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    touch-action: none;
+  }
+  .sheet-chrome {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    min-height: 44px;
+    border-bottom: 1px solid var(--linea);
+    background: var(--hoja);
+    border-radius: 16px 16px 0 0;
+    touch-action: none;
+  }
+  .sheet-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    cursor: grab;
+    touch-action: none;
+  }
+  .sheet-grab {
+    width: 40px;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--marino);
+  }
   .sheet-close {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
     min-height: 44px;
+    min-width: 44px;
+    margin-right: 8px;
     border: 0;
-    border-bottom: 1px solid var(--linea);
-    background: var(--hoja);
-    border-radius: 16px 16px 0 0;
+    background: transparent;
     font-weight: 600;
   }
-  .sheet-close::before {
-    content: "";
-    width: 36px;
-    height: 4px;
-    border-radius: 4px;
-    background: var(--linea);
-    position: absolute;
-    top: 8px;
-  }
+  .panel-view { touch-action: pan-y; }
   .sheet-action {
     position: sticky;
     bottom: 0;
@@ -511,7 +536,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   .panel-view { padding-bottom: 20px; }
   .maplibregl-ctrl-bottom-left,
   .maplibregl-ctrl-bottom-right {
-    bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+    bottom: calc(var(--sheet-h, 12px) + 64px + env(safe-area-inset-bottom)) !important;
   }
   .maplibregl-ctrl-top-right {
     top: calc(64px + env(safe-area-inset-top)) !important;
@@ -549,8 +574,48 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   to { transform: none; opacity: 1; }
 }
 
+.calendario { display: flex; flex-direction: column; gap: 12px; }
+.cal-head, .cal-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; }
+.cal-titulo { margin: 0; font-weight: 600; flex: 1; text-align: center; }
+.cal-mes {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.cal-dow { font-size: 12px; font-weight: 600; color: var(--muted); text-align: center; }
+.cal-dia {
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  background: var(--hoja);
+  text-align: left;
+  overflow: hidden;
+}
+.cal-dia small { font-size: 11px; line-height: 1.2; color: var(--marino); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.cal-dia.fuera { opacity: 0.45; }
+.cal-dia.hoy, .cal-col.hoy { border-color: var(--verde); }
+.cal-semana { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.cal-col { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.cal-col h3 { margin: 0; font-size: 13px; }
+.cal-evento { padding: 6px; border-radius: 6px; background: var(--hoja); border: 1px solid var(--linea); display: flex; flex-direction: column; gap: 2px; }
+.cal-evento small { color: var(--muted); }
+.cal-evento.cancelado { opacity: 0.6; }
+.cal-evento.realizado { background: color-mix(in srgb, var(--verde) 12%, var(--hoja)); }
+
+@media (max-width: 820px) {
+  .cal-semana { grid-template-columns: 1fr; }
+  .cal-dia { min-height: 52px; padding: 2px; }
+  .cal-dia small { display: none; }
+  .cal-dia.hoy small, .cal-mes .cal-dia:focus-visible small { display: block; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .panel-view, .panel { animation: none; }
+  .panel-view, .panel, .panel.sheet { animation: none; transition: none; }
   .skel { animation: none; background: var(--linea); }
   button, .roles button, .primary, .row-actions a { transition: none; }
   button:active, .row-actions a:active { transform: none; }

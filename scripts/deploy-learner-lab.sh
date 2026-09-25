@@ -38,14 +38,19 @@ docker push "$WEB_REPO:latest"
 
 bash "$ROOT/scripts/poner-secretos.sh" "$INSTANCE"
 
-aws ssm send-command \
+echo "URL: $URL"
+
+# Reinicio por SSM con LabInstanceProfile. El puerto 22 queda cerrado y no hay llave SSH.
+if ! aws ssm send-command \
   --instance-ids "$INSTANCE" \
   --document-name AWS-RunShellScript \
   --comment "campus verde compose" \
   --parameters 'commands=["systemctl restart campus.service"]' \
-  >/tmp/campus-ssm.json || {
-    echo "SSM no respondió. Si tiene la clave SSH: ssh ec2-user@$(terraform output -raw public_ip) 'systemctl restart campus.service'"
-  }
+  --region "$AWS_DEFAULT_REGION" \
+  >/tmp/campus-ssm.json; then
+  echo "SSM no aceptó el reinicio de campus.service. La URL de esta sesión es: $URL" >&2
+  exit 1
+fi
 
 echo "Listo: $URL"
 echo "Cuando cierre el lab la instancia se detiene. Para no gastar el saldo: terraform destroy -auto-approve"

@@ -35,6 +35,18 @@ func TestContratoUneLosTags(t *testing.T) {
 	if strings.Contains(raw, "TRUNCATE") {
 		t.Fatal("el contrato servido no debe mencionar TRUNCATE")
 	}
+	for _, path := range []string{
+		"/api/v1/sesion",
+		"/api/v1/inventario/tachos/{id}",
+		"/api/v1/inventario/bebederos/{id}",
+		"/api/v1/inventario/puntos/{id}",
+		"/api/v1/inventario/reservas/{id}",
+		"/api/v1/inventario/capas/{capa}/{id}",
+	} {
+		if _, ok := doc.Paths[path]["delete"]; !ok {
+			t.Errorf("falta DELETE %s", path)
+		}
+	}
 }
 
 func TestContratoRechazaPathRepetido(t *testing.T) {
