@@ -79,7 +79,7 @@ func New(deps Deps) *gin.Engine {
 	// 1D evidencias:        ya está en RegistrarAtencion; un path nuevo es handlers.RegistrarEvidencias(r, hdeps)
 	// 2A poda y vivero:     handlers.RegistrarPoda(r, hdeps)
 	// 2B reservas reales:   ampliar RegistrarReservas
-	// 2C auditoría:         handlers.RegistrarAuditoria(r, hdeps)
+	handlers.RegistrarAuditoria(r, hdeps)
 	// 2D reportes:          ampliar RegistrarAtencion
 	// 3A importaciones:     handlers.RegistrarImportaciones(r, hdeps)
 

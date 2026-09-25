@@ -127,7 +127,7 @@ func (h Operacion) Create(c *gin.Context) {
 		ID: body.ID, Tipo: body.Tipo, Titulo: body.Titulo, Detalle: body.Detalle,
 		Lon: body.Lon, Lat: body.Lat, AreaFeatureID: body.AreaFeatureID,
 		ZonaFeatureID: body.ZonaFeatureID, AssignedCapatazID: capataz,
-		ActorRol: u.Rol, Ejecutor: body.Ejecutor,
+		ActorRol: u.Rol, Ejecutor: body.Ejecutor, UsuarioID: u.ID,
 	}
 	if err := operacion.ValidateCreate(in); err != nil {
 		writeOperacionErr(c, err)
@@ -172,7 +172,7 @@ func (h Operacion) Assign(c *gin.Context) {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
 	}
-	feature, err := h.Store.Assign(c.Request.Context(), c.Param("id"), capataz, rol)
+	feature, err := h.Store.Assign(c.Request.Context(), c.Param("id"), capataz, rol, u.ID)
 	if err != nil {
 		writeOperacionErr(c, err)
 		return
@@ -209,7 +209,7 @@ func (h Operacion) Estado(c *gin.Context) {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
 	}
-	feature, err := h.Store.SetEstado(c.Request.Context(), c.Param("id"), body.Estado, rol, capataz)
+	feature, err := h.Store.SetEstado(c.Request.Context(), c.Param("id"), body.Estado, rol, capataz, u.ID)
 	if err != nil {
 		writeOperacionErr(c, err)
 		return
@@ -240,7 +240,7 @@ func (h Operacion) Archive(c *gin.Context) {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
 	}
-	if err := h.Store.Archive(c.Request.Context(), c.Param("id"), rol, body.Motivo); err != nil {
+	if err := h.Store.Archive(c.Request.Context(), c.Param("id"), rol, body.Motivo, u.ID); err != nil {
 		writeOperacionErr(c, err)
 		return
 	}
