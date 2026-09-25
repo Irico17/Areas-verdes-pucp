@@ -39,3 +39,16 @@ El despliegue no usa la llave SSH del laboratorio. `ssh_cidr` y `ssh_key_name` v
 Una IP pública efímera cambia cuando la instancia se detiene al cerrar la sesión. Terraform reserva `aws_eip.app` y la asocia a la instancia. Esa asociación se mantiene con la máquina detenida, así que `http://<elastic-ip>` no cambia al encenderla de nuevo. El lab lo permite con el rol existente; este módulo no crea IAM.
 
 Si en otra sesión el lab liberó esa IP y Terraform asigna otra, el job imprime la URL nueva (`URL:` y `Listo:`). La Elastic IP asociada a una instancia detenida se cobra; véase `docs/DEPLOY-AWS.md`.
+
+## Sesión por HTTP
+
+El lab publica `http://<elastic-ip>` sin TLS. Una cookie `Secure` no se guarda en ese origen y el login parece no hacer nada: la API responde 200 y el navegador descarta `cv_sesion`.
+
+`CAMPUS_COOKIE_SECURE` manda. Vale `true` solo con HTTPS. `CAMPUS_ENV=production` no la enciende: el compose de la instancia fija ese entorno también cuando nginx sigue en el puerto 80.
+
+`scripts/poner-secretos.sh` escribe el valor así:
+
+- Si al ejecutarlo ya está exportada `CAMPUS_COOKIE_SECURE`, usa ese valor.
+- Si no, en la instancia mira `/opt/campus/certs/fullchain.pem` y `privkey.pem` (el mismo par que el contenedor web monta en `/etc/nginx/certs`). Con los dos archivos pone `true`. Sin ellos pone `false`.
+
+Después de copiar o quitar el certificado hay que volver a correr `poner-secretos.sh` y reiniciar la API para que la cookie coincida con nginx.

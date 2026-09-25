@@ -245,7 +245,7 @@ func assertEsquema(t *testing.T, name string) {
 	if err := gdb.Raw(`SELECT count(*) FROM cuadrillas`).Scan(&cuadrillas).Error; err != nil {
 		t.Fatal(err)
 	}
-	if cuadrillas != 3 {
+	if cuadrillas != 9 {
 		t.Fatalf("%s: cuadrillas de demostración = %d", name, cuadrillas)
 	}
 	var geomNull string
@@ -275,5 +275,187 @@ func assertEsquema(t *testing.T, name string) {
 		)
 	`).Error; err != nil {
 		t.Fatalf("%s: actividades no aceptó geom NULL con lugar: %v", name, err)
+	}
+}
+
+func TestMigracionesConCodigosDuplicados(t *testing.T) {
+	base := os.Getenv("MIGRATE_TEST_URL")
+	if base == "" {
+		base = "postgres://campus:campus@127.0.0.1:5432/postgres?sslmode=disable"
+	}
+	admin, err := sql.Open("pgx", base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer admin.Close()
+	if err := admin.Ping(); err != nil {
+		t.Skipf("sin postgres de prueba: %v", err)
+	}
+
+	dir := filepath.Join("..", "..", "migrations")
+	name := "campus_verde_dup_codigo"
+	recrear(t, admin, name)
+	defer func() {
+		_, _ = admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name)
+		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + name)
+	}()
+
+	previas := filepath.Join(t.TempDir(), "hasta013")
+	if err := copiarHasta(dir, previas, "014"); err != nil {
+		t.Fatal(err)
+	}
+	if err := aplicar(name, previas); err != nil {
+		t.Fatalf("001-013: %v", err)
+	}
+	if err := sembrarDuplicados(name); err != nil {
+		t.Fatalf("semilla duplicada: %v", err)
+	}
+	if err := aplicar(name, dir); err != nil {
+		t.Fatalf("014 en adelante sobre duplicados: %v", err)
+	}
+	assertDuplicadosResueltos(t, name)
+}
+
+func copiarHasta(src, dst, corte string) error {
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		return err
+	}
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") || e.Name() >= corte {
+			continue
+		}
+		body, err := os.ReadFile(filepath.Join(src, e.Name()))
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dst, e.Name()), body, 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func sembrarDuplicados(name string) error {
+	gdb, err := db.Open(urlDe(name))
+	if err != nil {
+		return err
+	}
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		return err
+	}
+	defer sqlDB.Close()
+	geom := `ST_SetSRID(ST_GeomFromText('MULTIPOLYGON(((-77.08 -12.07, -77.079 -12.07, -77.079 -12.069, -77.08 -12.069, -77.08 -12.07)))'), 4326)`
+	if err := gdb.Exec(`
+		INSERT INTO areas_verdes (feature_id, source_index, codigo, nombre, perimetro_m, area_m2, referencia)
+		VALUES
+		  ('AV-D1', 9101, 'F 26', 'primero', -3, -4, repeat('x', 520)),
+		  ('AV-D2', 9102, 'F 26', 'segundo', 10, 20, 'ok')
+	`).Error; err != nil {
+		return err
+	}
+	if err := gdb.Exec(`
+		INSERT INTO poligonos_cuadrilla (feature_id, source_index, origen_ref, geom)
+		VALUES
+		  ('Z-D1', 9201, 'jefe:dup', ` + geom + `),
+		  ('Z-D2', 9202, 'jefe:dup', ` + geom + `)
+	`).Error; err != nil {
+		return err
+	}
+	return gdb.Exec(`
+		INSERT INTO capas_auxiliares (capa, feature_id, source_index, area_m2, perimetro_m, referencia)
+		VALUES
+		  ('jardines_reserva', 'JR-D1', 9301, -8, -1, repeat('y', 600)),
+		  ('xerofitica', 'XE-D1', 9302, -2, 4, NULL)
+	`).Error
+}
+
+func assertDuplicadosResueltos(t *testing.T, name string) {
+	t.Helper()
+	gdb, err := db.Open(urlDe(name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sqlDB.Close()
+
+	var n int
+	if err := gdb.Raw(`SELECT count(*) FROM areas_verdes WHERE feature_id IN ('AV-D1', 'AV-D2')`).Scan(&n).Error; err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Fatalf("se perdieron áreas: %d", n)
+	}
+	var codigo1, ref1 string
+	var area1 sql.NullFloat64
+	if err := gdb.Raw(`SELECT codigo, area_m2, referencia FROM areas_verdes WHERE feature_id = 'AV-D1'`).Row().Scan(&codigo1, &area1, &ref1); err != nil {
+		t.Fatal(err)
+	}
+	if codigo1 != "F 26" {
+		t.Fatalf("el menor id debía conservar F 26, tiene %q", codigo1)
+	}
+	if area1.Valid {
+		t.Fatalf("area negativa debía quedar NULL, tiene %v", area1.Float64)
+	}
+	if len(ref1) != 500 {
+		t.Fatalf("referencia larga debía recortarse a 500, tiene %d", len(ref1))
+	}
+	var codigo2 string
+	if err := gdb.Raw(`SELECT codigo FROM areas_verdes WHERE feature_id = 'AV-D2'`).Scan(&codigo2).Error; err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(codigo2, "F 26 ·") {
+		t.Fatalf("el duplicado debía llevar sufijo, tiene %q", codigo2)
+	}
+	var cambios int
+	if err := gdb.Raw(`SELECT count(*) FROM cambios WHERE entidad = 'areas_verdes' AND accion = 'edicion'`).Scan(&cambios).Error; err != nil {
+		t.Fatal(err)
+	}
+	if cambios < 2 {
+		t.Fatalf("faltan ediciones en cambios: %d", cambios)
+	}
+	var idx int
+	if err := gdb.Raw(`SELECT count(*) FROM pg_indexes WHERE indexname = 'areas_verdes_codigo_uidx'`).Scan(&idx).Error; err != nil {
+		t.Fatal(err)
+	}
+	if idx != 1 {
+		t.Fatal("no quedó el índice único de codigo")
+	}
+
+	var origen string
+	if err := gdb.Raw(`SELECT origen_ref FROM poligonos_cuadrilla WHERE feature_id = 'Z-D2'`).Scan(&origen).Error; err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(origen, "jefe:dup ·") {
+		t.Fatalf("origen_ref duplicado sin sufijo: %q", origen)
+	}
+	if err := gdb.Raw(`SELECT count(*) FROM poligonos_cuadrilla WHERE feature_id IN ('Z-D1', 'Z-D2')`).Scan(&n).Error; err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Fatalf("se perdieron polígonos: %d", n)
+	}
+
+	var areaJ sql.NullFloat64
+	var refJ string
+	if err := gdb.Raw(`SELECT area_m2, coalesce(referencia, '') FROM jardines_reserva WHERE feature_id = 'JR-D1'`).Row().Scan(&areaJ, &refJ); err != nil {
+		t.Fatal(err)
+	}
+	if areaJ.Valid || len(refJ) != 500 {
+		t.Fatalf("jardín no se ajustó: area=%v ref=%d", areaJ, len(refJ))
+	}
+	var areaX sql.NullFloat64
+	if err := gdb.Raw(`SELECT area_m2 FROM xerofiticas WHERE feature_id = 'XE-D1'`).Row().Scan(&areaX); err != nil {
+		t.Fatal(err)
+	}
+	if areaX.Valid {
+		t.Fatalf("xerofítica conservó area negativa: %v", areaX.Float64)
 	}
 }

@@ -15,6 +15,9 @@ if [ -z "$instance" ]; then
 fi
 
 cors="${CAMPUS_CORS_ORIGINS:-}"
+# Si el operador exporta CAMPUS_COOKIE_SECURE, se respeta. Si no, la instancia
+# lo deduce de los PEM en /opt/campus/certs (los mismos que nginx monta en /etc/nginx/certs).
+cookie="${CAMPUS_COOKIE_SECURE:-}"
 umask 077
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
@@ -23,16 +26,20 @@ POSTGRES_PASSWORD=${TF_VAR_db_password}
 DATABASE_URL=postgres://campus:${TF_VAR_db_password}@db:5432/campus_verde?sslmode=disable
 CAMPUS_DEV_PASSWORD=${TF_VAR_dev_password}
 CAMPUS_ENV=production
-CAMPUS_COOKIE_SECURE=true
 CAMPUS_CORS_ORIGINS=${cors}
 EOF
+if [ -n "$cookie" ]; then
+  printf 'CAMPUS_COOKIE_SECURE=%s\n' "$cookie" >>"$tmp"
+fi
 b64="$(base64 -w0 "$tmp" 2>/dev/null || base64 <"$tmp" | tr -d '\n')"
+
+remote='umask 077; echo '"$b64"' | base64 -d > /opt/campus/secrets.env; if ! grep -q "^CAMPUS_COOKIE_SECURE=" /opt/campus/secrets.env; then if [ -f /opt/campus/certs/fullchain.pem ] && [ -f /opt/campus/certs/privkey.pem ]; then echo CAMPUS_COOKIE_SECURE=true >> /opt/campus/secrets.env; else echo CAMPUS_COOKIE_SECURE=false >> /opt/campus/secrets.env; fi; fi; chmod 600 /opt/campus/secrets.env'
 
 aws ssm send-command \
   --region "$region" \
   --instance-ids "$instance" \
   --document-name AWS-RunShellScript \
   --comment "campus secrets.env" \
-  --parameters "commands=[\"umask 077; echo $b64 | base64 -d > /opt/campus/secrets.env; chmod 600 /opt/campus/secrets.env\"]" \
+  --parameters "commands=[\"$remote\"]" \
   >/dev/null
 echo "secrets.env escrito en $instance (el contenido no se imprime)"

@@ -3,7 +3,7 @@ package accesos
 import "net/http"
 
 // OpcionesCookie sale del entorno. HttpOnly va siempre.
-// Secure se enciende en producción; SameSite no se deja en None salvo que se pida.
+// Secure solo si hay TLS; en HTTP el navegador no guarda la cookie. SameSite no se deja en None salvo que se pida.
 type OpcionesCookie struct {
 	Secure   bool
 	SameSite http.SameSite

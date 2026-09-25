@@ -14,7 +14,7 @@ export TF_VAR_dev_password='(16 caracteres o más)'
 
 3. Desde el raíz: `bash scripts/deploy-learner-lab.sh` solo si va a usar el lab. El script aplica Terraform, sube las imágenes y escribe `/opt/campus/secrets.env` por SSM (`scripts/poner-secretos.sh`). Esas claves no van en el user data ni en el estado.
 4. Si la instancia ya existe, no hace falta reemplazarla. Suba las imágenes a ECR y ejecute `systemctl restart campus.service`. Ese unit hace `docker compose pull` y `up`. `user_data_replace_on_change` está en false y el AMI se ignora en cambios posteriores: un apply que solo cambia el tag de la imagen no recrea la EC2.
-5. Entre con la clave de `TF_VAR_dev_password`. La cookie sale `Secure` porque el compose de la instancia fija `CAMPUS_ENV=production`.
+5. Entre con la clave de `TF_VAR_dev_password`. En HTTP la cookie no lleva `Secure` (`CAMPUS_COOKIE_SECURE=false` si no hay certificado). Con TLS sí. El detalle está en `docs/DESPLIEGUE.md`.
 
 SSH queda cerrado salvo que pase `ssh_cidr` con una IP (`x.x.x.x/32`). Postgres no publica puerto.
 
