@@ -340,6 +340,9 @@ export function activarDibujo(map: MapLibre, modo: ModoDibujo | null): { actuali
     const paso = 0.00002 * Math.max(1, 16 - map.getZoom())
     let dx = 0
     let dy = 0
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "ArrowUp" || event.key === "ArrowDown") {
+      if (focoEnCampo(event.target)) return
+    }
     if (event.key === "ArrowLeft") dx = -paso
     else if (event.key === "ArrowRight") dx = paso
     else if (event.key === "ArrowUp") dy = paso
@@ -385,4 +388,23 @@ export function activarDibujo(map: MapLibre, modo: ModoDibujo | null): { actuali
       quitar(map)
     },
   }
+}
+
+const CAMPOS_FOCO = new Set(["input", "textarea", "select"])
+
+type NodoFoco = {
+  tagName?: string
+  isContentEditable?: boolean
+  parentElement?: NodoFoco | null
+}
+
+/** El vértice no se mueve si el usuario está escribiendo en un campo. */
+export function focoEnCampo(target: EventTarget | null): boolean {
+  let node: NodoFoco | null = target && typeof target === "object" ? (target as NodoFoco) : null
+  while (node) {
+    if (node.isContentEditable) return true
+    if (CAMPOS_FOCO.has(node.tagName?.toLowerCase() ?? "")) return true
+    node = node.parentElement ?? null
+  }
+  return false
 }
