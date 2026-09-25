@@ -81,7 +81,7 @@ func New(deps Deps) *gin.Engine {
 	handlers.RegistrarFrente2B(r, hdeps)
 	handlers.RegistrarAuditoria(r, hdeps)
 	// 2D reportes:          ampliar RegistrarAtencion
-	// 3A importaciones:     handlers.RegistrarImportaciones(r, hdeps)
+	handlers.RegistrarImportaciones(r, hdeps)
 
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ruta no encontrada"})
