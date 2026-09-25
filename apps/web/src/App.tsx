@@ -25,6 +25,7 @@ import { PodaPanel } from "./panel/Poda"
 import { ViveroPanel } from "./panel/Vivero"
 import { CatastroEditor } from "./panel/CatastroEditor"
 import { InventarioCapas } from "./panel/InventarioCapas"
+import { ImportacionesPanel } from "./panel/Importaciones"
 import { AdminPanel, CatalogosPanel, Login, ReportesPanel, RiegoPanel, SolicitudesPanel } from "./panel/Modulos"
 import { fetchCatalogo, fetchEvidencias, fetchSesion, salir, subirEvidencia, sugerirTipo, type CatalogoItem, type Evidencia, type Usuario } from "./producto"
 import { readEquipo, writeEquipo } from "./session"
@@ -32,7 +33,7 @@ import { LAYERS, type FeatureCollection, type GeoFeature, type LayerId, type Rol
 
 type LoadState = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ready" }
 
-type Modulo = "mapa" | "labores" | "catastro" | "inventario" | "solicitudes" | "reportes" | "catalogos" | "admin"
+type Modulo = "mapa" | "labores" | "catastro" | "inventario" | "solicitudes" | "reportes" | "catalogos" | "importaciones" | "admin"
 
 const MODULOS: { id: Modulo; label: string }[] = [
   { id: "mapa", label: "Mapa" },
@@ -42,14 +43,15 @@ const MODULOS: { id: Modulo; label: string }[] = [
   { id: "solicitudes", label: "Solicitudes" },
   { id: "reportes", label: "Reportes" },
   { id: "catalogos", label: "Catálogos" },
+  { id: "importaciones", label: "Importar" },
   { id: "admin", label: "Admin" },
 ]
 
 function modulosDe(rol: Rol): Modulo[] {
   if (rol === "capataz") return ["mapa", "labores", "catastro", "inventario"]
-  if (rol === "jefatura") return ["mapa", "labores", "catastro", "inventario", "solicitudes", "reportes"]
+  if (rol === "jefatura") return ["mapa", "labores", "catastro", "inventario", "solicitudes", "reportes", "importaciones"]
   if (rol === "admin") return MODULOS.map((item) => item.id)
-  return ["mapa", "labores", "catastro", "inventario", "solicitudes", "reportes", "catalogos"]
+  return ["mapa", "labores", "catastro", "inventario", "solicitudes", "reportes", "catalogos", "importaciones"]
 }
 
 function prop(feature: GeoFeature, key: string): string {
@@ -721,6 +723,7 @@ export default function App() {
         {moduloActivo === "solicitudes" && <SolicitudesPanel actividadId={selected?.queued ? "" : selected?.id ?? ""} />}
         {moduloActivo === "reportes" && <ReportesPanel />}
         {moduloActivo === "catalogos" && <CatalogosPanel editable={rol === "admin"} />}
+        {moduloActivo === "importaciones" && <ImportacionesPanel />}
         {moduloActivo === "admin" && <AdminPanel />}
         </div>
       </aside>
