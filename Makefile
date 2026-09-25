@@ -6,7 +6,7 @@ include .env
 export
 endif
 
-.PHONY: help env up down wait migrate etl api web test bootstrap counts stack
+.PHONY: help env up down wait migrate etl etl-lote api web test bootstrap counts stack
 
 help:
 	@echo "make bootstrap   # compose + migraciones + ETL"
@@ -15,6 +15,7 @@ help:
 	@echo "make wait        # espera a que Postgres acepte conexiones"
 	@echo "make migrate     # aplica SQL de apps/api/migrations"
 	@echo "make etl         # data/raw → data/v1 → PostGIS"
+	@echo "make etl-lote    # upsert del frente 1E (sin TRUNCATE)"
 	@echo "make api         # GET /health y /api/v1/geo/..."
 	@echo "make web         # visor MapLibre en http://127.0.0.1:4317"
 	@echo "make test        # go test ./..."
@@ -41,6 +42,9 @@ migrate: env
 
 etl: env
 	cd apps/api && go run ./cmd/etl
+
+etl-lote: env
+	cd apps/api && go run ./cmd/etl-lote
 
 api: env
 	cd apps/api && go run ./cmd/api

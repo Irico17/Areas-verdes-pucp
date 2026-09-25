@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { cerrarTrazo, erroresGeometria, moverVertice, type MultiPolygon } from "./draw.ts"
+import { cerrarTrazo, erroresGeometria, focoEnCampo, moverVertice, type MultiPolygon } from "./draw.ts"
 import { areaDesdeFeature, areasDeFixture, payloadArea, validarArea } from "../panel/catastro.ts"
 
 const cuadrado: MultiPolygon = {
@@ -60,6 +60,57 @@ test("un polígono abierto o fuera del campus no es válido", () => {
   }
   assert.ok(erroresGeometria(fuera, true).length > 0)
   assert.deepEqual(cuadrado.coordinates[0][0][0], cuadrado.coordinates[0][0][4])
+})
+
+test("un anillo cruzado dentro del campus se rechaza", () => {
+  const cruzado: MultiPolygon = {
+    type: "MultiPolygon",
+    coordinates: [
+      [
+        [
+          [-77.08, -12.07],
+          [-77.079, -12.0692],
+          [-77.079, -12.07],
+          [-77.08, -12.0692],
+          [-77.08, -12.07],
+        ],
+      ],
+    ],
+  }
+  const fallos = erroresGeometria(cruzado, true)
+  assert.ok(fallos.some((item) => item.includes("se cruza")))
+})
+
+test("un anillo de cuatro posiciones sin cerrar se rechaza", () => {
+  const abierto: MultiPolygon = {
+    type: "MultiPolygon",
+    coordinates: [
+      [
+        [
+          [-77.08, -12.07],
+          [-77.079, -12.07],
+          [-77.079, -12.0692],
+          [-77.0802, -12.0694],
+        ],
+      ],
+    ],
+  }
+  const fallos = erroresGeometria(abierto, true)
+  assert.ok(fallos.some((item) => item.includes("no está cerrado")))
+})
+
+test("las flechas no mueven el vértice si el foco está en un campo", () => {
+  const input = { tagName: "INPUT", parentElement: null }
+  const textarea = { tagName: "TEXTAREA", parentElement: null }
+  const select = { tagName: "SELECT", parentElement: null }
+  const editable = { tagName: "DIV", isContentEditable: true, parentElement: null }
+  const mapa = { tagName: "CANVAS", parentElement: null }
+  assert.equal(focoEnCampo(input as unknown as EventTarget), true)
+  assert.equal(focoEnCampo(textarea as unknown as EventTarget), true)
+  assert.equal(focoEnCampo(select as unknown as EventTarget), true)
+  assert.equal(focoEnCampo(editable as unknown as EventTarget), true)
+  assert.equal(focoEnCampo(mapa as unknown as EventTarget), false)
+  assert.equal(focoEnCampo(null), false)
 })
 
 test("el feature de la fuente se lee con los nombres del contrato", () => {

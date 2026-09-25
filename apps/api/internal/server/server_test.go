@@ -110,8 +110,8 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 			t.Errorf("falta la ruta registrada %s", key)
 		}
 	}
-	if len(vistas) != 46 {
-		t.Fatalf("rutas registradas = %d, se esperaban 46: %v", len(vistas), vistas)
+	if len(vistas) != 65 {
+		t.Fatalf("rutas registradas = %d, se esperaban 65: %v", len(vistas), vistas)
 	}
 
 	for _, want := range rutasCongeladas {

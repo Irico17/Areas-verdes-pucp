@@ -26,7 +26,13 @@ const selectFeature = `
 SELECT a.id::text, a.tipo, a.estado, a.titulo, a.detalle,
        a.area_feature_id, a.zona_feature_id, a.assigned_capataz_id, c.equipo,
        a.archivada_en IS NOT NULL, a.created_at, a.updated_at, COALESCE(a.ejecutor, 'propia'),
-       ST_AsGeoJSON(a.geom, 6)
+       COALESCE(
+         ST_AsGeoJSON(a.geom, 6),
+         (SELECT ST_AsGeoJSON(ST_SetSRID(ST_MakePoint(l.lon, l.lat), 4326), 6)
+            FROM lugares l WHERE l.id = a.lugar_id),
+         (SELECT ST_AsGeoJSON(ST_PointOnSurface(z.geom), 6)
+            FROM zonas_supervision z WHERE z.id = a.zona_supervision_id)
+       )
 FROM actividades a
 LEFT JOIN capataces c ON c.id = a.assigned_capataz_id
 `
@@ -433,7 +439,8 @@ func scanFeature(rows scanner) (geojson.Feature, error) {
 		area, zona, capataz, equipo       sql.NullString
 		archivada                         bool
 		created, updated                  time.Time
-		ejecutor, geom                    string
+		ejecutor                          string
+		geom                              sql.NullString
 	)
 	if err := rows.Scan(&id, &tipo, &estado, &titulo, &detalle, &area, &zona, &capataz, &equipo, &archivada, &created, &updated, &ejecutor, &geom); err != nil {
 		return geojson.Feature{}, err
@@ -453,9 +460,12 @@ func scanFeature(rows scanner) (geojson.Feature, error) {
 		CreatedAt:         created.UTC().Format(time.RFC3339),
 		UpdatedAt:         updated.UTC().Format(time.RFC3339),
 	}
-	raw := json.RawMessage(geom)
-	if !json.Valid(raw) {
-		return geojson.Feature{}, fmt.Errorf("geometría inválida para %s", id)
+	raw := json.RawMessage("null")
+	if geom.Valid && strings.TrimSpace(geom.String) != "" {
+		raw = json.RawMessage(geom.String)
+		if !json.Valid(raw) {
+			return geojson.Feature{}, fmt.Errorf("geometría inválida para %s", id)
+		}
 	}
 	return geojson.Feature{Type: "Feature", ID: id, Geometry: raw, Properties: props}, nil
 }
