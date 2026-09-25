@@ -265,18 +265,46 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    void reloadActivities()
-  }, [reloadActivities])
+    let cancelled = false
+    fetchActividades(rol, equipoId)
+      .then((fc) => {
+        if (cancelled) return
+        setActivities(fc)
+        void saveLabores(fc)
+        setActivityError("")
+      })
+      .catch(async (error: unknown) => {
+        if (cancelled) return
+        const cached = await loadLabores<FeatureCollection>().catch(() => null)
+        if (cached && Array.isArray(cached.features)) {
+          setActivities(cached)
+          setActivityError("Sin conexión: se muestra la última lista guardada en este navegador.")
+          return
+        }
+        setActivityError(error instanceof Error ? error.message : "No se pudieron leer las labores")
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [rol, equipoId])
 
   useEffect(() => {
-    void flush()
+    let cancelled = false
+    void Promise.resolve().then(() => {
+      if (!cancelled) return flush()
+    })
+    return () => {
+      cancelled = true
+    }
   }, [flush])
 
+  const seleccionEnCola = selectedId != null && queue.some((item) => item.id === selectedId)
+  const timelineVisible = selectedId && !seleccionEnCola ? timeline : []
+  const timelineErrorVisible = selectedId && !seleccionEnCola ? timelineError : ""
+  const evidenciasVisible = selectedId ? evidencias : []
+
   useEffect(() => {
-    if (!selectedId || queue.some((item) => item.id === selectedId)) {
-      setTimeline([])
-      return
-    }
+    if (!selectedId || queue.some((item) => item.id === selectedId)) return
     let cancelled = false
     fetchTimeline(selectedId)
       .then((rows) => {
@@ -295,16 +323,39 @@ export default function App() {
 
   useEffect(() => {
     if (!sesion) return
-    void fetchCatalogo("tipo_actividad", true).then(setTiposCat).catch(() => setTiposCat([]))
-    void fetchCatalogo("motivo_archivo", true).then(setMotivos).catch(() => setMotivos([]))
+    let cancelled = false
+    fetchCatalogo("tipo_actividad", true)
+      .then((rows) => {
+        if (!cancelled) setTiposCat(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setTiposCat([])
+      })
+    fetchCatalogo("motivo_archivo", true)
+      .then((rows) => {
+        if (!cancelled) setMotivos(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setMotivos([])
+      })
+    return () => {
+      cancelled = true
+    }
   }, [sesion])
 
   useEffect(() => {
-    if (!selectedId) {
-      setEvidencias([])
-      return
+    if (!selectedId) return
+    let cancelled = false
+    fetchEvidencias(selectedId)
+      .then((rows) => {
+        if (!cancelled) setEvidencias(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setEvidencias([])
+      })
+    return () => {
+      cancelled = true
     }
-    void fetchEvidencias(selectedId).then(setEvidencias).catch(() => setEvidencias([]))
   }, [selectedId, activities])
 
   const items = useMemo(() => {
@@ -604,8 +655,8 @@ export default function App() {
               creating={creating}
               selected={selected}
               onSelect={choose}
-              timeline={timeline}
-              timelineError={timelineError}
+              timeline={timelineVisible}
+              timelineError={timelineErrorVisible}
               estadoNuevo={estadoNuevo}
               onEstadoNuevo={setEstadoNuevo}
               onEstado={() => void onEstado()}
@@ -631,7 +682,7 @@ export default function App() {
                   .catch((error: unknown) => setSugerencia(error instanceof Error ? error.message : "Sin sugerencia"))
               }}
               sugerencia={sugerencia}
-              evidencias={evidencias}
+              evidencias={evidenciasVisible}
               onSubir={(file) => {
                 if (!selected) return
                 void subirEvidencia(selected.id, file, "")
