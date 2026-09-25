@@ -2,11 +2,14 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"path/filepath"
+	"strings"
 
 	"campusverde/api/internal/accesos"
 	"campusverde/api/internal/config"
 	"campusverde/api/internal/db"
+	"campusverde/api/internal/handlers"
 	"campusverde/api/internal/server"
 )
 
@@ -33,9 +36,28 @@ func main() {
 		FotosDir:         filepath.Join(cfg.RawDir, "drive_fotos"),
 		EvidenciasDir:    cfg.EvidenciasDir,
 		EvidenciasBucket: cfg.EvidenciasBucket,
+		Seguridad: handlers.OpcionesDeSeguridad{
+			CORSOrigins: cfg.CORSOrigins,
+			Cookie: accesos.OpcionesCookie{
+				Secure:   cfg.CookieSecure,
+				SameSite: sameSite(cfg.CookieSameSite),
+			},
+			LoginCada: cfg.LoginMax,
+		},
 	})
 	log.Printf("campus-verde-api escuchando en %s", cfg.APIAddr)
 	if err := engine.Run(cfg.APIAddr); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func sameSite(raw string) http.SameSite {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "strict":
+		return http.SameSiteStrictMode
+	case "none":
+		return http.SameSiteNoneMode
+	default:
+		return http.SameSiteLaxMode
 	}
 }

@@ -88,7 +88,7 @@ export type Reporte = {
 }
 
 async function send(path: string, method: string, body?: unknown): Promise<Response> {
-  const init: RequestInit = { method }
+  const init: RequestInit = { method, credentials: "include" }
   if (body !== undefined) {
     init.headers = { "Content-Type": "application/json" }
     init.body = JSON.stringify(body)
@@ -113,7 +113,7 @@ async function send(path: string, method: string, body?: unknown): Promise<Respo
 }
 
 export async function fetchSesion(): Promise<Usuario | null> {
-  const res = await fetch("/api/v1/sesion")
+  const res = await fetch("/api/v1/sesion", { credentials: "include" })
   if (res.status === 401) return null
   if (!res.ok) throw new ApiError(res.status, "No se pudo leer la sesión")
   const body = (await res.json()) as { usuario: Usuario }
@@ -231,7 +231,7 @@ export async function subirEvidencia(actividadId: string, archivo: File, nota: s
   data.set("archivo", archivo)
   let res: Response
   try {
-    res = await fetch("/api/v1/evidencias", { method: "POST", body: data })
+    res = await fetch("/api/v1/evidencias", { method: "POST", body: data, credentials: "include" })
   } catch {
     throw new ApiError(0, "Sin conexión con la API")
   }

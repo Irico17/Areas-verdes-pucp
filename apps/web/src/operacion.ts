@@ -94,7 +94,7 @@ async function readError(res: Response): Promise<string> {
 }
 
 async function send(path: string, method: string, body?: unknown): Promise<Response> {
-  const init: RequestInit = { method }
+  const init: RequestInit = { method, credentials: "include" }
   if (body !== undefined) {
     init.headers = { "Content-Type": "application/json" }
     init.body = JSON.stringify(body)
@@ -125,26 +125,25 @@ export async function fetchCapataces(): Promise<Capataz[]> {
 }
 
 export async function crearActividad(body: CreateBody): Promise<void> {
-  await send("/api/v1/operacion/actividades", "POST", body)
+  const { actor_rol: _rol, ...resto } = body
+  await send("/api/v1/operacion/actividades", "POST", resto)
 }
 
-export async function asignar(id: string, capatazId: string, rol: Rol): Promise<void> {
+export async function asignar(id: string, capatazId: string, _rol: Rol): Promise<void> {
   await send(`/api/v1/operacion/actividades/${id}/asignacion`, "PATCH", {
     capataz_id: capatazId,
-    actor_rol: rol,
   })
 }
 
 export async function cambiarEstado(id: string, estado: string, rol: Rol, capatazId: string): Promise<void> {
   await send(`/api/v1/operacion/actividades/${id}/estado`, "PATCH", {
     estado,
-    actor_rol: rol,
     capataz_id: rol === "capataz" ? capatazId : "",
   })
 }
 
-export async function archivar(id: string, rol: Rol, motivo: string): Promise<void> {
-  await send(`/api/v1/operacion/actividades/${id}/archivar`, "POST", { actor_rol: rol, motivo })
+export async function archivar(id: string, _rol: Rol, motivo: string): Promise<void> {
+  await send(`/api/v1/operacion/actividades/${id}/archivar`, "POST", { motivo })
 }
 
 export async function fetchTimeline(id: string): Promise<Evento[]> {

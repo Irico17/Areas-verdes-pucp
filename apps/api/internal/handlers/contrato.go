@@ -42,6 +42,12 @@ func UnirContrato(path string) ([]byte, error) {
 	if paths == nil {
 		paths = map[string]any{}
 	}
+	visto := map[string]string{}
+	for key := range paths {
+		if strings.HasPrefix(key, "/") {
+			visto[key] = filepath.Base(path)
+		}
+	}
 	for _, name := range names {
 		partBody, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {
@@ -52,9 +58,14 @@ func UnirContrato(path string) ([]byte, error) {
 			return nil, fmt.Errorf("leer %s: %w", name, err)
 		}
 		for key, value := range part {
-			if strings.HasPrefix(key, "/") {
-				paths[key] = value
+			if !strings.HasPrefix(key, "/") {
+				continue
 			}
+			if prev, ok := visto[key]; ok {
+				return nil, fmt.Errorf("path %s repetido en %s y %s", key, prev, name)
+			}
+			visto[key] = name
+			paths[key] = value
 		}
 	}
 	root["paths"] = paths
