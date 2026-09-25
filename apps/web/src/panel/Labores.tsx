@@ -161,6 +161,7 @@ export function Labores(props: Props) {
               <option value="tercerizada">Servicio tercerizado</option>
             </select>
           </label>
+          <FichaLabor />
           <label className="field">
             Detalle
             <textarea value={props.formDetalle} maxLength={2000} rows={3} onChange={(event) => props.onForm({ detalle: event.target.value })} />
@@ -218,6 +219,7 @@ export function Labores(props: Props) {
             {props.selected.ejecutor === "tercerizada" ? " · tercerizada" : " · personal propio"}
           </p>
           {props.selected.detalle && <p className="lede">{props.selected.detalle}</p>}
+          <FichaLabor actividadId={props.selected.queued ? "" : props.selected.id} />
           {props.selected.queued ? (
             <p className="hint">Aún no está en el servidor. El id ya quedó reservado para el reintento.</p>
           ) : (
@@ -289,5 +291,74 @@ export function Labores(props: Props) {
         </div>
       )}
     </section>
+  )
+}
+
+function FichaLabor(props: { actividadId?: string }) {
+  const [clase, setClase] = useState("Mantenimiento de jardines")
+  const [solicitud, setSolicitud] = useState("")
+  const [atencion, setAtencion] = useState("")
+  const [lugar, setLugar] = useState("")
+  const [comentario, setComentario] = useState("")
+  const [aviso, setAviso] = useState("")
+  async function guardar() {
+    if (solicitud && atencion && atencion < solicitud) {
+      setAviso("La atención no puede ser anterior a la solicitud.")
+      return
+    }
+    if (!props.actividadId) {
+      setAviso("Cree la labor en el mapa para poder guardar la ficha.")
+      return
+    }
+    try {
+      const res = await fetch(`/api/v1/operacion/actividades/${props.actividadId}/ficha`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clase,
+          fecha_solicitud: solicitud,
+          fecha_atencion: atencion,
+          lugar,
+          comentario,
+        }),
+      })
+      if (!res.ok) {
+        setAviso("No se pudo guardar la ficha.")
+        return
+      }
+      setAviso(lugar || "Ficha guardada. El pin del mapa no cambia.")
+    } catch {
+      setAviso("Sin conexión con la API.")
+    }
+  }
+  return (
+    <fieldset className="form">
+      <legend>Ficha de la labor</legend>
+      <label className="field">
+        Clase
+        <input value={clase} onChange={(event) => setClase(event.target.value)} />
+      </label>
+      <label className="field">
+        Fecha de solicitud
+        <input type="date" value={solicitud} onChange={(event) => setSolicitud(event.target.value)} />
+      </label>
+      <label className="field">
+        Fecha de atención
+        <input type="date" value={atencion} onChange={(event) => setAtencion(event.target.value)} />
+      </label>
+      <label className="field">
+        Lugar
+        <input value={lugar} onChange={(event) => setLugar(event.target.value)} placeholder="Si no hay pin, el lugar ubica la labor" />
+      </label>
+      <label className="field">
+        Comentario
+        <textarea value={comentario} rows={2} maxLength={2000} onChange={(event) => setComentario(event.target.value)} />
+      </label>
+      <button type="button" onClick={() => void guardar()}>
+        Guardar ficha
+      </button>
+      {aviso && <p className="hint">{aviso}</p>}
+    </fieldset>
   )
 }

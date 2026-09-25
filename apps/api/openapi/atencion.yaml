@@ -27,6 +27,12 @@
     responses:
       "200":
         description: Registros
+  post:
+    tags: [operacion]
+    summary: Alta de riego con zona de supervisión por identificador
+    responses:
+      "201":
+        description: Registro creado
 /api/v1/evidencias:
   get:
     tags: [atencion]
@@ -69,3 +75,105 @@
         description: Binario
       "404":
         description: No existe
+/api/v1/podas:
+  get:
+    tags: [operacion]
+    summary: Podas importadas o editadas en escritorio
+    responses:
+      "200":
+        description: Lista
+  post:
+    tags: [operacion]
+    summary: Alta de poda. El código OSG solo se conserva si viene en el cuerpo
+    responses:
+      "201":
+        description: Poda creada
+/api/v1/podas/{id}:
+  patch:
+    tags: [operacion]
+    summary: Edición de una poda
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string}
+    responses:
+      "200":
+        description: Poda actualizada
+/api/v1/podas/{id}/archivar:
+  post:
+    tags: [operacion]
+    summary: Baja lógica de una poda
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string}
+    responses:
+      "200":
+        description: Archivada
+/api/v1/vivero:
+  get:
+    tags: [operacion]
+    summary: Vivero filtrable por mes
+    parameters:
+      - name: mes
+        in: query
+        schema: {type: string, example: "2026-03"}
+    responses:
+      "200":
+        description: Registros
+  post:
+    tags: [operacion]
+    summary: Alta de registro de vivero
+    responses:
+      "201":
+        description: Registro creado
+/api/v1/vivero/{id}:
+  patch:
+    tags: [operacion]
+    summary: Edición de un registro de vivero
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string}
+    responses:
+      "200":
+        description: Registro actualizado
+/api/v1/solicitudes/{id}:
+  patch:
+    tags: [operacion]
+    summary: Edición manual de una solicitud. No llama a Centuria
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string}
+    responses:
+      "200":
+        description: Solicitud actualizada
+/api/v1/ordenes/{id}:
+  patch:
+    tags: [operacion]
+    summary: Conformidad, periodo y reporte del proveedor. No cierra la solicitud
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string}
+    responses:
+      "200":
+        description: Orden actualizada
+/api/v1/operacion/actividades/{id}/avances:
+  post:
+    tags: [operacion]
+    summary: Avance de la labor ligado a un área o a un ejemplar
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string}
+    responses:
+      "201":
+        description: Avance creado

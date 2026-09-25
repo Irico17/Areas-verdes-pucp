@@ -189,15 +189,18 @@ type Riego struct {
 	Equipo    string `json:"equipo,omitempty"`
 	Fecha     string `json:"fecha"`
 	Nota      string `json:"nota,omitempty"`
+	ZonaID    string `json:"zona_supervision_id,omitempty"`
+	Ciclo     string `json:"ciclo,omitempty"`
 }
 
 // consultaRiego arma el listado. Un capataz solo recibe las filas de su equipo.
 func consultaRiego(capatazID string) (string, []any) {
 	q := `
 		SELECT r.id::text, r.sector, r.turno, COALESCE(r.capataz_id, ''), COALESCE(c.equipo, ''),
-		       to_char(r.fecha, 'YYYY-MM-DD'), r.nota
+		       to_char(r.fecha, 'YYYY-MM-DD'), r.nota, COALESCE(z.codigo, ''), COALESCE(r.ciclo, '')
 		FROM riego_registros r
-		LEFT JOIN capataces c ON c.id = r.capataz_id`
+		LEFT JOIN capataces c ON c.id = r.capataz_id
+		LEFT JOIN zonas_supervision z ON z.id = r.zona_supervision_id`
 	var args []any
 	if id := strings.TrimSpace(capatazID); id != "" {
 		q += ` WHERE r.capataz_id = $1`
@@ -217,7 +220,7 @@ func (s *Store) ListarRiego(ctx context.Context, capatazID string) ([]Riego, err
 	out := []Riego{}
 	for rows.Next() {
 		var r Riego
-		if err := rows.Scan(&r.ID, &r.Sector, &r.Turno, &r.CapatazID, &r.Equipo, &r.Fecha, &r.Nota); err != nil {
+		if err := rows.Scan(&r.ID, &r.Sector, &r.Turno, &r.CapatazID, &r.Equipo, &r.Fecha, &r.Nota, &r.ZonaID, &r.Ciclo); err != nil {
 			return nil, err
 		}
 		out = append(out, r)
@@ -225,14 +228,15 @@ func (s *Store) ListarRiego(ctx context.Context, capatazID string) ([]Riego, err
 	return out, rows.Err()
 }
 
-func (s *Store) CrearRiego(ctx context.Context, id, sector, turno, capatazID, fecha, nota string) error {
+func (s *Store) CrearRiego(ctx context.Context, id, sector, turno, capatazID, fecha, nota, zonaID, ciclo string, superficie float64) error {
 	sector = strings.TrimSpace(sector)
 	turno = strings.TrimSpace(turno)
+	zonaID = strings.TrimSpace(zonaID)
+	if err := ValidarRiego(zonaID, turno, superficie); err != nil {
+		return err
+	}
 	if sector == "" || utf8.RuneCountInString(sector) > 80 {
 		return operacion.InputError{Reason: "el sector es obligatorio"}
-	}
-	if turno != "manana" && turno != "tarde" {
-		return operacion.InputError{Reason: "el turno es mañana o tarde"}
 	}
 	if _, err := time.Parse("2006-01-02", fecha); err != nil {
 		return operacion.InputError{Reason: "la fecha usa el formato AAAA-MM-DD"}
@@ -240,11 +244,22 @@ func (s *Store) CrearRiego(ctx context.Context, id, sector, turno, capatazID, fe
 	if !operacionUUID(id) {
 		return operacion.InputError{Reason: "id debe ser un UUID"}
 	}
-	return s.db.WithContext(ctx).Exec(`
-		INSERT INTO riego_registros (id, sector, turno, capataz_id, fecha, nota)
-		VALUES ($1, $2, $3, NULLIF($4, ''), $5::date, $6)`,
-		id, sector, turno, strings.TrimSpace(capatazID), fecha, strings.TrimSpace(nota),
+	var zonaNum int64
+	if err := s.db.WithContext(ctx).Raw(`SELECT COALESCE((SELECT id FROM zonas_supervision WHERE codigo = $1), 0)`, zonaID).Scan(&zonaNum).Error; err != nil {
+		return err
+	}
+	if zonaNum == 0 {
+		return operacion.InputError{Reason: "la zona de supervisión no existe"}
+	}
+	err := s.db.WithContext(ctx).Exec(`
+		INSERT INTO riego_registros (id, sector, turno, capataz_id, fecha, nota, zona_supervision_id, ciclo, superficie_m2)
+		VALUES ($1, $2, $3, NULLIF($4, ''), $5::date, $6, $7, $8, NULLIF($9, 0))`,
+		id, sector, turno, strings.TrimSpace(capatazID), fecha, strings.TrimSpace(nota), zonaNum, strings.TrimSpace(ciclo), superficie,
 	).Error
+	if err != nil && (strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique")) {
+		return operacion.InputError{Reason: "ya hay un riego de esa zona, turno y fecha"}
+	}
+	return err
 }
 
 type Evidencia struct {

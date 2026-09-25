@@ -31,6 +31,28 @@ func TestSamePayload(t *testing.T) {
 	}
 }
 
+func TestAltaPorLugarSinPin(t *testing.T) {
+	err := ValidateCreate(CreateInput{
+		ActorRol: RolCoordinacion,
+		ID:       "11111111-1111-4111-8111-111111111111",
+		Tipo:     "riego",
+		Titulo:   "Por lugar",
+		LugarID:  "lugar-1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPuedeCerrarTercerizada(t *testing.T) {
+	if PuedeCerrar("tercerizada", false, true) == nil {
+		t.Fatal("sin orden no cierra")
+	}
+	if PuedeCerrar("propia", false, true) != nil {
+		t.Fatal("la propia con ejecución sí cierra")
+	}
+}
+
 func TestPuntoFuera(t *testing.T) {
 	err := ValidateCreate(CreateInput{
 		ActorRol: RolCoordinacion,

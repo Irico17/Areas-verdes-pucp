@@ -65,7 +65,8 @@ func ValidateCreate(in CreateInput) error {
 	if utf8.RuneCountInString(in.Detalle) > 2000 {
 		return InputError{Reason: "detalle admite hasta 2000 caracteres"}
 	}
-	if in.Lon < MinLon || in.Lon > MaxLon || in.Lat < MinLat || in.Lat > MaxLat {
+	sinPunto := strings.TrimSpace(in.LugarID) != "" || strings.TrimSpace(in.ZonaSupervisionID) != ""
+	if !sinPunto && (in.Lon < MinLon || in.Lon > MaxLon || in.Lat < MinLat || in.Lat > MaxLat) {
 		return InputError{Reason: "el punto queda fuera del campus"}
 	}
 	return nil
@@ -85,7 +86,16 @@ func ValidateQuery(q Query) error {
 	if q.Tipo != "" && !slugRe.MatchString(q.Tipo) {
 		return InputError{Reason: "tipo no reconocido"}
 	}
+	if !refCatalogo(q.ZonaSupervisionID) || !refCatalogo(q.CuadrillaID) || !refCatalogo(q.Origen) {
+		return InputError{Reason: "filtro no reconocido"}
+	}
 	return nil
+}
+
+var refRe = regexp.MustCompile(`^[A-Za-z0-9_-]{0,40}$`)
+
+func refCatalogo(v string) bool {
+	return refRe.MatchString(v)
 }
 
 // ValidateEstado comprueba el nuevo estado y el rol.
@@ -138,6 +148,17 @@ func SamePayload(saved Saved, in CreateInput) bool {
 		ejecutorDe(saved.Ejecutor) == ejecutorDe(in.Ejecutor) &&
 		math.Abs(saved.Lon-in.Lon) < 1e-5 &&
 		math.Abs(saved.Lat-in.Lat) < 1e-5
+}
+
+// PuedeCerrar impide cerrar una tercerizada sin orden y cualquier labor sin ejecución.
+func PuedeCerrar(ejecutor string, tieneOrden, tieneEjecucion bool) error {
+	if ejecutorDe(ejecutor) == "tercerizada" && !tieneOrden {
+		return InputError{Reason: "una labor tercerizada no se cierra sin una orden de servicio"}
+	}
+	if !tieneEjecucion {
+		return InputError{Reason: "no se cierra la labor sin una ejecución registrada"}
+	}
+	return nil
 }
 
 func eventoEstado(estado string) string {

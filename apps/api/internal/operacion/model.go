@@ -14,7 +14,8 @@ const (
 var Tipos = []string{"riego", "poda", "limpieza", "incidencia", "inspeccion"}
 
 // Estados operativos. cerrada y cancelada salen del listado abierto.
-var Estados = []string{"pendiente", "en_proceso", "bloqueada", "cerrada", "cancelada"}
+// sin_estado es el valor de una fila de monitoreo sin estado en la hoja.
+var Estados = []string{"sin_estado", "pendiente", "en_proceso", "bloqueada", "cerrada", "cancelada"}
 
 // Recinto aproximado del campus Pando (EPSG:4326), con un margen corto.
 const (
@@ -83,15 +84,30 @@ type CreateInput struct {
 	ActorRol          string
 	Ejecutor          string
 	UsuarioID         int64
+	LugarID           string
+	ZonaSupervisionID string
+}
+
+// FichaInput es la edición de escritorio de una labor ya creada.
+type FichaInput struct {
+	ID             string
+	Clase          string `json:"clase"`
+	FechaSolicitud string `json:"fecha_solicitud"`
+	FechaAtencion  string `json:"fecha_atencion"`
+	Lugar          string `json:"lugar"`
+	Comentario     string `json:"comentario"`
 }
 
 // Query filtra el listado GeoJSON.
 type Query struct {
-	Rol          string
-	CapatazID    string
-	Estado       string
-	Tipo         string
-	SoloAbiertas bool
+	Rol               string
+	CapatazID         string
+	Estado            string
+	Tipo              string
+	ZonaSupervisionID string
+	CuadrillaID       string
+	Origen            string
+	SoloAbiertas      bool
 }
 
 // Saved es la fila que se compara en un reintento idempotente.

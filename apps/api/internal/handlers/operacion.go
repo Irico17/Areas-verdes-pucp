@@ -61,6 +61,7 @@ func RegistrarOperacion(r *gin.Engine, deps Deps) {
 	lab.PATCH("/actividades/:id/estado", op.Estado)
 	lab.POST("/actividades/:id/archivar", op.Archive)
 	lab.GET("/actividades/:id/timeline", op.Timeline)
+	lab.PATCH("/actividades/:id/ficha", op.Ficha)
 }
 
 func (h Operacion) Capataces(c *gin.Context) {
@@ -79,9 +80,12 @@ func (h Operacion) Capataces(c *gin.Context) {
 
 func (h Operacion) List(c *gin.Context) {
 	q := operacion.Query{
-		Estado:       c.Query("estado"),
-		Tipo:         c.Query("tipo"),
-		SoloAbiertas: c.DefaultQuery("abiertas", "1") != "0",
+		Estado:            c.Query("estado"),
+		Tipo:              c.Query("tipo"),
+		ZonaSupervisionID: c.Query("zona_supervision_id"),
+		CuadrillaID:       c.Query("cuadrilla_id"),
+		Origen:            c.Query("origen"),
+		SoloAbiertas:      c.DefaultQuery("abiertas", "1") != "0",
 	}
 	if u, ok := usuarioEn(c); ok {
 		if u.Rol == "capataz" {
@@ -245,6 +249,27 @@ func (h Operacion) Archive(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"archivada": true, "id": c.Param("id")})
+}
+
+func (h Operacion) Ficha(c *gin.Context) {
+	if _, ok := exige(c, "registrar"); !ok {
+		return
+	}
+	if h.Store == nil {
+		c.JSON(503, gin.H{"error": "base de datos no disponible"})
+		return
+	}
+	var body operacion.FichaInput
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(400, gin.H{"error": "JSON inválido"})
+		return
+	}
+	body.ID = c.Param("id")
+	if err := h.Store.GuardarFicha(c.Request.Context(), body); err != nil {
+		writeOperacionErr(c, err)
+		return
+	}
+	c.JSON(200, gin.H{"id": body.ID})
 }
 
 func (h Operacion) Timeline(c *gin.Context) {

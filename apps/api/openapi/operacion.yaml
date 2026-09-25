@@ -39,3 +39,15 @@
         description: La sesión no tiene el permiso validar
       "409":
         description: UUID repetido con otro contenido
+/api/v1/operacion/actividades/{id}/ficha:
+  patch:
+    tags: [operacion]
+    summary: Guarda clase, fechas, lugar y comentario de una labor
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    responses:
+      "200":
+        description: Ficha guardada

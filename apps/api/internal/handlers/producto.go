@@ -418,7 +418,10 @@ func (h Atencion) Ordenes(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "no se pudieron leer las órdenes"})
 		return
 	}
-	c.JSON(200, gin.H{"ordenes": rows})
+	c.JSON(200, gin.H{
+		"ordenes": rows,
+		"aviso":   "La orden no cierra la solicitud ni la labor. Una labor tercerizada solo se cierra si además hay ejecución registrada.",
+	})
 }
 
 func (h Atencion) CrearOrden(c *gin.Context) {
@@ -479,12 +482,15 @@ func (h Atencion) CrearRiego(c *gin.Context) {
 		return
 	}
 	var body struct {
-		ID        string `json:"id"`
-		Sector    string `json:"sector"`
-		Turno     string `json:"turno"`
-		CapatazID string `json:"capataz_id"`
-		Fecha     string `json:"fecha"`
-		Nota      string `json:"nota"`
+		ID         string  `json:"id"`
+		Sector     string  `json:"sector"`
+		Turno      string  `json:"turno"`
+		CapatazID  string  `json:"capataz_id"`
+		Fecha      string  `json:"fecha"`
+		Nota       string  `json:"nota"`
+		ZonaID     string  `json:"zona_supervision_id"`
+		Ciclo      string  `json:"ciclo"`
+		Superficie float64 `json:"superficie_m2"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
@@ -493,7 +499,7 @@ func (h Atencion) CrearRiego(c *gin.Context) {
 	if u.Rol == "capataz" {
 		body.CapatazID = u.CapatazID
 	}
-	if err := h.Store.CrearRiego(c.Request.Context(), body.ID, body.Sector, body.Turno, body.CapatazID, body.Fecha, body.Nota); err != nil {
+	if err := h.Store.CrearRiego(c.Request.Context(), body.ID, body.Sector, body.Turno, body.CapatazID, body.Fecha, body.Nota, body.ZonaID, body.Ciclo, body.Superficie); err != nil {
 		writeAtencion(c, err)
 		return
 	}
