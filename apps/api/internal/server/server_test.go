@@ -4,7 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
+
+	"campusverde/api/internal/handlers"
 )
 
 func TestHealthYIndiceSinDB(t *testing.T) {
@@ -61,10 +65,10 @@ var rutasCongeladas = []struct {
 	{http.MethodGet, "/api/v1/geo/reservas-mock", 200},
 	{http.MethodGet, "/api/v1/operacion/capataces", 503},
 	{http.MethodGet, "/api/v1/operacion/actividades", 503},
-	{http.MethodPost, "/api/v1/operacion/actividades", 400},
-	{http.MethodPatch, "/api/v1/operacion/actividades/1/asignacion", 400},
-	{http.MethodPatch, "/api/v1/operacion/actividades/1/estado", 400},
-	{http.MethodPost, "/api/v1/operacion/actividades/1/archivar", 400},
+	{http.MethodPost, "/api/v1/operacion/actividades", 401},
+	{http.MethodPatch, "/api/v1/operacion/actividades/1/asignacion", 401},
+	{http.MethodPatch, "/api/v1/operacion/actividades/1/estado", 401},
+	{http.MethodPost, "/api/v1/operacion/actividades/1/archivar", 401},
 	{http.MethodGet, "/api/v1/operacion/actividades/1/timeline", 503},
 	{http.MethodPost, "/api/v1/sesion", 503},
 	{http.MethodGet, "/api/v1/sesion", 401},
@@ -122,6 +126,50 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 	r.ServeHTTP(w, httptest.NewRequest(http.MethodOptions, "/health", nil))
 	if w.Code != http.StatusNoContent {
 		t.Fatalf("options %d", w.Code)
+	}
+}
+
+func TestCORSSoloReflejaElOrigenConfigurado(t *testing.T) {
+	r := New(Deps{
+		OpenAPIPath: "no-existe.yaml",
+		Seguridad:   handlers.OpcionesDeSeguridad{CORSOrigins: []string{"http://localhost:5173"}},
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1", nil)
+	req.Header.Set("Origin", "http://localhost:5173")
+	r.ServeHTTP(w, req)
+	if got := w.Header().Get("Access-Control-Allow-Origin"); got != "http://localhost:5173" {
+		t.Fatalf("origen %q", got)
+	}
+	if strings.Contains(w.Header().Get("Access-Control-Allow-Origin"), "*") {
+		t.Fatal("no debe reflejar asterisco")
+	}
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1", nil)
+	req.Header.Set("Origin", "https://otro.example")
+	r.ServeHTTP(w, req)
+	if got := w.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("origen ajeno %q", got)
+	}
+}
+
+func TestLoginTieneRateLimit(t *testing.T) {
+	r := New(Deps{
+		OpenAPIPath: "no-existe.yaml",
+		Seguridad:   handlers.OpcionesDeSeguridad{LoginCada: 2, LoginVentana: time.Minute},
+	})
+	for i := 0; i < 2; i++ {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/v1/sesion", nil))
+		if w.Code == http.StatusTooManyRequests {
+			t.Fatalf("intento %d cortado antes de tiempo", i)
+		}
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/v1/sesion", nil))
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("rate limit %d %s", w.Code, w.Body.String())
 	}
 }
 
