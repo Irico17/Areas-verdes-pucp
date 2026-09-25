@@ -199,16 +199,35 @@ func (h Modelo) CrearEspecie(c *gin.Context) {
 	c.JSON(201, item)
 }
 
+func pagina(limitRaw, offsetRaw string) (int, int) {
+	limit, _ := strconv.Atoi(limitRaw)
+	offset, _ := strconv.Atoi(offsetRaw)
+	if limitRaw == "" {
+		return 0, 0
+	}
+	if limit < 1 {
+		limit = 1
+	}
+	if limit > 2000 {
+		limit = 2000
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return limit, offset
+}
+
 func (h Modelo) Ejemplares(c *gin.Context) {
 	if !h.listo(c, "consultar") {
 		return
 	}
-	rows, err := h.Store.ListarEjemplares(c.Request.Context())
+	limit, offset := pagina(c.Query("limit"), c.Query("offset"))
+	rows, total, err := h.Store.ListarEjemplares(c.Request.Context(), limit, offset)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "no se pudo leer los ejemplares"})
 		return
 	}
-	c.JSON(200, gin.H{"ejemplares": rows})
+	c.JSON(200, gin.H{"ejemplares": rows, "total": total, "limit": limit, "offset": offset})
 }
 
 func (h Modelo) CrearEjemplar(c *gin.Context) {

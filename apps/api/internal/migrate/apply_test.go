@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"campusverde/api/internal/db"
@@ -93,8 +94,14 @@ func TestMigraciones001a019EnVacioYSobre008(t *testing.T) {
 	if err := gdb.Raw(`SELECT count(*) FROM schema_migrations`).Scan(&aplicadas).Error; err != nil {
 		t.Fatal(err)
 	}
-	if aplicadas != 21 {
-		t.Fatalf("migraciones aplicadas = %d", aplicadas)
+	sqlFiles := 0
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".sql") {
+			sqlFiles++
+		}
+	}
+	if aplicadas != sqlFiles {
+		t.Fatalf("migraciones aplicadas = %d, archivos = %d", aplicadas, sqlFiles)
 	}
 }
 
