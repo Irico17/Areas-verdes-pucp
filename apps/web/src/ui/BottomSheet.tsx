@@ -14,10 +14,13 @@ function reducido() {
 export function BottomSheet({
   open,
   onClose,
+  vista,
   children,
 }: {
   open: boolean
   onClose: () => void
+  /** Módulo activo: al cambiar, el cuerpo vuelve arriba. */
+  vista: string
   children: ReactNode
 }) {
   const [movil, setMovil] = useState(esMovil)
@@ -123,7 +126,7 @@ export function BottomSheet({
           Cerrar
         </button>
       </div>
-      <div className="panel-view">{children}</div>
+      <div className="panel-view" key={vista}>{children}</div>
     </aside>
   )
 }

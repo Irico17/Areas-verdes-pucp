@@ -562,8 +562,7 @@ export default function App() {
           </button>
         ))}
       </nav>
-      <BottomSheet open={railOpen} onClose={() => setRailOpen(false)}>
-        <div key={moduloActivo}>
+      <BottomSheet open={railOpen} onClose={() => setRailOpen(false)} vista={moduloActivo}>
         <p className={load.kind === "error" || activityError ? "status error" : "status"}>
           {load.kind === "error" ? load.message : summary}
           {activityError ? ` · ${activityError}` : ""}
@@ -704,7 +703,6 @@ export default function App() {
         {moduloActivo === "catalogos" && <CatalogosPanel editable={rol === "admin"} />}
         {moduloActivo === "importaciones" && <ImportacionesPanel />}
         {moduloActivo === "admin" && <AdminPanel />}
-        </div>
       </BottomSheet>
       <div className="stage">
         <MapBoundary>

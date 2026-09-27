@@ -1,5 +1,6 @@
-import { useEffect, useId, useState, type FormEvent, type KeyboardEvent } from "react"
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react"
 import { listarVertices, medirGeom, moverVertice, type ModoDibujo, type Position, type VerticeRef } from "../map/draw"
+import { mostrarEnPanel } from "../ui/desplazar"
 import {
   areaNueva,
   areasDeFixture,
@@ -129,6 +130,9 @@ export function CatastroEditor({
   const [errores, setErrores] = useState<ErrorCampo[]>([])
   const [editandoGeom, setEditandoGeom] = useState(false)
   const [vertice, setVertice] = useState(0)
+  const [verLista, setVerLista] = useState(false)
+  const listaRef = useRef<HTMLDivElement>(null)
+  const fichaRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     return () => onModoDibujo?.(null)
@@ -197,6 +201,28 @@ export function CatastroEditor({
       },
     })
   }, [editandoGeom, entidad, idActivo, geomActiva, onModoDibujo])
+
+  const seleccion = entidad === "area" ? area : zona
+  const vista = seleccion && !verLista ? "ficha" : "lista"
+
+  // Otra ficha: empieza arriba (escritorio: .split-detail; móvil: .panel-view).
+  useEffect(() => {
+    if (vista !== "ficha") return
+    fichaRef.current?.scrollTo({ top: 0 })
+    mostrarEnPanel(fichaRef.current, "inicio")
+  }, [vista, idActivo])
+
+  // De vuelta en la lista: la fila elegida a la vista, o el inicio si no hay.
+  useEffect(() => {
+    if (vista !== "lista") return
+    const fila = listaRef.current?.querySelector(".labor.on")
+    mostrarEnPanel(fila ?? listaRef.current, fila ? "centro" : "inicio")
+  }, [vista])
+
+  // Al editar la geometría, los controles de vértice quedan arriba del cuerpo visible.
+  useEffect(() => {
+    if (editandoGeom) mostrarEnPanel(fichaRef.current?.querySelector(".vertice-box"), "inicio")
+  }, [editandoGeom])
 
   const filtro = q.trim().toLowerCase()
   const areasVisibles = areas.filter((row) => {
@@ -298,8 +324,8 @@ export function CatastroEditor({
   }
 
   return (
-    <section className="split catastro-editor">
-      <div className="split-list">
+    <section className="split catastro-editor" data-vista={vista}>
+      <div className="split-list" ref={listaRef}>
         <h2>Catastro</h2>
         <div className="roles" role="tablist" aria-label="Entidad del catastro">
           <button type="button" role="tab" aria-selected={entidad === "area"} onClick={() => { setEntidad("area"); setErrores([]); setEditandoGeom(false) }}>
@@ -320,6 +346,42 @@ export function CatastroEditor({
             <input id={`${baseId}-q`} value={q} onChange={(event) => setQ(event.target.value)} placeholder="Código, nombre o uso" />
           </label>
         </form>
+        {!seleccion && aviso && <p className={aviso.toLowerCase().includes("no se") || aviso.toLowerCase().includes("respondió") ? "status error" : "banner"}>{aviso}</p>}
+        <p className="row-actions">
+          {entidad === "area" ? (
+            <button
+              type="button"
+              onClick={() => {
+                setArea(areaNueva(areas.map((row) => row.feature_id)))
+                setAltaArea(true)
+                setErrores([])
+                setEditandoGeom(false)
+                setVerLista(false)
+              }}
+            >
+              Nueva área
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setZona(zonaNueva(zonas.map((row) => row.codigo)))
+                setAltaZona(true)
+                setErrores([])
+                setEditandoGeom(false)
+                setVerLista(false)
+              }}
+            >
+              Nueva zona
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => descargar(entidad === "area" ? "areas-verdes.csv" : "zonas-supervision.csv", entidad === "area" ? csvAreas(areas) : csvZonas(zonas))}
+          >
+            Exportar CSV
+          </button>
+        </p>
         {error && <p className="status error">{error}</p>}
         {error && (
           <button type="button" onClick={() => void load(true)}>
@@ -353,6 +415,7 @@ export function CatastroEditor({
                     setErrores([])
                     setEditandoGeom(false)
                     setVertice(0)
+                    setVerLista(false)
                   }}
                 >
                   <span>
@@ -378,6 +441,7 @@ export function CatastroEditor({
                     setErrores([])
                     setEditandoGeom(false)
                     setVertice(0)
+                    setVerLista(false)
                   }}
                 >
                   <span>
@@ -391,41 +455,11 @@ export function CatastroEditor({
               </li>
             ))}
         </ul>
-        <p className="row-actions">
-          {entidad === "area" ? (
-            <button
-              type="button"
-              onClick={() => {
-                setArea(areaNueva(areas.map((row) => row.feature_id)))
-                setAltaArea(true)
-                setErrores([])
-                setEditandoGeom(false)
-              }}
-            >
-              Nueva área
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setZona(zonaNueva(zonas.map((row) => row.codigo)))
-                setAltaZona(true)
-                setErrores([])
-                setEditandoGeom(false)
-              }}
-            >
-              Nueva zona
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => descargar(entidad === "area" ? "areas-verdes.csv" : "zonas-supervision.csv", entidad === "area" ? csvAreas(areas) : csvZonas(zonas))}
-          >
-            Exportar CSV
-          </button>
-        </p>
       </div>
-      <div className="split-detail">
+      <div className="split-detail" ref={fichaRef}>
+        <button type="button" className="link volver-lista" onClick={() => setVerLista(true)}>
+          Volver a la lista
+        </button>
         {entidad === "area" && !area && <p className="empty">Elija un área. La ficha queda en este panel.</p>}
         {entidad === "zona" && !zona && <p className="empty">Elija una zona de supervisión. El mapa muestra su polígono al editar.</p>}
         {entidad === "area" && area && (
@@ -675,7 +709,7 @@ export function CatastroEditor({
             )}
           </form>
         )}
-        {aviso && <p className={aviso.toLowerCase().includes("no se") || aviso.toLowerCase().includes("respondió") ? "status error" : "banner"}>{aviso}</p>}
+        {seleccion && aviso && <p className={aviso.toLowerCase().includes("no se") || aviso.toLowerCase().includes("respondió") ? "status error" : "banner"}>{aviso}</p>}
       </div>
     </section>
   )

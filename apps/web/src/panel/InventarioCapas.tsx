@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { mostrarEnPanel } from "../ui/desplazar"
 import {
   CAPAS_EDITABLES,
   CONTEOS_TACHO,
@@ -55,6 +56,9 @@ export function InventarioCapas({
   cliente?: typeof fetch
 }) {
   const [entidad, setEntidad] = useState<EntidadInventario>(entidadInicial)
+  const formRef = useRef<HTMLFormElement>(null)
+  const listaRef = useRef<HTMLDivElement>(null)
+  const [salto, setSalto] = useState(0)
   const [filas, setFilas] = useState<Fila[]>([])
   const [id, setId] = useState<number | null>(null)
   const [errores, setErrores] = useState<ErrorCampo[]>([])
@@ -107,6 +111,14 @@ export function InventarioCapas({
     }
   }, [cliente, entidad])
 
+  useEffect(() => {
+    if (salto > 0) mostrarEnPanel(formRef.current, "inicio")
+  }, [salto])
+
+  useEffect(() => {
+    formRef.current?.closest(".split-detail")?.scrollTo({ top: 0 })
+  }, [entidad])
+
   function cargarFila(raw: Record<string, unknown>) {
     const form = formularioDesdeFila(raw)
     setId(Number(raw.id))
@@ -125,6 +137,7 @@ export function InventarioCapas({
     setFicha(form.ficha)
     setErrores([])
     setAviso("")
+    setSalto((n) => n + 1)
   }
 
   function elegir(siguiente: EntidadInventario) {
@@ -217,7 +230,7 @@ export function InventarioCapas({
 
   return (
     <section className="split catastro-editor">
-      <div className="split-list">
+      <div className="split-list" ref={listaRef}>
         <div className="roles" role="tablist" aria-label="Inventario">
           {(["tachos", "bebederos", "puntos", "reservas"] as const).map((item) => (
             <button key={item} type="button" aria-pressed={entidad === item} onClick={() => elegir(item)}>
@@ -245,12 +258,20 @@ export function InventarioCapas({
       </div>
       <div className="split-detail">
         <form
+          ref={formRef}
           className="form"
           onSubmit={(event) => {
             event.preventDefault()
             void guardar()
           }}
         >
+          <button
+            type="button"
+            className="link volver-lista"
+            onClick={() => mostrarEnPanel(listaRef.current?.querySelector(".labor.on") ?? listaRef.current, "centro")}
+          >
+            Volver a la lista
+          </button>
           <h2>Edición de inventario</h2>
           {entidad === "tachos" && (
             <>

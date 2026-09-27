@@ -161,10 +161,15 @@ a { color: var(--yucca-deep); }
   padding: 16px 16px 32px;
   animation: rise 180ms var(--ease);
 }
-.panel-view:has(.split) {
+.panel-view:has(> .split) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+.panel-view:has(> .split) > * { flex: none; }
+.panel-view:has(> .split) > .split {
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 .stage { grid-column: 3; grid-row: 2; position: relative; min-width: 0; min-height: 0; }
@@ -320,22 +325,43 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .form button { margin-top: 4px; }
 
 .split {
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(160px, 42%) minmax(220px, 1fr);
+  grid-template-rows: minmax(160px, 42%) minmax(0, 1fr);
   gap: 12px;
 }
-.split-list, .split-detail {
+.split-list,
+.split-detail {
   min-height: 0;
-  overflow: auto;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   background: var(--hoja);
-  border-radius: 10px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-hoja);
   padding: 12px;
 }
-.split-detail { box-shadow: var(--sombra); }
+/* Sin box-shadow en .split-detail: la ficha no flota dentro del panel (V05). */
 .catastro-editor .roles { margin: 0 0 12px; width: 100%; }
 .catastro-editor .roles button { flex: 1; }
+.volver-lista { display: none; }
+@media (max-width: 820px), (max-height: 560px) {
+  .panel-view:has(> .split) { display: block; overflow: hidden auto; }
+  .split { display: block; }
+  .split-list,
+  .split-detail {
+    overflow: visible;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .split-detail { margin-top: 16px; }
+  .split[data-vista="ficha"] > .split-list,
+  .split[data-vista="lista"] > .split-detail { display: none; }
+  .volver-lista { display: inline-flex; }
+}
 .geom-box, .vertice-box {
   margin: 0 0 12px;
   padding: 8px 10px 4px;
