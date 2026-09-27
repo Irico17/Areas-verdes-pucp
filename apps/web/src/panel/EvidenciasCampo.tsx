@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react"
+import { formatFechaHora } from "../fecha"
 import { comprimirFoto, rechazarPorTamano } from "../offline/comprimir"
 import { leerExif } from "../offline/exif"
 import {
@@ -11,10 +12,18 @@ import {
   type QueuedEvidencia,
   type ResultadoEnvio,
 } from "../offline/queue"
+import {
+  avanzar,
+  crearCacheUrls,
+  enviarConProgreso,
+  esImagen,
+  ocupado,
+  textoEstado,
+  unirEvidencias,
+  urlArchivo,
+} from "../offline/subida"
 import { fetchEvidencias, type Evidencia } from "../producto"
 import { Esqueleto } from "../ui/Esqueleto"
-
-type Aviso = { tono: "ok" | "pendiente" | "error"; texto: string }
 
 async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const dig = await crypto.subtle.digest("SHA-256", bytes)
@@ -32,7 +41,10 @@ function pedirPunto(): Promise<{ lat: number; lon: number } | null> {
   })
 }
 
-async function publicar(item: QueuedEvidencia): Promise<ResultadoEnvio> {
+async function publicar(
+  item: QueuedEvidencia,
+  alProgreso: (cargado: number, total: number | null) => void = () => {},
+): Promise<ResultadoEnvio> {
   const data = new FormData()
   data.set("id", item.id)
   data.set("actividad_id", item.actividadId)
@@ -45,13 +57,8 @@ async function publicar(item: QueuedEvidencia): Promise<ResultadoEnvio> {
   }
   if (item.ordenId) data.set("orden_id", item.ordenId)
   data.set("archivo", new Blob([item.bytes], { type: item.mime }), item.nombre)
-  let res: Response
-  try {
-    res = await fetch("/api/v1/evidencias", { method: "POST", body: data })
-  } catch {
-    return { tipo: "reintento", status: 0 }
-  }
-  return clasificarEstado(res.status)
+  const status = await enviarConProgreso("/api/v1/evidencias", data, alProgreso)
+  return clasificarEstado(status)
 }
 
 export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
@@ -59,8 +66,17 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
   const [pendientes, setPendientes] = useState<QueuedEvidencia[]>([])
   const [cargadoDe, setCargadoDe] = useState<string | null>(null)
   const cargando = cargadoDe !== actividadId
-  const [aviso, setAviso] = useState<Aviso | null>(null)
-  const [ocupado, setOcupado] = useState(false)
+  const [estado, despachar] = useReducer(avanzar, { fase: "inactivo" } as const)
+  const [fallido, setFallido] = useState<QueuedEvidencia | null>(null)
+  const [rotas, setRotas] = useState<Set<string>>(new Set())
+  const cacheRef = useRef(crearCacheUrls())
+
+  useEffect(() => () => cacheRef.current.liberar(), [])
+
+  const marcarRota = useCallback(
+    (id: string) => () => setRotas((prev) => new Set(prev).add(id)),
+    [],
+  )
 
   const refrescar = useCallback(async () => {
     const locales = await listarEvidencias().catch(() => [])
@@ -79,11 +95,11 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
     const r = await enviarColaEvidencias(publicar)
     if (r.reintentos.length > 0) {
       const ultimo = r.reintentos[r.reintentos.length - 1]
-      setAviso({ tono: "pendiente", texto: mensajeReintento(ultimo.status) })
+      despachar({ tipo: "cola", texto: mensajeReintento(ultimo.status) })
     } else if (r.conflictos.length > 0) {
-      setAviso({ tono: "error", texto: "Esa foto ya estaba registrada con otro contenido." })
+      despachar({ tipo: "fallo", texto: "Esa foto ya estaba registrada con otro contenido.", reintentable: false })
     } else if (r.enviadas.length > 0) {
-      setAviso({ tono: "ok", texto: "Foto enviada." })
+      despachar({ tipo: "ok", sinPunto: false })
     }
     await refrescar()
   }, [refrescar])
@@ -100,13 +116,42 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
     }
   }, [refrescar, drenar])
 
+  const enviar = useCallback(
+    async (item: QueuedEvidencia) => {
+      const sinPunto = item.lat == null || item.lon == null
+      if (!navigator.onLine) {
+        await encolarEvidencia(item)
+        despachar({
+          tipo: "cola",
+          texto: sinPunto ? "Guardado en este equipo, sin ubicación." : "Guardado en este equipo.",
+        })
+        await refrescar()
+        return
+      }
+      const resultado = await publicar(item, (cargado, total) => despachar({ tipo: "progreso", cargado, total }))
+      if (resultado.tipo === "ok") {
+        despachar({ tipo: "ok", sinPunto })
+      } else if (resultado.tipo === "conflicto") {
+        despachar({ tipo: "fallo", texto: "Esa foto ya estaba registrada con otro contenido.", reintentable: false })
+      } else if (resultado.status === 0) {
+        despachar({ tipo: "fallo", texto: "No se pudo enviar la foto por un problema de red.", reintentable: true })
+        setFallido(item)
+      } else {
+        await encolarEvidencia(conBackoff(item))
+        despachar({ tipo: "cola", texto: mensajeReintento(resultado.status) })
+      }
+      await refrescar()
+    },
+    [refrescar],
+  )
+
   async function tomar(file: File) {
     if (!actividadId) return
-    setOcupado(true)
-    setAviso(null)
+    despachar({ tipo: "preparar" })
+    setFallido(null)
     try {
       if (rechazarPorTamano(file.size) && !file.type.startsWith("image/")) {
-        setAviso({ tono: "error", texto: "El archivo supera 8 MB." })
+        despachar({ tipo: "fallo", texto: "El archivo supera 8 MB.", reintentable: false })
         return
       }
       const crudo = new Uint8Array(await file.arrayBuffer())
@@ -138,32 +183,36 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
         },
         createdAt: new Date().toISOString(),
       }
-      const sinPunto = lat == null || lon == null
-      if (!navigator.onLine) {
-        await encolarEvidencia(item)
-        setAviso({
-          tono: "pendiente",
-          texto: sinPunto ? "Guardado en este equipo, sin ubicación." : "Guardado en este equipo.",
-        })
-        await refrescar()
-        return
-      }
-      const resultado = await publicar(item)
-      if (resultado.tipo === "ok") {
-        setAviso({ tono: "ok", texto: sinPunto ? "Foto enviada, sin ubicación." : "Foto enviada." })
-      } else if (resultado.tipo === "conflicto") {
-        setAviso({ tono: "error", texto: "Esa foto ya estaba registrada con otro contenido." })
-      } else {
-        await encolarEvidencia(conBackoff(item))
-        setAviso({ tono: "pendiente", texto: mensajeReintento(resultado.status) })
-      }
-      await refrescar()
+      await enviar(item)
     } catch (error) {
-      setAviso({ tono: "error", texto: error instanceof Error ? error.message : "No se pudo preparar la foto." })
-    } finally {
-      setOcupado(false)
+      despachar({
+        tipo: "fallo",
+        texto: error instanceof Error ? error.message : "No se pudo preparar la foto.",
+        reintentable: false,
+      })
+      setFallido(null)
     }
   }
+
+  async function reintentar() {
+    if (!fallido) return
+    const item = fallido
+    setFallido(null)
+    await enviar(item)
+  }
+
+  const items = useMemo(() => unirEvidencias(pendientes, enviadas), [pendientes, enviadas])
+  const [urls, setUrls] = useState<Map<string, string>>(new Map())
+  useEffect(() => {
+    setUrls(
+      cacheRef.current.sincronizar(
+        pendientes.map((item) => ({ id: item.id, blob: new Blob([item.bytes], { type: item.mime }) })),
+      ),
+    )
+  }, [pendientes])
+
+  const etiquetaCaptura =
+    estado.fase === "preparando" ? "Preparando…" : estado.fase === "subiendo" ? "Subiendo…" : "Tomar foto"
 
   return (
     <section className="evidencia-campo" aria-label="Evidencias de la labor">
@@ -171,12 +220,12 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
       <p className="evidencia-ayuda">La foto se reduce en el teléfono antes de enviarse.</p>
       <div className="evidencia-acciones">
         <label className="primary evidencia-captura">
-          {ocupado ? "Preparando…" : "Tomar foto"}
+          {etiquetaCaptura}
           <input
             type="file"
             accept="image/*"
             capture="environment"
-            disabled={ocupado || !actividadId}
+            disabled={ocupado(estado) || !actividadId}
             onChange={(event) => {
               const file = event.target.files?.[0]
               event.target.value = ""
@@ -189,7 +238,7 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp,application/pdf"
-            disabled={ocupado || !actividadId}
+            disabled={ocupado(estado) || !actividadId}
             onChange={(event) => {
               const file = event.target.files?.[0]
               event.target.value = ""
@@ -198,29 +247,70 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
           />
         </label>
       </div>
-      {aviso && (
-        <p className={`status${aviso.tono === "error" ? " error" : ""}`} role="status">
-          {aviso.texto}
-        </p>
-      )}
-      <ul className="labor-list evidencia-lista">
-        {pendientes.map((item) => (
-          <li key={item.id}>
-            <strong>{item.nombre}</strong>
-            <span className="chip pendiente">Pendiente</span>
-            <small>{item.lat == null ? "Sin ubicación" : "Con ubicación"}</small>
-          </li>
-        ))}
-        {enviadas.map((item) => (
-          <li key={item.id}>
-            <a href={`/api/v1/evidencias/${item.id}/archivo`}>{item.nombre}</a>
-            <span className="chip enviada">Enviada</span>
-            {item.nota ? <small>{item.nota}</small> : null}
-          </li>
-        ))}
+      <div className="evidencia-estado" aria-live="polite">
+        <p className={estado.fase === "error" ? "status error" : "status"}>{textoEstado(estado)}</p>
+        {estado.fase === "preparando" && <progress aria-label="Preparando foto" />}
+        {estado.fase === "subiendo" &&
+          (estado.pct == null ? (
+            <progress aria-label="Preparando foto" />
+          ) : (
+            <progress max={100} value={estado.pct} aria-label="Progreso de la subida" />
+          ))}
+        {estado.fase === "error" && estado.reintentable && (
+          <button type="button" className="link" onClick={() => void reintentar()}>
+            Reintentar
+          </button>
+        )}
+        {estado.fase === "en-cola" && (
+          <button type="button" className="link" onClick={() => void drenar()}>
+            Reintentar envío
+          </button>
+        )}
+      </div>
+      <ul className="evidencia-grid" aria-label="Fotos de la labor">
+        {items.map((it) => {
+          const rota = rotas.has(it.id)
+          const contenido = rota ? (
+            <span className="evidencia-doc" aria-hidden="true">
+              No disponible
+            </span>
+          ) : esImagen(it.mime) ? (
+            <img
+              src={it.estado === "enviada" ? urlArchivo(it.id) : urls.get(it.id)}
+              alt={`Foto de evidencia del ${formatFechaHora(it.fecha)}`}
+              width={112}
+              height={112}
+              loading="lazy"
+              decoding="async"
+              onError={marcarRota(it.id)}
+            />
+          ) : (
+            <span className="evidencia-doc" aria-hidden="true">
+              PDF
+            </span>
+          )
+          return (
+            <li key={it.id}>
+              <figure className="evidencia-mini">
+                {it.estado === "enviada" ? (
+                  <a href={urlArchivo(it.id)} target="_blank" rel="noopener" aria-label={`Abrir ${it.nombre}`}>
+                    {contenido}
+                  </a>
+                ) : (
+                  contenido
+                )}
+                <figcaption>
+                  <span className={`chip ${it.estado}`}>{it.estado === "enviada" ? "Enviada" : "Pendiente"}</span>
+                  <small>{it.nombre}</small>
+                  {it.estado === "pendiente" && <small>{it.conPunto ? "Con ubicación" : "Sin ubicación"}</small>}
+                </figcaption>
+              </figure>
+            </li>
+          )
+        })}
       </ul>
       {cargando && <Esqueleto filas={2} />}
-      {!cargando && pendientes.length === 0 && enviadas.length === 0 && (
+      {!cargando && items.length === 0 && (
         <p className="empty">{actividadId ? "Esta labor no tiene fotos." : "La foto se adjunta cuando la labor ya está en el servidor."}</p>
       )}
     </section>

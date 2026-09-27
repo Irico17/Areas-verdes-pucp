@@ -84,8 +84,6 @@ test("la ficha de labores conserva el pin y muestra los campos de escritorio", (
       sugerencia: "Regla local sobre el título. No es un modelo externo: confirme antes de guardar.",
       pista: { codigo: "poda", etiqueta: "Poda" },
       onConfirmarPista: () => {},
-      evidencias: [],
-      onSubir: () => {},
     }),
   )
   assert.match(html, /Marcar labor|Cancelar marca/)

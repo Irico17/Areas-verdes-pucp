@@ -286,30 +286,6 @@ export async function fetchEvidencias(actividadId: string): Promise<Evidencia[]>
   return body.evidencias ?? []
 }
 
-export async function subirEvidencia(actividadId: string, archivo: File, nota: string): Promise<void> {
-  const data = new FormData()
-  data.set("id", crypto.randomUUID())
-  data.set("actividad_id", actividadId)
-  data.set("nota", nota)
-  data.set("archivo", archivo)
-  let res: Response
-  try {
-    res = await fetch("/api/v1/evidencias", { method: "POST", body: data, credentials: "include" })
-  } catch {
-    throw new ApiError(0, "Sin conexión con la API")
-  }
-  if (!res.ok) {
-    let message = `La API respondió ${res.status}`
-    try {
-      const payload = (await res.json()) as { error?: string }
-      if (payload.error) message = payload.error
-    } catch {
-      /* vacío */
-    }
-    throw new ApiError(res.status, message)
-  }
-}
-
 export async function fetchReporte(filtro: FiltroReporte): Promise<Reporte> {
   const res = await send(`/api/v1/reportes/labores?${reporteQuery(filtro)}`, "GET")
   return res.json() as Promise<Reporte>

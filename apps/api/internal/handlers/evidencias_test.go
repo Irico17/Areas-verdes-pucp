@@ -159,6 +159,92 @@ func TestSubirEvidencia409YIdempotente(t *testing.T) {
 	}
 }
 
+func TestArchivoCabecerasCache(t *testing.T) {
+	base := os.Getenv("MIGRATE_TEST_URL")
+	if base == "" {
+		base = "postgres://campus:campus@127.0.0.1:5432/postgres?sslmode=disable"
+	}
+	admin, err := sql.Open("pgx", base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer admin.Close()
+	if err := admin.Ping(); err != nil {
+		t.Skipf("sin postgres de prueba: %v", err)
+	}
+	name := "campus_verde_evidencia_archivo"
+	if _, err := admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := admin.Exec("DROP DATABASE IF EXISTS " + name); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := admin.Exec("CREATE DATABASE " + name); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name)
+		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + name)
+	})
+
+	url := fmt.Sprintf("postgres://campus:campus@127.0.0.1:5432/%s?sslmode=disable", name)
+	gdb, err := db.Open(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sqlDB.Close()
+	dir := filepath.Join("..", "..", "migrations")
+	if err := migrate.Apply(gdb, dir); err != nil {
+		t.Fatal(err)
+	}
+
+	gin.SetMode(gin.TestMode)
+	h := Atencion{Store: atencion.NewStore(gdb), Files: blobs.Disk{Dir: t.TempDir()}}
+	labor := "11111111-1111-4111-8111-111111111111"
+	id := "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+	foto := []byte{0xFF, 0xD8, 0xFF, 0xD9}
+	var uid int64
+	if err := gdb.Raw(`
+		INSERT INTO usuarios (usuario, nombre, rol, capataz_id, password_hash)
+		VALUES ('prueba-campo', 'Equipo de prueba', 'capataz', 'cap-norte', 'x')
+		RETURNING id`).Row().Scan(&uid); err != nil {
+		t.Fatal(err)
+	}
+
+	subida := postEvidencia(t, h, id, labor, "", foto, "capataz", "cap-norte", uid)
+	if subida.Code != 201 {
+		t.Fatalf("alta: %d %s", subida.Code, subida.Body.String())
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/evidencias/"+id+"/archivo", nil)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+	c.Params = gin.Params{{Key: "id", Value: id}}
+	c.Set("usuario", accesos.Usuario{ID: uid, Rol: "capataz", CapatazID: "cap-norte", Nombre: "Equipo de prueba"})
+	h.Archivo(c)
+
+	if rec.Code != 200 {
+		t.Fatalf("archivo: %d %s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Cache-Control"); got != "private, max-age=31536000, immutable" {
+		t.Fatalf("Cache-Control = %q", got)
+	}
+	if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+		t.Fatalf("X-Content-Type-Options = %q", got)
+	}
+	if got := rec.Header().Get("Content-Disposition"); got != "inline" {
+		t.Fatalf("Content-Disposition = %q", got)
+	}
+	if !bytes.Equal(rec.Body.Bytes(), foto) {
+		t.Fatalf("el cuerpo no coincide con la foto subida")
+	}
+}
+
 func postEvidencia(t *testing.T, h Atencion, id, labor, orden string, foto []byte, rol, capataz string, uid int64) *httptest.ResponseRecorder {
 	t.Helper()
 	sum := sha256.Sum256(foto)
