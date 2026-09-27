@@ -231,7 +231,7 @@ func TestArchivoCabecerasCache(t *testing.T) {
 	if rec.Code != 200 {
 		t.Fatalf("archivo: %d %s", rec.Code, rec.Body.String())
 	}
-	if got := rec.Header().Get("Cache-Control"); got != "private, max-age=31536000, immutable" {
+	if got := rec.Header().Get("Cache-Control"); got != "private, max-age=86400" {
 		t.Fatalf("Cache-Control = %q", got)
 	}
 	if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {

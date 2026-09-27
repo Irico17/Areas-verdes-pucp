@@ -560,7 +560,7 @@ func (h Atencion) Archivo(c *gin.Context) {
 	}
 	defer body.Close()
 	c.Header("Content-Type", mime)
-	c.Header("Cache-Control", "private, max-age=31536000, immutable")
+	c.Header("Cache-Control", "private, max-age=86400")
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.Header("Content-Disposition", "inline")
 	c.Status(200)
