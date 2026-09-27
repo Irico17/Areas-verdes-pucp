@@ -195,8 +195,10 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
   const [urls, setUrls] = useState<Map<string, string>>(new Map())
   useEffect(() => {
     setUrls(
-      cacheRef.current.sincronizar(
-        pendientes.map((item) => ({ id: item.id, blob: new Blob([item.bytes], { type: item.mime }) })),
+      new Map(
+        cacheRef.current.sincronizar(
+          pendientes.map((item) => ({ id: item.id, blob: new Blob([item.bytes], { type: item.mime }) })),
+        ),
       ),
     )
   }, [pendientes])
