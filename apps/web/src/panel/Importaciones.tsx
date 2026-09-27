@@ -78,7 +78,7 @@ export function ImportacionesPanel() {
     }
   }
 
-  const columnas = vista?.filas[0] ? Object.keys(vista.filas[0]) : []
+  const columnas = vista ? Array.from(new Set(vista.filas.flatMap((fila) => Object.keys(fila)))) : []
 
   return (
     <section className="form">

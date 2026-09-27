@@ -65,13 +65,8 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
   const refrescar = useCallback(async () => {
     const locales = await listarEvidencias().catch(() => [])
     setPendientes(locales.filter((item) => item.actividadId === actividadId))
-    if (!actividadId) {
-      setEnviadas([])
-      setCargadoDe(actividadId)
-      return
-    }
     try {
-      setEnviadas(await fetchEvidencias(actividadId))
+      setEnviadas(actividadId ? await fetchEvidencias(actividadId) : [])
     } catch {
       setEnviadas([])
     } finally {

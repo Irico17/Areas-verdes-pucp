@@ -19,10 +19,11 @@ export function ViveroPanel(props: Props) {
   const catalogo = { subproceso: props.subprocesos ?? [], etapa: props.etapas ?? [] }
   useEffect(() => {
     if (props.iniciales) return
+    let cancelado = false
     void fetch("/api/v1/vivero", { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { registros?: (ViveroItem & { lugar_libre?: string })[] } | null) => {
-        if (!body?.registros) return
+        if (cancelado || !body?.registros) return
         setItems(
           body.registros.map((item) => ({
             ...item,
@@ -31,7 +32,12 @@ export function ViveroPanel(props: Props) {
         )
       })
       .catch(() => {})
-      .finally(() => setCargando(false))
+      .finally(() => {
+        if (!cancelado) setCargando(false)
+      })
+    return () => {
+      cancelado = true
+    }
   }, [props.iniciales])
   const visibles = useMemo(
     () => items.filter((item) => !mes || item.fecha.startsWith(mes)),

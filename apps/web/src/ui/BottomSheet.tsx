@@ -142,7 +142,6 @@ export function BottomSheet({ open, onClose, vista, cabeza, onAltura, children }
           onClick={alTocarAsa}
           onPointerDown={alBajar}
           onPointerMove={alMover}
-          onPointerUp={alSoltar}
           onPointerCancel={alSoltar}
           onLostPointerCapture={alSoltar}
         >

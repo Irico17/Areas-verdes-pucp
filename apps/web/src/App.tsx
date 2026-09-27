@@ -517,7 +517,8 @@ export default function App() {
 
   const stageRef = useRef<HTMLDivElement>(null)
   const publicarAltura = useCallback((px: number) => {
-    stageRef.current?.style.setProperty("--sheet-h", `${Math.round(px)}px`)
+    if (px > 0) stageRef.current?.style.setProperty("--sheet-h", `${Math.round(px)}px`)
+    else stageRef.current?.style.removeProperty("--sheet-h")
   }, [])
   const movil = useMedia(MQ_MOVIL)
   const [masAbierto, setMasAbierto] = useState(false)
@@ -565,7 +566,7 @@ export default function App() {
     setRailOpen(false)
     requestAnimationFrame(() => {
       document
-        .querySelector<HTMLButtonElement>('.guard button[aria-pressed="true"], .guard .guard-mas.activo')
+        .querySelector<HTMLButtonElement>('.guard button[aria-current="page"], .guard .guard-mas.activo')
         ?.focus({ preventScroll: true })
     })
   }
@@ -594,7 +595,7 @@ export default function App() {
       <nav className="guard" aria-label="Módulos">
         <div className="rail-mark"><img src="/isotipo.svg" alt="VerdePUCP" /></div>
         {barra.map((item) => (
-          <button key={item.id} type="button" aria-pressed={moduloActivo === item.id} onClick={() => irA(item.id)}>
+          <button key={item.id} type="button" aria-current={moduloActivo === item.id ? "page" : undefined} onClick={() => irA(item.id)}>
             {item.label}
           </button>
         ))}
@@ -621,6 +622,10 @@ export default function App() {
             event.stopPropagation()
             setMasAbierto(false)
             document.querySelector<HTMLButtonElement>(".guard-mas")?.focus({ preventScroll: true })
+          }}
+          onBlur={(event) => {
+            const siguiente = event.relatedTarget
+            if (!(siguiente instanceof Element) || !siguiente.closest(".guard-menu, .guard-mas")) setMasAbierto(false)
           }}
         >
           {mas.map((item) => (

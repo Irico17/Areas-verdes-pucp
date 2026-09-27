@@ -346,7 +346,7 @@ export function CatastroEditor({
             <input id={`${baseId}-q`} value={q} onChange={(event) => setQ(event.target.value)} placeholder="Código, nombre o uso" />
           </label>
         </form>
-        {!seleccion && aviso && <p className={aviso.toLowerCase().includes("no se") || aviso.toLowerCase().includes("respondió") ? "status error" : "banner"}>{aviso}</p>}
+        {vista === "lista" && aviso && <p className={aviso.toLowerCase().includes("no se") || aviso.toLowerCase().includes("respondió") ? "status error" : "banner"}>{aviso}</p>}
         <p className="row-actions">
           {entidad === "area" ? (
             <button
@@ -709,7 +709,7 @@ export function CatastroEditor({
             )}
           </form>
         )}
-        {seleccion && aviso && <p className={aviso.toLowerCase().includes("no se") || aviso.toLowerCase().includes("respondió") ? "status error" : "banner"}>{aviso}</p>}
+        {vista === "ficha" && aviso && <p className={aviso.toLowerCase().includes("no se") || aviso.toLowerCase().includes("respondió") ? "status error" : "banner"}>{aviso}</p>}
       </div>
     </section>
   )

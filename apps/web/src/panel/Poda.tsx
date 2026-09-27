@@ -16,13 +16,19 @@ export function PodaPanel(props: Props) {
   const fallos = useMemo(() => validarPoda(form), [form])
   useEffect(() => {
     if (props.iniciales) return
+    let cancelado = false
     void fetch("/api/v1/podas", { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { podas?: PodaItem[] } | null) => {
-        if (body?.podas) setItems(body.podas)
+        if (!cancelado && body?.podas) setItems(body.podas)
       })
       .catch(() => {})
-      .finally(() => setCargando(false))
+      .finally(() => {
+        if (!cancelado) setCargando(false)
+      })
+    return () => {
+      cancelado = true
+    }
   }, [props.iniciales])
   function set<K extends keyof PodaItem>(key: K, value: PodaItem[K]) {
     setForm((current) => ({ ...current, [key]: value }))

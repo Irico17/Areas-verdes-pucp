@@ -32,7 +32,9 @@ export function FechaCampo(props: { value: string; onChange: (iso: string) => vo
         }
         const iso = parseFechaPE(next)
         setBad(iso == null)
-        if (iso) props.onChange(iso)
+        // Texto inválido: el padre no debe conservar la última fecha válida
+        // (si no, un formulario podría enviarla mientras el campo se ve inválido).
+        props.onChange(iso ?? "")
       }}
     />
   )
