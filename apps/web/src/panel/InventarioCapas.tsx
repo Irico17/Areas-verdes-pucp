@@ -28,6 +28,20 @@ const ceros = Object.fromEntries(CONTEOS_TACHO.map((campo) => [campo, 0])) as Co
 
 const GEO_PUNTO = '{"type":"Point","coordinates":[-77.08,-12.07]}'
 
+const PESTANAS = { tachos: "Tachos", bebederos: "Bebederos", puntos: "Puntos", reservas: "Reservas" } as const
+
+const CAMPO = {
+  nombre: "nombre",
+  codigo: "código",
+  nota: "nota",
+  clase: "clase",
+  riego: "riego",
+  area_m2: "área",
+  perimetro_m: "perímetro",
+  pertenecen: "pertenecen",
+  uso: "uso",
+} as const
+
 function numeroOpcional(texto: string): number | null {
   const limpio = texto.trim()
   if (!limpio) return null
@@ -237,10 +251,11 @@ export function InventarioCapas({
   return (
     <section className="split catastro-editor">
       <div className="split-list" ref={listaRef}>
-        <div className="roles" role="tablist" aria-label="Inventario">
+        <h2>Inventario</h2>
+        <div className="roles" role="group" aria-label="Inventario">
           {(["tachos", "bebederos", "puntos", "reservas"] as const).map((item) => (
             <button key={item} type="button" aria-pressed={entidad === item} onClick={() => elegir(item)}>
-              {item}
+              {PESTANAS[item]}
             </button>
           ))}
         </div>
@@ -249,7 +264,7 @@ export function InventarioCapas({
             <li key={item.id}>
               <button type="button" className={entidad === item.id ? "labor on" : "labor"} onClick={() => elegir(item.id)}>
                 <span>{item.label}</span>
-                <small>{item.campos.join(", ")}</small>
+                <small>Campos: {item.campos.map((campo) => CAMPO[campo]).join(", ")}</small>
               </button>
             </li>
           ))}
@@ -280,7 +295,7 @@ export function InventarioCapas({
           >
             Volver a la lista
           </button>
-          <h2>Edición de inventario</h2>
+          <h3>{id == null ? "Nuevo registro" : "Editar registro"}</h3>
           {entidad === "tachos" && (
             <>
               <label className="field">

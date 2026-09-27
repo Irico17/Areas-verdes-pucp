@@ -581,9 +581,6 @@ export default function App() {
             <span className="brand-sub">Gestión de Áreas Verdes</span>
           </div>
         </div>
-        <button type="button" className="menu-btn" onClick={() => setRailOpen((open) => !open)}>
-          {railOpen ? "Ocultar" : "Panel"}
-        </button>
         <div className="top-spacer" />
         <div className="roles" role="group" aria-label="Vista del mapa">
           <button type="button" aria-pressed={!relieve} onClick={() => setRelieve(false)}>Plano</button>
