@@ -2,7 +2,13 @@
 
 **Superficie:** `apps/web` (React 19, Vite, MapLibre 6.11). Rutas relativas a `apps/web/`.
 **Fecha:** 27/09/2026. **Rama sugerida:** `fix/ui-scroll-diseno`.
-**Estado:** auditoría y plan. En esta fase no se tocó código.
+**Estado:** auditoría y plan. En esta fase no se tocó código. *(Nota de una fase posterior: el Lote A ya está implementado en la rama `fix/ui-scroll-diseno`; ver "Progreso" más abajo. Lotes B, C y D siguen pendientes.)*
+
+### Progreso (actualizado durante la implementación)
+
+- **Lote A · completo.** S01–S19 implementados y verificados con `npm run lint`, `npm test`, `npm run build` en `apps/web`, y con capturas a 1280×800 y 390×844 (prefijo `loteA` en `/workspace/verdepucp-shots`).
+- Fuera de la auditoría: se corrigió que `FichaLabor` (`Labores.tsx`) conservaba valores tipeados al cambiar de labor (riesgo de guardar en la labor equivocada). Ver O1 y el commit `fix: FichaLabor ya no arrastra datos tipeados de una labor a otra`.
+- Pendiente: Lote B (diseño visual), Lote C (movimiento) y Lote D (verificación formal en dispositivo).
 
 ## Cómo se hizo
 
