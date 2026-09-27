@@ -542,6 +542,14 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
     max-height: var(--sheet-util);
     touch-action: none;
   }
+  html[data-teclado] .guard,
+  html[data-teclado] .topbar { visibility: hidden; }
+  .panel.sheet.con-teclado {
+    max-height: none;
+    border-radius: 0;
+    transition: none;
+  }
+  .panel.sheet.con-teclado .sheet-action { position: static; box-shadow: none; }
   .sheet-chrome {
     display: grid;
     grid-template-columns: 1fr auto;
