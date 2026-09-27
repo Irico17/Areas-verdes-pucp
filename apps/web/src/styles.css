@@ -355,6 +355,34 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .agenda { padding: 8px 0; border-top: 1px solid var(--linea); }
 .form button { margin-top: 4px; }
 
+.tabla-scroll {
+  overflow: auto hidden;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  margin: 8px 0 16px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-control);
+  background: var(--hoja);
+}
+.tabla { border-collapse: separate; border-spacing: 0; min-width: 100%; font-size: 13px; }
+.tabla th,
+.tabla td {
+  padding: 8px 10px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--linea);
+}
+.tabla th { background: var(--papel); font-size: 12px; font-weight: 600; }
+.tabla tbody tr:last-child td { border-bottom: 0; }
+.tabla :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  background: var(--hoja);
+  box-shadow: 1px 0 0 var(--linea);
+}
+.tabla th:first-child { background: var(--papel); }
+.tabla .celda { display: block; max-width: 28ch; overflow: hidden; text-overflow: ellipsis; }
+
 .split {
   flex: 1 1 0;
   min-height: 0;
