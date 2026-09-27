@@ -467,14 +467,8 @@ export function CampusMap({
              <p class="cv-popup-meta">${categoria}</p>`,
           )
           .addTo(map)
-        const seleccionado = hit.id != null ? { source: String(hit.source), id: hit.id } : null
         popup.on("close", () => {
-          if (
-            seleccionado &&
-            selRef.current &&
-            selRef.current.source === seleccionado.source &&
-            selRef.current.id === seleccionado.id
-          ) {
+          if (popupRef.current === popup && selRef.current) {
             map.setFeatureState(selRef.current, { sel: false })
             selRef.current = null
           }
