@@ -146,6 +146,16 @@ Fuente: vivo `jefe_de_grupo.json`, 534 features (505 Polygon + 29 MultiPolygon).
 
 Formulario: polígono + selector de cuadrilla (solo ficticios). Importador GeoJSON; columna `jefes` se transforma y no se persiste. Anonimización: sección 2.
 
+Columna `sector` (migración `044_sector_poligonos.sql`): equivalente anonimizado del color por
+grupo del mapa original, para colorear el catastro por sector operativo en vez de por
+`cuadrilla_id` (ese lo reescribe cada corrida de `etl-lote`). `sector` es uno de
+`cua-valeria`/`cua-mateo`/`cua-renato` (por frecuencia del hash de jefe de grupo, el más
+numeroso primero) o `campo-deportivo`/`bosque-humedo` (rótulos de lugar), o `NULL` si el
+polígono no viene de `jefe_de_grupo.json`. Se genera con `make sectores`
+(`go run ./cmd/sectores`), que escribe `data/v1/zonas_sector.json` y, con `-sql`, el bloque de
+la migración. El ETL normal y el de lote lo vuelven a completar en cada corrida sin pisar un
+valor ya asignado (`internal/etl.AplicarSectores`).
+
 ### 4.4 Cuadrilla y responsable ficticio
 
 No hay tabla de personas reales. `capataces` hoy tiene tres equipos de demo (`003_operacion.sql`).
