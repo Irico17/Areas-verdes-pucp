@@ -201,6 +201,17 @@ html:has(.shell) body {
   flex: 1 1 0;
   min-height: 0;
 }
+.panel-head {
+  flex: none;
+  padding: 10px 16px;
+  background: var(--papel);
+  border-bottom: 1px solid var(--linea);
+}
+.panel-head .status { margin: 0; }
+@media (max-width: 820px) {
+  .panel-head { padding: 6px 16px; }
+  .panel-head .status:not(.error) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
 
 .stage { grid-column: 3; grid-row: 2; position: relative; min-width: 0; min-height: 0; }
 .map-host { position: absolute; inset: 0; }

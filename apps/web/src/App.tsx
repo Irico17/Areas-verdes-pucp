@@ -629,12 +629,19 @@ export default function App() {
           ))}
         </div>
       )}
-      <BottomSheet open={railOpen} onClose={cerrarPanel} vista={moduloActivo} onAltura={publicarAltura}>
-        <p className={load.kind === "error" || activityError ? "status error" : "status"}>
-          {load.kind === "error" ? load.message : summary}
-          {activityError ? ` · ${activityError}` : ""}
-          {picked ? ` · ${picked}` : ""}
-        </p>
+      <BottomSheet
+        open={railOpen}
+        onClose={cerrarPanel}
+        vista={moduloActivo}
+        onAltura={publicarAltura}
+        cabeza={
+          <p className={load.kind === "error" || activityError ? "status error" : "status"} role="status">
+            {load.kind === "error" ? load.message : summary}
+            {activityError ? ` · ${activityError}` : ""}
+            {picked ? ` · ${picked}` : ""}
+          </p>
+        }
+      >
         {moduloActivo === "mapa" && (
           <section className="block">
             <h2>Capas</h2>
