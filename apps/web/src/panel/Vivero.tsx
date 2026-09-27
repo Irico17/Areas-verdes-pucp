@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { Esqueleto } from "../ui/Esqueleto"
 import { AREAS, VIVERO_VACIO, validarVivero, type ViveroItem } from "./vivero"
 
 type Props = {
@@ -11,6 +12,7 @@ type Props = {
 export function ViveroPanel(props: Props) {
   const [mes, setMes] = useState("")
   const [items, setItems] = useState<ViveroItem[]>(props.iniciales ?? [])
+  const [cargando, setCargando] = useState(!props.iniciales)
   const [form, setForm] = useState<ViveroItem>(VIVERO_VACIO)
   const [aviso, setAviso] = useState("")
   const catalogo = { subproceso: props.subprocesos ?? [], etapa: props.etapas ?? [] }
@@ -28,6 +30,7 @@ export function ViveroPanel(props: Props) {
         )
       })
       .catch(() => {})
+      .finally(() => setCargando(false))
   }, [props.iniciales])
   const visibles = useMemo(
     () => items.filter((item) => !mes || item.fecha.startsWith(mes)),
@@ -44,8 +47,9 @@ export function ViveroPanel(props: Props) {
         Mes
         <input type="month" value={mes} onChange={(event) => setMes(event.target.value)} />
       </label>
+      {cargando && <Esqueleto />}
       <ul className="labor-list">
-        {visibles.length === 0 && <li className="empty">No hay registros de vivero en este mes.</li>}
+        {!cargando && visibles.length === 0 && <li className="empty">No hay registros de vivero en este mes.</li>}
         {visibles.map((item) => (
           <li key={item.id} className="agenda">
             <strong>{item.area || "Sin área"}</strong>

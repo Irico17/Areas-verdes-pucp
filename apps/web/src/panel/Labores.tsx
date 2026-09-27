@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { formatFechaHora } from "../fecha"
 import { mostrarEnPanel } from "../ui/desplazar"
+import { Esqueleto } from "../ui/Esqueleto"
 import {
   ABIERTOS,
   ESTADOS,
@@ -29,6 +30,7 @@ export type LaborItem = {
 
 type Props = {
   rol: Rol
+  cargando?: boolean
   equipos: Capataz[]
   equipoId: string
   onEquipo: (id: string) => void
@@ -204,9 +206,14 @@ export function Labores(props: Props) {
           </button>
         </p>
       )}
-      {props.notice && <p className={avisoError ? "status error" : "banner"}>{props.notice}</p>}
+      {props.notice && (
+        <p className={avisoError ? "status error" : "banner"} role="status">
+          {props.notice}
+        </p>
+      )}
+      {props.cargando && <Esqueleto />}
       <ul className="labor-list">
-        {visibles.length === 0 && <li className="empty">No hay labores con este filtro.</li>}
+        {!props.cargando && visibles.length === 0 && <li className="empty">No hay labores con este filtro.</li>}
         {visibles.map((item) => (
           <li key={item.id}>
             <button type="button" className={props.selected?.id === item.id ? "labor on" : "labor"} onClick={() => props.onSelect(item.id)}>

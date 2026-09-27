@@ -309,11 +309,20 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
 .lede, .hint, .meta { color: var(--muted); font-size: 13px; max-width: 62ch; }
 .status { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
-.status.error, .banner.error { color: var(--alerta); }
+.status.error {
+  color: var(--alerta);
+  background: color-mix(in srgb, var(--alerta) 7%, var(--hoja));
+  border: 1px solid color-mix(in srgb, var(--alerta) 35%, var(--linea));
+  border-radius: var(--r-control);
+  padding: 8px 10px;
+}
+.errores-campo .status.error { background: none; border: 0; padding: 0; }
+.banner.error { color: var(--alerta); }
 .banner {
   margin: 8px 0;
   padding: 8px 10px;
   background: color-mix(in srgb, var(--yucca) 10%, var(--hoja));
+  border: 1px solid color-mix(in srgb, var(--yucca) 30%, var(--linea));
   border-radius: var(--r-control);
   font-size: 13px;
 }
@@ -329,6 +338,10 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 }
 .field textarea { min-height: 88px; resize: vertical; }
 .field input::placeholder { color: color-mix(in srgb, var(--muted) 75%, var(--hoja)); }
+.field :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--alerta);
+  background: color-mix(in srgb, var(--alerta) 4%, var(--hoja));
+}
 .checks { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 8px 0 12px; padding: 0; list-style: none; }
 .checks label, .checks li { display: flex; align-items: center; gap: 8px; font-size: 13px; min-height: 32px; }
 .checks i { width: 12px; height: 12px; display: inline-block; border-radius: 2px; }

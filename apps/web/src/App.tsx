@@ -111,6 +111,7 @@ export default function App() {
   const [activities, setActivities] = useState<FeatureCollection>({ type: "FeatureCollection", features: [] })
   const [activityError, setActivityError] = useState("")
   const [queue, setQueue] = useState<QueuedLabor[]>([])
+  const [laboresListas, setLaboresListas] = useState(false)
   const [estados, setEstados] = useState<Record<string, boolean>>({ pendiente: true, en_proceso: true, bloqueada: true })
   const [tipoFiltro, setTipoFiltro] = useState("")
   const [railOpen, setRailOpen] = useState(() => !window.matchMedia(MQ_MOVIL).matches)
@@ -276,6 +277,7 @@ export default function App() {
         setActivities(fc)
         void saveLabores(fc)
         setActivityError("")
+        setLaboresListas(true)
       })
       .catch(async (error: unknown) => {
         if (cancelled) return
@@ -283,9 +285,11 @@ export default function App() {
         if (cached && Array.isArray(cached.features)) {
           setActivities(cached)
           setActivityError("Sin conexión: se muestra la última lista guardada en este navegador.")
+          setLaboresListas(true)
           return
         }
         setActivityError(error instanceof Error ? error.message : "No se pudieron leer las labores")
+        setLaboresListas(true)
       })
     return () => {
       cancelled = true
@@ -684,6 +688,7 @@ export default function App() {
           <>
             <Labores
               rol={rol}
+              cargando={!laboresListas}
               equipos={equipos}
               equipoId={equipoId}
               onEquipo={(id) => {

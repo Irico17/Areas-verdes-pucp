@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { Esqueleto } from "../ui/Esqueleto"
 import { PODA_VACIA, codigoExterno, validarPoda, type PodaItem } from "./poda"
 
 type Props = {
@@ -8,6 +9,7 @@ type Props = {
 
 export function PodaPanel(props: Props) {
   const [items, setItems] = useState<PodaItem[]>(props.iniciales ?? [])
+  const [cargando, setCargando] = useState(!props.iniciales)
   const [form, setForm] = useState<PodaItem>({ ...PODA_VACIA, id: "nueva" })
   const [aviso, setAviso] = useState("")
   const fallos = useMemo(() => validarPoda(form), [form])
@@ -19,6 +21,7 @@ export function PodaPanel(props: Props) {
         if (body?.podas) setItems(body.podas)
       })
       .catch(() => {})
+      .finally(() => setCargando(false))
   }, [props.iniciales])
   function set<K extends keyof PodaItem>(key: K, value: PodaItem[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -27,8 +30,9 @@ export function PodaPanel(props: Props) {
     <section className="block">
       <h2>Poda</h2>
       <p className="lede">Incidencias de poda. El código externo solo se conserva si ya viene como OSG.</p>
+      {cargando && <Esqueleto />}
       <ul className="labor-list">
-        {items.length === 0 && <li className="empty">No hay podas en esta vista.</li>}
+        {!cargando && items.length === 0 && <li className="empty">No hay podas en esta vista.</li>}
         {items.map((item) => (
           <li key={item.codigo}>
             <button type="button" className="labor" onClick={() => setForm(item)}>

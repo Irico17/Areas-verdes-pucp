@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { mostrarEnPanel } from "../ui/desplazar"
+import { Esqueleto } from "../ui/Esqueleto"
 import {
   CAPAS_EDITABLES,
   CONTEOS_TACHO,
@@ -60,6 +61,8 @@ export function InventarioCapas({
   const listaRef = useRef<HTMLDivElement>(null)
   const [salto, setSalto] = useState(0)
   const [filas, setFilas] = useState<Fila[]>([])
+  const [cargadoDe, setCargadoDe] = useState<EntidadInventario | null>(null)
+  const cargando = cargadoDe !== entidad
   const [id, setId] = useState<number | null>(null)
   const [errores, setErrores] = useState<ErrorCampo[]>([])
   const [aviso, setAviso] = useState("")
@@ -105,6 +108,9 @@ export function InventarioCapas({
       })
       .catch(() => {
         if (vivo) setFilas([])
+      })
+      .finally(() => {
+        if (vivo) setCargadoDe(entidad)
       })
     return () => {
       vivo = false
@@ -247,14 +253,16 @@ export function InventarioCapas({
               </button>
             </li>
           ))}
-          {filas.map((fila) => (
-            <li key={fila.id}>
-              <button type="button" className={id === fila.id ? "labor on" : "labor"} onClick={() => cargarFila(fila.raw)}>
-                <span>{fila.etiqueta}</span>
-              </button>
-            </li>
-          ))}
+          {!cargando &&
+            filas.map((fila) => (
+              <li key={fila.id}>
+                <button type="button" className={id === fila.id ? "labor on" : "labor"} onClick={() => cargarFila(fila.raw)}>
+                  <span>{fila.etiqueta}</span>
+                </button>
+              </li>
+            ))}
         </ul>
+        {cargando && <Esqueleto />}
       </div>
       <div className="split-detail">
         <form
