@@ -332,10 +332,17 @@ func normalizar(fila Fila) (string, string, json.RawMessage, json.RawMessage, er
 }
 
 func insertarCambio(tx *gorm.DB, entidad, entidadID, accion string, antes, despues json.RawMessage, usuarioID int64, loteID *int64) error {
+	var antesVal, despuesVal any
+	if len(antes) > 0 {
+		antesVal = string(antes)
+	}
+	if len(despues) > 0 {
+		despuesVal = string(despues)
+	}
 	return tx.Exec(`
 		INSERT INTO cambios (entidad, entidad_id, accion, antes, despues, usuario_id, lote_id)
 		VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7)`,
-		entidad, entidadID, accion, string(antes), string(despues), usuarioID, loteID,
+		entidad, entidadID, accion, antesVal, despuesVal, usuarioID, loteID,
 	).Error
 }
 
@@ -559,7 +566,12 @@ func leerActual(tx *gorm.DB, entidad, entidadID string) (json.RawMessage, error)
 			SELECT json_build_object('nombre', nombre, 'detalle', referencia)::text
 			FROM areas_verdes WHERE feature_id = $1`, entidadID).Row().Scan(&raw)
 	default:
-		return nil, InputError{Reason: "entidad no importable"}
+		spec, ok := bajaPorActivo[entidad]
+		if !ok {
+			return nil, InputError{Reason: "entidad no importable"}
+		}
+		q := fmt.Sprintf(`SELECT to_jsonb(t)::text FROM %s t WHERE %s = $1`, spec.tabla, spec.col)
+		err = tx.Raw(q, entidadID).Row().Scan(&raw)
 	}
 	if err != nil {
 		return nil, err
