@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { FechaCampo } from "../FechaCampo"
 import { Esqueleto } from "../ui/Esqueleto"
 import { PODA_VACIA, codigoExterno, validarPoda, type PodaItem } from "./poda"
 
@@ -103,11 +104,11 @@ export function PodaPanel(props: Props) {
         </label>
         <label className="field">
           Fecha de reporte
-          <input type="date" value={form.fecha_reporte} onChange={(event) => set("fecha_reporte", event.target.value)} />
+          <FechaCampo value={form.fecha_reporte} onChange={(iso) => set("fecha_reporte", iso)} />
         </label>
         <label className="field">
           Fecha de ejecución
-          <input type="date" value={form.fecha_ejecucion} onChange={(event) => set("fecha_ejecucion", event.target.value)} />
+          <FechaCampo value={form.fecha_ejecucion} onChange={(iso) => set("fecha_ejecucion", iso)} />
         </label>
         <label className="field">
           Personal

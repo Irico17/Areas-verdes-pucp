@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { FechaCampo } from "../FechaCampo"
 import { formatFechaHora } from "../fecha"
 import { mostrarEnPanel } from "../ui/desplazar"
 import { Esqueleto } from "../ui/Esqueleto"
@@ -362,11 +363,11 @@ function FichaLabor(props: { actividadId?: string }) {
       </label>
       <label className="field">
         Fecha de solicitud
-        <input type="date" value={solicitud} onChange={(event) => setSolicitud(event.target.value)} />
+        <FechaCampo value={solicitud} onChange={setSolicitud} />
       </label>
       <label className="field">
         Fecha de atención
-        <input type="date" value={atencion} onChange={(event) => setAtencion(event.target.value)} />
+        <FechaCampo value={atencion} onChange={setAtencion} />
       </label>
       <label className="field">
         Lugar

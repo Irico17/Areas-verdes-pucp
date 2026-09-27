@@ -4,6 +4,15 @@ import { formatFecha, parseFechaPE } from "./fecha"
 export function FechaCampo(props: { value: string; onChange: (iso: string) => void; required?: boolean }) {
   const [text, setText] = useState(() => (props.value ? formatFecha(props.value) : ""))
   const [bad, setBad] = useState(false)
+  const [externo, setExterno] = useState(props.value)
+  if (props.value !== externo) {
+    setExterno(props.value)
+    // Solo si el cambio vino de fuera: no reformatear mientras se escribe.
+    if (props.value !== (parseFechaPE(text) ?? "")) {
+      setText(props.value ? formatFecha(props.value) : "")
+      setBad(false)
+    }
+  }
 
   return (
     <input

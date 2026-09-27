@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { FechaCampo } from "../FechaCampo"
 import { Esqueleto } from "../ui/Esqueleto"
 import { AREAS, VIVERO_VACIO, validarVivero, type ViveroItem } from "./vivero"
 
@@ -99,7 +100,7 @@ export function ViveroPanel(props: Props) {
       >
         <label className="field">
           Fecha
-          <input type="date" value={form.fecha} onChange={(event) => set("fecha", event.target.value)} />
+          <FechaCampo value={form.fecha} onChange={(iso) => set("fecha", iso)} />
         </label>
         <label className="field">
           Área
