@@ -17,9 +17,9 @@ INSERT INTO areas_verdes (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, catastro_geom_4326($11)
 ) RETURNING id`
 
-// motivoCodigoDuplicado es el mismo texto que usan las migraciones 014 y 034
-// para este tipo de corrección, así el historial de cambios queda consistente.
-const motivoCodigoDuplicado = "codigo duplicado en el catastro de origen; se conservo el de menor id. Corrija el codigo desde la ficha"
+// motivoCodigoDuplicado es el mismo texto que usa la migración 014 para este
+// tipo de corrección, así el historial de cambios queda consistente.
+const motivoCodigoDuplicado = "codigo duplicado; se conservo el de menor id. Corrija el codigo desde la ficha"
 
 const insertZona = `
 INSERT INTO zonas (
@@ -90,7 +90,9 @@ func insertAreas(tx *gorm.DB, areas []Record) error {
 
 // duplicadosPorIndice devuelve, para cada área cuyo código ya apareció antes en la
 // lista, el código original. Las áreas se insertan en este mismo orden, así que la
-// primera aparición recibe el id menor y conserva el código sin cambios.
+// primera aparición recibe el id menor y conserva el código sin cambios. La
+// comparación usa el código tal cual (sin recortar), igual que el índice único de
+// la base; TrimSpace solo sirve para descartar códigos en blanco.
 func duplicadosPorIndice(areas []Record) map[int]string {
 	vistos := map[string]bool{}
 	duplicados := map[int]string{}
@@ -98,8 +100,8 @@ func duplicadosPorIndice(areas []Record) map[int]string {
 		if r.Codigo == nil {
 			continue
 		}
-		codigo := strings.TrimSpace(*r.Codigo)
-		if codigo == "" {
+		codigo := *r.Codigo
+		if strings.TrimSpace(codigo) == "" {
 			continue
 		}
 		if vistos[codigo] {
