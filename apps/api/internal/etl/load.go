@@ -62,6 +62,12 @@ func Load(db *gorm.DB, areas, zonas []Record, capas map[string][]Record) error {
 				}
 			}
 		}
+		// El TRUNCATE anterior deja sector en NULL; poligonos_sector_ref no
+		// tiene FK a poligonos_cuadrilla, así que sobrevive y esto lo vuelve a
+		// completar en cada corrida (ver internal/etl/sector.go).
+		if _, err := AplicarSectores(tx); err != nil {
+			return fmt.Errorf("aplicar sectores: %w", err)
+		}
 		return verifyLoaded(tx, len(areas), len(zonas), capas)
 	})
 }
@@ -264,6 +270,19 @@ func verifyLoaded(tx *gorm.DB, areas, zonas int, capas map[string][]Record) erro
 		}
 		if c.N != len(rows) || c.Con != len(rows) || c.SRID != len(rows) || c.Multi != len(rows) {
 			return fmt.Errorf("capa %s cargada=%+v, esperadas=%d", name, c, len(rows))
+		}
+	}
+
+	if zonas == ExpectedZonas {
+		var sinSector int
+		if err := tx.Raw(`
+			SELECT count(*) FROM poligonos_cuadrilla
+			WHERE sector IS NULL AND source_index IN (SELECT source_index FROM poligonos_sector_ref)
+		`).Scan(&sinSector).Error; err != nil {
+			return err
+		}
+		if sinSector != 0 {
+			return fmt.Errorf("AplicarSectores dejó %d polígono(s) con sector de referencia sin completar", sinSector)
 		}
 	}
 	return nil

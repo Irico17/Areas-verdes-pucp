@@ -1,0 +1,2685 @@
+{
+  "version": 1,
+  "fuente": "jefe_de_grupo.json (fuente: lote)",
+  "clave": "source_index",
+  "nota": "sector es un id de cuadrilla ficticia (cua-*) o un rótulo de lugar; no identifica personas",
+  "conteos": {
+    "bosque-humedo": 1,
+    "campo-deportivo": 2,
+    "cua-mateo": 168,
+    "cua-renato": 104,
+    "cua-valeria": 259
+  },
+  "poligonos": [
+    {
+      "source_index": 0,
+      "feature_id": "Z-0001",
+      "sector": "bosque-humedo"
+    },
+    {
+      "source_index": 1,
+      "feature_id": "Z-0002",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 2,
+      "feature_id": "Z-0003",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 3,
+      "feature_id": "Z-0004",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 4,
+      "feature_id": "Z-0005",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 5,
+      "feature_id": "Z-0006",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 6,
+      "feature_id": "Z-0007",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 7,
+      "feature_id": "Z-0008",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 8,
+      "feature_id": "Z-0009",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 9,
+      "feature_id": "Z-0010",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 10,
+      "feature_id": "Z-0011",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 11,
+      "feature_id": "Z-0012",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 12,
+      "feature_id": "Z-0013",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 13,
+      "feature_id": "Z-0014",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 14,
+      "feature_id": "Z-0015",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 15,
+      "feature_id": "Z-0016",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 16,
+      "feature_id": "Z-0017",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 17,
+      "feature_id": "Z-0018",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 18,
+      "feature_id": "Z-0019",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 19,
+      "feature_id": "Z-0020",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 20,
+      "feature_id": "Z-0021",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 21,
+      "feature_id": "Z-0022",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 22,
+      "feature_id": "Z-0023",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 23,
+      "feature_id": "Z-0024",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 24,
+      "feature_id": "Z-0025",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 25,
+      "feature_id": "Z-0026",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 26,
+      "feature_id": "Z-0027",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 27,
+      "feature_id": "Z-0028",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 28,
+      "feature_id": "Z-0029",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 29,
+      "feature_id": "Z-0030",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 30,
+      "feature_id": "Z-0031",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 31,
+      "feature_id": "Z-0032",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 32,
+      "feature_id": "Z-0033",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 33,
+      "feature_id": "Z-0034",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 34,
+      "feature_id": "Z-0035",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 35,
+      "feature_id": "Z-0036",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 36,
+      "feature_id": "Z-0037",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 37,
+      "feature_id": "Z-0038",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 38,
+      "feature_id": "Z-0039",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 39,
+      "feature_id": "Z-0040",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 40,
+      "feature_id": "Z-0041",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 41,
+      "feature_id": "Z-0042",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 42,
+      "feature_id": "Z-0043",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 43,
+      "feature_id": "Z-0044",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 44,
+      "feature_id": "Z-0045",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 45,
+      "feature_id": "Z-0046",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 46,
+      "feature_id": "Z-0047",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 47,
+      "feature_id": "Z-0048",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 48,
+      "feature_id": "Z-0049",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 49,
+      "feature_id": "Z-0050",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 50,
+      "feature_id": "Z-0051",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 51,
+      "feature_id": "Z-0052",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 52,
+      "feature_id": "Z-0053",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 53,
+      "feature_id": "Z-0054",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 54,
+      "feature_id": "Z-0055",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 55,
+      "feature_id": "Z-0056",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 56,
+      "feature_id": "Z-0057",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 57,
+      "feature_id": "Z-0058",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 58,
+      "feature_id": "Z-0059",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 59,
+      "feature_id": "Z-0060",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 60,
+      "feature_id": "Z-0061",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 61,
+      "feature_id": "Z-0062",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 62,
+      "feature_id": "Z-0063",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 63,
+      "feature_id": "Z-0064",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 64,
+      "feature_id": "Z-0065",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 65,
+      "feature_id": "Z-0066",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 66,
+      "feature_id": "Z-0067",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 67,
+      "feature_id": "Z-0068",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 68,
+      "feature_id": "Z-0069",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 69,
+      "feature_id": "Z-0070",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 70,
+      "feature_id": "Z-0071",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 71,
+      "feature_id": "Z-0072",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 72,
+      "feature_id": "Z-0073",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 73,
+      "feature_id": "Z-0074",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 74,
+      "feature_id": "Z-0075",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 75,
+      "feature_id": "Z-0076",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 76,
+      "feature_id": "Z-0077",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 77,
+      "feature_id": "Z-0078",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 78,
+      "feature_id": "Z-0079",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 79,
+      "feature_id": "Z-0080",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 80,
+      "feature_id": "Z-0081",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 81,
+      "feature_id": "Z-0082",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 82,
+      "feature_id": "Z-0083",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 83,
+      "feature_id": "Z-0084",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 84,
+      "feature_id": "Z-0085",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 85,
+      "feature_id": "Z-0086",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 86,
+      "feature_id": "Z-0087",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 87,
+      "feature_id": "Z-0088",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 88,
+      "feature_id": "Z-0089",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 89,
+      "feature_id": "Z-0090",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 90,
+      "feature_id": "Z-0091",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 91,
+      "feature_id": "Z-0092",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 92,
+      "feature_id": "Z-0093",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 93,
+      "feature_id": "Z-0094",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 94,
+      "feature_id": "Z-0095",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 95,
+      "feature_id": "Z-0096",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 96,
+      "feature_id": "Z-0097",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 97,
+      "feature_id": "Z-0098",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 98,
+      "feature_id": "Z-0099",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 99,
+      "feature_id": "Z-0100",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 100,
+      "feature_id": "Z-0101",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 101,
+      "feature_id": "Z-0102",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 102,
+      "feature_id": "Z-0103",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 103,
+      "feature_id": "Z-0104",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 104,
+      "feature_id": "Z-0105",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 105,
+      "feature_id": "Z-0106",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 106,
+      "feature_id": "Z-0107",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 107,
+      "feature_id": "Z-0108",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 108,
+      "feature_id": "Z-0109",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 109,
+      "feature_id": "Z-0110",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 110,
+      "feature_id": "Z-0111",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 111,
+      "feature_id": "Z-0112",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 112,
+      "feature_id": "Z-0113",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 113,
+      "feature_id": "Z-0114",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 114,
+      "feature_id": "Z-0115",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 115,
+      "feature_id": "Z-0116",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 116,
+      "feature_id": "Z-0117",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 117,
+      "feature_id": "Z-0118",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 118,
+      "feature_id": "Z-0119",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 119,
+      "feature_id": "Z-0120",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 120,
+      "feature_id": "Z-0121",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 121,
+      "feature_id": "Z-0122",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 122,
+      "feature_id": "Z-0123",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 123,
+      "feature_id": "Z-0124",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 124,
+      "feature_id": "Z-0125",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 125,
+      "feature_id": "Z-0126",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 126,
+      "feature_id": "Z-0127",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 127,
+      "feature_id": "Z-0128",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 128,
+      "feature_id": "Z-0129",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 129,
+      "feature_id": "Z-0130",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 130,
+      "feature_id": "Z-0131",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 131,
+      "feature_id": "Z-0132",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 132,
+      "feature_id": "Z-0133",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 133,
+      "feature_id": "Z-0134",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 134,
+      "feature_id": "Z-0135",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 135,
+      "feature_id": "Z-0136",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 136,
+      "feature_id": "Z-0137",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 137,
+      "feature_id": "Z-0138",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 138,
+      "feature_id": "Z-0139",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 139,
+      "feature_id": "Z-0140",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 140,
+      "feature_id": "Z-0141",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 141,
+      "feature_id": "Z-0142",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 142,
+      "feature_id": "Z-0143",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 143,
+      "feature_id": "Z-0144",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 144,
+      "feature_id": "Z-0145",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 145,
+      "feature_id": "Z-0146",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 146,
+      "feature_id": "Z-0147",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 147,
+      "feature_id": "Z-0148",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 148,
+      "feature_id": "Z-0149",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 149,
+      "feature_id": "Z-0150",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 150,
+      "feature_id": "Z-0151",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 151,
+      "feature_id": "Z-0152",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 152,
+      "feature_id": "Z-0153",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 153,
+      "feature_id": "Z-0154",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 154,
+      "feature_id": "Z-0155",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 155,
+      "feature_id": "Z-0156",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 156,
+      "feature_id": "Z-0157",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 157,
+      "feature_id": "Z-0158",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 158,
+      "feature_id": "Z-0159",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 159,
+      "feature_id": "Z-0160",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 160,
+      "feature_id": "Z-0161",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 161,
+      "feature_id": "Z-0162",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 162,
+      "feature_id": "Z-0163",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 163,
+      "feature_id": "Z-0164",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 164,
+      "feature_id": "Z-0165",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 165,
+      "feature_id": "Z-0166",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 166,
+      "feature_id": "Z-0167",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 167,
+      "feature_id": "Z-0168",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 168,
+      "feature_id": "Z-0169",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 169,
+      "feature_id": "Z-0170",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 170,
+      "feature_id": "Z-0171",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 171,
+      "feature_id": "Z-0172",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 172,
+      "feature_id": "Z-0173",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 173,
+      "feature_id": "Z-0174",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 174,
+      "feature_id": "Z-0175",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 175,
+      "feature_id": "Z-0176",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 176,
+      "feature_id": "Z-0177",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 177,
+      "feature_id": "Z-0178",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 178,
+      "feature_id": "Z-0179",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 179,
+      "feature_id": "Z-0180",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 180,
+      "feature_id": "Z-0181",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 181,
+      "feature_id": "Z-0182",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 182,
+      "feature_id": "Z-0183",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 183,
+      "feature_id": "Z-0184",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 184,
+      "feature_id": "Z-0185",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 185,
+      "feature_id": "Z-0186",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 186,
+      "feature_id": "Z-0187",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 187,
+      "feature_id": "Z-0188",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 188,
+      "feature_id": "Z-0189",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 189,
+      "feature_id": "Z-0190",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 190,
+      "feature_id": "Z-0191",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 191,
+      "feature_id": "Z-0192",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 192,
+      "feature_id": "Z-0193",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 193,
+      "feature_id": "Z-0194",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 194,
+      "feature_id": "Z-0195",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 195,
+      "feature_id": "Z-0196",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 196,
+      "feature_id": "Z-0197",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 197,
+      "feature_id": "Z-0198",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 198,
+      "feature_id": "Z-0199",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 199,
+      "feature_id": "Z-0200",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 200,
+      "feature_id": "Z-0201",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 201,
+      "feature_id": "Z-0202",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 202,
+      "feature_id": "Z-0203",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 203,
+      "feature_id": "Z-0204",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 204,
+      "feature_id": "Z-0205",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 205,
+      "feature_id": "Z-0206",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 206,
+      "feature_id": "Z-0207",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 207,
+      "feature_id": "Z-0208",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 208,
+      "feature_id": "Z-0209",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 209,
+      "feature_id": "Z-0210",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 210,
+      "feature_id": "Z-0211",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 211,
+      "feature_id": "Z-0212",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 212,
+      "feature_id": "Z-0213",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 213,
+      "feature_id": "Z-0214",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 214,
+      "feature_id": "Z-0215",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 215,
+      "feature_id": "Z-0216",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 216,
+      "feature_id": "Z-0217",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 217,
+      "feature_id": "Z-0218",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 218,
+      "feature_id": "Z-0219",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 219,
+      "feature_id": "Z-0220",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 220,
+      "feature_id": "Z-0221",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 221,
+      "feature_id": "Z-0222",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 222,
+      "feature_id": "Z-0223",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 223,
+      "feature_id": "Z-0224",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 224,
+      "feature_id": "Z-0225",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 225,
+      "feature_id": "Z-0226",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 226,
+      "feature_id": "Z-0227",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 227,
+      "feature_id": "Z-0228",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 228,
+      "feature_id": "Z-0229",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 229,
+      "feature_id": "Z-0230",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 230,
+      "feature_id": "Z-0231",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 231,
+      "feature_id": "Z-0232",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 232,
+      "feature_id": "Z-0233",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 233,
+      "feature_id": "Z-0234",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 234,
+      "feature_id": "Z-0235",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 235,
+      "feature_id": "Z-0236",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 236,
+      "feature_id": "Z-0237",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 237,
+      "feature_id": "Z-0238",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 238,
+      "feature_id": "Z-0239",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 239,
+      "feature_id": "Z-0240",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 240,
+      "feature_id": "Z-0241",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 241,
+      "feature_id": "Z-0242",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 242,
+      "feature_id": "Z-0243",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 243,
+      "feature_id": "Z-0244",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 244,
+      "feature_id": "Z-0245",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 245,
+      "feature_id": "Z-0246",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 246,
+      "feature_id": "Z-0247",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 247,
+      "feature_id": "Z-0248",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 248,
+      "feature_id": "Z-0249",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 249,
+      "feature_id": "Z-0250",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 250,
+      "feature_id": "Z-0251",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 251,
+      "feature_id": "Z-0252",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 252,
+      "feature_id": "Z-0253",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 253,
+      "feature_id": "Z-0254",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 254,
+      "feature_id": "Z-0255",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 255,
+      "feature_id": "Z-0256",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 256,
+      "feature_id": "Z-0257",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 257,
+      "feature_id": "Z-0258",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 258,
+      "feature_id": "Z-0259",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 259,
+      "feature_id": "Z-0260",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 260,
+      "feature_id": "Z-0261",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 261,
+      "feature_id": "Z-0262",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 262,
+      "feature_id": "Z-0263",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 263,
+      "feature_id": "Z-0264",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 264,
+      "feature_id": "Z-0265",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 265,
+      "feature_id": "Z-0266",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 266,
+      "feature_id": "Z-0267",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 267,
+      "feature_id": "Z-0268",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 268,
+      "feature_id": "Z-0269",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 269,
+      "feature_id": "Z-0270",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 270,
+      "feature_id": "Z-0271",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 271,
+      "feature_id": "Z-0272",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 272,
+      "feature_id": "Z-0273",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 273,
+      "feature_id": "Z-0274",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 274,
+      "feature_id": "Z-0275",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 275,
+      "feature_id": "Z-0276",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 276,
+      "feature_id": "Z-0277",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 277,
+      "feature_id": "Z-0278",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 278,
+      "feature_id": "Z-0279",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 279,
+      "feature_id": "Z-0280",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 280,
+      "feature_id": "Z-0281",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 281,
+      "feature_id": "Z-0282",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 282,
+      "feature_id": "Z-0283",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 283,
+      "feature_id": "Z-0284",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 284,
+      "feature_id": "Z-0285",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 285,
+      "feature_id": "Z-0286",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 286,
+      "feature_id": "Z-0287",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 287,
+      "feature_id": "Z-0288",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 288,
+      "feature_id": "Z-0289",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 289,
+      "feature_id": "Z-0290",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 290,
+      "feature_id": "Z-0291",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 291,
+      "feature_id": "Z-0292",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 292,
+      "feature_id": "Z-0293",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 293,
+      "feature_id": "Z-0294",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 294,
+      "feature_id": "Z-0295",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 295,
+      "feature_id": "Z-0296",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 296,
+      "feature_id": "Z-0297",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 297,
+      "feature_id": "Z-0298",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 298,
+      "feature_id": "Z-0299",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 299,
+      "feature_id": "Z-0300",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 300,
+      "feature_id": "Z-0301",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 301,
+      "feature_id": "Z-0302",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 302,
+      "feature_id": "Z-0303",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 303,
+      "feature_id": "Z-0304",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 304,
+      "feature_id": "Z-0305",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 305,
+      "feature_id": "Z-0306",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 306,
+      "feature_id": "Z-0307",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 307,
+      "feature_id": "Z-0308",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 308,
+      "feature_id": "Z-0309",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 309,
+      "feature_id": "Z-0310",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 310,
+      "feature_id": "Z-0311",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 311,
+      "feature_id": "Z-0312",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 312,
+      "feature_id": "Z-0313",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 313,
+      "feature_id": "Z-0314",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 314,
+      "feature_id": "Z-0315",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 315,
+      "feature_id": "Z-0316",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 316,
+      "feature_id": "Z-0317",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 317,
+      "feature_id": "Z-0318",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 318,
+      "feature_id": "Z-0319",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 319,
+      "feature_id": "Z-0320",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 320,
+      "feature_id": "Z-0321",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 321,
+      "feature_id": "Z-0322",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 322,
+      "feature_id": "Z-0323",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 323,
+      "feature_id": "Z-0324",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 324,
+      "feature_id": "Z-0325",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 325,
+      "feature_id": "Z-0326",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 326,
+      "feature_id": "Z-0327",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 327,
+      "feature_id": "Z-0328",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 328,
+      "feature_id": "Z-0329",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 329,
+      "feature_id": "Z-0330",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 330,
+      "feature_id": "Z-0331",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 331,
+      "feature_id": "Z-0332",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 332,
+      "feature_id": "Z-0333",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 333,
+      "feature_id": "Z-0334",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 334,
+      "feature_id": "Z-0335",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 335,
+      "feature_id": "Z-0336",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 336,
+      "feature_id": "Z-0337",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 337,
+      "feature_id": "Z-0338",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 338,
+      "feature_id": "Z-0339",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 339,
+      "feature_id": "Z-0340",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 340,
+      "feature_id": "Z-0341",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 341,
+      "feature_id": "Z-0342",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 342,
+      "feature_id": "Z-0343",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 343,
+      "feature_id": "Z-0344",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 344,
+      "feature_id": "Z-0345",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 345,
+      "feature_id": "Z-0346",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 346,
+      "feature_id": "Z-0347",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 347,
+      "feature_id": "Z-0348",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 348,
+      "feature_id": "Z-0349",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 349,
+      "feature_id": "Z-0350",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 350,
+      "feature_id": "Z-0351",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 351,
+      "feature_id": "Z-0352",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 352,
+      "feature_id": "Z-0353",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 353,
+      "feature_id": "Z-0354",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 354,
+      "feature_id": "Z-0355",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 355,
+      "feature_id": "Z-0356",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 356,
+      "feature_id": "Z-0357",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 357,
+      "feature_id": "Z-0358",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 358,
+      "feature_id": "Z-0359",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 359,
+      "feature_id": "Z-0360",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 360,
+      "feature_id": "Z-0361",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 361,
+      "feature_id": "Z-0362",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 362,
+      "feature_id": "Z-0363",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 363,
+      "feature_id": "Z-0364",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 364,
+      "feature_id": "Z-0365",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 365,
+      "feature_id": "Z-0366",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 366,
+      "feature_id": "Z-0367",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 367,
+      "feature_id": "Z-0368",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 368,
+      "feature_id": "Z-0369",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 369,
+      "feature_id": "Z-0370",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 370,
+      "feature_id": "Z-0371",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 371,
+      "feature_id": "Z-0372",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 372,
+      "feature_id": "Z-0373",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 373,
+      "feature_id": "Z-0374",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 374,
+      "feature_id": "Z-0375",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 375,
+      "feature_id": "Z-0376",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 376,
+      "feature_id": "Z-0377",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 377,
+      "feature_id": "Z-0378",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 378,
+      "feature_id": "Z-0379",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 379,
+      "feature_id": "Z-0380",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 380,
+      "feature_id": "Z-0381",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 381,
+      "feature_id": "Z-0382",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 382,
+      "feature_id": "Z-0383",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 383,
+      "feature_id": "Z-0384",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 384,
+      "feature_id": "Z-0385",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 385,
+      "feature_id": "Z-0386",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 386,
+      "feature_id": "Z-0387",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 387,
+      "feature_id": "Z-0388",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 388,
+      "feature_id": "Z-0389",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 389,
+      "feature_id": "Z-0390",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 390,
+      "feature_id": "Z-0391",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 391,
+      "feature_id": "Z-0392",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 392,
+      "feature_id": "Z-0393",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 393,
+      "feature_id": "Z-0394",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 394,
+      "feature_id": "Z-0395",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 395,
+      "feature_id": "Z-0396",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 396,
+      "feature_id": "Z-0397",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 397,
+      "feature_id": "Z-0398",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 398,
+      "feature_id": "Z-0399",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 399,
+      "feature_id": "Z-0400",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 400,
+      "feature_id": "Z-0401",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 401,
+      "feature_id": "Z-0402",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 402,
+      "feature_id": "Z-0403",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 403,
+      "feature_id": "Z-0404",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 404,
+      "feature_id": "Z-0405",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 405,
+      "feature_id": "Z-0406",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 406,
+      "feature_id": "Z-0407",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 407,
+      "feature_id": "Z-0408",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 408,
+      "feature_id": "Z-0409",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 409,
+      "feature_id": "Z-0410",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 410,
+      "feature_id": "Z-0411",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 411,
+      "feature_id": "Z-0412",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 412,
+      "feature_id": "Z-0413",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 413,
+      "feature_id": "Z-0414",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 414,
+      "feature_id": "Z-0415",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 415,
+      "feature_id": "Z-0416",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 416,
+      "feature_id": "Z-0417",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 417,
+      "feature_id": "Z-0418",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 418,
+      "feature_id": "Z-0419",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 419,
+      "feature_id": "Z-0420",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 420,
+      "feature_id": "Z-0421",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 421,
+      "feature_id": "Z-0422",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 422,
+      "feature_id": "Z-0423",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 423,
+      "feature_id": "Z-0424",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 424,
+      "feature_id": "Z-0425",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 425,
+      "feature_id": "Z-0426",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 426,
+      "feature_id": "Z-0427",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 427,
+      "feature_id": "Z-0428",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 428,
+      "feature_id": "Z-0429",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 429,
+      "feature_id": "Z-0430",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 430,
+      "feature_id": "Z-0431",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 431,
+      "feature_id": "Z-0432",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 432,
+      "feature_id": "Z-0433",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 433,
+      "feature_id": "Z-0434",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 434,
+      "feature_id": "Z-0435",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 435,
+      "feature_id": "Z-0436",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 436,
+      "feature_id": "Z-0437",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 437,
+      "feature_id": "Z-0438",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 438,
+      "feature_id": "Z-0439",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 439,
+      "feature_id": "Z-0440",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 440,
+      "feature_id": "Z-0441",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 441,
+      "feature_id": "Z-0442",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 442,
+      "feature_id": "Z-0443",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 443,
+      "feature_id": "Z-0444",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 444,
+      "feature_id": "Z-0445",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 445,
+      "feature_id": "Z-0446",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 446,
+      "feature_id": "Z-0447",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 447,
+      "feature_id": "Z-0448",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 448,
+      "feature_id": "Z-0449",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 449,
+      "feature_id": "Z-0450",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 450,
+      "feature_id": "Z-0451",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 451,
+      "feature_id": "Z-0452",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 452,
+      "feature_id": "Z-0453",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 453,
+      "feature_id": "Z-0454",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 454,
+      "feature_id": "Z-0455",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 455,
+      "feature_id": "Z-0456",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 456,
+      "feature_id": "Z-0457",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 457,
+      "feature_id": "Z-0458",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 458,
+      "feature_id": "Z-0459",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 459,
+      "feature_id": "Z-0460",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 460,
+      "feature_id": "Z-0461",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 461,
+      "feature_id": "Z-0462",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 462,
+      "feature_id": "Z-0463",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 463,
+      "feature_id": "Z-0464",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 464,
+      "feature_id": "Z-0465",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 465,
+      "feature_id": "Z-0466",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 466,
+      "feature_id": "Z-0467",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 467,
+      "feature_id": "Z-0468",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 468,
+      "feature_id": "Z-0469",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 469,
+      "feature_id": "Z-0470",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 470,
+      "feature_id": "Z-0471",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 471,
+      "feature_id": "Z-0472",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 472,
+      "feature_id": "Z-0473",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 473,
+      "feature_id": "Z-0474",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 474,
+      "feature_id": "Z-0475",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 475,
+      "feature_id": "Z-0476",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 476,
+      "feature_id": "Z-0477",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 477,
+      "feature_id": "Z-0478",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 478,
+      "feature_id": "Z-0479",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 479,
+      "feature_id": "Z-0480",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 480,
+      "feature_id": "Z-0481",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 481,
+      "feature_id": "Z-0482",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 482,
+      "feature_id": "Z-0483",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 483,
+      "feature_id": "Z-0484",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 484,
+      "feature_id": "Z-0485",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 485,
+      "feature_id": "Z-0486",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 486,
+      "feature_id": "Z-0487",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 487,
+      "feature_id": "Z-0488",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 488,
+      "feature_id": "Z-0489",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 489,
+      "feature_id": "Z-0490",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 490,
+      "feature_id": "Z-0491",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 491,
+      "feature_id": "Z-0492",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 492,
+      "feature_id": "Z-0493",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 493,
+      "feature_id": "Z-0494",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 494,
+      "feature_id": "Z-0495",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 495,
+      "feature_id": "Z-0496",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 496,
+      "feature_id": "Z-0497",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 497,
+      "feature_id": "Z-0498",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 498,
+      "feature_id": "Z-0499",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 499,
+      "feature_id": "Z-0500",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 500,
+      "feature_id": "Z-0501",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 501,
+      "feature_id": "Z-0502",
+      "sector": "campo-deportivo"
+    },
+    {
+      "source_index": 502,
+      "feature_id": "Z-0503",
+      "sector": "campo-deportivo"
+    },
+    {
+      "source_index": 503,
+      "feature_id": "Z-0504",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 504,
+      "feature_id": "Z-0505",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 505,
+      "feature_id": "Z-0506",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 506,
+      "feature_id": "Z-0507",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 507,
+      "feature_id": "Z-0508",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 508,
+      "feature_id": "Z-0509",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 509,
+      "feature_id": "Z-0510",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 510,
+      "feature_id": "Z-0511",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 511,
+      "feature_id": "Z-0512",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 512,
+      "feature_id": "Z-0513",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 513,
+      "feature_id": "Z-0514",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 514,
+      "feature_id": "Z-0515",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 515,
+      "feature_id": "Z-0516",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 516,
+      "feature_id": "Z-0517",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 517,
+      "feature_id": "Z-0518",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 518,
+      "feature_id": "Z-0519",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 519,
+      "feature_id": "Z-0520",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 520,
+      "feature_id": "Z-0521",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 521,
+      "feature_id": "Z-0522",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 522,
+      "feature_id": "Z-0523",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 523,
+      "feature_id": "Z-0524",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 524,
+      "feature_id": "Z-0525",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 525,
+      "feature_id": "Z-0526",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 526,
+      "feature_id": "Z-0527",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 527,
+      "feature_id": "Z-0528",
+      "sector": "cua-mateo"
+    },
+    {
+      "source_index": 528,
+      "feature_id": "Z-0529",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 529,
+      "feature_id": "Z-0530",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 530,
+      "feature_id": "Z-0531",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 531,
+      "feature_id": "Z-0532",
+      "sector": "cua-renato"
+    },
+    {
+      "source_index": 532,
+      "feature_id": "Z-0533",
+      "sector": "cua-valeria"
+    },
+    {
+      "source_index": 533,
+      "feature_id": "Z-0534",
+      "sector": "cua-valeria"
+    }
+  ]
+}

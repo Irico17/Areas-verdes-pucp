@@ -232,6 +232,7 @@ func assertEsquema(t *testing.T, name string) {
 		"zonas_supervision", "cuadrillas", "poligonos_cuadrilla", "asignaciones_poligono",
 		"lugares", "especies", "ejemplares", "codigos_historicos", "medidas_palmera",
 		"fauna", "puertas", "playas_estacionamiento", "veredas_riesgo", "xerofiticas", "jardines_reserva",
+		"poligonos_sector_ref",
 	} {
 		var n int
 		if err := gdb.Raw(`SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ?`, tabla).Scan(&n).Error; err != nil {
@@ -254,6 +255,36 @@ func assertEsquema(t *testing.T, name string) {
 	}
 	if geomNull != "true" {
 		t.Fatalf("%s: poligonos_cuadrilla.geom debería ser NOT NULL cuando la copia no tiene nulos", name)
+	}
+	var sectorCols int
+	if err := gdb.Raw(`SELECT count(*) FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name = 'poligonos_cuadrilla' AND column_name = 'sector'`).Scan(&sectorCols).Error; err != nil {
+		t.Fatal(err)
+	}
+	if sectorCols != 1 {
+		t.Fatalf("%s: falta poligonos_cuadrilla.sector", name)
+	}
+	var sectorEnVista int
+	if err := gdb.Raw(`SELECT count(*) FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name = 'zonas' AND column_name = 'sector'`).Scan(&sectorEnVista).Error; err != nil {
+		t.Fatal(err)
+	}
+	if sectorEnVista != 1 {
+		t.Fatalf("%s: la vista zonas no expone sector", name)
+	}
+	if err := gdb.Exec(`
+		INSERT INTO zonas (feature_id, source_index, nombre, geom)
+		VALUES (
+		  'Z-9101', 9101, 'Sin sector',
+		  ST_SetSRID(ST_GeomFromText('MULTIPOLYGON(((-77.08 -12.07, -77.079 -12.07, -77.079 -12.069, -77.08 -12.069, -77.08 -12.07)))'), 4326)
+		)`).Error; err != nil {
+		t.Fatalf("%s: INSERT en zonas sin sector debería seguir funcionando: %v", name, err)
+	}
+	if err := gdb.Exec(`UPDATE poligonos_cuadrilla SET sector = 'otro' WHERE feature_id = 'Z-9101'`).Error; err == nil {
+		t.Fatalf("%s: el CHECK debería rechazar un sector fuera de la lista", name)
+	}
+	if err := gdb.Exec(`UPDATE poligonos_cuadrilla SET sector = 'cua-valeria' WHERE feature_id = 'Z-9101'`).Error; err != nil {
+		t.Fatalf("%s: el CHECK debería aceptar un sector válido: %v", name, err)
 	}
 	if err := gdb.Exec(`
 		INSERT INTO actividades (id, tipo, estado, titulo, detalle, geom)

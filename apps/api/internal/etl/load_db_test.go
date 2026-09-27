@@ -196,6 +196,64 @@ func TestLoadRenombraCodigoDuplicado(t *testing.T) {
 	}
 }
 
+// TestLoadAplicaSectoresEnCatalogoCompleto carga las 521 áreas y 534 zonas
+// reales (sin PII: NormalizeZonas descarta "jefes") y comprueba que Load deja
+// el sector completo con los conteos de data/v1/zonas_sector.json, y que un
+// segundo Load (re-ETL, con su TRUNCATE) los mantiene porque
+// poligonos_sector_ref no tiene FK y AplicarSectores vuelve a correr.
+func TestLoadAplicaSectoresEnCatalogoCompleto(t *testing.T) {
+	gdb := migrarDBTemporal(t, "campus_verde_etl_sector_c")
+	dir := rawDir(t)
+
+	areasBody, err := os.ReadFile(filepath.Join(dir, "areas_verdes.geojson"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	areas, err := NormalizeAreas(areasBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zonasBody, err := os.ReadFile(filepath.Join(dir, "jefe_de_grupo.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	zonas, err := NormalizeZonas(zonasBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	esperado := map[string]int{"cua-valeria": 259, "cua-mateo": 168, "cua-renato": 104, "campo-deportivo": 2, "bosque-humedo": 1}
+	verificarConteos := func(momento string) {
+		t.Helper()
+		var sinSector int
+		if err := gdb.Raw(`SELECT count(*) FROM poligonos_cuadrilla WHERE sector IS NULL`).Scan(&sinSector).Error; err != nil {
+			t.Fatal(err)
+		}
+		if sinSector != 0 {
+			t.Fatalf("%s: %d polígono(s) sin sector", momento, sinSector)
+		}
+		for sector, n := range esperado {
+			var got int
+			if err := gdb.Raw(`SELECT count(*) FROM poligonos_cuadrilla WHERE sector = $1`, sector).Scan(&got).Error; err != nil {
+				t.Fatal(err)
+			}
+			if got != n {
+				t.Fatalf("%s: sector=%s conteo=%d, se esperaba %d", momento, sector, got, n)
+			}
+		}
+	}
+
+	if err := Load(gdb, areas, zonas, map[string][]Record{}); err != nil {
+		t.Fatal(err)
+	}
+	verificarConteos("primer Load")
+
+	if err := Load(gdb, areas, zonas, map[string][]Record{}); err != nil {
+		t.Fatal(err)
+	}
+	verificarConteos("segundo Load (re-ETL)")
+}
+
 // TestLoadSeNiegaSiHayEjemplares comprueba que Load no vuelva a hacer
 // TRUNCATE ... CASCADE sobre una base con inventario real: ejemplares no tiene
 // filtro por FK en un TRUNCATE CASCADE, así que una recarga borraría todos los

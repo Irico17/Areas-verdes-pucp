@@ -239,6 +239,13 @@ func cargarCuadrillasYPoligonos(tx *gorm.DB, pols []poligonoCarga, loteID int64,
 		  AND p.zona_supervision_id IS NULL`).Error; err != nil {
 		return err
 	}
+	// El upsert de arriba no toca sector (no está en el SET del ON CONFLICT),
+	// así que un re-lote no lo pisa. Esto solo completa lo que siga en NULL.
+	n, err := AplicarSectores(tx)
+	if err != nil {
+		return err
+	}
+	rep.Cargados["sectores"] = int(n)
 	return nil
 }
 
