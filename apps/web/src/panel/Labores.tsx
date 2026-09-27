@@ -347,7 +347,7 @@ function FichaLabor(props: { actividadId?: string }) {
     }
   }
   return (
-    <fieldset className="form">
+    <fieldset className="form grupo">
       <legend>Ficha de la labor</legend>
       <label className="field">
         Clase
