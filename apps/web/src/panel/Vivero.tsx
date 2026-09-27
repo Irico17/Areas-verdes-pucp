@@ -70,6 +70,10 @@ export function ViveroPanel(props: Props) {
         className="form"
         onSubmit={(event) => {
           event.preventDefault()
+          if (event.currentTarget.querySelector('[aria-invalid="true"]')) {
+            setAviso("Corrija la fecha antes de guardar.")
+            return
+          }
           const fallos = validarVivero(form, catalogo)
           if (fallos.length) {
             setAviso(fallos[0].motivo)

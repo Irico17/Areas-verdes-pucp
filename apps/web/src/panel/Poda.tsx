@@ -58,6 +58,10 @@ export function PodaPanel(props: Props) {
         className="form"
         onSubmit={(event) => {
           event.preventDefault()
+          if (event.currentTarget.querySelector('[aria-invalid="true"]')) {
+            setAviso("Corrija la fecha antes de guardar.")
+            return
+          }
           const errores = validarPoda(form)
           if (errores.length) {
             setAviso(errores[0].motivo)

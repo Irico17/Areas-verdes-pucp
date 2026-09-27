@@ -323,7 +323,12 @@ function FichaLabor(props: { actividadId?: string }) {
   const [lugar, setLugar] = useState("")
   const [comentario, setComentario] = useState("")
   const [aviso, setAviso] = useState("")
+  const fichaRef = useRef<HTMLFieldSetElement>(null)
   async function guardar() {
+    if (fichaRef.current?.querySelector('[aria-invalid="true"]')) {
+      setAviso("Corrija la fecha antes de guardar.")
+      return
+    }
     if (solicitud && atencion && atencion < solicitud) {
       setAviso("La atención no puede ser anterior a la solicitud.")
       return
@@ -355,7 +360,7 @@ function FichaLabor(props: { actividadId?: string }) {
     }
   }
   return (
-    <fieldset className="form grupo">
+    <fieldset className="form grupo" ref={fichaRef}>
       <legend>Ficha de la labor</legend>
       <label className="field">
         Clase

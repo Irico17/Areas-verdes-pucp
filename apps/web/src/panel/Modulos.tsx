@@ -466,6 +466,10 @@ export function ReportesPanel() {
         className="form"
         onSubmit={(event) => {
           event.preventDefault()
+          if (event.currentTarget.querySelector('[aria-invalid="true"]')) {
+            setError("Corrija la fecha antes de actualizar.")
+            return
+          }
           void load()
         }}
       >
@@ -767,6 +771,10 @@ export function RiegoPanel(props: { capatazId: string }) {
         className="form"
         onSubmit={(event) => {
           event.preventDefault()
+          if (event.currentTarget.querySelector('[aria-invalid="true"]')) {
+            setError("Corrija la fecha antes de registrar.")
+            return
+          }
           void crearRiego({
             id: crypto.randomUUID(),
             sector,
