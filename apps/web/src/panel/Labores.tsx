@@ -233,7 +233,7 @@ export function Labores(props: Props) {
             {props.selected.ejecutor === "tercerizada" ? " · tercerizada" : " · personal propio"}
           </p>
           {props.selected.detalle && <p className="lede">{props.selected.detalle}</p>}
-          <FichaLabor actividadId={props.selected.queued ? "" : props.selected.id} />
+          <FichaLabor key={props.selected.id} actividadId={props.selected.queued ? "" : props.selected.id} />
           {props.selected.queued ? (
             <p className="hint">Aún no está en el servidor. El id ya quedó reservado para el reintento.</p>
           ) : (
