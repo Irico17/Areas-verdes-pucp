@@ -80,7 +80,7 @@ test("textoEstado para cada fase", () => {
   assert.equal(textoEstado({ fase: "inactivo" }), "")
   assert.equal(textoEstado({ fase: "preparando" }), "Preparando foto…")
   assert.equal(textoEstado({ fase: "subiendo", pct: null }), "Subiendo…")
-  assert.equal(textoEstado({ fase: "subiendo", pct: 42 }), "Subiendo 42 %")
+  assert.equal(textoEstado({ fase: "subiendo", pct: 42 }), "Subiendo…")
   assert.equal(textoEstado({ fase: "guardada", sinPunto: false }), "Foto enviada.")
   assert.equal(textoEstado({ fase: "guardada", sinPunto: true }), "Foto enviada, sin ubicación.")
   assert.equal(textoEstado({ fase: "en-cola", texto: "Guardado en este equipo." }), "Guardado en este equipo.")

@@ -44,7 +44,7 @@ export function textoEstado(e: EstadoSubida): string {
     case "preparando":
       return "Preparando foto…"
     case "subiendo":
-      return e.pct == null ? "Subiendo…" : `Subiendo ${e.pct} %`
+      return "Subiendo…"
     case "guardada":
       return e.sinPunto ? "Foto enviada, sin ubicación." : "Foto enviada."
     case "en-cola":

@@ -237,12 +237,14 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
           />
         </label>
       </div>
-      <div className="evidencia-estado" aria-live="polite">
-        <p className={estado.fase === "error" ? "status error" : "status"}>{textoEstado(estado)}</p>
+      <div className="evidencia-estado">
+        <p className={estado.fase === "error" ? "status error" : "status"} aria-live="polite">
+          {textoEstado(estado)}
+        </p>
         {estado.fase === "preparando" && <progress aria-label="Preparando foto" />}
         {estado.fase === "subiendo" &&
           (estado.pct == null ? (
-            <progress aria-label="Preparando foto" />
+            <progress aria-label="Subiendo foto" />
           ) : (
             <progress max={100} value={estado.pct} aria-label="Progreso de la subida" />
           ))}
