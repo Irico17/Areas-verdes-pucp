@@ -40,6 +40,9 @@ INSERT INTO capas_auxiliares (
 // Load reemplaza el catastro semilla en una transacción.
 func Load(db *gorm.DB, areas, zonas []Record, capas map[string][]Record) error {
 	return db.Transaction(func(tx *gorm.DB) error {
+		if err := negarSiHayDependientes(tx); err != nil {
+			return err
+		}
 		// zonas es una vista sobre poligonos_cuadrilla. zonas_origen no se toca.
 		if err := tx.Exec(`TRUNCATE areas_verdes, poligonos_cuadrilla, capas_auxiliares RESTART IDENTITY CASCADE`).Error; err != nil {
 			return fmt.Errorf("truncar catastro: %w", err)
@@ -61,6 +64,28 @@ func Load(db *gorm.DB, areas, zonas []Record, capas map[string][]Record) error {
 		}
 		return verifyLoaded(tx, len(areas), len(zonas), capas)
 	})
+}
+
+// negarSiHayDependientes evita que el TRUNCATE ... CASCADE de Load borre datos
+// reales: ejemplares (FK area_verde_id) y asignaciones_poligono (FK poligono_id)
+// referencian a las tablas truncadas, y CASCADE vacía la tabla hija entera (no
+// solo las filas enlazadas). Si ejemplares está vacía, sus propias hijas
+// (codigos_historicos, medidas_palmera) también lo están, así que basta este
+// chequeo. En una base nueva estas tablas están vacías y Load sigue igual;
+// en una base con inventario real, Load se niega en vez de borrar filas.
+func negarSiHayDependientes(tx *gorm.DB) error {
+	for _, tabla := range []string{"ejemplares", "asignaciones_poligono"} {
+		var n int
+		if err := tx.Raw(fmt.Sprintf(`SELECT count(*) FROM %s`, tabla)).Scan(&n).Error; err != nil {
+			return err
+		}
+		if n > 0 {
+			return fmt.Errorf(
+				"Load: %s tiene %d fila(s); TRUNCATE ... CASCADE las borraría. Usa etl-lote (upsert, sin TRUNCATE) en una base con datos",
+				tabla, n)
+		}
+	}
+	return nil
 }
 
 // insertAreas inserta el catastro de áreas verdes. El catastro de origen repite
