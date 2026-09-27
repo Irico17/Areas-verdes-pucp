@@ -8,7 +8,8 @@
 
 - **Lote A · completo.** S01–S19 implementados y verificados con `npm run lint`, `npm test`, `npm run build` en `apps/web`, y con capturas a 1280×800 y 390×844 (prefijo `loteA` en `/workspace/verdepucp-shots`).
 - Fuera de la auditoría: se corrigió que `FichaLabor` (`Labores.tsx`) conservaba valores tipeados al cambiar de labor (riesgo de guardar en la labor equivocada). Ver O1 y el commit `fix: FichaLabor ya no arrastra datos tipeados de una labor a otra`.
-- Pendiente: Lote B (diseño visual), Lote C (movimiento) y Lote D (verificación formal en dispositivo).
+- **Lote B · completo.** V01–V14 implementados en seis bloques (B1–B6) y verificados con `npm run lint`, `npm test`, `npm run build` en `apps/web`, y con capturas a 1280×800 y 390×844 (prefijo `loteB` en `/workspace/verdepucp-shots`).
+- Pendiente: Lote C (movimiento) y Lote D (verificación formal en dispositivo).
 
 ## Cómo se hizo
 
