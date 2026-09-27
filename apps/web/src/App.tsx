@@ -32,6 +32,8 @@ import { AdminPanel, CatalogosPanel, Login, ReportesPanel, RiegoPanel, Solicitud
 import { fetchCatalogo, fetchEvidencias, fetchSesion, salir, subirEvidencia, sugerirTipo, type CatalogoItem, type Evidencia, type Usuario } from "./producto"
 import { readEquipo, writeEquipo } from "./session"
 import { LAYERS, type FeatureCollection, type GeoFeature, type LayerId, type Rol } from "./types"
+import { MQ_MOVIL, useMedia } from "./ui/media"
+import { repartirModulos } from "./ui/navegacion"
 
 type LoadState = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ready" }
 
@@ -111,7 +113,7 @@ export default function App() {
   const [queue, setQueue] = useState<QueuedLabor[]>([])
   const [estados, setEstados] = useState<Record<string, boolean>>({ pendiente: true, en_proceso: true, bloqueada: true })
   const [tipoFiltro, setTipoFiltro] = useState("")
-  const [railOpen, setRailOpen] = useState(() => window.matchMedia("(min-width: 821px)").matches)
+  const [railOpen, setRailOpen] = useState(() => !window.matchMedia(MQ_MOVIL).matches)
   const [picked, setPicked] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pinMode, setPinMode] = useState(false)
@@ -513,6 +515,17 @@ export default function App() {
   const publicarAltura = useCallback((px: number) => {
     stageRef.current?.style.setProperty("--sheet-h", `${Math.round(px)}px`)
   }, [])
+  const movil = useMedia(MQ_MOVIL)
+  const [masAbierto, setMasAbierto] = useState(false)
+  useEffect(() => {
+    if (!masAbierto) return
+    document.querySelector<HTMLButtonElement>(".guard-menu button")?.focus({ preventScroll: true })
+    const cerrar = (event: PointerEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest(".guard-menu, .guard-mas")) setMasAbierto(false)
+    }
+    document.addEventListener("pointerdown", cerrar)
+    return () => document.removeEventListener("pointerdown", cerrar)
+  }, [masAbierto])
 
   if (!sesionLista) {
     return (
@@ -534,10 +547,28 @@ export default function App() {
   const permitidos = modulosDe(rol)
   const moduloActivo = permitidos.includes(modulo) ? modulo : "mapa"
   const tipos = tiposCat.length > 0 ? tiposCat.map((item) => ({ id: item.codigo, label: item.nombre })) : TIPOS.map((item) => ({ id: item.id, label: item.label }))
+  const visiblesModulos = MODULOS.filter((item) => permitidos.includes(item.id))
+  const { barra, mas } = movil ? repartirModulos(visiblesModulos) : { barra: visiblesModulos, mas: [] as typeof visiblesModulos }
+  const enMas = mas.find((item) => item.id === moduloActivo)
+  const menuMas = masAbierto && movil && mas.length > 0
+
+  function irA(id: Modulo) {
+    setModulo(id)
+    setRailOpen(true)
+    setMasAbierto(false)
+  }
+  function cerrarPanel() {
+    setRailOpen(false)
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLButtonElement>('.guard button[aria-pressed="true"], .guard .guard-mas.activo')
+        ?.focus({ preventScroll: true })
+    })
+  }
 
   return (
     <div className={railOpen ? "shell" : "shell panel-off"}>
-      <a className="skip" href="#panel">Saltar al panel</a>
+      <a className="skip" href="#panel" onClick={() => setRailOpen(true)}>Saltar al panel</a>
       <header className="topbar">
         <div className="brand">
           <img className="brand-mark" src="/isotipo.svg" alt="" />
@@ -561,13 +592,44 @@ export default function App() {
       </header>
       <nav className="guard" aria-label="Módulos">
         <div className="rail-mark"><img src="/isotipo.svg" alt="VerdePUCP" /></div>
-        {MODULOS.filter((item) => permitidos.includes(item.id)).map((item) => (
-          <button key={item.id} type="button" aria-pressed={moduloActivo === item.id} onClick={() => { setModulo(item.id); setRailOpen(true) }}>
+        {barra.map((item) => (
+          <button key={item.id} type="button" aria-pressed={moduloActivo === item.id} onClick={() => irA(item.id)}>
             {item.label}
           </button>
         ))}
+        {mas.length > 0 && (
+          <button
+            type="button"
+            className={enMas ? "guard-mas activo" : "guard-mas"}
+            aria-expanded={menuMas}
+            aria-controls="mas-modulos"
+            onClick={() => setMasAbierto((abierto) => !abierto)}
+          >
+            {enMas?.label ?? "Más"}
+          </button>
+        )}
       </nav>
-      <BottomSheet open={railOpen} onClose={() => setRailOpen(false)} vista={moduloActivo} onAltura={publicarAltura}>
+      {menuMas && (
+        <div
+          className="guard-menu"
+          id="mas-modulos"
+          role="group"
+          aria-label="Más módulos"
+          onKeyDown={(event) => {
+            if (event.key !== "Escape") return
+            event.stopPropagation()
+            setMasAbierto(false)
+            document.querySelector<HTMLButtonElement>(".guard-mas")?.focus({ preventScroll: true })
+          }}
+        >
+          {mas.map((item) => (
+            <button key={item.id} type="button" aria-current={moduloActivo === item.id ? "page" : undefined} onClick={() => irA(item.id)}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <BottomSheet open={railOpen} onClose={cerrarPanel} vista={moduloActivo} onAltura={publicarAltura}>
         <p className={load.kind === "error" || activityError ? "status error" : "status"}>
           {load.kind === "error" ? load.message : summary}
           {activityError ? ` · ${activityError}` : ""}
