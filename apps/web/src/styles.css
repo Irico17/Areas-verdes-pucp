@@ -379,8 +379,24 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   .checks label { min-height: 44px; }
   .layer label { display: block; min-height: 44px; }
 }
-.layer small, .labor small, .agenda small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+.layer small, .labor small, .agenda small, .layer-toggle small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
 .count { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+.layer-toggle { display: block; padding: 8px 0; border-top: 1px solid var(--linea); }
+.catastro-color .segmentado { margin: 10px 0; }
+.leyenda { list-style: none; margin: 8px 0; padding: 0; }
+.leyenda label {
+  display: grid;
+  grid-template-columns: auto 14px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid var(--linea);
+}
+.leyenda .swatch { border: 1px solid; }
+.leyenda label:has(input:disabled) { opacity: 0.5; }
+@media (pointer: coarse) {
+  .leyenda label { min-height: 44px; }
+}
 .labor-list { list-style: none; margin: 8px 0; padding: 0; }
 .labor-list > li:last-child > .labor,
 .labor-list > li.agenda:last-child,

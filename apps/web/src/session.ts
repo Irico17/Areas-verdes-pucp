@@ -1,3 +1,4 @@
+import type { ColorPor } from "./map/categorias"
 import type { Rol } from "./types"
 
 const KEY = "campus-verde-rol"
@@ -20,4 +21,14 @@ export function readEquipo(): string {
 
 export function writeEquipo(id: string) {
   localStorage.setItem(EQUIPO, id)
+}
+
+const COLOR_POR = "cv:colorPor"
+
+export function readColorPor(): ColorPor {
+  return localStorage.getItem(COLOR_POR) === "sector" ? "sector" : "uso"
+}
+
+export function writeColorPor(colorPor: ColorPor) {
+  localStorage.setItem(COLOR_POR, colorPor)
 }

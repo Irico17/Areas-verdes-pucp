@@ -26,11 +26,12 @@ import { ViveroPanel } from "./panel/Vivero"
 import { CatastroEditor } from "./panel/CatastroEditor"
 import { InventarioCapas } from "./panel/InventarioCapas"
 import { CalendarioReservas } from "./panel/CalendarioReservas"
+import { conCategorias, conteoPorCategoria, normalizar, SECTORES, USOS, type ColorPor } from "./map/categorias"
 import { BottomSheet } from "./ui/BottomSheet"
 import { ImportacionesPanel } from "./panel/Importaciones"
 import { AdminPanel, CatalogosPanel, Login, ReportesPanel, RiegoPanel, SolicitudesPanel } from "./panel/Modulos"
 import { fetchCatalogo, fetchSesion, salir, sugerirTipo, type CatalogoItem, type Usuario } from "./producto"
-import { readEquipo, writeEquipo } from "./session"
+import { readColorPor, readEquipo, writeColorPor, writeEquipo } from "./session"
 import { LAYERS, type FeatureCollection, type GeoFeature, type LayerId, type Rol } from "./types"
 import { MQ_MOVIL, useMedia } from "./ui/media"
 import { repartirModulos } from "./ui/navegacion"
@@ -106,6 +107,9 @@ export default function App() {
   const [visible, setVisible] = useState<Record<LayerId, boolean>>(() =>
     Object.fromEntries(LAYERS.map((layer) => [layer.id, layer.defaultOn])) as Record<LayerId, boolean>,
   )
+  const [colorPor, setColorPor] = useState<ColorPor>(() => readColorPor())
+  const [catastroOn, setCatastroOn] = useState(true)
+  const [ocultas, setOcultas] = useState<Record<ColorPor, string[]>>({ uso: [], sector: [] })
   const [data, setData] = useState<Partial<Record<LayerId, FeatureCollection>>>({})
   const [load, setLoad] = useState<LoadState>({ kind: "loading" })
   const [activities, setActivities] = useState<FeatureCollection>({ type: "FeatureCollection", features: [] })
@@ -383,6 +387,33 @@ export default function App() {
     }
   }, [items, queue, activities])
 
+  useEffect(() => {
+    writeColorPor(colorPor)
+  }, [colorPor])
+
+  const dataMapa = useMemo<Partial<Record<LayerId, FeatureCollection>>>(
+    () => ({ ...data, areas: conCategorias(data.areas, "uso"), zonas: conCategorias(data.zonas, "sector") }),
+    [data],
+  )
+  const visibleMapa = useMemo<Record<LayerId, boolean>>(
+    () => ({ ...visible, areas: catastroOn && colorPor === "uso", zonas: catastroOn && colorPor === "sector" }),
+    [visible, catastroOn, colorPor],
+  )
+  const conteoUso = useMemo(() => conteoPorCategoria(dataMapa.areas, "cat_uso", USOS), [dataMapa.areas])
+  const conteoSector = useMemo(() => conteoPorCategoria(dataMapa.zonas, "cat_sector", SECTORES), [dataMapa.zonas])
+  const catsColor = colorPor === "uso" ? USOS : SECTORES
+  const conteoColor: Record<string, number> = colorPor === "uso" ? conteoUso : conteoSector
+  const otrosDesglose = useMemo(() => {
+    let deportivas = 0
+    let conservacion = 0
+    for (const f of data.areas?.features ?? []) {
+      const uso = normalizar(f.properties?.uso)
+      if (uso.includes("deportiv")) deportivas++
+      else if (uso.includes("conserv")) conservacion++
+    }
+    return { deportivas, conservacion }
+  }, [data.areas])
+
   const selected = items.find((item) => item.id === selectedId) ?? null
   const summary = useMemo(() => {
     const areas = data.areas?.features.length
@@ -642,7 +673,56 @@ export default function App() {
               </label>
               <span className="count">{edificios.features.length || "—"}</span>
             </div>
-            {LAYERS.map((layer) => (
+            <fieldset className="grupo catastro-color">
+              <legend>Catastro</legend>
+              <label className="layer-toggle">
+                <input type="checkbox" checked={catastroOn} onChange={() => setCatastroOn((on) => !on)} /> Mostrar catastro
+                <small>
+                  {data.areas?.features.length ?? "—"} áreas · {data.zonas?.features.length ?? "—"} polígonos de sector
+                </small>
+              </label>
+              <div className="roles segmentado" role="group" aria-label="Colorear el catastro por">
+                <button type="button" aria-pressed={colorPor === "uso"} onClick={() => setColorPor("uso")}>
+                  Uso del área
+                </button>
+                <button type="button" aria-pressed={colorPor === "sector"} onClick={() => setColorPor("sector")}>
+                  Sector operativo
+                </button>
+              </div>
+              <ul className="leyenda" aria-label={colorPor === "uso" ? "Leyenda por uso del área" : "Leyenda por sector operativo"}>
+                {catsColor.map((cat) => {
+                  const n = conteoColor[cat.id]
+                  return (
+                    <li key={cat.id}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={!ocultas[colorPor].includes(cat.id)}
+                          disabled={n === 0}
+                          onChange={() =>
+                            setOcultas((current) => {
+                              const activas = current[colorPor]
+                              const siguiente = activas.includes(cat.id) ? activas.filter((id) => id !== cat.id) : [...activas, cat.id]
+                              return { ...current, [colorPor]: siguiente }
+                            })
+                          }
+                        />
+                        <span className="swatch" style={{ background: `color-mix(in srgb, ${cat.fill} 55%, var(--hoja))`, borderColor: cat.line }} />
+                        <span>{cat.label}</span>
+                        <span className="count">{n}</span>
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+              {colorPor === "uso" && (
+                <p className="hint">
+                  Otros incluye áreas deportivas ({otrosDesglose.deportivas}) y de conservación ({otrosDesglose.conservacion}), como en el mapa original.
+                </p>
+              )}
+              {colorPor === "sector" && <p className="hint">Cuadrillas con nombre ficticio. La asignación real no se publica.</p>}
+            </fieldset>
+            {LAYERS.filter((layer) => layer.id === "jardines_reserva" || layer.id === "xerofitica").map((layer) => (
               <div className="layer" key={layer.id}>
                 <span className="swatch" style={{ background: layer.fill }} />
                 <label>
@@ -762,8 +842,8 @@ export default function App() {
       <div className="stage" ref={stageRef}>
         <MapBoundary>
           <CampusMap
-            data={data}
-            visible={visible}
+            data={dataMapa}
+            visible={visibleMapa}
             activities={mapActivities}
             pinMode={pinMode && rol !== "capataz" && moduloActivo === "labores"}
             modoDibujo={moduloActivo === "catastro" ? modoDibujo : null}
@@ -774,6 +854,7 @@ export default function App() {
             showEdificios={showEdificios}
             inventory={inventory}
             inventoryOn={inventoryOn}
+            ocultas={ocultas[colorPor]}
             onSelectCatastro={(hit) => setPicked(hit ? `${hit.layer}: ${String(hit.props.nombre || hit.props.feature_id || "polígono")}` : null)}
             onSelectActividad={(id) => {
               if (id) {

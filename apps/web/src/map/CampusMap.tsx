@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import type { FeatureCollection as GJFeatureCollection } from "geojson"
+import type { ExpressionSpecification } from "@maplibre/maplibre-gl-style-spec"
 import {
   GeoJSONSource,
   Map,
@@ -12,11 +13,25 @@ import {
   type LngLatBoundsLike,
 } from "maplibre-gl"
 import "maplibre-gl/dist/maplibre-gl.css"
+import {
+  ANCHO_REALCE,
+  COLOR_REALCE,
+  etiquetaCategoria,
+  expresionColor,
+  filtroCategorias,
+  OPACIDAD_RELLENO,
+  SECTORES,
+  USOS,
+} from "./categorias"
 import { catastroVisible, conteoCapas } from "./coverage"
 import { activarDibujo, type ModoDibujo } from "./draw"
 import { INVENTARIO } from "../inventario"
 import { etiquetaEstado, etiquetaTipo } from "../operacion"
 import { EMPTY, LAYERS, type FeatureCollection, type LayerId } from "../types"
+
+const CATASTRO_FILLS = ["areas-fill", "zonas-fill"]
+const USO_IDS = USOS.map((c) => c.id)
+const SECTOR_IDS = SECTORES.map((c) => c.id)
 
 type Props = {
   data: Partial<Record<LayerId, FeatureCollection>>
@@ -30,6 +45,7 @@ type Props = {
   showEdificios: boolean
   inventory: Partial<Record<string, FeatureCollection>>
   inventoryOn: Record<string, boolean>
+  ocultas: string[]
   onSelectCatastro: (hit: { layer: string; props: Record<string, unknown> } | null) => void
   onSelectActividad: (id: string | null) => void
   onPin: (lon: number, lat: number) => void
@@ -111,6 +127,7 @@ export function CampusMap({
   showEdificios,
   inventory,
   inventoryOn,
+  ocultas,
   modoDibujo = null,
 }: Props) {
   const host = useRef<HTMLDivElement | null>(null)
@@ -126,6 +143,8 @@ export function CampusMap({
   const inventoryRef = useRef(inventory)
   const inventoryOnRef = useRef(inventoryOn)
   const dibujoRef = useRef(modoDibujo)
+  const hoverRef = useRef<{ source: string; id: string | number } | null>(null)
+  const selRef = useRef<{ source: string; id: string | number } | null>(null)
 
   useEffect(() => {
     pinRef.current = pinMode
@@ -160,43 +179,75 @@ export function CampusMap({
     map.addControl(new NavigationControl({ showCompass: true, visualizePitch: false }), "bottom-right")
     map.addControl(new ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left")
     map.on("load", () => {
+      const alturaExtrusion = [
+        "interpolate",
+        ["linear"],
+        ["coalesce", ["to-number", ["get", "area_m2"]], 0],
+        0,
+        2.5,
+        500,
+        4,
+        2500,
+        8,
+        12000,
+        14,
+      ] as ExpressionSpecification
       for (const layer of LAYERS) {
-        map.addSource(layer.id, { type: "geojson", data: { type: "FeatureCollection", features: [] } })
+        map.addSource(layer.id, { type: "geojson", data: { type: "FeatureCollection", features: [] }, promoteId: "id" })
+        const esCatastro = layer.id === "areas" || layer.id === "zonas"
+        const campo = layer.id === "zonas" ? "cat_sector" : "cat_uso"
+        const cats = layer.id === "zonas" ? SECTORES : USOS
         map.addLayer({
           id: `${layer.id}-fill`,
           type: "fill",
           source: layer.id,
-          paint: { "fill-color": layer.fill, "fill-opacity": layer.fillOpacity },
+          paint: {
+            "fill-color": esCatastro ? expresionColor(campo, cats, "fill") : layer.fill,
+            "fill-opacity": esCatastro ? OPACIDAD_RELLENO : layer.fillOpacity,
+          },
         })
         map.addLayer({
           id: `${layer.id}-line`,
           type: "line",
           source: layer.id,
-          paint: { "line-color": layer.line, "line-width": layer.id === "zonas" ? 1.1 : 1.25 },
+          paint: {
+            "line-color": esCatastro ? expresionColor(campo, cats, "line") : layer.line,
+            "line-width": esCatastro ? 0.8 : 1.25,
+          },
         })
-        if (layer.id === "zonas") map.setPaintProperty(`${layer.id}-line`, "line-dasharray", [1.4, 1.1])
       }
+      map.addLayer({
+        id: "areas-realce",
+        type: "line",
+        source: "areas",
+        paint: { "line-color": COLOR_REALCE, "line-width": ANCHO_REALCE },
+      })
+      map.addLayer({
+        id: "zonas-realce",
+        type: "line",
+        source: "zonas",
+        paint: { "line-color": COLOR_REALCE, "line-width": ANCHO_REALCE },
+      })
       map.addLayer({
         id: "areas-extrusion",
         type: "fill-extrusion",
         source: "areas",
         layout: { visibility: "none" },
         paint: {
-          "fill-extrusion-color": "#308046",
+          "fill-extrusion-color": ["case", ["boolean", ["feature-state", "sel"], false], "#083465", expresionColor("cat_uso", USOS, "fill")],
           "fill-extrusion-opacity": 0.8,
-          "fill-extrusion-height": [
-            "interpolate",
-            ["linear"],
-            ["coalesce", ["to-number", ["get", "area_m2"]], 0],
-            0,
-            2.5,
-            500,
-            4,
-            2500,
-            8,
-            12000,
-            14,
-          ],
+          "fill-extrusion-height": alturaExtrusion,
+        },
+      })
+      map.addLayer({
+        id: "zonas-extrusion",
+        type: "fill-extrusion",
+        source: "zonas",
+        layout: { visibility: "none" },
+        paint: {
+          "fill-extrusion-color": ["case", ["boolean", ["feature-state", "sel"], false], "#083465", expresionColor("cat_sector", SECTORES, "fill")],
+          "fill-extrusion-opacity": 0.8,
+          "fill-extrusion-height": alturaExtrusion,
         },
       })
       map.addSource("edificios", { type: "geojson", data: { type: "FeatureCollection", features: [] } })
@@ -315,15 +366,33 @@ export function CampusMap({
           .addTo(map)
         popupRef.current = popup
       }
+      const limpiarHover = () => {
+        if (!hoverRef.current) return
+        map.setFeatureState(hoverRef.current, { hover: false })
+        hoverRef.current = null
+      }
       map.on("mousemove", (event: MapMouseEvent) => {
         if (pinRef.current || dibujoRef.current) {
           map.getCanvas().style.cursor = pinRef.current ? "crosshair" : ""
+          limpiarHover()
           return
         }
         const near = nearestInventoryPoint(map, event.point, inventoryRef.current, inventoryOnRef.current)
         const hits = map.queryRenderedFeatures(event.point, { layers: ["actividades-circle", ...invFills, ...fills] })
         map.getCanvas().style.cursor = near || hits.length ? "pointer" : ""
+        const catastroHit = map.queryRenderedFeatures(event.point, { layers: CATASTRO_FILLS })[0]
+        if (catastroHit?.id != null) {
+          const siguiente = { source: String(catastroHit.source), id: catastroHit.id }
+          if (!hoverRef.current || hoverRef.current.source !== siguiente.source || hoverRef.current.id !== siguiente.id) {
+            limpiarHover()
+            map.setFeatureState(siguiente, { hover: true })
+            hoverRef.current = siguiente
+          }
+        } else {
+          limpiarHover()
+        }
       })
+      map.on("mouseout", limpiarHover)
       map.on("click", (event: MapMouseEvent) => {
         if (dibujoRef.current) return
         if (pinRef.current) {
@@ -363,24 +432,53 @@ export function CampusMap({
         if (!hits.length) {
           onCatastro.current(null)
           onActividad.current(null)
+          if (selRef.current) {
+            map.setFeatureState(selRef.current, { sel: false })
+            selRef.current = null
+          }
           return
         }
         const hit = hits[0]
         const props = (hit.properties ?? {}) as Record<string, unknown>
         onActividad.current(null)
         onCatastro.current({ layer: labelOf(String(hit.source)), props })
+        const esZona = String(hit.source) === "zonas"
+        if (hit.id != null) {
+          const siguiente = { source: String(hit.source), id: hit.id }
+          if (selRef.current && (selRef.current.source !== siguiente.source || selRef.current.id !== siguiente.id)) {
+            map.setFeatureState(selRef.current, { sel: false })
+          }
+          map.setFeatureState(siguiente, { sel: true })
+          selRef.current = siguiente
+        }
         const crudo = String(props.nombre ?? "").trim()
         const nombre = crudo || String(props.feature_id ?? props.codigo ?? "Área sin nombre")
         const codigo = props.codigo ? String(props.codigo) : "sin código"
         const uso = props.uso ? String(props.uso) : ""
+        const categoria = esZona
+          ? `Sector: ${escapeHtml(props.sector_etiqueta ?? etiquetaCategoria("sector", String(props.cat_sector ?? "")))}`
+          : `Categoría: ${escapeHtml(etiquetaCategoria("uso", String(props.cat_uso ?? "")))}`
         const popup = new Popup({ closeButton: true, maxWidth: "280px", className: "cv-popup" })
           .setLngLat(event.lngLat)
           .setHTML(
             `<p class="cv-popup-kicker">${escapeHtml(labelOf(String(hit.source)))}</p>
              <p class="cv-popup-title">${escapeHtml(nombre)}</p>
-             <p class="cv-popup-meta">${escapeHtml(codigo)}${uso ? ` · ${escapeHtml(uso)}` : ""}</p>`,
+             <p class="cv-popup-meta">${escapeHtml(codigo)}${uso ? ` · ${escapeHtml(uso)}` : ""}</p>
+             <p class="cv-popup-meta">${categoria}</p>`,
           )
           .addTo(map)
+        const seleccionado = hit.id != null ? { source: String(hit.source), id: hit.id } : null
+        popup.on("close", () => {
+          if (
+            seleccionado &&
+            selRef.current &&
+            selRef.current.source === seleccionado.source &&
+            selRef.current.id === seleccionado.id
+          ) {
+            map.setFeatureState(selRef.current, { sel: false })
+            selRef.current = null
+          }
+        })
         popupRef.current = popup
       })
       setReady(true)
@@ -399,17 +497,32 @@ export function CampusMap({
     const map = mapRef.current
     if (!map || !ready) return
     for (const layer of LAYERS) {
+      const esCatastro = layer.id === "areas" || layer.id === "zonas"
       const source = map.getSource(layer.id) as GeoJSONSource | undefined
       if (source) source.setData(asCollection(data[layer.id]))
-      const showFill = visible[layer.id] && !(relieve && layer.id === "areas")
+      const showFill = visible[layer.id] && !(relieve && esCatastro)
       const vis = showFill ? "visible" : "none"
       if (map.getLayer(`${layer.id}-fill`)) {
         map.setLayoutProperty(`${layer.id}-fill`, "visibility", vis)
         map.setLayoutProperty(`${layer.id}-line`, "visibility", visible[layer.id] ? "visible" : "none")
       }
+      if (esCatastro && map.getLayer(`${layer.id}-realce`)) {
+        map.setLayoutProperty(`${layer.id}-realce`, "visibility", visible[layer.id] ? "visible" : "none")
+      }
+      if (esCatastro) {
+        const campo = layer.id === "zonas" ? "cat_sector" : "cat_uso"
+        const todos = layer.id === "zonas" ? SECTOR_IDS : USO_IDS
+        const filtro = filtroCategorias(campo, todos.filter((id) => !ocultas.includes(id)), todos)
+        for (const capa of [`${layer.id}-fill`, `${layer.id}-line`, `${layer.id}-realce`, `${layer.id}-extrusion`]) {
+          if (map.getLayer(capa)) map.setFilter(capa, filtro)
+        }
+      }
     }
     if (map.getLayer("areas-extrusion")) {
       map.setLayoutProperty("areas-extrusion", "visibility", relieve && visible.areas ? "visible" : "none")
+    }
+    if (map.getLayer("zonas-extrusion")) {
+      map.setLayoutProperty("zonas-extrusion", "visibility", relieve && visible.zonas ? "visible" : "none")
     }
     const conteo = conteoCapas(data)
     if (!encuadrado.current && catastroVisible(conteo)) {
@@ -433,7 +546,7 @@ export function CampusMap({
         }
       }
     }
-  }, [data, visible, activities, ready, relieve, edificios, showEdificios, inventory, inventoryOn])
+  }, [data, visible, activities, ready, relieve, edificios, showEdificios, inventory, inventoryOn, ocultas])
 
   useEffect(() => {
     const map = mapRef.current
