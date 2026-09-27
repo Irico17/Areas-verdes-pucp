@@ -70,6 +70,7 @@ a { color: var(--yucca-deep); }
 .skip:focus { top: 8px; }
 
 .shell {
+  height: 100vh;
   height: 100dvh;
   display: grid;
   grid-template-columns: 188px minmax(320px, 400px) minmax(0, 1fr);
@@ -78,6 +79,13 @@ a { color: var(--yucca-deep); }
 }
 .shell.panel-off { grid-template-columns: 188px 0 minmax(0, 1fr); }
 .shell.panel-off .panel { display: none; }
+.shell { overflow: hidden; overflow: clip; }
+
+html:has(.shell),
+html:has(.shell) body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 
 .topbar {
   grid-column: 1 / -1;
@@ -153,11 +161,16 @@ a { color: var(--yucca-deep); }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overflow: clip;
 }
 .panel-view {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden auto;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
   padding: 16px 16px 32px;
   animation: rise 180ms var(--ease);
 }
@@ -276,7 +289,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .huecos strong { color: var(--pendiente); font-weight: 600; font-size: 13px; white-space: nowrap; }
 .layer {
   display: grid;
-  grid-template-columns: 14px 1fr auto;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: start;
   padding: 8px 0;
@@ -298,6 +311,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   min-height: 52px;
   border-radius: 0;
 }
+.labor > span { min-width: 0; }
 .labor.on { background: color-mix(in srgb, var(--yucca) 10%, var(--hoja)); color: var(--tinta); }
 .marca {
   width: 28px;
@@ -377,6 +391,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .errores-campo { list-style: none; margin: -4px 0 12px; padding: 0; }
 
 .gate {
+  min-height: 100vh;
   min-height: 100dvh;
   display: grid;
   grid-template-columns: minmax(280px, 42%) 1fr;
@@ -459,12 +474,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 }
 
 @media (max-width: 820px) {
-  html, body, #root { overflow: hidden; }
-  .shell, .shell.panel-off {
-    display: block;
-    height: 100dvh;
-    overflow: hidden;
-  }
+  input, select, textarea { font-size: 16px; }
+  .shell, .shell.panel-off { display: block; }
   .stage { position: absolute; inset: 0; }
   .topbar {
     position: absolute;
@@ -497,6 +508,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
     border-right: 0;
     border-top: 1px solid var(--linea);
     overflow: hidden;
+    overflow: clip;
   }
   .guard button {
     flex: 1 1 0;
@@ -571,7 +583,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
     background: transparent;
     font-weight: 600;
   }
-  .panel-view { touch-action: pan-y; }
+  .panel-view { touch-action: pan-y pinch-zoom; }
   .sheet-action {
     position: sticky;
     bottom: 0;
@@ -593,8 +605,6 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   .gate {
     grid-template-columns: 1fr;
     grid-template-rows: auto minmax(0, 1fr);
-    min-height: 100dvh;
-    overflow: auto;
   }
   .gate-brand {
     padding: calc(20px + env(safe-area-inset-top)) 20px 20px;
