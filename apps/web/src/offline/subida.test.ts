@@ -105,6 +105,7 @@ class FakeXHR {
   onload: Handler = null
   onerror: Handler = null
   ontimeout: Handler = null
+  onabort: Handler = null
   status = 0
   withCredentials = false
   timeout = 0
@@ -153,6 +154,13 @@ test("enviarConProgreso resuelve 0 en onerror y en ontimeout", async () => {
   const timeoutProm = enviarConProgreso("/x", new FormData(), () => {}, () => xhrTimeout as unknown as XMLHttpRequest)
   xhrTimeout.ontimeout?.()
   assert.equal(await timeoutProm, 0)
+})
+
+test("enviarConProgreso resuelve 0 en onabort para no dejar la promesa colgada", async () => {
+  const xhr = new FakeXHR()
+  const promesa = enviarConProgreso("/x", new FormData(), () => {}, () => xhr as unknown as XMLHttpRequest)
+  xhr.onabort?.()
+  assert.equal(await promesa, 0)
 })
 
 test("unirEvidencias descarta la pendiente cuando ya llegó enviada y ordena por fecha descendente", () => {

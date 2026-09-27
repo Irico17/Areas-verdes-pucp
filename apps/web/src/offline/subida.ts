@@ -87,6 +87,7 @@ export function enviarConProgreso(
     xhr.onload = () => resolve(xhr.status)
     xhr.onerror = () => resolve(0)
     xhr.ontimeout = () => resolve(0)
+    xhr.onabort = () => resolve(0)
     xhr.send(data)
   })
 }
