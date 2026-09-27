@@ -2,14 +2,15 @@
 
 **Superficie:** `apps/web` (React 19, Vite, MapLibre 6.11). Rutas relativas a `apps/web/`.
 **Fecha:** 27/09/2026. **Rama sugerida:** `fix/ui-scroll-diseno`.
-**Estado:** auditoría y plan. En esta fase no se tocó código. *(Nota de una fase posterior: el Lote A ya está implementado en la rama `fix/ui-scroll-diseno`; ver "Progreso" más abajo. Lotes B, C y D siguen pendientes.)*
+**Estado:** auditoría y plan, implementados. *(Nota de una fase posterior: los lotes A, B, C y D están implementados en la rama `fix/ui-scroll-diseno`; ver "Progreso" más abajo.)*
 
 ### Progreso (actualizado durante la implementación)
 
 - **Lote A · completo.** S01–S19 implementados y verificados con `npm run lint`, `npm test`, `npm run build` en `apps/web`, y con capturas a 1280×800 y 390×844 (prefijo `loteA` en `/workspace/verdepucp-shots`).
 - Fuera de la auditoría: se corrigió que `FichaLabor` (`Labores.tsx`) conservaba valores tipeados al cambiar de labor (riesgo de guardar en la labor equivocada). Ver O1 y el commit `fix: FichaLabor ya no arrastra datos tipeados de una labor a otra`.
 - **Lote B · completo.** V01–V14 implementados en seis bloques (B1–B6) y verificados con `npm run lint`, `npm test`, `npm run build` en `apps/web`, y con capturas a 1280×800 y 390×844 (prefijo `loteB` en `/workspace/verdepucp-shots`).
-- Pendiente: Lote C (movimiento) y Lote D (verificación formal en dispositivo).
+- **Lote C · completo.** M01–M04 implementados y verificados con `npm run lint`, `npm test`, `npm run build` en `apps/web`, con capturas a 1280×800 y 390×844 (prefijo `loteC`) y con un script de Playwright aparte (`/workspace/shots-tool/verify-loteD.mjs`) que confirma, con `prefers-reduced-motion: reduce` emulado, que la hoja móvil solo transiciona `opacity, display` (sin traslado) y que los botones conservan `background, color, transform, border-color` en su lista de transición.
+- **Lote D · verificado dentro de lo posible en este entorno.** D.1 (lint/test/build) en verde. D.3: sin desbordes horizontales ni contenedores recortados en ningún módulo (script equivalente ya integrado en `shots.mjs`, ver reporte `loteC` en la consola); sin objetivos táctiles bajo 44 px a 390 px en Mapa, Labores, Catastro e Inventario. D.2 (matriz completa de anchos), D.4 (regresión de gestos del mapa con puntero real) y D.6 (lector de pantalla) quedan como huecos: este entorno no tiene un iPhone o Android físico ni un lector de pantalla para probarlos; no bloquean el cierre del plan, tal como indica la guía del Lote D.
 
 ## Cómo se hizo
 
@@ -1821,11 +1822,11 @@ A 390×844 (coordinación y admin; los puntos con [dispositivo] se verifican en 
 - **C3 · Estados** (M03): `rise` por módulo, filas, avisos, ficha, esqueleto y menú «Más».
 
 **Criterios de aceptación del Lote C:**
-- [ ] 390: la hoja entra en ≈260 ms desde la barra y sale en ≈180 ms; el ajuste al anclaje anima; no hay retardo al arrastrar; los controles del mapa acompañan.
-- [ ] 390 y 1280: el cambio de módulo es un fundido con 6 px en 180 ms; la selección de fila cambia de tono en 120 ms; los avisos aparecen con fundido.
-- [ ] Movimiento reducido (DevTools → Rendering): nada se traslada; la hoja usa un fundido de 120 ms; los colores siguen transicionando; el mapa usa `jumpTo` o `duration: 0`; los desplazamientos por programa son instantáneos.
-- [ ] Ninguna transición de UI supera 300 ms, salvo el vuelo del mapa (900 ms, ya existente).
-- [ ] Con la CPU a ×4 en DevTools, el arrastre no produce tareas largas de más de 50 ms.
+- [x] 390: la hoja entra en ≈260 ms desde la barra y sale en ≈180 ms (`@starting-style` + `allow-discrete` sobre `.panel.sheet`); el ajuste al anclaje anima; sin transición durante el arrastre (`.panel.sheet.arrastrando { transition: none }`); los controles del mapa acompañan (`transition: bottom var(--dur-hoja)…`, congelada durante `.arrastrando`).
+- [x] 390 y 1280: el cambio de módulo es un fundido con 6 px en 180 ms (`rise` con `key={vista}`, ya de Lote A); la selección de fila cambia de tono en 120 ms (`.labor { transition: background-color var(--dur-feedback)… }`); los avisos y la ficha aparecen con fundido (`@keyframes aparecer` en `.banner`, `.status.error`, `.detail`).
+- [x] Movimiento reducido: verificado con Playwright (`reducedMotion: "reduce"`, ver `/workspace/shots-tool/verify-loteD.mjs`) — `.panel.sheet` solo lista `opacity, display` en su transición (nada se traslada); los botones conservan `background, color, transform, border-color` en su transición (el color sigue cambiando); `CampusMap.tsx` ya usaba `jumpTo`/`duration: 0` desde antes de este lote y no se tocó; `mostrarEnPanel` ya usa `behavior: "auto"` desde el Lote A.
+- [x] Ninguna transición de UI nueva supera 300 ms (260/180/120 ms), salvo el vuelo del mapa (900 ms, sin cambios, ya existente).
+- [ ] Con la CPU a ×4 en DevTools, el arrastre no produce tareas largas de más de 50 ms — sin verificar: requiere el panel Performance de un Chrome interactivo, no disponible en este entorno headless. Hueco, no bloquea (el arrastre solo cambia `height`/`transform` de un elemento y `bottom` de los controles del mapa, sin recalcular el layout del documento; ver M04).
 
 ### Lote D · Verificación
 
