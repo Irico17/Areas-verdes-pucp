@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 
@@ -28,11 +27,7 @@ func main() {
 		*salida = filepath.Join(*v1, "zonas_sector.json")
 	}
 
-	var client *http.Client
-	if *vivo {
-		client = &http.Client{}
-	}
-	body, desde, err := etl.FuenteSectores(*raw, *vivo, client)
+	body, desde, err := etl.FuenteSectores(*raw, *vivo, nil)
 	if err != nil {
 		log.Fatalf("fuente: %v", err)
 	}
