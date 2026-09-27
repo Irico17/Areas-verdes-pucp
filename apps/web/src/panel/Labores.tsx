@@ -290,7 +290,7 @@ export function Labores(props: Props) {
                   </div>
                 </>
               )}
-              <EvidenciasCampo actividadId={props.selected.queued ? "" : props.selected.id} />
+              <EvidenciasCampo key={props.selected.id} actividadId={props.selected.queued ? "" : props.selected.id} />
               <h3>Bitácora</h3>
               {props.timelineError && <p className="status error">{props.timelineError}</p>}
               <ol className="timeline">
