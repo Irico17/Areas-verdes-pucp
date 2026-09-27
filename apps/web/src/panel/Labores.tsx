@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { formatFechaHora } from "../fecha"
+import { mostrarEnPanel } from "../ui/desplazar"
 import {
   ABIERTOS,
   ESTADOS,
@@ -79,6 +80,11 @@ export function Labores(props: Props) {
   const [equipoVista, setEquipoVista] = useState("")
   const visibles = props.items.filter((item) => !equipoVista || item.capatazId === equipoVista)
   const avisoError = /no se|sin conexión|error/i.test(props.notice)
+  const detalleRef = useRef<HTMLDivElement>(null)
+  const elegida = props.selected?.id
+  useEffect(() => {
+    if (elegida) mostrarEnPanel(detalleRef.current, "inicio")
+  }, [elegida])
   return (
     <section className="block">
       <h2>Labores</h2>
@@ -220,7 +226,7 @@ export function Labores(props: Props) {
         ))}
       </ul>
       {props.selected && (
-        <div className="detail">
+        <div className="detail" ref={detalleRef}>
           <h3>{props.selected.titulo}</h3>
           <p className="meta">
             {etiquetaTipo(props.selected.tipo)} · {etiquetaEstado(props.selected.estado)} · {props.selected.equipo || "Sin equipo"}
