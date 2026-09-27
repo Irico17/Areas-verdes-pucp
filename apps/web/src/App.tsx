@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { fetchCollection } from "./api"
 import { INVENTARIO } from "./inventario"
 import { CampusMap } from "./map/CampusMap"
@@ -509,6 +509,11 @@ export default function App() {
     }
   }
 
+  const stageRef = useRef<HTMLDivElement>(null)
+  const publicarAltura = useCallback((px: number) => {
+    stageRef.current?.style.setProperty("--sheet-h", `${Math.round(px)}px`)
+  }, [])
+
   if (!sesionLista) {
     return (
       <main className="gate" aria-busy="true">
@@ -562,7 +567,7 @@ export default function App() {
           </button>
         ))}
       </nav>
-      <BottomSheet open={railOpen} onClose={() => setRailOpen(false)} vista={moduloActivo}>
+      <BottomSheet open={railOpen} onClose={() => setRailOpen(false)} vista={moduloActivo} onAltura={publicarAltura}>
         <p className={load.kind === "error" || activityError ? "status error" : "status"}>
           {load.kind === "error" ? load.message : summary}
           {activityError ? ` · ${activityError}` : ""}
@@ -704,7 +709,7 @@ export default function App() {
         {moduloActivo === "importaciones" && <ImportacionesPanel />}
         {moduloActivo === "admin" && <AdminPanel />}
       </BottomSheet>
-      <div className="stage">
+      <div className="stage" ref={stageRef}>
         <MapBoundary>
           <CampusMap
             data={data}

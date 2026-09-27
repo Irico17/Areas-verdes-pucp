@@ -498,12 +498,12 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 6;
+    z-index: var(--z-nav);
     flex-direction: row;
     align-items: stretch;
     justify-content: space-around;
     gap: 0;
-    height: calc(64px + env(safe-area-inset-bottom));
+    height: calc(var(--nav-h) + env(safe-area-inset-bottom));
     padding: 4px 4px env(safe-area-inset-bottom);
     border-right: 0;
     border-top: 1px solid var(--linea);
@@ -526,23 +526,20 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   }
   .panel {
     position: fixed;
-    z-index: 5;
+    z-index: var(--z-hoja);
     left: 0;
     right: 0;
     top: auto;
-    bottom: calc(64px + env(safe-area-inset-bottom));
+    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
     width: auto;
-    height: min(74dvh, 680px);
     border-right: 0;
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--r-hoja) var(--r-hoja) 0 0;
     box-shadow: var(--sombra);
     background: var(--papel);
-    animation: sheet 180ms var(--ease);
   }
   .panel.sheet {
-    height: auto;
-    max-height: calc(100dvh - 64px - env(safe-area-inset-bottom));
-    padding-bottom: env(safe-area-inset-bottom);
+    height: calc(var(--sheet-util) * 0.55);
+    max-height: var(--sheet-util);
     touch-action: none;
   }
   .sheet-chrome {
@@ -552,7 +549,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
     min-height: 44px;
     border-bottom: 1px solid var(--linea);
     background: var(--hoja);
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--r-hoja) var(--r-hoja) 0 0;
     touch-action: none;
   }
   .sheet-handle {
@@ -619,14 +616,13 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   .field input, .field select, .field textarea, .primary, .form button { min-height: 48px; }
 }
 
+@media (max-width: 820px) and (max-height: 480px) {
+  :root { --topbar-zona: env(safe-area-inset-top); }
+}
+
 @media (max-width: 380px) {
   .word { font-size: 16px; }
   .roles button { padding: 8px 8px; }
-}
-
-@keyframes sheet {
-  from { transform: translateY(12px); opacity: 0.6; }
-  to { transform: none; opacity: 1; }
 }
 
 .calendario { display: flex; flex-direction: column; gap: 12px; }
