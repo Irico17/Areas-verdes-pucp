@@ -973,6 +973,8 @@ fieldset { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
   padding: 2px 8px;
   border: 1px solid var(--linea);
   border-radius: var(--r-marca);
+  width: fit-content;
+  justify-self: start;
 }
 .chip.pendiente {
   color: var(--pendiente);
