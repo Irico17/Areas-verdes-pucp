@@ -1,5 +1,8 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { FechaCampo } from "../FechaCampo"
 import { formatFechaHora } from "../fecha"
+import { mostrarEnPanel } from "../ui/desplazar"
+import { Esqueleto } from "../ui/Esqueleto"
 import {
   ABIERTOS,
   ESTADOS,
@@ -28,6 +31,7 @@ export type LaborItem = {
 
 type Props = {
   rol: Rol
+  cargando?: boolean
   equipos: Capataz[]
   equipoId: string
   onEquipo: (id: string) => void
@@ -79,6 +83,11 @@ export function Labores(props: Props) {
   const [equipoVista, setEquipoVista] = useState("")
   const visibles = props.items.filter((item) => !equipoVista || item.capatazId === equipoVista)
   const avisoError = /no se|sin conexión|error/i.test(props.notice)
+  const detalleRef = useRef<HTMLDivElement>(null)
+  const elegida = props.selected?.id
+  useEffect(() => {
+    if (elegida) mostrarEnPanel(detalleRef.current, "inicio")
+  }, [elegida])
   return (
     <section className="block">
       <h2>Labores</h2>
@@ -198,9 +207,14 @@ export function Labores(props: Props) {
           </button>
         </p>
       )}
-      {props.notice && <p className={avisoError ? "status error" : "banner"}>{props.notice}</p>}
+      {props.notice && (
+        <p className={avisoError ? "status error" : "banner"} role="status">
+          {props.notice}
+        </p>
+      )}
+      {props.cargando && <Esqueleto />}
       <ul className="labor-list">
-        {visibles.length === 0 && <li className="empty">No hay labores con este filtro.</li>}
+        {!props.cargando && visibles.length === 0 && <li className="empty">No hay labores con este filtro.</li>}
         {visibles.map((item) => (
           <li key={item.id}>
             <button type="button" className={props.selected?.id === item.id ? "labor on" : "labor"} onClick={() => props.onSelect(item.id)}>
@@ -220,14 +234,14 @@ export function Labores(props: Props) {
         ))}
       </ul>
       {props.selected && (
-        <div className="detail">
+        <div className="detail" ref={detalleRef}>
           <h3>{props.selected.titulo}</h3>
           <p className="meta">
             {etiquetaTipo(props.selected.tipo)} · {etiquetaEstado(props.selected.estado)} · {props.selected.equipo || "Sin equipo"}
             {props.selected.ejecutor === "tercerizada" ? " · tercerizada" : " · personal propio"}
           </p>
           {props.selected.detalle && <p className="lede">{props.selected.detalle}</p>}
-          <FichaLabor actividadId={props.selected.queued ? "" : props.selected.id} />
+          <FichaLabor key={props.selected.id} actividadId={props.selected.queued ? "" : props.selected.id} />
           {props.selected.queued ? (
             <p className="hint">Aún no está en el servidor. El id ya quedó reservado para el reintento.</p>
           ) : (
@@ -309,7 +323,12 @@ function FichaLabor(props: { actividadId?: string }) {
   const [lugar, setLugar] = useState("")
   const [comentario, setComentario] = useState("")
   const [aviso, setAviso] = useState("")
+  const fichaRef = useRef<HTMLFieldSetElement>(null)
   async function guardar() {
+    if (fichaRef.current?.querySelector('[aria-invalid="true"]')) {
+      setAviso("Corrija la fecha antes de guardar.")
+      return
+    }
     if (solicitud && atencion && atencion < solicitud) {
       setAviso("La atención no puede ser anterior a la solicitud.")
       return
@@ -341,7 +360,7 @@ function FichaLabor(props: { actividadId?: string }) {
     }
   }
   return (
-    <fieldset className="form">
+    <fieldset className="form grupo" ref={fichaRef}>
       <legend>Ficha de la labor</legend>
       <label className="field">
         Clase
@@ -349,11 +368,11 @@ function FichaLabor(props: { actividadId?: string }) {
       </label>
       <label className="field">
         Fecha de solicitud
-        <input type="date" value={solicitud} onChange={(event) => setSolicitud(event.target.value)} />
+        <FechaCampo value={solicitud} onChange={setSolicitud} />
       </label>
       <label className="field">
         Fecha de atención
-        <input type="date" value={atencion} onChange={(event) => setAtencion(event.target.value)} />
+        <FechaCampo value={atencion} onChange={setAtencion} />
       </label>
       <label className="field">
         Lugar

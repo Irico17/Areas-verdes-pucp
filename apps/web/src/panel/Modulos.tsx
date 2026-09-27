@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react"
 import { FechaCampo } from "../FechaCampo"
 import { formatFecha, hoyISO } from "../fecha"
 import { ApiError, ESTADOS, etiquetaEstado, etiquetaTipo } from "../operacion"
+import { Esqueleto } from "../ui/Esqueleto"
 import {
   crearAreaSinGeom,
   crearCatalogo,
@@ -242,6 +243,7 @@ export function CatastroPanel() {
 export function SolicitudesPanel(props: { actividadId: string }) {
   const [rows, setRows] = useState<Awaited<ReturnType<typeof fetchSolicitudes>>>([])
   const [ordenes, setOrdenes] = useState<Orden[]>([])
+  const [cargando, setCargando] = useState(true)
   const [error, setError] = useState("")
   const [titulo, setTitulo] = useState("")
   const [fuente, setFuente] = useState("osg")
@@ -274,6 +276,9 @@ export function SolicitudesPanel(props: { actividadId: string }) {
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof ApiError ? err.message : "No se pudieron leer las solicitudes")
       })
+      .finally(() => {
+        if (!cancelled) setCargando(false)
+      })
     return () => {
       cancelled = true
     }
@@ -284,7 +289,8 @@ export function SolicitudesPanel(props: { actividadId: string }) {
       <h2>Solicitudes</h2>
       <p className="lede">Captura manual. El código externo se conserva si viene de Centuria u OSG; el sistema no lo inventa.</p>
       {error && <p className="status error">{error}</p>}
-      {rows.length === 0 && !error && <p className="empty">No hay solicitudes registradas.</p>}
+      {cargando && <Esqueleto />}
+      {!cargando && rows.length === 0 && !error && <p className="empty">No hay solicitudes registradas.</p>}
       <ul className="labor-list">
         {rows.map((row) => (
           <li key={row.id} className="agenda">
@@ -460,6 +466,10 @@ export function ReportesPanel() {
         className="form"
         onSubmit={(event) => {
           event.preventDefault()
+          if (event.currentTarget.querySelector('[aria-invalid="true"]')) {
+            setError("Corrija la fecha antes de actualizar.")
+            return
+          }
           void load()
         }}
       >
@@ -549,6 +559,8 @@ const CLASES = [
 export function CatalogosPanel(props: { editable: boolean }) {
   const [clase, setClase] = useState<string>("tipo_actividad")
   const [items, setItems] = useState<CatalogoItem[]>([])
+  const [cargadoDe, setCargadoDe] = useState<string | null>(null)
+  const cargando = cargadoDe !== clase
   const [error, setError] = useState("")
   const [codigo, setCodigo] = useState("")
   const [nombre, setNombre] = useState("")
@@ -573,6 +585,9 @@ export function CatalogosPanel(props: { editable: boolean }) {
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "No se pudo leer el catálogo")
       })
+      .finally(() => {
+        if (!cancelled) setCargadoDe(clase)
+      })
     return () => {
       cancelled = true
     }
@@ -593,7 +608,8 @@ export function CatalogosPanel(props: { editable: boolean }) {
         </select>
       </label>
       {error && <p className="status error">{error}</p>}
-      {items.length === 0 && !error && <p className="empty">Esta clase no tiene ítems.</p>}
+      {cargando && <Esqueleto />}
+      {!cargando && items.length === 0 && !error && <p className="empty">Esta clase no tiene ítems.</p>}
       <ul className="labor-list">
         {items.map((item) => (
           <li key={item.id} className="agenda">
@@ -692,6 +708,7 @@ export function AdminPanel() {
 export function RiegoPanel(props: { capatazId: string }) {
   const [aviso, setAviso] = useState("")
   const [rows, setRows] = useState<Awaited<ReturnType<typeof fetchRiego>>["registros"]>([])
+  const [cargando, setCargando] = useState(true)
   const [error, setError] = useState("")
   const [sector, setSector] = useState("Eje central")
   const [zona, setZona] = useState("Z1")
@@ -722,6 +739,9 @@ export function RiegoPanel(props: { capatazId: string }) {
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "No se pudo leer el riego")
       })
+      .finally(() => {
+        if (!cancelled) setCargando(false)
+      })
     return () => {
       cancelled = true
     }
@@ -735,7 +755,8 @@ export function RiegoPanel(props: { capatazId: string }) {
         {rows.length} {rows.length === 1 ? "turno registrado" : "turnos registrados"}. Cobertura: definición pendiente.
       </p>
       {error && <p className="status error">{error}</p>}
-      {rows.length === 0 && !error && <p className="empty">Todavía no hay turnos registrados.</p>}
+      {cargando && <Esqueleto />}
+      {!cargando && rows.length === 0 && !error && <p className="empty">Todavía no hay turnos registrados.</p>}
       <ul className="labor-list">
         {rows.map((row) => (
           <li key={row.id} className="agenda">
@@ -750,6 +771,10 @@ export function RiegoPanel(props: { capatazId: string }) {
         className="form"
         onSubmit={(event) => {
           event.preventDefault()
+          if (event.currentTarget.querySelector('[aria-invalid="true"]')) {
+            setError("Corrija la fecha antes de registrar.")
+            return
+          }
           void crearRiego({
             id: crypto.randomUUID(),
             sector,

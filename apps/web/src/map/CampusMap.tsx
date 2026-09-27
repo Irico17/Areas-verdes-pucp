@@ -86,6 +86,16 @@ function nearestInventoryPoint(
   return best ? { id: best.id, props: best.props } : null
 }
 
+function desfaseHoja(contenedor: HTMLElement): [number, number] {
+  const hoja = parseFloat(getComputedStyle(contenedor).getPropertyValue("--sheet-h")) || 0
+  if (hoja <= 0) return [0, 0]
+  const alto = contenedor.clientHeight
+  const arriba = document.querySelector(".topbar")?.getBoundingClientRect().bottom ?? 0
+  const nav = document.querySelector(".guard")?.getBoundingClientRect().height ?? 0
+  const bordeHoja = alto - nav - hoja
+  return [0, Math.round((arriba + bordeHoja) / 2 - alto / 2)]
+}
+
 export function CampusMap({
   data,
   visible,
@@ -455,8 +465,9 @@ export function CampusMap({
     if (!map || !ready || !focus) return
     const quiet = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     const zoom = Math.max(map.getZoom(), 16.4)
-    if (quiet) map.jumpTo({ center: [focus.lon, focus.lat], zoom })
-    else map.flyTo({ center: [focus.lon, focus.lat], zoom, duration: 900, essential: true })
+    const offset = desfaseHoja(map.getContainer())
+    if (quiet) map.easeTo({ center: [focus.lon, focus.lat], zoom, offset, duration: 0 })
+    else map.flyTo({ center: [focus.lon, focus.lat], zoom, offset, duration: 900, essential: true })
   }, [focus, ready])
 
   const dibujoId = modoDibujo ? `${modoDibujo.entidad}:${modoDibujo.id}` : ""

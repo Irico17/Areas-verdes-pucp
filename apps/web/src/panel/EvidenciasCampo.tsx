@@ -12,6 +12,7 @@ import {
   type ResultadoEnvio,
 } from "../offline/queue"
 import { fetchEvidencias, type Evidencia } from "../producto"
+import { Esqueleto } from "../ui/Esqueleto"
 
 type Aviso = { tono: "ok" | "pendiente" | "error"; texto: string }
 
@@ -56,20 +57,20 @@ async function publicar(item: QueuedEvidencia): Promise<ResultadoEnvio> {
 export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
   const [enviadas, setEnviadas] = useState<Evidencia[]>([])
   const [pendientes, setPendientes] = useState<QueuedEvidencia[]>([])
+  const [cargadoDe, setCargadoDe] = useState<string | null>(null)
+  const cargando = cargadoDe !== actividadId
   const [aviso, setAviso] = useState<Aviso | null>(null)
   const [ocupado, setOcupado] = useState(false)
 
   const refrescar = useCallback(async () => {
     const locales = await listarEvidencias().catch(() => [])
     setPendientes(locales.filter((item) => item.actividadId === actividadId))
-    if (!actividadId) {
-      setEnviadas([])
-      return
-    }
     try {
-      setEnviadas(await fetchEvidencias(actividadId))
+      setEnviadas(actividadId ? await fetchEvidencias(actividadId) : [])
     } catch {
       setEnviadas([])
+    } finally {
+      setCargadoDe(actividadId)
     }
   }, [actividadId])
 
@@ -218,7 +219,8 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
           </li>
         ))}
       </ul>
-      {pendientes.length === 0 && enviadas.length === 0 && (
+      {cargando && <Esqueleto filas={2} />}
+      {!cargando && pendientes.length === 0 && enviadas.length === 0 && (
         <p className="empty">{actividadId ? "Esta labor no tiene fotos." : "La foto se adjunta cuando la labor ya está en el servidor."}</p>
       )}
     </section>

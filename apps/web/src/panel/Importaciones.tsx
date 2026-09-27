@@ -78,7 +78,7 @@ export function ImportacionesPanel() {
     }
   }
 
-  const columnas = vista?.filas[0] ? Object.keys(vista.filas[0]).slice(0, 6) : []
+  const columnas = vista ? Array.from(new Set(vista.filas.flatMap((fila) => Object.keys(fila)))) : []
 
   return (
     <section className="form">
@@ -124,14 +124,30 @@ export function ImportacionesPanel() {
             <p key={item}>{item}</p>
           ))}
           {vista.filas.length > 0 && (
-            <div className="labor-list">
-              <p>Primeras {vista.filas.length} filas</p>
-              {vista.filas.map((fila, i) => (
-                <p key={i}>
-                  {columnas.map((col) => `${col}: ${String(fila[col] ?? "")}`).join(" · ")}
-                </p>
-              ))}
-            </div>
+            <>
+              <h3>Primeras {vista.filas.length} filas</h3>
+              <div className="tabla-scroll" role="region" aria-label="Vista previa del archivo" tabIndex={0}>
+                <table className="tabla">
+                  <thead>
+                    <tr>{columnas.map((col) => <th key={col} scope="col">{col}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {vista.filas.map((fila, i) => (
+                      <tr key={i}>
+                        {columnas.map((col) => {
+                          const valor = String(fila[col] ?? "")
+                          return (
+                            <td key={col}>
+                              <span className="celda" title={valor}>{valor}</span>
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
           {vista.errores.length > 0 && (
             <ul className="labor-list">

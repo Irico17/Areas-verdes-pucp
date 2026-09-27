@@ -160,7 +160,7 @@ func (s *Store) Create(ctx context.Context, in CreateInput) (geojson.Feature, bo
 			  $1, $2, 'pendiente', $3, $4, NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''),
 			  CASE WHEN $11 THEN NULL ELSE ST_SetSRID(ST_MakePoint($8, $9), 4326) END,
 			  $10,
-			  CASE WHEN $12 ~ '^[0-9]+$' THEN $12::bigint ELSE NULL END,
+			  (CASE WHEN $12 ~ '^[0-9]+$' THEN $12 END)::bigint,
 			  (SELECT id FROM zonas_supervision WHERE codigo = NULLIF($13, '') LIMIT 1)
 			)`,
 			in.ID, in.Tipo, in.Titulo, in.Detalle, in.AreaFeatureID, in.ZonaFeatureID,

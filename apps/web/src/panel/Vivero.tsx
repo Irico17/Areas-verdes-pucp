@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
+import { FechaCampo } from "../FechaCampo"
+import { Esqueleto } from "../ui/Esqueleto"
 import { AREAS, VIVERO_VACIO, validarVivero, type ViveroItem } from "./vivero"
 
 type Props = {
@@ -11,15 +13,17 @@ type Props = {
 export function ViveroPanel(props: Props) {
   const [mes, setMes] = useState("")
   const [items, setItems] = useState<ViveroItem[]>(props.iniciales ?? [])
+  const [cargando, setCargando] = useState(!props.iniciales)
   const [form, setForm] = useState<ViveroItem>(VIVERO_VACIO)
   const [aviso, setAviso] = useState("")
   const catalogo = { subproceso: props.subprocesos ?? [], etapa: props.etapas ?? [] }
   useEffect(() => {
     if (props.iniciales) return
+    let cancelado = false
     void fetch("/api/v1/vivero", { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { registros?: (ViveroItem & { lugar_libre?: string })[] } | null) => {
-        if (!body?.registros) return
+        if (cancelado || !body?.registros) return
         setItems(
           body.registros.map((item) => ({
             ...item,
@@ -28,6 +32,12 @@ export function ViveroPanel(props: Props) {
         )
       })
       .catch(() => {})
+      .finally(() => {
+        if (!cancelado) setCargando(false)
+      })
+    return () => {
+      cancelado = true
+    }
   }, [props.iniciales])
   const visibles = useMemo(
     () => items.filter((item) => !mes || item.fecha.startsWith(mes)),
@@ -44,8 +54,9 @@ export function ViveroPanel(props: Props) {
         Mes
         <input type="month" value={mes} onChange={(event) => setMes(event.target.value)} />
       </label>
+      {cargando && <Esqueleto />}
       <ul className="labor-list">
-        {visibles.length === 0 && <li className="empty">No hay registros de vivero en este mes.</li>}
+        {!cargando && visibles.length === 0 && <li className="empty">No hay registros de vivero en este mes.</li>}
         {visibles.map((item) => (
           <li key={item.id} className="agenda">
             <strong>{item.area || "Sin área"}</strong>
@@ -59,6 +70,10 @@ export function ViveroPanel(props: Props) {
         className="form"
         onSubmit={(event) => {
           event.preventDefault()
+          if (event.currentTarget.querySelector('[aria-invalid="true"]')) {
+            setAviso("Corrija la fecha antes de guardar.")
+            return
+          }
           const fallos = validarVivero(form, catalogo)
           if (fallos.length) {
             setAviso(fallos[0].motivo)
@@ -95,7 +110,7 @@ export function ViveroPanel(props: Props) {
       >
         <label className="field">
           Fecha
-          <input type="date" value={form.fecha} onChange={(event) => set("fecha", event.target.value)} />
+          <FechaCampo value={form.fecha} onChange={(iso) => set("fecha", iso)} />
         </label>
         <label className="field">
           Área

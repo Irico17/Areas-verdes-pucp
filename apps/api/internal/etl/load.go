@@ -1,7 +1,10 @@
 package etl
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -12,7 +15,11 @@ INSERT INTO areas_verdes (
   perimetro_m, area_m2, geom
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, catastro_geom_4326($11)
-)`
+) RETURNING id`
+
+// motivoCodigoDuplicado es el mismo texto que usa la migración 014 para este
+// tipo de corrección, así el historial de cambios queda consistente.
+const motivoCodigoDuplicado = "codigo duplicado; se conservo el de menor id. Corrija el codigo desde la ficha"
 
 const insertZona = `
 INSERT INTO zonas (
@@ -33,14 +40,15 @@ INSERT INTO capas_auxiliares (
 // Load reemplaza el catastro semilla en una transacción.
 func Load(db *gorm.DB, areas, zonas []Record, capas map[string][]Record) error {
 	return db.Transaction(func(tx *gorm.DB) error {
+		if err := negarSiHayDependientes(tx); err != nil {
+			return err
+		}
 		// zonas es una vista sobre poligonos_cuadrilla. zonas_origen no se toca.
 		if err := tx.Exec(`TRUNCATE areas_verdes, poligonos_cuadrilla, capas_auxiliares RESTART IDENTITY CASCADE`).Error; err != nil {
 			return fmt.Errorf("truncar catastro: %w", err)
 		}
-		for _, r := range areas {
-			if err := tx.Exec(insertArea, argsCatastro(r)...).Error; err != nil {
-				return fmt.Errorf("área %s: %w", r.FeatureID, err)
-			}
+		if err := insertAreas(tx, areas); err != nil {
+			return err
 		}
 		for _, r := range zonas {
 			if err := tx.Exec(insertZona, argsCatastro(r)...).Error; err != nil {
@@ -56,6 +64,122 @@ func Load(db *gorm.DB, areas, zonas []Record, capas map[string][]Record) error {
 		}
 		return verifyLoaded(tx, len(areas), len(zonas), capas)
 	})
+}
+
+// negarSiHayDependientes evita que el TRUNCATE ... CASCADE de Load borre datos
+// reales: ejemplares (FK area_verde_id) y asignaciones_poligono (FK poligono_id)
+// referencian a las tablas truncadas, y CASCADE vacía la tabla hija entera (no
+// solo las filas enlazadas). Si ejemplares está vacía, sus propias hijas
+// (codigos_historicos, medidas_palmera) también lo están, así que basta este
+// chequeo. En una base nueva estas tablas están vacías y Load sigue igual;
+// en una base con inventario real, Load se niega en vez de borrar filas.
+func negarSiHayDependientes(tx *gorm.DB) error {
+	for _, tabla := range []string{"ejemplares", "asignaciones_poligono"} {
+		var n int
+		if err := tx.Raw(fmt.Sprintf(`SELECT count(*) FROM %s`, tabla)).Scan(&n).Error; err != nil {
+			return err
+		}
+		if n > 0 {
+			return fmt.Errorf(
+				"Load: %s tiene %d fila(s); TRUNCATE ... CASCADE las borraría. Usa etl-lote (upsert, sin TRUNCATE) en una base con datos",
+				tabla, n)
+		}
+	}
+	return nil
+}
+
+// insertAreas inserta el catastro de áreas verdes. El catastro de origen repite
+// código a veces (p. ej. "D 20" en dos features): la unicidad de codigo la exige
+// areas_verdes_codigo_uidx (migración 014), así que antes de insertar se detectan
+// los duplicados y, tras conocer el id de cada fila repetida, se renombran con el
+// mismo criterio que usan las migraciones 014/034 (menor id conserva el código).
+func insertAreas(tx *gorm.DB, areas []Record) error {
+	duplicados := duplicadosPorIndice(areas)
+	for i, r := range areas {
+		args := argsCatastro(r)
+		if _, esDuplicado := duplicados[i]; esDuplicado {
+			args[2] = nil // codigo se asigna luego de conocer el id
+		}
+		var id int64
+		if err := tx.Raw(insertArea, args...).Row().Scan(&id); err != nil {
+			return fmt.Errorf("área %s: %w", r.FeatureID, err)
+		}
+		if codigoOriginal, esDuplicado := duplicados[i]; esDuplicado {
+			if err := renombrarCodigoDuplicado(tx, id, codigoOriginal); err != nil {
+				return fmt.Errorf("área %s: %w", r.FeatureID, err)
+			}
+		}
+	}
+	return nil
+}
+
+// duplicadosPorIndice devuelve, para cada área cuyo código ya apareció antes en la
+// lista, el código original. Las áreas se insertan en este mismo orden, así que la
+// primera aparición recibe el id menor y conserva el código sin cambios. La
+// comparación usa el código tal cual (sin recortar), igual que el índice único de
+// la base; TrimSpace solo sirve para descartar códigos en blanco.
+func duplicadosPorIndice(areas []Record) map[int]string {
+	vistos := map[string]bool{}
+	duplicados := map[int]string{}
+	for i, r := range areas {
+		if r.Codigo == nil {
+			continue
+		}
+		codigo := *r.Codigo
+		if strings.TrimSpace(codigo) == "" {
+			continue
+		}
+		if vistos[codigo] {
+			duplicados[i] = codigo
+			continue
+		}
+		vistos[codigo] = true
+	}
+	return duplicados
+}
+
+// renombrarCodigoDuplicado aplica "codigo · id" (con sufijo -n si también choca) y dejar
+// constancia en cambios, igual que las migraciones 014 y 034. No se salta si el cambio
+// ya está registrado, para que una segunda corrida del ETL no duplique el historial.
+func renombrarCodigoDuplicado(tx *gorm.DB, id int64, codigoOriginal string) error {
+	idStr := strconv.FormatInt(id, 10)
+	nuevo := codigoOriginal + " ·" + idStr
+	for n := 2; ; n++ {
+		var existe bool
+		if err := tx.Raw(`SELECT EXISTS (SELECT 1 FROM areas_verdes WHERE codigo = $1 AND id <> $2)`,
+			nuevo, id).Row().Scan(&existe); err != nil {
+			return err
+		}
+		if !existe {
+			break
+		}
+		nuevo = fmt.Sprintf("%s ·%s-%d", codigoOriginal, idStr, n)
+	}
+
+	if err := tx.Exec(`UPDATE areas_verdes SET codigo = $1, updated_at = now() WHERE id = $2`,
+		nuevo, id).Error; err != nil {
+		return err
+	}
+
+	antes, _ := json.Marshal(map[string]any{"codigo": codigoOriginal})
+	despues, _ := json.Marshal(map[string]any{"codigo": nuevo, "motivo": motivoCodigoDuplicado})
+
+	var yaRegistrado bool
+	if err := tx.Raw(`
+		SELECT EXISTS (
+			SELECT 1 FROM cambios
+			WHERE entidad = 'areas_verdes' AND entidad_id = $1 AND accion = 'edicion'
+			  AND despues->>'motivo' = $2 AND despues->>'codigo' = $3
+		)`, idStr, motivoCodigoDuplicado, nuevo).Row().Scan(&yaRegistrado); err != nil {
+		return err
+	}
+	if yaRegistrado {
+		return nil
+	}
+	return tx.Exec(`
+		INSERT INTO cambios (entidad, entidad_id, accion, antes, despues)
+		VALUES ('areas_verdes', $1, 'edicion', $2::jsonb, $3::jsonb)`,
+		idStr, string(antes), string(despues)).Error
 }
 
 func argsCatastro(r Record) []any {

@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
+import { FechaCampo } from "../FechaCampo"
+import { Esqueleto } from "../ui/Esqueleto"
 import { PODA_VACIA, codigoExterno, validarPoda, type PodaItem } from "./poda"
 
 type Props = {
@@ -8,17 +10,25 @@ type Props = {
 
 export function PodaPanel(props: Props) {
   const [items, setItems] = useState<PodaItem[]>(props.iniciales ?? [])
+  const [cargando, setCargando] = useState(!props.iniciales)
   const [form, setForm] = useState<PodaItem>({ ...PODA_VACIA, id: "nueva" })
   const [aviso, setAviso] = useState("")
   const fallos = useMemo(() => validarPoda(form), [form])
   useEffect(() => {
     if (props.iniciales) return
+    let cancelado = false
     void fetch("/api/v1/podas", { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { podas?: PodaItem[] } | null) => {
-        if (body?.podas) setItems(body.podas)
+        if (!cancelado && body?.podas) setItems(body.podas)
       })
       .catch(() => {})
+      .finally(() => {
+        if (!cancelado) setCargando(false)
+      })
+    return () => {
+      cancelado = true
+    }
   }, [props.iniciales])
   function set<K extends keyof PodaItem>(key: K, value: PodaItem[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -27,8 +37,9 @@ export function PodaPanel(props: Props) {
     <section className="block">
       <h2>Poda</h2>
       <p className="lede">Incidencias de poda. El código externo solo se conserva si ya viene como OSG.</p>
+      {cargando && <Esqueleto />}
       <ul className="labor-list">
-        {items.length === 0 && <li className="empty">No hay podas en esta vista.</li>}
+        {!cargando && items.length === 0 && <li className="empty">No hay podas en esta vista.</li>}
         {items.map((item) => (
           <li key={item.codigo}>
             <button type="button" className="labor" onClick={() => setForm(item)}>
@@ -47,6 +58,10 @@ export function PodaPanel(props: Props) {
         className="form"
         onSubmit={(event) => {
           event.preventDefault()
+          if (event.currentTarget.querySelector('[aria-invalid="true"]')) {
+            setAviso("Corrija la fecha antes de guardar.")
+            return
+          }
           const errores = validarPoda(form)
           if (errores.length) {
             setAviso(errores[0].motivo)
@@ -99,11 +114,11 @@ export function PodaPanel(props: Props) {
         </label>
         <label className="field">
           Fecha de reporte
-          <input type="date" value={form.fecha_reporte} onChange={(event) => set("fecha_reporte", event.target.value)} />
+          <FechaCampo value={form.fecha_reporte} onChange={(iso) => set("fecha_reporte", iso)} />
         </label>
         <label className="field">
           Fecha de ejecución
-          <input type="date" value={form.fecha_ejecucion} onChange={(event) => set("fecha_ejecucion", event.target.value)} />
+          <FechaCampo value={form.fecha_ejecucion} onChange={(iso) => set("fecha_ejecucion", iso)} />
         </label>
         <label className="field">
           Personal

@@ -1,8 +1,10 @@
 package etl
 
 import (
+	"database/sql"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -319,6 +321,11 @@ func LeerReservasFicticias(body []byte) ([]reservaCarga, []Rechazo, error) {
 // CargarAreasVerdes hace upsert del catastro por feature_id, sin TRUNCATE.
 // El comando cmd/etl (Load) sigue truncando; este es el camino de etl-lote.
 // Si las 521 áreas ya están por ese otro comando, el upsert las reconcilia y el total no crece.
+//
+// Los códigos duplicados del origen (p. ej. "D 20" repetido) se resuelven con el
+// mismo criterio que Load (duplicadosPorIndice/renombrarCodigoDuplicado), y nunca
+// se pisa un código que ya haya divergido del origen: eso cubre tanto el renombre
+// por duplicado de una corrida anterior como una edición hecha desde la ficha.
 func CargarAreasVerdes(db *gorm.DB, rawDir string) (int, error) {
 	body, err := os.ReadFile(filepath.Join(rawDir, "areas_verdes.geojson"))
 	if err != nil {
@@ -328,9 +335,31 @@ func CargarAreasVerdes(db *gorm.DB, rawDir string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	duplicados := duplicadosPorIndice(rows)
 	err = db.Transaction(func(tx *gorm.DB) error {
-		for _, r := range rows {
-			if err := tx.Exec(`
+		for i, r := range rows {
+			var existeID int64
+			var codigoActual *string
+			scanErr := tx.Raw(`SELECT id, codigo FROM areas_verdes WHERE feature_id = $1`, r.FeatureID).
+				Row().Scan(&existeID, &codigoActual)
+			existe := scanErr == nil
+			if scanErr != nil && !errors.Is(scanErr, sql.ErrNoRows) {
+				return fmt.Errorf("área %s: %w", r.FeatureID, scanErr)
+			}
+
+			codigoOriginal, esDuplicado := duplicados[i]
+			var codigoArg any
+			switch {
+			case esDuplicado:
+				codigoArg = nil // se resuelve tras el upsert, o se conserva el ya renombrado
+			case existe && codigoActual != nil && (r.Codigo == nil || *codigoActual != *r.Codigo):
+				codigoArg = nil // el código actual diverge del origen (renombrado o editado); no se pisa
+			default:
+				codigoArg = r.Codigo
+			}
+
+			var id int64
+			if err := tx.Raw(`
 				INSERT INTO areas_verdes (
 				  feature_id, source_index, codigo, nombre, uso, proy_riego, riego_act, referencia,
 				  perimetro_m, area_m2, geom, origen_ref, activo
@@ -338,7 +367,7 @@ func CargarAreasVerdes(db *gorm.DB, rawDir string) (int, error) {
 				  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, catastro_geom_4326($11), $1, TRUE
 				)
 				ON CONFLICT (feature_id) DO UPDATE SET
-				  codigo = EXCLUDED.codigo,
+				  codigo = COALESCE(EXCLUDED.codigo, areas_verdes.codigo),
 				  nombre = EXCLUDED.nombre,
 				  uso = EXCLUDED.uso,
 				  proy_riego = EXCLUDED.proy_riego,
@@ -348,11 +377,18 @@ func CargarAreasVerdes(db *gorm.DB, rawDir string) (int, error) {
 				  area_m2 = EXCLUDED.area_m2,
 				  geom = EXCLUDED.geom,
 				  origen_ref = EXCLUDED.origen_ref,
-				  updated_at = now()`,
-				r.FeatureID, r.SourceIndex, r.Codigo, r.Nombre, r.Uso, r.ProyRiego, r.RiegoAct, r.Referencia,
+				  updated_at = now()
+				RETURNING id`,
+				r.FeatureID, r.SourceIndex, codigoArg, r.Nombre, r.Uso, r.ProyRiego, r.RiegoAct, r.Referencia,
 				r.PerimetroM, r.AreaM2, geomArg(r),
-			).Error; err != nil {
+			).Row().Scan(&id); err != nil {
 				return fmt.Errorf("área %s: %w", r.FeatureID, err)
+			}
+
+			if esDuplicado && !existe {
+				if err := renombrarCodigoDuplicado(tx, id, codigoOriginal); err != nil {
+					return fmt.Errorf("área %s: %w", r.FeatureID, err)
+				}
 			}
 		}
 		return nil

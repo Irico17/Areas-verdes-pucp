@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { mostrarEnPanel } from "../ui/desplazar"
+import { Esqueleto } from "../ui/Esqueleto"
 import {
   CAPAS_EDITABLES,
   CONTEOS_TACHO,
@@ -25,6 +27,20 @@ type Fila = { id: number; etiqueta: string; raw: Record<string, unknown> }
 const ceros = Object.fromEntries(CONTEOS_TACHO.map((campo) => [campo, 0])) as Conteos
 
 const GEO_PUNTO = '{"type":"Point","coordinates":[-77.08,-12.07]}'
+
+const PESTANAS = { tachos: "Tachos", bebederos: "Bebederos", puntos: "Puntos", reservas: "Reservas" } as const
+
+const CAMPO = {
+  nombre: "nombre",
+  codigo: "código",
+  nota: "nota",
+  clase: "clase",
+  riego: "riego",
+  area_m2: "área",
+  perimetro_m: "perímetro",
+  pertenecen: "pertenecen",
+  uso: "uso",
+} as const
 
 function numeroOpcional(texto: string): number | null {
   const limpio = texto.trim()
@@ -55,7 +71,12 @@ export function InventarioCapas({
   cliente?: typeof fetch
 }) {
   const [entidad, setEntidad] = useState<EntidadInventario>(entidadInicial)
+  const formRef = useRef<HTMLFormElement>(null)
+  const listaRef = useRef<HTMLDivElement>(null)
+  const [salto, setSalto] = useState(0)
   const [filas, setFilas] = useState<Fila[]>([])
+  const [cargadoDe, setCargadoDe] = useState<EntidadInventario | null>(null)
+  const cargando = cargadoDe !== entidad
   const [id, setId] = useState<number | null>(null)
   const [errores, setErrores] = useState<ErrorCampo[]>([])
   const [aviso, setAviso] = useState("")
@@ -102,10 +123,21 @@ export function InventarioCapas({
       .catch(() => {
         if (vivo) setFilas([])
       })
+      .finally(() => {
+        if (vivo) setCargadoDe(entidad)
+      })
     return () => {
       vivo = false
     }
   }, [cliente, entidad])
+
+  useEffect(() => {
+    if (salto > 0) mostrarEnPanel(formRef.current, "inicio")
+  }, [salto])
+
+  useEffect(() => {
+    formRef.current?.closest(".split-detail")?.scrollTo({ top: 0 })
+  }, [entidad])
 
   function cargarFila(raw: Record<string, unknown>) {
     const form = formularioDesdeFila(raw)
@@ -125,6 +157,7 @@ export function InventarioCapas({
     setFicha(form.ficha)
     setErrores([])
     setAviso("")
+    setSalto((n) => n + 1)
   }
 
   function elegir(siguiente: EntidadInventario) {
@@ -217,11 +250,12 @@ export function InventarioCapas({
 
   return (
     <section className="split catastro-editor">
-      <div className="split-list">
-        <div className="roles" role="tablist" aria-label="Inventario">
+      <div className="split-list" ref={listaRef}>
+        <h2>Inventario</h2>
+        <div className="roles" role="group" aria-label="Inventario">
           {(["tachos", "bebederos", "puntos", "reservas"] as const).map((item) => (
             <button key={item} type="button" aria-pressed={entidad === item} onClick={() => elegir(item)}>
-              {item}
+              {PESTANAS[item]}
             </button>
           ))}
         </div>
@@ -230,28 +264,38 @@ export function InventarioCapas({
             <li key={item.id}>
               <button type="button" className={entidad === item.id ? "labor on" : "labor"} onClick={() => elegir(item.id)}>
                 <span>{item.label}</span>
-                <small>{item.campos.join(", ")}</small>
+                <small>Campos: {item.campos.map((campo) => CAMPO[campo]).join(", ")}</small>
               </button>
             </li>
           ))}
-          {filas.map((fila) => (
-            <li key={fila.id}>
-              <button type="button" onClick={() => cargarFila(fila.raw)}>
-                {fila.etiqueta}
-              </button>
-            </li>
-          ))}
+          {!cargando &&
+            filas.map((fila) => (
+              <li key={fila.id}>
+                <button type="button" className={id === fila.id ? "labor on" : "labor"} onClick={() => cargarFila(fila.raw)}>
+                  <span>{fila.etiqueta}</span>
+                </button>
+              </li>
+            ))}
         </ul>
+        {cargando && <Esqueleto />}
       </div>
       <div className="split-detail">
         <form
+          ref={formRef}
           className="form"
           onSubmit={(event) => {
             event.preventDefault()
             void guardar()
           }}
         >
-          <h2>Edición de inventario</h2>
+          <button
+            type="button"
+            className="link volver-lista"
+            onClick={() => mostrarEnPanel(listaRef.current?.querySelector(".labor.on") ?? listaRef.current, "centro")}
+          >
+            Volver a la lista
+          </button>
+          <h3>{id == null ? "Nuevo registro" : "Editar registro"}</h3>
           {entidad === "tachos" && (
             <>
               <label className="field">
