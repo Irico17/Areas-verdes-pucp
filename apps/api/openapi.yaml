@@ -143,3 +143,11 @@ components:
             pertenecen:
               type: string
               description: Unidad organizacional, no una persona
+            sector:
+              type: string
+              nullable: true
+              enum: [cua-valeria, cua-mateo, cua-renato, campo-deportivo, bosque-humedo]
+              description: Solo en /geo/zonas. Sector operativo ficticio o rótulo de lugar.
+            sector_etiqueta:
+              type: string
+              description: Solo en /geo/zonas. Rótulo legible de sector.

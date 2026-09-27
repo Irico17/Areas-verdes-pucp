@@ -49,6 +49,15 @@ type CapaProperties struct {
 	Pertenecen *string `json:"pertenecen,omitempty"`
 }
 
+// ZonaProperties añade el sector operativo ficticio o rótulo de lugar. Nunca
+// lleva nombres de personas reales: solo el slug guardado en la BD y su
+// etiqueta legible (ver internal/catastro.EtiquetaSector).
+type ZonaProperties struct {
+	CatastroProperties
+	Sector         *string `json:"sector,omitempty"`
+	SectorEtiqueta *string `json:"sector_etiqueta,omitempty"`
+}
+
 // RoundedFloat escribe mediciones con 3 decimales, como el catastro de origen.
 type RoundedFloat float64
 

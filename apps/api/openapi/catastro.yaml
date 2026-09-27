@@ -42,6 +42,7 @@
       FeatureCollection derivada de `jefe_de_grupo.json`.
       El campo `jefes` (nombres de personas) no se almacena ni se sirve.
       Identificador estable `Z-NNNN`.
+      `sector` es el sector operativo ficticio (`cua-*`) o un rótulo de lugar; se omite si no hay.
     operationId: zonas
     parameters:
       - $ref: "#/components/parameters/bbox"

@@ -69,9 +69,9 @@ func (s *Store) Areas(ctx context.Context, f Filter) (geojson.FeatureCollection,
 func (s *Store) Zonas(ctx context.Context, f Filter) (geojson.FeatureCollection, error) {
 	q, args := spatialSelect(`
 		SELECT id, feature_id, source_index, codigo, nombre, uso, proy_riego, riego_act,
-		       referencia, perimetro_m, area_m2, ST_AsGeoJSON(geom, 9)
+		       referencia, perimetro_m, area_m2, sector, ST_AsGeoJSON(geom, 9)
 		FROM zonas`, "", nil, f)
-	return s.scanCatastro(ctx, "zonas", q, args)
+	return s.scanZonas(ctx, "zonas", q, args)
 }
 
 func (s *Store) Capa(ctx context.Context, capa string, f Filter) (geojson.FeatureCollection, error) {
@@ -191,6 +191,66 @@ func (s *Store) scanCatastro(ctx context.Context, name, query string, args []any
 				Referencia:  nullStr(ref),
 				PerimetroM:  geojson.FloatPtr(nullFloat(per)),
 				AreaM2:      geojson.FloatPtr(nullFloat(area)),
+			},
+		})
+	}
+	return fc, rows.Err()
+}
+
+func (s *Store) scanZonas(ctx context.Context, name, query string, args []any) (geojson.FeatureCollection, error) {
+	fc := geojson.Collection(name)
+	rows, err := s.db.WithContext(ctx).Raw(query, args...).Rows()
+	if err != nil {
+		return fc, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			id          int64
+			featureID   string
+			sourceIndex int
+			codigo      sql.NullString
+			nombre      sql.NullString
+			uso         sql.NullString
+			proy        sql.NullString
+			riego       sql.NullString
+			ref         sql.NullString
+			per         sql.NullFloat64
+			area        sql.NullFloat64
+			sector      sql.NullString
+			geom        sql.NullString
+		)
+		if err := rows.Scan(&id, &featureID, &sourceIndex, &codigo, &nombre, &uso, &proy, &riego, &ref, &per, &area, &sector, &geom); err != nil {
+			return fc, err
+		}
+		sectorPtr := nullStr(sector)
+		var etiquetaPtr *string
+		if sectorPtr != nil {
+			if etiqueta := EtiquetaSector(*sectorPtr); etiqueta != "" {
+				etiquetaPtr = &etiqueta
+			}
+		}
+		fc.Features = append(fc.Features, geojson.Feature{
+			Type:     "Feature",
+			ID:       featureID,
+			Geometry: geomJSON(geom),
+			Properties: geojson.ZonaProperties{
+				CatastroProperties: geojson.CatastroProperties{
+					ID:          id,
+					FeatureID:   featureID,
+					SourceIndex: sourceIndex,
+					Codigo:      nullStr(codigo),
+					Nombre:      nullStr(nombre),
+					Uso:         nullStr(uso),
+					ProyRiego:   nullStr(proy),
+					RiegoAct:    nullStr(riego),
+					Referencia:  nullStr(ref),
+					PerimetroM:  geojson.FloatPtr(nullFloat(per)),
+					AreaM2:      geojson.FloatPtr(nullFloat(area)),
+				},
+				Sector:         sectorPtr,
+				SectorEtiqueta: etiquetaPtr,
 			},
 		})
 	}

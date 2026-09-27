@@ -22,7 +22,15 @@ func (f fakeGeo) Areas(context.Context, catastro.Filter) (geojson.FeatureCollect
 	return f.areas, nil
 }
 func (f fakeGeo) Zonas(context.Context, catastro.Filter) (geojson.FeatureCollection, error) {
-	return geojson.Collection("zonas"), nil
+	sector := "cua-mateo"
+	fc := geojson.Collection("zonas")
+	fc.Features = append(fc.Features, geojson.Feature{
+		Type:       "Feature",
+		ID:         "Z-0001",
+		Geometry:   json.RawMessage(`{"type":"MultiPolygon","coordinates":[]}`),
+		Properties: geojson.ZonaProperties{CatastroProperties: geojson.CatastroProperties{ID: 1, FeatureID: "Z-0001"}, Sector: &sector},
+	})
+	return fc, nil
 }
 func (f fakeGeo) Capa(_ context.Context, capa string, _ catastro.Filter) (geojson.FeatureCollection, error) {
 	if capa != "xerofitica" && capa != "jardines_reserva" {
@@ -119,6 +127,32 @@ func TestGeoAreasSinLimite(t *testing.T) {
 	}
 	if len(got.Features) != n {
 		t.Fatalf("features %d, se esperaban %d", len(got.Features), n)
+	}
+}
+
+func TestGeoZonasIncluyeSector(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	h := Geo{Source: fakeGeo{}}
+	r.GET("/api/v1/geo/zonas", h.Zonas)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/geo/zonas", nil))
+	if w.Code != 200 {
+		t.Fatalf("status %d", w.Code)
+	}
+	var got struct {
+		Features []struct {
+			Properties struct {
+				Sector *string `json:"sector"`
+			} `json:"properties"`
+		} `json:"features"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Features) != 1 || got.Features[0].Properties.Sector == nil || *got.Features[0].Properties.Sector != "cua-mateo" {
+		t.Fatalf("body %s", w.Body.Bytes())
 	}
 }
 
