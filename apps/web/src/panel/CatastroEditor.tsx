@@ -327,11 +327,11 @@ export function CatastroEditor({
     <section className="split catastro-editor" data-vista={vista}>
       <div className="split-list" ref={listaRef}>
         <h2>Catastro</h2>
-        <div className="roles" role="tablist" aria-label="Entidad del catastro">
-          <button type="button" role="tab" aria-selected={entidad === "area"} onClick={() => { setEntidad("area"); setErrores([]); setEditandoGeom(false) }}>
+        <div className="roles" role="group" aria-label="Entidad del catastro">
+          <button type="button" aria-pressed={entidad === "area"} onClick={() => { setEntidad("area"); setErrores([]); setEditandoGeom(false) }}>
             Áreas verdes
           </button>
-          <button type="button" role="tab" aria-selected={entidad === "zona"} onClick={() => { setEntidad("zona"); setErrores([]); setEditandoGeom(false) }}>
+          <button type="button" aria-pressed={entidad === "zona"} onClick={() => { setEntidad("zona"); setErrores([]); setEditandoGeom(false) }}>
             Zonas
           </button>
         </div>

@@ -79,9 +79,9 @@ export function CalendarioReservas({ cliente = fetch }: { cliente?: typeof fetch
     <section className="calendario" aria-label="Calendario de reservas">
       <div className="cal-head">
         <h2>Reservas</h2>
-        <div className="roles" role="tablist" aria-label="Vista del calendario">
+        <div className="roles" role="group" aria-label="Vista del calendario">
           {VISTAS.map((item) => (
-            <button key={item.id} type="button" role="tab" aria-selected={vista === item.id} onClick={() => setVista(item.id)}>
+            <button key={item.id} type="button" aria-pressed={vista === item.id} onClick={() => setVista(item.id)}>
               {item.label}
             </button>
           ))}

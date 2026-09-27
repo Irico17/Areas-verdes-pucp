@@ -249,8 +249,8 @@ export function InventarioCapas({
           ))}
           {filas.map((fila) => (
             <li key={fila.id}>
-              <button type="button" onClick={() => cargarFila(fila.raw)}>
-                {fila.etiqueta}
+              <button type="button" className={id === fila.id ? "labor on" : "labor"} onClick={() => cargarFila(fila.raw)}>
+                <span>{fila.etiqueta}</span>
               </button>
             </li>
           ))}
