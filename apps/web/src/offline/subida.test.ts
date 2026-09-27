@@ -3,6 +3,7 @@ import test from "node:test"
 import type { Evidencia } from "../producto.ts"
 import type { QueuedEvidencia } from "./queue.ts"
 import {
+  accionTrasFallo,
   avanzar,
   crearCacheUrls,
   enviarConProgreso,
@@ -212,4 +213,31 @@ test("crearCacheUrls crea una sola vez por id, revoca los que desaparecen y libe
 
   cache.liberar()
   assert.deepEqual(revocadas, ["blob:2", "blob:1"])
+})
+
+test("accionTrasFallo con estado 0 deja el ítem listo para la cola en vez de perderlo", () => {
+  const item = pendiente("r1", "2026-09-25T10:00:00.000Z")
+  const accion = accionTrasFallo({ tipo: "reintento", status: 0 }, item)
+  assert.ok(accion)
+  assert.equal(accion?.encolar.id, item.id)
+  assert.equal(accion?.encolar.intentos, 1)
+  assert.deepEqual(accion?.evento, {
+    tipo: "fallo",
+    texto: "No se pudo enviar la foto por un problema de red.",
+    reintentable: true,
+  })
+})
+
+test("accionTrasFallo con otros status también encola, con mensaje de cola", () => {
+  const item = pendiente("r2", "2026-09-25T10:00:00.000Z")
+  const accion = accionTrasFallo({ tipo: "reintento", status: 404 }, item)
+  assert.ok(accion)
+  assert.equal(accion?.encolar.id, item.id)
+  assert.equal(accion?.evento.tipo, "cola")
+})
+
+test("accionTrasFallo no hace nada si el envío fue ok o hubo conflicto", () => {
+  const item = pendiente("r3", "2026-09-25T10:00:00.000Z")
+  assert.equal(accionTrasFallo({ tipo: "ok" }, item), null)
+  assert.equal(accionTrasFallo({ tipo: "conflicto" }, item), null)
 })

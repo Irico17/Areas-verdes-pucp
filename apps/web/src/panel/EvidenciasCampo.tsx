@@ -4,7 +4,6 @@ import { comprimirFoto, rechazarPorTamano } from "../offline/comprimir"
 import { leerExif } from "../offline/exif"
 import {
   clasificarEstado,
-  conBackoff,
   encolarEvidencia,
   enviarColaEvidencias,
   listarEvidencias,
@@ -13,6 +12,7 @@ import {
   type ResultadoEnvio,
 } from "../offline/queue"
 import {
+  accionTrasFallo,
   avanzar,
   crearCacheUrls,
   enviarConProgreso,
@@ -67,7 +67,6 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
   const [cargadoDe, setCargadoDe] = useState<string | null>(null)
   const cargando = cargadoDe !== actividadId
   const [estado, despachar] = useReducer(avanzar, { fase: "inactivo" } as const)
-  const [fallido, setFallido] = useState<QueuedEvidencia | null>(null)
   const [rotas, setRotas] = useState<Set<string>>(new Set())
   const cacheRef = useRef(crearCacheUrls())
 
@@ -133,12 +132,12 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
         despachar({ tipo: "ok", sinPunto })
       } else if (resultado.tipo === "conflicto") {
         despachar({ tipo: "fallo", texto: "Esa foto ya estaba registrada con otro contenido.", reintentable: false })
-      } else if (resultado.status === 0) {
-        despachar({ tipo: "fallo", texto: "No se pudo enviar la foto por un problema de red.", reintentable: true })
-        setFallido(item)
       } else {
-        await encolarEvidencia(conBackoff(item))
-        despachar({ tipo: "cola", texto: mensajeReintento(resultado.status) })
+        const accion = accionTrasFallo(resultado, item)
+        if (accion) {
+          await encolarEvidencia(accion.encolar)
+          despachar(accion.evento)
+        }
       }
       await refrescar()
     },
@@ -148,7 +147,6 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
   async function tomar(file: File) {
     if (!actividadId) return
     despachar({ tipo: "preparar" })
-    setFallido(null)
     try {
       if (rechazarPorTamano(file.size) && !file.type.startsWith("image/")) {
         despachar({ tipo: "fallo", texto: "El archivo supera 8 MB.", reintentable: false })
@@ -190,15 +188,7 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
         texto: error instanceof Error ? error.message : "No se pudo preparar la foto.",
         reintentable: false,
       })
-      setFallido(null)
     }
-  }
-
-  async function reintentar() {
-    if (!fallido) return
-    const item = fallido
-    setFallido(null)
-    await enviar(item)
   }
 
   const items = useMemo(() => unirEvidencias(pendientes, enviadas), [pendientes, enviadas])
@@ -257,7 +247,7 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
             <progress max={100} value={estado.pct} aria-label="Progreso de la subida" />
           ))}
         {estado.fase === "error" && estado.reintentable && (
-          <button type="button" className="link" onClick={() => void reintentar()}>
+          <button type="button" className="link" onClick={() => void drenar()}>
             Reintentar
           </button>
         )}

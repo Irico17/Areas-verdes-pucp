@@ -1,5 +1,5 @@
 import type { Evidencia } from "../producto"
-import type { QueuedEvidencia } from "./queue"
+import { conBackoff, mensajeReintento, type QueuedEvidencia, type ResultadoEnvio } from "./queue"
 
 export type EstadoSubida =
   | { fase: "inactivo" }
@@ -56,6 +56,18 @@ export function textoEstado(e: EstadoSubida): string {
 
 export function ocupado(e: EstadoSubida): boolean {
   return e.fase === "preparando" || e.fase === "subiendo"
+}
+
+export function accionTrasFallo(
+  resultado: ResultadoEnvio,
+  item: QueuedEvidencia,
+): { encolar: QueuedEvidencia; evento: EventoSubida } | null {
+  if (resultado.tipo !== "reintento") return null
+  const evento: EventoSubida =
+    resultado.status === 0
+      ? { tipo: "fallo", texto: "No se pudo enviar la foto por un problema de red.", reintentable: true }
+      : { tipo: "cola", texto: mensajeReintento(resultado.status) }
+  return { encolar: conBackoff(item), evento }
 }
 
 export function enviarConProgreso(
