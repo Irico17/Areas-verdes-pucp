@@ -64,6 +64,10 @@ func migrarDBTemporal(t *testing.T, name string) *gorm.DB {
 func TestAplicarSectoresNoPisaUnSectorYaAsignado(t *testing.T) {
 	gdb := migrarDBTemporal(t, "campus_verde_etl_sector_a")
 
+	if err := gdb.Exec(`TRUNCATE actividades, actividad_eventos, ordenes_servicio, riego_registros, cambios CASCADE`).Error; err != nil {
+		t.Fatal(err)
+	}
+
 	geom := json.RawMessage(`{"type":"MultiPolygon","coordinates":[[[[-77.08,-12.07],[-77.079,-12.07],[-77.079,-12.069],[-77.08,-12.069],[-77.08,-12.07]]]]}`)
 	nombre := "Polígono de prueba"
 	zona := Record{FeatureID: "Z-0001", SourceIndex: 0, Nombre: &nombre, Geometry: geom}

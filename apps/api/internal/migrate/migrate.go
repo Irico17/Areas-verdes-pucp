@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,39 @@ import (
 
 	"gorm.io/gorm"
 )
+
+// TablasETL son las tablas de negocio que deben estar vacías para que proceda la carga inicial.
+var TablasETL = []string{
+	"areas_verdes",
+	"poligonos_cuadrilla",
+	"capas_auxiliares",
+	"inventario",
+	"ejemplares",
+	"actividades",
+	"cambios",
+}
+
+// ComprobarNecesitaETL revisa si la base requiere carga inicial de ETL.
+// Devuelve:
+// - necesita=true, conDatos=nil, err=nil si todas las tablas tienen 0 filas (código de salida 0).
+// - necesita=false, conDatos=[...], err=nil si alguna tabla tiene filas (código de salida 10).
+// - err!=nil si ocurre un error al consultar la base de datos.
+func ComprobarNecesitaETL(sqlDB *sql.DB) (bool, []string, error) {
+	var conDatos []string
+	for _, tabla := range TablasETL {
+		var n int
+		if err := sqlDB.QueryRow(fmt.Sprintf(`SELECT count(*) FROM %s`, tabla)).Scan(&n); err != nil {
+			return false, nil, fmt.Errorf("consultar conteo de %s: %w", tabla, err)
+		}
+		if n > 0 {
+			conDatos = append(conDatos, fmt.Sprintf("%s (%d)", tabla, n))
+		}
+	}
+	if len(conDatos) > 0 {
+		return false, conDatos, nil
+	}
+	return true, nil, nil
+}
 
 // Apply ejecuta los .sql de dir en orden lexicográfico, una sola vez cada uno.
 func Apply(gdb *gorm.DB, dir string) error {

@@ -72,22 +72,31 @@ func Load(db *gorm.DB, areas, zonas []Record, capas map[string][]Record) error {
 	})
 }
 
+// TablasGuardLoad son las tablas que deben estar vacías para que Load proceda.
+var TablasGuardLoad = []string{
+	"areas_verdes",
+	"poligonos_cuadrilla",
+	"capas_auxiliares",
+	"actividades",
+	"cambios",
+	"ejemplares",
+	"asignaciones_poligono",
+}
+
 // negarSiHayDependientes evita que el TRUNCATE ... CASCADE de Load borre datos
-// reales: ejemplares (FK area_verde_id) y asignaciones_poligono (FK poligono_id)
-// referencian a las tablas truncadas, y CASCADE vacía la tabla hija entera (no
-// solo las filas enlazadas). Si ejemplares está vacía, sus propias hijas
-// (codigos_historicos, medidas_palmera) también lo están, así que basta este
-// chequeo. En una base nueva estas tablas están vacías y Load sigue igual;
-// en una base con inventario real, Load se niega en vez de borrar filas.
+// existentes: Load solo procede sobre un catastro vacío (areas_verdes,
+// poligonos_cuadrilla, capas_auxiliares, actividades, cambios, ejemplares y
+// asignaciones_poligono sin filas). En una base con datos, se niega en vez de
+// borrar filas y remite a etl-lote (upsert).
 func negarSiHayDependientes(tx *gorm.DB) error {
-	for _, tabla := range []string{"ejemplares", "asignaciones_poligono"} {
+	for _, tabla := range TablasGuardLoad {
 		var n int
 		if err := tx.Raw(fmt.Sprintf(`SELECT count(*) FROM %s`, tabla)).Scan(&n).Error; err != nil {
 			return err
 		}
 		if n > 0 {
 			return fmt.Errorf(
-				"Load: %s tiene %d fila(s); TRUNCATE ... CASCADE las borraría. Usa etl-lote (upsert, sin TRUNCATE) en una base con datos",
+				"Load: %s tiene %d fila(s); TRUNCATE las borraría. Load solo procede sobre un catastro vacío. Usa etl-lote (upsert, sin TRUNCATE) en una base con datos",
 				tabla, n)
 		}
 	}

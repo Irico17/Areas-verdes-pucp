@@ -131,9 +131,16 @@ func WriteInventario(dir string, capas map[string][]InvRecord) error {
 	return nil
 }
 
-// LoadInventario reemplaza solo la tabla inventario.
+// LoadInventario reemplaza solo la tabla inventario si está vacía.
 func LoadInventario(db *gorm.DB, capas map[string][]InvRecord) error {
 	return db.Transaction(func(tx *gorm.DB) error {
+		var n int
+		if err := tx.Raw(`SELECT count(*) FROM inventario`).Scan(&n).Error; err != nil {
+			return err
+		}
+		if n > 0 {
+			return fmt.Errorf("LoadInventario: inventario tiene %d fila(s); TRUNCATE las borraría. Usa etl-lote (upsert, sin TRUNCATE) en una base con datos", n)
+		}
 		if err := tx.Exec(`TRUNCATE inventario RESTART IDENTITY`).Error; err != nil {
 			return fmt.Errorf("truncar inventario: %w", err)
 		}

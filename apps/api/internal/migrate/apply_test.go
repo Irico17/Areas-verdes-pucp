@@ -490,3 +490,79 @@ func assertDuplicadosResueltos(t *testing.T, name string) {
 		t.Fatalf("xerofítica conservó area negativa: %v", areaX.Float64)
 	}
 }
+
+func TestComprobarNecesitaETL(t *testing.T) {
+	base := os.Getenv("MIGRATE_TEST_URL")
+	if base == "" {
+		base = "postgres://campus:campus@127.0.0.1:5432/postgres?sslmode=disable"
+	}
+	admin, err := sql.Open("pgx", base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer admin.Close()
+	if err := admin.Ping(); err != nil {
+		t.Skipf("sin postgres de prueba: %v", err)
+	}
+
+	name := "campus_verde_test_necesita_etl"
+	recrear(t, admin, name)
+	defer func() {
+		_, _ = admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name)
+		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + name)
+	}()
+
+	dir := filepath.Join("..", "..", "migrations")
+	if err := aplicar(name, dir); err != nil {
+		t.Fatal(err)
+	}
+
+	gdb, err := db.Open(fmt.Sprintf("postgres://campus:campus@127.0.0.1:5432/%s?sslmode=disable", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sqlDB.Close()
+
+	// Tras migraciones, actividades tiene datos demo -> necesita=false
+	necesita, conDatos, err := ComprobarNecesitaETL(sqlDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if necesita {
+		t.Fatal("esperaba necesita=false porque actividades tiene filas de demo")
+	}
+	if len(conDatos) == 0 || !strings.Contains(conDatos[0], "actividades") {
+		t.Fatalf("esperaba conDatos con actividades, obtuve: %v", conDatos)
+	}
+
+	// Truncamos actividades y cambios -> base limpia de datos de negocio -> necesita=true
+	if err := gdb.Exec(`TRUNCATE actividades, actividad_eventos, ordenes_servicio, riego_registros, cambios CASCADE`).Error; err != nil {
+		t.Fatal(err)
+	}
+	necesita, conDatos, err = ComprobarNecesitaETL(sqlDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !necesita || len(conDatos) != 0 {
+		t.Fatalf("esperaba necesita=true con 0 tablas con datos, obtuve necesita=%v conDatos=%v", necesita, conDatos)
+	}
+
+	// Insertamos un inventario -> necesita=false
+	if err := gdb.Exec(`INSERT INTO inventario (capa, feature_id) VALUES ('arboles', 'ARB-001')`).Error; err != nil {
+		t.Fatal(err)
+	}
+	necesita, conDatos, err = ComprobarNecesitaETL(sqlDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if necesita {
+		t.Fatal("esperaba necesita=false tras insertar inventario")
+	}
+	if len(conDatos) != 1 || !strings.Contains(conDatos[0], "inventario") {
+		t.Fatalf("esperaba conDatos con inventario, obtuve: %v", conDatos)
+	}
+}
