@@ -129,7 +129,6 @@ func (h Operacion) Create(c *gin.Context) {
 	}
 	u, capataz, ok := actorDeSesion(c, body.AssignedCapatazID)
 	if !ok {
-		c.JSON(401, gin.H{"error": "inicie sesión"})
 		return
 	}
 	in := operacion.CreateInput{
@@ -169,7 +168,6 @@ func (h Operacion) Assign(c *gin.Context) {
 	}
 	u, capataz, ok := actorDeSesion(c, body.CapatazID)
 	if !ok {
-		c.JSON(401, gin.H{"error": "inicie sesión"})
 		return
 	}
 	rol := u.Rol
@@ -204,9 +202,8 @@ func (h Operacion) Estado(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
 		return
 	}
-	_, capataz, ok := actorDeSesion(c, body.CapatazID)
+	u, capataz, ok := actorDeSesion(c, body.CapatazID)
 	if !ok {
-		c.JSON(401, gin.H{"error": "inicie sesión"})
 		return
 	}
 	rol := u.Rol
@@ -237,7 +234,6 @@ func (h Operacion) Archive(c *gin.Context) {
 	}
 	u, _, ok := actorDeSesion(c, "")
 	if !ok {
-		c.JSON(401, gin.H{"error": "inicie sesión"})
 		return
 	}
 	rol := u.Rol

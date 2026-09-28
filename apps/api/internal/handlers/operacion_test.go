@@ -48,6 +48,24 @@ func TestCreateCapatazConSesionEs403(t *testing.T) {
 	}
 }
 
+func TestEstadoCapatazSinCapatazIDRetorna403(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := Operacion{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("usuario", accesos.Usuario{Rol: "capataz", CapatazID: "", Usuario: "sin-id"})
+	body := `{"estado":"en_proceso","capataz_id":"cap-norte"}`
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/estado", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	h.Estado(c)
+	if w.Code != 403 {
+		t.Fatalf("código %d cuerpo %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "sin identificador asignado") {
+		t.Fatalf("mensaje inesperado: %s", w.Body.String())
+	}
+}
+
 func TestListSinSesionEs401(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	h := Operacion{}
@@ -260,6 +278,116 @@ func TestCapatazFichaYAvancesPermisos(t *testing.T) {
 		podaHandler.CrearAvance(c)
 		if w.Code != 201 {
 			t.Fatalf("coordinacion en avance status esperado 201, obtuve %d: %s", w.Code, w.Body.String())
+		}
+	}
+
+	// 7. Configurar laborNorte como tercerizada para probar ordenes
+	if err := gdb.Exec(`UPDATE actividades SET ejecutor = 'tercerizada' WHERE id = $1`, laborNorte).Error; err != nil {
+		t.Fatal(err)
+	}
+	atHandler := Atencion{Store: atencion.NewStore(gdb)}
+	ordenID := "33333333-3333-4333-8333-333333333331"
+
+	// 8. POST /ordenes por cap-sur (capataz ajeno) -> 403
+	{
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("usuario", accesos.Usuario{Rol: "capataz", CapatazID: "cap-sur", Usuario: "sur"})
+		body := fmt.Sprintf(`{"id":"%s","actividad_id":"%s","empresa":"Eulen","referencia":"ORD-01"}`, ordenID, laborNorte)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/ordenes", strings.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		atHandler.CrearOrden(c)
+		if w.Code != 403 {
+			t.Fatalf("capataz ajeno en crear orden esperado 403, obtuve %d: %s", w.Code, w.Body.String())
+		}
+	}
+
+	// 9. POST /ordenes por cap-norte (asignado) -> 201
+	{
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("usuario", accesos.Usuario{Rol: "capataz", CapatazID: "cap-norte", Usuario: "norte"})
+		body := fmt.Sprintf(`{"id":"%s","actividad_id":"%s","empresa":"Eulen","referencia":"ORD-01"}`, ordenID, laborNorte)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/ordenes", strings.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		atHandler.CrearOrden(c)
+		if w.Code != 201 {
+			t.Fatalf("capataz asignado en crear orden esperado 201, obtuve %d: %s", w.Code, w.Body.String())
+		}
+	}
+
+	// 10. PATCH /ordenes/:id por cap-sur (capataz ajeno) -> 403
+	{
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("usuario", accesos.Usuario{Rol: "capataz", CapatazID: "cap-sur", Usuario: "sur"})
+		c.Params = gin.Params{{Key: "id", Value: ordenID}}
+		c.Request = httptest.NewRequest(http.MethodPatch, "/api/v1/ordenes/"+ordenID,
+			strings.NewReader(`{"conformidad":"conforme","estado":"conforme"}`))
+		c.Request.Header.Set("Content-Type", "application/json")
+		podaHandler.EditarOrden(c)
+		if w.Code != 403 {
+			t.Fatalf("capataz ajeno en editar orden esperado 403, obtuve %d: %s", w.Code, w.Body.String())
+		}
+	}
+
+	// 11. PATCH /ordenes/:id por cap-norte (asignado) -> 200
+	{
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("usuario", accesos.Usuario{Rol: "capataz", CapatazID: "cap-norte", Usuario: "norte"})
+		c.Params = gin.Params{{Key: "id", Value: ordenID}}
+		c.Request = httptest.NewRequest(http.MethodPatch, "/api/v1/ordenes/"+ordenID,
+			strings.NewReader(`{"conformidad":"conforme","estado":"conforme"}`))
+		c.Request.Header.Set("Content-Type", "application/json")
+		podaHandler.EditarOrden(c)
+		if w.Code != 200 {
+			t.Fatalf("capataz asignado en editar orden esperado 200, obtuve %d: %s", w.Code, w.Body.String())
+		}
+	}
+
+	// 12. Coordinación cierra la labor -> 200
+	{
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("usuario", accesos.Usuario{Rol: "coordinacion", Usuario: "coord"})
+		c.Params = gin.Params{{Key: "id", Value: laborNorte}}
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/operacion/actividades/"+laborNorte+"/estado",
+			strings.NewReader(`{"estado":"cerrada"}`))
+		c.Request.Header.Set("Content-Type", "application/json")
+		opHandler.Estado(c)
+		if w.Code != 200 {
+			t.Fatalf("coordinacion cerrar labor esperado 200, obtuve %d: %s", w.Code, w.Body.String())
+		}
+	}
+
+	// 13. Capataz asignado (cap-norte) intenta reabrir labor cerrada a pendiente -> 403
+	{
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("usuario", accesos.Usuario{Rol: "capataz", CapatazID: "cap-norte", Usuario: "norte"})
+		c.Params = gin.Params{{Key: "id", Value: laborNorte}}
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/operacion/actividades/"+laborNorte+"/estado",
+			strings.NewReader(`{"estado":"pendiente"}`))
+		c.Request.Header.Set("Content-Type", "application/json")
+		opHandler.Estado(c)
+		if w.Code != 403 {
+			t.Fatalf("capataz reabriendo labor cerrada esperado 403, obtuve %d: %s", w.Code, w.Body.String())
+		}
+	}
+
+	// 14. Coordinación sí puede reabrir labor cerrada a pendiente -> 200
+	{
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Set("usuario", accesos.Usuario{Rol: "coordinacion", Usuario: "coord"})
+		c.Params = gin.Params{{Key: "id", Value: laborNorte}}
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/operacion/actividades/"+laborNorte+"/estado",
+			strings.NewReader(`{"estado":"pendiente"}`))
+		c.Request.Header.Set("Content-Type", "application/json")
+		opHandler.Estado(c)
+		if w.Code != 200 {
+			t.Fatalf("coordinacion reabriendo labor cerrada esperado 200, obtuve %d: %s", w.Code, w.Body.String())
 		}
 	}
 }

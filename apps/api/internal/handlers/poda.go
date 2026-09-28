@@ -208,7 +208,8 @@ func (h PodaVivero) EditarSolicitud(c *gin.Context) {
 }
 
 func (h PodaVivero) EditarOrden(c *gin.Context) {
-	if _, ok := exige(c, "registrar"); !ok {
+	u, ok := exige(c, "registrar")
+	if !ok {
 		return
 	}
 	if !h.ready(c) {
@@ -220,7 +221,7 @@ func (h PodaVivero) EditarOrden(c *gin.Context) {
 		return
 	}
 	body.ID = c.Param("id")
-	item, err := h.Store.EditarOrden(c.Request.Context(), body)
+	item, err := h.Store.EditarOrden(c.Request.Context(), body, u.Rol, u.CapatazID)
 	if err != nil {
 		writeAtencion(c, err)
 		return

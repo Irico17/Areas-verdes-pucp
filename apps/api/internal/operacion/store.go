@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -206,59 +205,50 @@ func (s *Store) GuardarFicha(ctx context.Context, in FichaInput, actorRol, capat
 	if in.FechaSolicitud != "" && in.FechaAtencion != "" && in.FechaAtencion < in.FechaSolicitud {
 		return InputError{Reason: "la atención no puede ser anterior a la solicitud"}
 	}
-	if actorRol == RolCapataz {
-		var row struct {
-			AssignedCapatazID *string
-			ArchivadaEn       *time.Time
-		}
-		err := s.db.WithContext(ctx).Raw(`
-			SELECT assigned_capataz_id, archivada_en
-			FROM actividades WHERE id = $1`, in.ID).Row().Scan(&row.AssignedCapatazID, &row.ArchivadaEn)
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		row, err := lockActividad(tx, in.ID)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return ErrNoEncontrada
-			}
 			return err
 		}
-		if row.ArchivadaEn != nil {
+		if row.Archivada {
 			return InputError{Reason: "la labor está archivada"}
 		}
-		if row.AssignedCapatazID == nil || *row.AssignedCapatazID != strings.TrimSpace(capatazID) {
+		if actorRol == RolCapataz && row.Capataz != strings.TrimSpace(capatazID) {
 			return ForbiddenError{Reason: "el capataz solo puede editar la ficha de sus propias labores"}
 		}
-	}
-	var lugarID any
-	lugar := strings.TrimSpace(in.Lugar)
-	if lugar != "" {
-		var id int64
-		err := s.db.WithContext(ctx).Raw(`SELECT COALESCE((SELECT id FROM lugares WHERE id::text = $1 LIMIT 1), 0)`, lugar).Scan(&id).Error
-		if err != nil {
-			return err
+		var lugarID any
+		lugar := strings.TrimSpace(in.Lugar)
+		if lugar != "" {
+			var id int64
+			err := tx.Raw(`SELECT COALESCE((SELECT id FROM lugares WHERE id::text = $1 LIMIT 1), 0)`, lugar).Scan(&id).Error
+			if err != nil {
+				return err
+			}
+			if id != 0 {
+				lugarID = id
+			}
 		}
-		if id != 0 {
-			lugarID = id
+		res := tx.Exec(`
+			UPDATE actividades SET
+			  clase_codigo = NULLIF($2, ''),
+			  fecha_solicitud = NULLIF($3, '')::date,
+			  fecha_atencion = NULLIF($4, '')::date,
+			  lugar_id = $5,
+			  lugar_libre = $6,
+			  comentario = $7,
+			  updated_at = now()
+			WHERE id = $1 AND archivada_en IS NULL`,
+			in.ID, strings.TrimSpace(in.Clase), strings.TrimSpace(in.FechaSolicitud), strings.TrimSpace(in.FechaAtencion),
+			lugarID, lugar, strings.TrimSpace(in.Comentario),
+		)
+		if res.Error != nil {
+			return res.Error
 		}
-	}
-	res := s.db.WithContext(ctx).Exec(`
-		UPDATE actividades SET
-		  clase_codigo = NULLIF($2, ''),
-		  fecha_solicitud = NULLIF($3, '')::date,
-		  fecha_atencion = NULLIF($4, '')::date,
-		  lugar_id = $5,
-		  lugar_libre = $6,
-		  comentario = $7,
-		  updated_at = now()
-		WHERE id = $1 AND archivada_en IS NULL`,
-		in.ID, strings.TrimSpace(in.Clase), strings.TrimSpace(in.FechaSolicitud), strings.TrimSpace(in.FechaAtencion),
-		lugarID, lugar, strings.TrimSpace(in.Comentario),
-	)
-	if res.Error != nil {
-		return res.Error
-	}
-	if res.RowsAffected == 0 {
-		return ErrNoEncontrada
-	}
-	return nil
+		if res.RowsAffected == 0 {
+			return ErrNoEncontrada
+		}
+		return nil
+	})
 }
 
 func (s *Store) Assign(ctx context.Context, id, capatazID, actorRol string, usuarioID int64) (geojson.Feature, error) {
@@ -272,7 +262,7 @@ func (s *Store) Assign(ctx context.Context, id, capatazID, actorRol string, usua
 		if err != nil {
 			return err
 		}
-		if row.archivada {
+		if row.Archivada {
 			return InputError{Reason: "la labor está archivada"}
 		}
 		ok, err := capatazExiste(tx, capatazID)
@@ -282,12 +272,12 @@ func (s *Store) Assign(ctx context.Context, id, capatazID, actorRol string, usua
 		if !ok {
 			return InputError{Reason: "capataz_id no existe"}
 		}
-		if row.capataz == capatazID {
+		if row.Capataz == capatazID {
 			return nil
 		}
 		tipo := "asignada"
 		nota := "Asignación"
-		if row.capataz != "" {
+		if row.Capataz != "" {
 			tipo = "reasignada"
 			nota = "Reasignación"
 		}
@@ -297,7 +287,7 @@ func (s *Store) Assign(ctx context.Context, id, capatazID, actorRol string, usua
 			WHERE id = $1`, id, capatazID).Error; err != nil {
 			return err
 		}
-		return insertEvento(tx, id, tipo, row.estado, capatazID, actorRol, nota, usuarioID)
+		return insertEvento(tx, id, tipo, row.Estado, capatazID, actorRol, nota, usuarioID)
 	})
 	if err != nil {
 		return zero, err
@@ -315,13 +305,16 @@ func (s *Store) SetEstado(ctx context.Context, id, estado, actorRol, capatazID s
 		if err != nil {
 			return err
 		}
-		if row.archivada {
+		if row.Archivada {
 			return InputError{Reason: "la labor está archivada"}
 		}
-		if actorRol == RolCapataz && row.capataz != strings.TrimSpace(capatazID) {
+		if actorRol == RolCapataz && row.Capataz != strings.TrimSpace(capatazID) {
 			return ForbiddenError{Reason: "el capataz solo puede modificar sus propias labores"}
 		}
-		if row.estado == estado {
+		if actorRol == RolCapataz && (row.Estado == "cerrada" || row.Estado == "cancelada") {
+			return ForbiddenError{Reason: "el capataz no puede modificar labores cerradas o canceladas"}
+		}
+		if row.Estado == estado {
 			return nil
 		}
 		if estado == "cerrada" {
@@ -336,7 +329,7 @@ func (s *Store) SetEstado(ctx context.Context, id, estado, actorRol, capatazID s
 			if err := tx.Raw(`SELECT count(*) FROM actividad_avances WHERE actividad_id = $1`, id).Scan(&avances).Error; err != nil {
 				return err
 			}
-			if err := PuedeCerrar(row.ejecutor, ordenes > 0, fecha.Valid || avances > 0); err != nil {
+			if err := PuedeCerrar(row.Ejecutor, ordenes > 0, fecha.Valid || avances > 0); err != nil {
 				return err
 			}
 		}
@@ -344,7 +337,7 @@ func (s *Store) SetEstado(ctx context.Context, id, estado, actorRol, capatazID s
 			UPDATE actividades SET estado = $2, updated_at = now() WHERE id = $1`, id, estado).Error; err != nil {
 			return err
 		}
-		return insertEvento(tx, id, eventoEstado(estado), estado, row.capataz, actorRol, "Cambio de estado", usuarioID)
+		return insertEvento(tx, id, eventoEstado(estado), estado, row.Capataz, actorRol, "Cambio de estado", usuarioID)
 	})
 	if err != nil {
 		return zero, err
@@ -361,7 +354,7 @@ func (s *Store) Archive(ctx context.Context, id, actorRol, motivo string, usuari
 		if err != nil {
 			return err
 		}
-		if row.archivada {
+		if row.Archivada {
 			return nil
 		}
 		nota := "Baja lógica"
@@ -373,7 +366,7 @@ func (s *Store) Archive(ctx context.Context, id, actorRol, motivo string, usuari
 			UPDATE actividades SET archivada_en = now(), motivo_archivo = NULLIF($2, ''), updated_at = now() WHERE id = $1`, id, motivo).Error; err != nil {
 			return err
 		}
-		return insertEvento(tx, id, "archivada", row.estado, row.capataz, actorRol, nota, usuarioID)
+		return insertEvento(tx, id, "archivada", row.Estado, row.Capataz, actorRol, nota, usuarioID)
 	})
 }
 
@@ -448,15 +441,15 @@ func (s *Store) one(ctx context.Context, id string) (geojson.Feature, error) {
 	return scanFeature(rows)
 }
 
-type locked struct {
-	estado    string
-	capataz   string
-	ejecutor  string
-	archivada bool
+type LockedActividad struct {
+	Estado    string
+	Capataz   string
+	Ejecutor  string
+	Archivada bool
 }
 
-func lockActividad(tx *gorm.DB, id string) (locked, error) {
-	var row locked
+func LockActividad(tx *gorm.DB, id string) (LockedActividad, error) {
+	var row LockedActividad
 	if !uuidRe.MatchString(id) {
 		return row, InputError{Reason: "id debe ser un UUID"}
 	}
@@ -464,7 +457,7 @@ func lockActividad(tx *gorm.DB, id string) (locked, error) {
 	var archivada sql.NullTime
 	err := tx.Raw(`
 		SELECT estado, assigned_capataz_id, archivada_en, COALESCE(ejecutor, 'propia')
-		FROM actividades WHERE id = $1 FOR UPDATE`, id).Row().Scan(&row.estado, &cap, &archivada, &row.ejecutor)
+		FROM actividades WHERE id = $1 FOR UPDATE`, id).Row().Scan(&row.Estado, &cap, &archivada, &row.Ejecutor)
 	if err == sql.ErrNoRows {
 		return row, ErrNoEncontrada
 	}
@@ -472,10 +465,14 @@ func lockActividad(tx *gorm.DB, id string) (locked, error) {
 		return row, err
 	}
 	if cap.Valid {
-		row.capataz = cap.String
+		row.Capataz = cap.String
 	}
-	row.archivada = archivada.Valid
+	row.Archivada = archivada.Valid
 	return row, nil
+}
+
+func lockActividad(tx *gorm.DB, id string) (LockedActividad, error) {
+	return LockActividad(tx, id)
 }
 
 func loadSaved(tx *gorm.DB, id string) (Saved, bool, error) {

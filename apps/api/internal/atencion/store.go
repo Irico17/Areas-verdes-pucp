@@ -144,7 +144,7 @@ func (s *Store) ListarOrdenes(ctx context.Context) ([]Orden, error) {
 	return out, rows.Err()
 }
 
-func (s *Store) CrearOrden(ctx context.Context, id, actividadID, empresa, referencia, frecuencia string) (Orden, error) {
+func (s *Store) CrearOrden(ctx context.Context, id, actividadID, empresa, referencia, frecuencia, actorRol, capatazID string) (Orden, error) {
 	var zero Orden
 	empresa = strings.TrimSpace(empresa)
 	referencia = strings.TrimSpace(referencia)
@@ -154,33 +154,45 @@ func (s *Store) CrearOrden(ctx context.Context, id, actividadID, empresa, refere
 	if !operacionUUID(id) || !operacionUUID(actividadID) {
 		return zero, operacion.InputError{Reason: "id y actividad_id deben ser UUID"}
 	}
-	var ejecutor string
-	err := s.db.WithContext(ctx).Raw(`SELECT ejecutor FROM actividades WHERE id = $1 AND archivada_en IS NULL`, actividadID).Row().Scan(&ejecutor)
-	if err == sql.ErrNoRows {
-		return zero, operacion.ErrNoEncontrada
-	}
+	var o Orden
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		row, err := operacion.LockActividad(tx, actividadID)
+		if err != nil {
+			return err
+		}
+		if row.Archivada {
+			return operacion.InputError{Reason: "la labor está archivada"}
+		}
+		if actorRol == operacion.RolCapataz {
+			if row.Capataz != strings.TrimSpace(capatazID) {
+				return operacion.ForbiddenError{Reason: "el capataz solo puede registrar órdenes en sus propias labores"}
+			}
+		}
+		if row.Ejecutor != "tercerizada" {
+			return operacion.InputError{Reason: "la orden solo se vincula a una labor tercerizada"}
+		}
+		if err := tx.Exec(`
+			INSERT INTO ordenes_servicio (id, actividad_id, empresa, referencia, frecuencia)
+			VALUES ($1, $2, $3, $4, $5)`,
+			id, actividadID, empresa, referencia, strings.TrimSpace(frecuencia),
+		).Error; err != nil {
+			return err
+		}
+		var when time.Time
+		if err := tx.Raw(`
+			SELECT id::text, actividad_id::text, empresa, referencia, frecuencia, estado, conformidad, created_at
+			FROM ordenes_servicio WHERE id = $1`, id).Row().Scan(
+			&o.ID, &o.ActividadID, &o.Empresa, &o.Referencia, &o.Frecuencia, &o.Estado, &o.Conformidad, &when,
+		); err != nil {
+			return err
+		}
+		o.CreatedAt = when.UTC().Format(time.RFC3339)
+		return nil
+	})
 	if err != nil {
 		return zero, err
 	}
-	if ejecutor != "tercerizada" {
-		return zero, operacion.InputError{Reason: "la orden solo se vincula a una labor tercerizada"}
-	}
-	if err := s.db.WithContext(ctx).Exec(`
-		INSERT INTO ordenes_servicio (id, actividad_id, empresa, referencia, frecuencia)
-		VALUES ($1, $2, $3, $4, $5)`,
-		id, actividadID, empresa, referencia, strings.TrimSpace(frecuencia),
-	).Error; err != nil {
-		return zero, err
-	}
-	var o Orden
-	var when time.Time
-	err = s.db.WithContext(ctx).Raw(`
-		SELECT id::text, actividad_id::text, empresa, referencia, frecuencia, estado, conformidad, created_at
-		FROM ordenes_servicio WHERE id = $1`, id).Row().Scan(
-		&o.ID, &o.ActividadID, &o.Empresa, &o.Referencia, &o.Frecuencia, &o.Estado, &o.Conformidad, &when,
-	)
-	o.CreatedAt = when.UTC().Format(time.RFC3339)
-	return o, err
+	return o, nil
 }
 
 type Riego struct {

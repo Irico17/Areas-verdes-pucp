@@ -24,16 +24,21 @@ func usuarioEn(c *gin.Context) (accesos.Usuario, bool) {
 }
 
 // actorDeSesion ignora el rol que venga en el cuerpo. Sin cookie no hay actor.
+// Para el rol capataz siempre exige u.CapatazID; si está vacío, responde 403 y nunca toma el cuerpo.
 func actorDeSesion(c *gin.Context, capatazCuerpo string) (accesos.Usuario, string, bool) {
 	u, ok := usuarioEn(c)
 	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "inicie sesión"})
 		return accesos.Usuario{}, "", false
 	}
-	capataz := capatazCuerpo
-	if u.Rol == "capataz" && u.CapatazID != "" {
-		capataz = u.CapatazID
+	if u.Rol == "capataz" {
+		if strings.TrimSpace(u.CapatazID) == "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "capataz sin identificador asignado"})
+			return u, "", false
+		}
+		return u, u.CapatazID, true
 	}
-	return u, capataz, true
+	return u, capatazCuerpo, true
 }
 
 func exige(c *gin.Context, accion string) (accesos.Usuario, bool) {
@@ -425,7 +430,8 @@ func (h Atencion) Ordenes(c *gin.Context) {
 }
 
 func (h Atencion) CrearOrden(c *gin.Context) {
-	if _, ok := exige(c, "registrar"); !ok {
+	u, ok := exige(c, "registrar")
+	if !ok {
 		return
 	}
 	if !h.ready(c) {
@@ -442,7 +448,7 @@ func (h Atencion) CrearOrden(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
 		return
 	}
-	item, err := h.Store.CrearOrden(c.Request.Context(), body.ID, body.ActividadID, body.Empresa, body.Referencia, body.Frecuencia)
+	item, err := h.Store.CrearOrden(c.Request.Context(), body.ID, body.ActividadID, body.Empresa, body.Referencia, body.Frecuencia, u.Rol, u.CapatazID)
 	if err != nil {
 		writeAtencion(c, err)
 		return

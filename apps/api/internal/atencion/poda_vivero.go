@@ -3,11 +3,12 @@ package atencion
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"strings"
 	"time"
 
 	"campusverde/api/internal/operacion"
+
+	"gorm.io/gorm"
 )
 
 type Poda struct {
@@ -301,7 +302,7 @@ type OrdenInput struct {
 	Estado           string `json:"estado"`
 }
 
-func (s *Store) EditarOrden(ctx context.Context, in OrdenInput) (Orden, error) {
+func (s *Store) EditarOrden(ctx context.Context, in OrdenInput, actorRol, capatazID string) (Orden, error) {
 	var zero Orden
 	if !operacionUUID(in.ID) {
 		return zero, operacion.InputError{Reason: "id debe ser un UUID"}
@@ -315,35 +316,64 @@ func (s *Store) EditarOrden(ctx context.Context, in OrdenInput) (Orden, error) {
 	if estado == "" {
 		estado = "en_proceso"
 	}
-	res := s.db.WithContext(ctx).Exec(`
-		UPDATE ordenes_servicio SET
-		  conformidad = $2,
-		  periodo_inicio = NULLIF($3, '')::date,
-		  periodo_fin = NULLIF($4, '')::date,
-		  reporte_proveedor = $5,
-		  estado = $6
-		WHERE id = $1`,
-		in.ID, strings.TrimSpace(in.Conformidad), strings.TrimSpace(in.PeriodoInicio),
-		strings.TrimSpace(in.PeriodoFin), strings.TrimSpace(in.ReporteProveedor), estado,
-	)
-	if res.Error != nil {
-		return zero, res.Error
-	}
-	if res.RowsAffected == 0 {
-		return zero, operacion.ErrNoEncontrada
-	}
 	var o Orden
-	var when time.Time
-	err := s.db.WithContext(ctx).Raw(`
-		SELECT id::text, actividad_id::text, empresa, referencia, frecuencia, estado, conformidad, created_at
-		FROM ordenes_servicio WHERE id = $1`, in.ID).Row().Scan(
-		&o.ID, &o.ActividadID, &o.Empresa, &o.Referencia, &o.Frecuencia, &o.Estado, &o.Conformidad, &when,
-	)
-	if err == sql.ErrNoRows {
-		return zero, operacion.ErrNoEncontrada
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var actividadID string
+		err := tx.Raw(`SELECT actividad_id::text FROM ordenes_servicio WHERE id = $1 FOR UPDATE`, in.ID).Row().Scan(&actividadID)
+		if err == sql.ErrNoRows {
+			return operacion.ErrNoEncontrada
+		}
+		if err != nil {
+			return err
+		}
+		row, err := operacion.LockActividad(tx, actividadID)
+		if err != nil {
+			return err
+		}
+		if row.Archivada {
+			return operacion.InputError{Reason: "la labor está archivada"}
+		}
+		if actorRol == operacion.RolCapataz {
+			if row.Capataz != strings.TrimSpace(capatazID) {
+				return operacion.ForbiddenError{Reason: "el capataz solo puede editar órdenes de sus propias labores"}
+			}
+		}
+		res := tx.Exec(`
+			UPDATE ordenes_servicio SET
+			  conformidad = $2,
+			  periodo_inicio = NULLIF($3, '')::date,
+			  periodo_fin = NULLIF($4, '')::date,
+			  reporte_proveedor = $5,
+			  estado = $6
+			WHERE id = $1`,
+			in.ID, strings.TrimSpace(in.Conformidad), strings.TrimSpace(in.PeriodoInicio),
+			strings.TrimSpace(in.PeriodoFin), strings.TrimSpace(in.ReporteProveedor), estado,
+		)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return operacion.ErrNoEncontrada
+		}
+		var when time.Time
+		err = tx.Raw(`
+			SELECT id::text, actividad_id::text, empresa, referencia, frecuencia, estado, conformidad, created_at
+			FROM ordenes_servicio WHERE id = $1`, in.ID).Row().Scan(
+			&o.ID, &o.ActividadID, &o.Empresa, &o.Referencia, &o.Frecuencia, &o.Estado, &o.Conformidad, &when,
+		)
+		if err == sql.ErrNoRows {
+			return operacion.ErrNoEncontrada
+		}
+		if err != nil {
+			return err
+		}
+		o.CreatedAt = when.UTC().Format(time.RFC3339)
+		return nil
+	})
+	if err != nil {
+		return zero, err
 	}
-	o.CreatedAt = when.UTC().Format(time.RFC3339)
-	return o, err
+	return o, nil
 }
 
 func (s *Store) CrearAvance(ctx context.Context, actividadID, id, fecha, nota, area, ejemplar, actorRol, capatazID string) error {
@@ -356,30 +386,23 @@ func (s *Store) CrearAvance(ctx context.Context, actividadID, id, fecha, nota, a
 	if strings.TrimSpace(area) == "" && strings.TrimSpace(ejemplar) == "" {
 		return operacion.InputError{Reason: "el avance se liga a un área o a un ejemplar"}
 	}
-	var row struct {
-		AssignedCapatazID *string
-		ArchivadaEn       *time.Time
-	}
-	err := s.db.WithContext(ctx).Raw(`
-		SELECT assigned_capataz_id, archivada_en
-		FROM actividades WHERE id = $1`, actividadID).Row().Scan(&row.AssignedCapatazID, &row.ArchivadaEn)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return operacion.ErrNoEncontrada
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		row, err := operacion.LockActividad(tx, actividadID)
+		if err != nil {
+			return err
 		}
-		return err
-	}
-	if row.ArchivadaEn != nil {
-		return operacion.InputError{Reason: "la labor está archivada"}
-	}
-	if actorRol == operacion.RolCapataz {
-		if row.AssignedCapatazID == nil || *row.AssignedCapatazID != strings.TrimSpace(capatazID) {
-			return operacion.ForbiddenError{Reason: "el capataz solo puede registrar avances en sus propias labores"}
+		if row.Archivada {
+			return operacion.InputError{Reason: "la labor está archivada"}
 		}
-	}
-	return s.db.WithContext(ctx).Exec(`
-		INSERT INTO actividad_avances (id, actividad_id, fecha, nota, area_feature_id, ejemplar_ref)
-		VALUES ($1, $2, $3::date, $4, NULLIF($5, ''), NULLIF($6, ''))`,
-		id, actividadID, fecha, strings.TrimSpace(nota), strings.TrimSpace(area), strings.TrimSpace(ejemplar),
-	).Error
+		if actorRol == operacion.RolCapataz {
+			if row.Capataz != strings.TrimSpace(capatazID) {
+				return operacion.ForbiddenError{Reason: "el capataz solo puede registrar avances en sus propias labores"}
+			}
+		}
+		return tx.Exec(`
+			INSERT INTO actividad_avances (id, actividad_id, fecha, nota, area_feature_id, ejemplar_ref)
+			VALUES ($1, $2, $3::date, $4, NULLIF($5, ''), NULLIF($6, ''))`,
+			id, actividadID, fecha, strings.TrimSpace(nota), strings.TrimSpace(area), strings.TrimSpace(ejemplar),
+		).Error
+	})
 }
