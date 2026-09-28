@@ -12,17 +12,15 @@ import (
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
+// areaVerdeUseCase implements the area-card use cases. Like the old API
+// (catastro.Store.ActualizarFicha/CrearSinGeom) it does not write `cambios`.
 type areaVerdeUseCase struct {
-	repo      contracts.IAreaVerdeRepository
-	auditoria contracts.IAuditoriaService
+	repo contracts.IAreaVerdeRepository
 }
 
 // NewAreaVerdeUseCase creates a new AreaVerdeUseCase instance.
-func NewAreaVerdeUseCase(repo contracts.IAreaVerdeRepository, auditoria contracts.IAuditoriaService) contracts.IAreaVerdeUseCase {
-	return &areaVerdeUseCase{
-		repo:      repo,
-		auditoria: auditoria,
-	}
+func NewAreaVerdeUseCase(repo contracts.IAreaVerdeRepository) contracts.IAreaVerdeUseCase {
+	return &areaVerdeUseCase{repo: repo}
 }
 
 func (u *areaVerdeUseCase) Fichas(ctx context.Context, q string) ([]dto.FichaDTO, error) {
@@ -43,42 +41,13 @@ func (u *areaVerdeUseCase) ActualizarFicha(ctx context.Context, featureID string
 	riego := strings.TrimSpace(req.RiegoAct)
 	referencia := strings.TrimSpace(req.Referencia)
 
-	if featureID == "" || utf8.RuneCountInString(nombre) > 160 || utf8.RuneCountInString(referencia) > 500 {
+	if featureID == "" || utf8.RuneCountInString(nombre) > 160 {
 		return nil, domainErrors.ErrEntrada
-	}
-
-	antes, err := u.repo.ObtenerFichaPorFeatureID(ctx, featureID)
-	if err != nil {
-		return nil, err
-	}
-	if antes == nil {
-		return nil, domainErrors.ErrFichaNoEncontrada
 	}
 
 	item, err := u.repo.ActualizarFicha(ctx, featureID, nombre, uso, riego, referencia)
 	if err != nil {
 		return nil, err
-	}
-
-	if u.auditoria != nil {
-		_ = u.auditoria.RegistrarCambio(ctx, dto.RegistrarCambioDTO{
-			Entidad:   "areas_verdes",
-			EntidadID: featureID,
-			Accion:    "edicion",
-			Antes: map[string]any{
-				"nombre":     antes.Nombre,
-				"uso":        antes.Uso,
-				"riego_act":  antes.RiegoAct,
-				"referencia": antes.Referencia,
-			},
-			Despues: map[string]any{
-				"nombre":     item.Nombre,
-				"uso":        item.Uso,
-				"riego_act":  item.RiegoAct,
-				"referencia": item.Referencia,
-			},
-			UsuarioID: usuarioID,
-		})
 	}
 
 	return item, nil
@@ -89,7 +58,9 @@ func (u *areaVerdeUseCase) CrearSinGeom(ctx context.Context, req dto.CrearAreaSi
 	nombre := strings.TrimSpace(req.Nombre)
 	uso := strings.TrimSpace(req.Uso)
 
-	if nombre == "" {
+	// The old API inserted the row and then failed the 160-rune check with 400;
+	// the check now runs before the insert (same status, no orphan row).
+	if nombre == "" || utf8.RuneCountInString(nombre) > 160 {
 		return nil, domainErrors.ErrEntrada
 	}
 	if featureID == "" {
@@ -102,21 +73,6 @@ func (u *areaVerdeUseCase) CrearSinGeom(ctx context.Context, req dto.CrearAreaSi
 	item, err := u.repo.CrearSinGeom(ctx, featureID, nombre, uso)
 	if err != nil {
 		return nil, err
-	}
-
-	if u.auditoria != nil {
-		_ = u.auditoria.RegistrarCambio(ctx, dto.RegistrarCambioDTO{
-			Entidad:   "areas_verdes",
-			EntidadID: item.FeatureID,
-			Accion:    "alta",
-			Antes:     nil,
-			Despues: map[string]any{
-				"feature_id": item.FeatureID,
-				"nombre":     item.Nombre,
-				"uso":        item.Uso,
-			},
-			UsuarioID: usuarioID,
-		})
 	}
 
 	return item, nil

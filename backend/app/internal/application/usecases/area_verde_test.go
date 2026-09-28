@@ -10,15 +10,6 @@ import (
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
-type mockAuditoriaService struct {
-	registrados []dto.RegistrarCambioDTO
-}
-
-func (m *mockAuditoriaService) RegistrarCambio(_ context.Context, req dto.RegistrarCambioDTO) error {
-	m.registrados = append(m.registrados, req)
-	return nil
-}
-
 type mockAreaVerdeRepo struct {
 	fichas        map[string]dto.FichaDTO
 	crearError    error
@@ -89,24 +80,22 @@ func (m *mockAreaVerdeRepo) CrearSinGeom(_ context.Context, featureID, nombre, u
 
 func TestAreaVerdeUseCase_ValidacionesReferenciaYNombre(t *testing.T) {
 	repo := newMockAreaVerdeRepo()
-	aud := &mockAuditoriaService{}
-	uc := usecases.NewAreaVerdeUseCase(repo, aud)
+	uc := usecases.NewAreaVerdeUseCase(repo)
 	ctx := context.Background()
 	var userID int64 = 1
 
-	// Referencia mayor a 500 caracteres (portado de catastro/modelo_test.go: TestValidacionesDeCatastro)
-	refLarga := string(make([]rune, 501))
-	_, err := uc.ActualizarFicha(ctx, "AV-0001", dto.ActualizarFichaDTO{
+	// Referencia larga: la API vieja no la limita en fichas (columna text).
+	refLarga := strings.Repeat("r", 501)
+	if _, err := uc.ActualizarFicha(ctx, "AV-0001", dto.ActualizarFichaDTO{
 		Nombre:     "Nombre Válido",
 		Referencia: refLarga,
-	}, &userID)
-	if err != domainErrors.ErrEntrada {
-		t.Fatalf("referencia > 500 caracteres debía fallar con ErrEntrada, obtenido: %v", err)
+	}, &userID); err != nil {
+		t.Fatalf("referencia > 500 caracteres debía aceptarse como en la API vieja, obtenido: %v", err)
 	}
 
 	// Nombre mayor a 160 caracteres
 	nombreLargo := string(make([]rune, 161))
-	_, err = uc.ActualizarFicha(ctx, "AV-0001", dto.ActualizarFichaDTO{
+	_, err := uc.ActualizarFicha(ctx, "AV-0001", dto.ActualizarFichaDTO{
 		Nombre: nombreLargo,
 	}, &userID)
 	if err != domainErrors.ErrEntrada {
@@ -129,12 +118,21 @@ func TestAreaVerdeUseCase_ValidacionesReferenciaYNombre(t *testing.T) {
 	if err != domainErrors.ErrEntrada {
 		t.Fatalf("feature_id con espacios debía fallar con ErrEntrada, obtenido: %v", err)
 	}
+
+	// Crear con nombre > 160: se rechaza antes de insertar (la vieja insertaba y luego daba 400).
+	antes := len(repo.fichas)
+	_, err = uc.CrearSinGeom(ctx, dto.CrearAreaSinGeomDTO{Nombre: strings.Repeat("n", 161)}, &userID)
+	if err != domainErrors.ErrEntrada {
+		t.Fatalf("crear con nombre > 160 debía fallar con ErrEntrada, obtenido: %v", err)
+	}
+	if len(repo.fichas) != antes {
+		t.Fatalf("crear con nombre > 160 no debía insertar filas")
+	}
 }
 
-func TestAreaVerdeUseCase_ActualizarRegistraCambio(t *testing.T) {
+func TestAreaVerdeUseCase_Actualizar(t *testing.T) {
 	repo := newMockAreaVerdeRepo()
-	aud := &mockAuditoriaService{}
-	uc := usecases.NewAreaVerdeUseCase(repo, aud)
+	uc := usecases.NewAreaVerdeUseCase(repo)
 	ctx := context.Background()
 	var userID int64 = 5
 
@@ -150,23 +148,11 @@ func TestAreaVerdeUseCase_ActualizarRegistraCambio(t *testing.T) {
 	if updated.Nombre != "Bosque Tropical" {
 		t.Fatalf("nombre no actualizado: %s", updated.Nombre)
 	}
-
-	if len(aud.registrados) != 1 {
-		t.Fatalf("se esperaba 1 cambio registrado, obtenido: %d", len(aud.registrados))
-	}
-	cambio := aud.registrados[0]
-	if cambio.Entidad != "areas_verdes" || cambio.EntidadID != "AV-0001" || cambio.Accion != "edicion" {
-		t.Fatalf("metadatos de cambio incorrectos: %+v", cambio)
-	}
-	if cambio.UsuarioID == nil || *cambio.UsuarioID != 5 {
-		t.Fatalf("usuario_id esperado 5, obtenido: %v", cambio.UsuarioID)
-	}
 }
 
-func TestAreaVerdeUseCase_CrearRegistraCambio(t *testing.T) {
+func TestAreaVerdeUseCase_Crear(t *testing.T) {
 	repo := newMockAreaVerdeRepo()
-	aud := &mockAuditoriaService{}
-	uc := usecases.NewAreaVerdeUseCase(repo, aud)
+	uc := usecases.NewAreaVerdeUseCase(repo)
 	ctx := context.Background()
 	var userID int64 = 6
 
@@ -180,13 +166,5 @@ func TestAreaVerdeUseCase_CrearRegistraCambio(t *testing.T) {
 	}
 	if creada.FeatureID != "AV-NUEVA-01" || creada.Nombre != "Jardín Nuevo" {
 		t.Fatalf("datos incorrectos en ficha creada: %+v", creada)
-	}
-
-	if len(aud.registrados) != 1 {
-		t.Fatalf("se esperaba 1 cambio registrado en creación, obtenido: %d", len(aud.registrados))
-	}
-	cambio := aud.registrados[0]
-	if cambio.Entidad != "areas_verdes" || cambio.EntidadID != "AV-NUEVA-01" || cambio.Accion != "alta" {
-		t.Fatalf("metadatos de alta incorrectos: %+v", cambio)
 	}
 }

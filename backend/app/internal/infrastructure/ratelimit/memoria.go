@@ -51,15 +51,17 @@ func (l *memoriaLimitador) Permitir(clave string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	// Poda de costo acotado: inspeccionar hasta 8 claves y eliminar las que no tienen hits en la ventana
-	pruned := 0
+	// Bounded-cost pruning: inspect at most 8 keys per call (Go map iteration
+	// order is random, so stale keys are eventually visited) and drop the ones
+	// with no hits inside the window.
+	inspected := 0
 	for k, times := range l.hits {
-		if pruned >= 8 {
+		if inspected >= 8 {
 			break
 		}
+		inspected++
 		if len(times) == 0 || !times[len(times)-1].After(corte) {
 			delete(l.hits, k)
-			pruned++
 		}
 	}
 

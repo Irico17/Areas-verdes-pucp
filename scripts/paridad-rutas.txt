@@ -113,15 +113,10 @@ norte GET /api/v1/geo/inventario/bebederos
 jefatura GET /api/v1/geo/inventario/bebederos
 - GET /api/v1/geo/inventario/bebederos 401
 
-# Las líneas de fotos requieren una foto recuperada localmente en data/raw/drive_fotos (ignorada por git) en ambas APIs
-admin GET /api/v1/geo/inventario/fotos/bbr63_1lWGGPOaC44FC4BjKyFD8DEPjY8Dizw4m.jpg
-coordinacion GET /api/v1/geo/inventario/fotos/bbr63_1lWGGPOaC44FC4BjKyFD8DEPjY8Dizw4m.jpg
-norte GET /api/v1/geo/inventario/fotos/bbr63_1lWGGPOaC44FC4BjKyFD8DEPjY8Dizw4m.jpg
 admin GET /api/v1/geo/inventario/fotos/no_existe.jpg 404
 admin GET /api/v1/geo/inventario/fotos/invalido.png 404
 admin GET /api/v1/geo/inventario/fotos/..%2F..%2Fetc%2Fpasswd 404
 admin GET /api/v1/geo/inventario/fotos/..%2F..%2Fetc%2Fpasswd.jpg 404
-- GET /api/v1/geo/inventario/fotos/bbr63_1lWGGPOaC44FC4BjKyFD8DEPjY8Dizw4m.jpg 401
 
 admin GET /api/v1/geo/reservas-mock
 coordinacion GET /api/v1/geo/reservas-mock

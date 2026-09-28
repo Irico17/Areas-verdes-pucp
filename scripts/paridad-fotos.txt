@@ -1,0 +1,7 @@
+# Rutas de fotos recuperadas (dependen del entorno): requieren la misma foto recuperada
+# en el drive_fotos de ambas APIs (caché local ignorada por git). Uso:
+#   scripts/paridad-api.sh VIEJA NUEVA scripts/paridad-fotos.txt
+admin GET /api/v1/geo/inventario/fotos/bbr63_1lWGGPOaC44FC4BjKyFD8DEPjY8Dizw4m.jpg
+coordinacion GET /api/v1/geo/inventario/fotos/bbr63_1lWGGPOaC44FC4BjKyFD8DEPjY8Dizw4m.jpg
+norte GET /api/v1/geo/inventario/fotos/bbr63_1lWGGPOaC44FC4BjKyFD8DEPjY8Dizw4m.jpg
+- GET /api/v1/geo/inventario/fotos/bbr63_1lWGGPOaC44FC4BjKyFD8DEPjY8Dizw4m.jpg 401

@@ -592,6 +592,7 @@ Cambios de código asociados (lote 6):
 - **Alcance:** `/geo/resumen|areas|zonas|capas|capas/:capa|edificios` y `/catastro/areas` (GET, POST, PATCH) con escritura en `cambios`; se migran los 3 structs de `internal/models`.
 - **Tests portados:** `handlers/geo_test.go`, `geojson/*_test.go`, `catastro/modelo_test.go` (parte de fichas).
 - **Aceptación:** paridad byte a byte (tras `jq -S`) de `/geo/areas?bbox=-77.09,-12.08,-77.07,-12.06&limit=50` y de `/geo/zonas`; `/geo/resumen` informa 521 áreas; un PATCH de ficha genera una fila en `cambios` igual a la de la API vieja.
+- **Nota (review 3):** la API vieja **no** escribe `cambios` en `PATCH`/`POST /catastro/areas` (`catastro.Store.ActualizarFicha/CrearSinGeom`); por paridad estricta el port tampoco lo hace, y el criterio se verifica como «mismo conteo de `cambios` en ambas copias». La auditoría de fichas queda como mejora posterior al corte (lote 17 define el servicio común).
 
 ### Lote 9: Catastro maestro
 - **Alcance:** zonas de supervisión, polígonos, cuadrillas, lugares, especies, ejemplares (paginados), códigos históricos y las 6 capas de referencia.
