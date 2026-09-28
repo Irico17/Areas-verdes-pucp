@@ -77,17 +77,15 @@ var TablasGuardLoad = []string{
 	"areas_verdes",
 	"poligonos_cuadrilla",
 	"capas_auxiliares",
-	"actividades",
-	"cambios",
 	"ejemplares",
 	"asignaciones_poligono",
 }
 
 // negarSiHayDependientes evita que el TRUNCATE ... CASCADE de Load borre datos
 // existentes: Load solo procede sobre un catastro vacío (areas_verdes,
-// poligonos_cuadrilla, capas_auxiliares, actividades, cambios, ejemplares y
-// asignaciones_poligono sin filas). En una base con datos, se niega en vez de
-// borrar filas y remite a etl-lote (upsert).
+// poligonos_cuadrilla, capas_auxiliares, ejemplares y asignaciones_poligono sin
+// filas). En una base con datos, se niega en vez de borrar filas y remite a
+// etl-lote (upsert).
 func negarSiHayDependientes(tx *gorm.DB) error {
 	for _, tabla := range TablasGuardLoad {
 		var n int

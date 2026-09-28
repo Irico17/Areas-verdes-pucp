@@ -527,23 +527,8 @@ func TestComprobarNecesitaETL(t *testing.T) {
 	}
 	defer sqlDB.Close()
 
-	// Tras migraciones, actividades tiene datos demo -> necesita=false
+	// Tras migraciones, las tablas de catastro e inventario están vacías -> necesita=true
 	necesita, conDatos, err := ComprobarNecesitaETL(sqlDB)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if necesita {
-		t.Fatal("esperaba necesita=false porque actividades tiene filas de demo")
-	}
-	if len(conDatos) == 0 || !strings.Contains(conDatos[0], "actividades") {
-		t.Fatalf("esperaba conDatos con actividades, obtuve: %v", conDatos)
-	}
-
-	// Truncamos actividades y cambios -> base limpia de datos de negocio -> necesita=true
-	if err := gdb.Exec(`TRUNCATE actividades, actividad_eventos, ordenes_servicio, riego_registros, cambios CASCADE`).Error; err != nil {
-		t.Fatal(err)
-	}
-	necesita, conDatos, err = ComprobarNecesitaETL(sqlDB)
 	if err != nil {
 		t.Fatal(err)
 	}

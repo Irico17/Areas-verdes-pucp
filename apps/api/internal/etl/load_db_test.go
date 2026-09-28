@@ -57,10 +57,6 @@ func TestLoadSobreBaseMigrada(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := gdb.Exec(`TRUNCATE actividades, actividad_eventos, ordenes_servicio, riego_registros, cambios CASCADE`).Error; err != nil {
-		t.Fatal(err)
-	}
-
 	geom := json.RawMessage(`{"type":"MultiPolygon","coordinates":[[[[-77.08,-12.07],[-77.079,-12.07],[-77.079,-12.069],[-77.08,-12.069],[-77.08,-12.07]]]]}`)
 	nombre := "Polígono de carga"
 	area := Record{FeatureID: "AV-9001", SourceIndex: 1, Nombre: &nombre, Geometry: geom}
@@ -127,10 +123,6 @@ func TestLoadRenombraCodigoDuplicado(t *testing.T) {
 	defer sqlDB.Close()
 	dir := filepath.Join("..", "..", "migrations")
 	if err := migrate.Apply(gdb, dir); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := gdb.Exec(`TRUNCATE actividades, actividad_eventos, ordenes_servicio, riego_registros, cambios CASCADE`).Error; err != nil {
 		t.Fatal(err)
 	}
 
@@ -213,10 +205,6 @@ func TestLoadRenombraCodigoDuplicado(t *testing.T) {
 // segundo Load se niega por existir datos en poligonos_cuadrilla/areas_verdes.
 func TestLoadAplicaSectoresEnCatalogoCompleto(t *testing.T) {
 	gdb := migrarDBTemporal(t, "campus_verde_etl_sector_c")
-
-	if err := gdb.Exec(`TRUNCATE actividades, actividad_eventos, ordenes_servicio, riego_registros, cambios CASCADE`).Error; err != nil {
-		t.Fatal(err)
-	}
 
 	dir := rawDir(t)
 
@@ -342,29 +330,37 @@ func TestLoadSeNiegaSiHayEjemplares(t *testing.T) {
 	}
 }
 
-func TestLoadSeNiegaSiHayActividades(t *testing.T) {
+func TestLoadPermiteActividadesDemo(t *testing.T) {
 	gdb := migrarDBTemporal(t, "campus_verde_etl_guard_act")
 
 	// La base recién migrada ya contiene actividades de demostración (003/006).
+	var antes int
+	if err := gdb.Raw(`SELECT count(*) FROM actividades`).Scan(&antes).Error; err != nil {
+		t.Fatal(err)
+	}
+	if antes == 0 {
+		t.Fatal("se esperaban actividades demo tras migraciones")
+	}
+
 	geom := json.RawMessage(`{"type":"MultiPolygon","coordinates":[[[[-77.08,-12.07],[-77.079,-12.07],[-77.079,-12.069],[-77.08,-12.069],[-77.08,-12.07]]]]}`)
 	nombre := "Polígono de carga"
 	area := Record{FeatureID: "AV-9001", SourceIndex: 1, Nombre: &nombre, Geometry: geom}
 
 	err := Load(gdb, []Record{area}, nil, map[string][]Record{})
-	if err == nil {
-		t.Fatal("Load debía negarse si hay actividades")
+	if err != nil {
+		t.Fatalf("Load debía proceder con actividades demo existentes: %v", err)
 	}
-	if !strings.Contains(err.Error(), "actividades tiene") {
-		t.Fatalf("error inesperado: %v", err)
+	var despues int
+	if err := gdb.Raw(`SELECT count(*) FROM actividades`).Scan(&despues).Error; err != nil {
+		t.Fatal(err)
+	}
+	if despues != antes {
+		t.Fatalf("actividades demo alteradas: antes=%d, despues=%d", antes, despues)
 	}
 }
 
 func TestLoadSeNiegaSiHayAreasVerdes(t *testing.T) {
 	gdb := migrarDBTemporal(t, "campus_verde_etl_guard_av")
-
-	if err := gdb.Exec(`TRUNCATE actividades, actividad_eventos, ordenes_servicio, riego_registros CASCADE`).Error; err != nil {
-		t.Fatal(err)
-	}
 
 	if err := gdb.Exec(`INSERT INTO areas_verdes (feature_id, source_index, geom) VALUES ('AV-9999', 1, ST_SetSRID(ST_Multi(ST_GeomFromGeoJSON('{"type":"Polygon","coordinates":[[[-77.08,-12.07],[-77.079,-12.07],[-77.079,-12.069],[-77.08,-12.069],[-77.08,-12.07]]]}')), 4326))`).Error; err != nil {
 		t.Fatal(err)
@@ -383,10 +379,11 @@ func TestLoadSeNiegaSiHayAreasVerdes(t *testing.T) {
 	}
 }
 
-func TestLoadSeNiegaSiHayCambios(t *testing.T) {
+func TestLoadPermiteCambios(t *testing.T) {
 	gdb := migrarDBTemporal(t, "campus_verde_etl_guard_cambios")
 
-	if err := gdb.Exec(`TRUNCATE actividades, actividad_eventos, ordenes_servicio, riego_registros CASCADE`).Error; err != nil {
+	var antes int
+	if err := gdb.Raw(`SELECT count(*) FROM cambios`).Scan(&antes).Error; err != nil {
 		t.Fatal(err)
 	}
 
@@ -399,11 +396,86 @@ func TestLoadSeNiegaSiHayCambios(t *testing.T) {
 	area := Record{FeatureID: "AV-9001", SourceIndex: 1, Nombre: &nombre, Geometry: geom}
 
 	err := Load(gdb, []Record{area}, nil, map[string][]Record{})
-	if err == nil {
-		t.Fatal("Load debía negarse si hay cambios")
+	if err != nil {
+		t.Fatalf("Load debía proceder con cambios existentes: %v", err)
 	}
-	if !strings.Contains(err.Error(), "cambios tiene") {
-		t.Fatalf("error inesperado: %v", err)
+	var despues int
+	if err := gdb.Raw(`SELECT count(*) FROM cambios`).Scan(&despues).Error; err != nil {
+		t.Fatal(err)
+	}
+	if despues != antes+1 {
+		t.Fatalf("cambios alterados: antes+1=%d, despues=%d", antes+1, despues)
+	}
+}
+
+func TestIntegracionCargaInicialYProteccionReintento(t *testing.T) {
+	gdb := migrarDBTemporal(t, "campus_verde_etl_integ_load")
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. Base recién migrada: necesita-etl debe responder true (código de salida 0)
+	necesita, conDatos, err := migrate.ComprobarNecesitaETL(sqlDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !necesita || len(conDatos) != 0 {
+		t.Fatalf("se esperaba necesita=true en base limpia de catastro, obtuve %v (%v)", necesita, conDatos)
+	}
+
+	var actAntes int
+	if err := gdb.Raw(`SELECT count(*) FROM actividades`).Scan(&actAntes).Error; err != nil {
+		t.Fatal(err)
+	}
+	if actAntes == 0 {
+		t.Fatal("se esperaban actividades demo tras migraciones")
+	}
+
+	// 2. Primera carga con Load tiene éxito y sobreviven las actividades demo
+	geom := json.RawMessage(`{"type":"MultiPolygon","coordinates":[[[[-77.08,-12.07],[-77.079,-12.07],[-77.079,-12.069],[-77.08,-12.069],[-77.08,-12.07]]]]}`)
+	nombre := "Área inicial"
+	area := Record{FeatureID: "AV-1001", SourceIndex: 1, Nombre: &nombre, Geometry: geom}
+	zona := Record{FeatureID: "Z-1002", SourceIndex: 1, Nombre: &nombre, Geometry: geom}
+
+	if err := Load(gdb, []Record{area}, []Record{zona}, map[string][]Record{}); err != nil {
+		t.Fatalf("primera carga con Load falló: %v", err)
+	}
+
+	var actDespues int
+	if err := gdb.Raw(`SELECT count(*) FROM actividades`).Scan(&actDespues).Error; err != nil {
+		t.Fatal(err)
+	}
+	if actDespues != actAntes {
+		t.Fatalf("las actividades demo no sobrevivieron: antes=%d, después=%d", actAntes, actDespues)
+	}
+
+	// 3. Comprobar que necesita-etl ahora retorna false (código 10) con areas_verdes
+	necesita2, conDatos2, err := migrate.ComprobarNecesitaETL(sqlDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if necesita2 {
+		t.Fatal("se esperaba necesita=false tras la carga inicial")
+	}
+	var tieneAreas bool
+	for _, cd := range conDatos2 {
+		if strings.Contains(cd, "areas_verdes") {
+			tieneAreas = true
+			break
+		}
+	}
+	if !tieneAreas {
+		t.Fatalf("se esperaba areas_verdes en conDatos, obtuve: %v", conDatos2)
+	}
+
+	// 4. Una segunda carga con Load se niega porque areas_verdes ya contiene filas
+	err = Load(gdb, []Record{area}, []Record{zona}, map[string][]Record{})
+	if err == nil {
+		t.Fatal("la segunda carga de Load debía ser rechazada")
+	}
+	if !strings.Contains(err.Error(), "areas_verdes tiene") {
+		t.Fatalf("error inesperado en segundo Load: %v", err)
 	}
 }
 

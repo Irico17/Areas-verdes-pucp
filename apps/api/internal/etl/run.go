@@ -132,15 +132,6 @@ func Run(opt Options) (Report, error) {
 		return Report{}, err
 	}
 
-	if !opt.SkipLoad {
-		if opt.DB == nil {
-			return Report{}, fmt.Errorf("no hay conexión a Postgres; usa --skip-load o define DATABASE_URL")
-		}
-		if err := Load(opt.DB, areas, zonas, capas); err != nil {
-			return Report{}, err
-		}
-	}
-
 	counts := map[string]int{}
 	for name, rows := range capas {
 		counts[name] = len(rows)
@@ -157,11 +148,17 @@ func Run(opt Options) (Report, error) {
 	for name, rows := range inv {
 		invCounts[name] = len(rows)
 	}
+
 	if !opt.SkipLoad {
 		if opt.DB == nil {
 			return Report{}, fmt.Errorf("no hay conexión a Postgres; usa --skip-load o define DATABASE_URL")
 		}
-		if err := LoadInventario(opt.DB, inv); err != nil {
+		if err := opt.DB.Transaction(func(tx *gorm.DB) error {
+			if err := Load(tx, areas, zonas, capas); err != nil {
+				return err
+			}
+			return LoadInventario(tx, inv)
+		}); err != nil {
 			return Report{}, err
 		}
 	}

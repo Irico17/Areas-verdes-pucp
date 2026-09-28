@@ -18,8 +18,7 @@ var TablasETL = []string{
 	"capas_auxiliares",
 	"inventario",
 	"ejemplares",
-	"actividades",
-	"cambios",
+	"asignaciones_poligono",
 }
 
 // ComprobarNecesitaETL revisa si la base requiere carga inicial de ETL.

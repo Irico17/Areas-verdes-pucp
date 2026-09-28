@@ -34,6 +34,19 @@ func main() {
 		}
 		if !necesita {
 			fmt.Printf("BD con datos en: %s\n", strings.Join(conDatos, ", "))
+			hasAreas := false
+			hasInv := false
+			for _, item := range conDatos {
+				if strings.HasPrefix(item, "areas_verdes ") {
+					hasAreas = true
+				}
+				if strings.HasPrefix(item, "inventario ") {
+					hasInv = true
+				}
+			}
+			if hasAreas && !hasInv {
+				log.Println("ADVERTENCIA: areas_verdes contiene datos pero inventario está vacío")
+			}
 			os.Exit(10)
 		}
 		fmt.Println("BD vacía: requiere carga inicial de ETL")
