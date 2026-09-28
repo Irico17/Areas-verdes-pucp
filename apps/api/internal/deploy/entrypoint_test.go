@@ -1,4 +1,4 @@
-package main_test
+package deploy_test
 
 import (
 	"bytes"
@@ -21,7 +21,7 @@ func createFakeBinary(t *testing.T, dir, name, script string) string {
 }
 
 func TestDockerEntrypoint(t *testing.T) {
-	entrypointPath, err := filepath.Abs("docker-entrypoint.sh")
+	entrypointPath, err := filepath.Abs(filepath.Join("..", "..", "docker-entrypoint.sh"))
 	if err != nil {
 		t.Fatal(err)
 	}
