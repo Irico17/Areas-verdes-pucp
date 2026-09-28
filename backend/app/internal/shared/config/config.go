@@ -94,6 +94,8 @@ func New() *Config {
 
 	ginMode := valueOrDefault("SERVER_GIN_MODE", "release")
 
+	rawDir := valueOrDefault("DATA_RAW_DIR", filepath.Join(root, "data", "raw"))
+
 	return &Config{
 		Server: ServerConfig{
 			Port:           serverPort(),
@@ -125,11 +127,11 @@ func New() *Config {
 			Bucket: os.Getenv("EVIDENCIAS_BUCKET"),
 		},
 		Datos: DatosConfig{
-			RawDir:        valueOrDefault("DATA_RAW_DIR", filepath.Join(root, "data", "raw")),
+			RawDir:        rawDir,
 			V1Dir:         valueOrDefault("DATA_V1_DIR", filepath.Join(root, "data", "v1")),
 			EdificiosPath: valueOrDefault("EDIFICIOS_PATH", filepath.Join(root, "data", "osm", "edificios_pando.geojson")),
 			ReservasPath:  valueOrDefault("RESERVAS_MOCK_PATH", filepath.Join(root, "data", "mocks", "reservas_agenda.mock.json")),
-			FotosDir:      valueOrDefault("DRIVE_FOTOS_DIR", filepath.Join(root, "data", "drive_fotos")),
+			FotosDir:      valueOrDefault("DRIVE_FOTOS_DIR", filepath.Join(rawDir, "drive_fotos")),
 			OpenAPIPath:   valueOrDefault("OPENAPI_PATH", filepath.Join(root, "apps", "api", "openapi.yaml")),
 		},
 		Migraciones: MigracionesConfig{

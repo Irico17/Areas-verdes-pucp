@@ -90,8 +90,44 @@ jefatura GET /api/v1/catastro/ejemplares
 - GET /api/v1/catastro/ejemplares 401
 
 # Lote 10: Inventario heredado y reservas mock
-# admin GET /api/v1/geo/inventario
-# admin GET /api/v1/geo/reservas-mock
+admin GET /api/v1/geo/inventario
+coordinacion GET /api/v1/geo/inventario
+norte GET /api/v1/geo/inventario
+jefatura GET /api/v1/geo/inventario
+- GET /api/v1/geo/inventario 401
+
+admin GET /api/v1/geo/inventario/bebederos
+admin GET /api/v1/geo/inventario/fauna
+admin GET /api/v1/geo/inventario/playas_estacionamiento
+admin GET /api/v1/geo/inventario/puertas
+admin GET /api/v1/geo/inventario/area_vereda_peligro
+admin GET /api/v1/geo/inventario/flora
+admin GET /api/v1/geo/inventario/cafetos
+admin GET /api/v1/geo/inventario/tachos
+admin GET /api/v1/geo/inventario/xerofitica
+admin GET /api/v1/geo/inventario/jardines_reserva
+admin GET /api/v1/geo/inventario/puntos_pucp
+admin GET /api/v1/geo/inventario/desconocida 404
+coordinacion GET /api/v1/geo/inventario/bebederos
+norte GET /api/v1/geo/inventario/bebederos
+jefatura GET /api/v1/geo/inventario/bebederos
+- GET /api/v1/geo/inventario/bebederos 401
+
+# Las líneas de fotos requieren una foto recuperada localmente en data/raw/drive_fotos (ignorada por git) en ambas APIs
+admin GET /api/v1/geo/inventario/fotos/bbr63_1lWGGPOaC44FC4BjKyFD8DEPjY8Dizw4m.jpg
+coordinacion GET /api/v1/geo/inventario/fotos/bbr63_1lWGGPOaC44FC4BjKyFD8DEPjY8Dizw4m.jpg
+norte GET /api/v1/geo/inventario/fotos/bbr63_1lWGGPOaC44FC4BjKyFD8DEPjY8Dizw4m.jpg
+admin GET /api/v1/geo/inventario/fotos/no_existe.jpg 404
+admin GET /api/v1/geo/inventario/fotos/invalido.png 404
+admin GET /api/v1/geo/inventario/fotos/..%2F..%2Fetc%2Fpasswd 404
+admin GET /api/v1/geo/inventario/fotos/..%2F..%2Fetc%2Fpasswd.jpg 404
+- GET /api/v1/geo/inventario/fotos/bbr63_1lWGGPOaC44FC4BjKyFD8DEPjY8Dizw4m.jpg 401
+
+admin GET /api/v1/geo/reservas-mock
+coordinacion GET /api/v1/geo/reservas-mock
+norte GET /api/v1/geo/reservas-mock
+jefatura GET /api/v1/geo/reservas-mock
+- GET /api/v1/geo/reservas-mock 401
 
 # Lote 11: Inventario 2B
 # admin GET /api/v1/inventario/tachos
