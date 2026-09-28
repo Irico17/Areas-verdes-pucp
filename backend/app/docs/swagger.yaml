@@ -1,0 +1,36 @@
+basePath: /areas-verdes
+definitions:
+  controller.HealthResponse:
+    properties:
+      status:
+        type: string
+      timestamp:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@example.com (update)
+    name: Group_12
+  description: API for the Areas Verdes service
+  license:
+    name: Proprietary
+    url: https://example.com
+  termsOfService: http://swagger.io/terms/
+  title: Areas Verdes API $SWAGGER_ENV
+  version: 1.0.0
+paths:
+  /v1/health:
+    get:
+      description: Verify the health state of the API service
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.HealthResponse'
+      summary: Health check
+      tags:
+      - health
+swagger: "2.0"

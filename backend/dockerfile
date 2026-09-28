@@ -1,0 +1,16 @@
+FROM golang:1.25.3-alpine AS build
+
+WORKDIR /src
+COPY app/go.mod app/go.sum ./
+RUN go mod download && go mod verify
+COPY app/ .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /api ./cmd
+
+FROM alpine:3.22 AS runtime
+RUN apk add --no-cache ca-certificates tzdata && \
+    addgroup -S app && adduser -S -G app app
+COPY --from=build --chown=app:app /api /app/api
+WORKDIR /app
+USER app
+EXPOSE 8080
+ENTRYPOINT ["/app/api"]

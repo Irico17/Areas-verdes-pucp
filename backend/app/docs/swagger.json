@@ -1,0 +1,54 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API for the Areas Verdes service",
+        "title": "Areas Verdes API $SWAGGER_ENV",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "Group_12",
+            "email": "support@example.com (update)"
+        },
+        "license": {
+            "name": "Proprietary",
+            "url": "https://example.com"
+        },
+        "version": "1.0.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/areas-verdes",
+    "paths": {
+        "/v1/health": {
+            "get": {
+                "description": "Verify the health state of the API service",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controller.HealthResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "controller.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

@@ -73,3 +73,6 @@ infra/terraform/.terraform/
 !*.tfvars.example
 crash.log
 crash.*.log
+
+# backend (init/backend)
+backend/app/bin/
