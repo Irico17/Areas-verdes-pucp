@@ -7,7 +7,7 @@ Fuentes revisadas:
 
 - Código: `apps/web/src/App.tsx`, `apps/web/src/panel/*.tsx`, `apps/web/src/ui/*`, `apps/web/src/styles.css`, `apps/web/src/map/CampusMap.tsx`, `apps/web/src/producto.ts`, `apps/web/src/inventario.ts`.
 - Permisos del servidor: `apps/api/internal/accesos/accesos.go` (matriz semilla) y los `exige(c, "…")` de `apps/api/internal/handlers/*.go`.
-- Capturas: `/workspace/verdepucp-shots/fase1-*.png` (1280×800 y 390×844, stack local de hoy, sesión `admin`), además de `live-*`, `v1review-*` y `loteA-*` (menú «Más», ficha de labor).
+- Capturas: `fase1-*.png` (carpeta local de capturas del equipo, no versionada) (1280×800 y 390×844, stack local de hoy, sesión `admin`), además de `live-*`, `v1review-*` y `loteA-*` (menú «Más», ficha de labor).
 - Backlog v2 (`docs/fuente/extraccion/backlog_v2.txt`): RF-02, RF-03, RF-12, RF-29 a RF-32, RNF-01, RNF-02, RNF-06.
 - Documentos anteriores: `docs/UI-AUDIT.md` (sistema visual, tokens, jerarquía) y `docs/PLAN-PRODUCTO-Y-UI.md` (riel de guardia, olas). `docs/AUDITORIA-UI-SCROLL.md` resolvió el scroll, la hoja móvil y el movimiento. Esta propuesta **no** reabre tokens, tipografía ni el comportamiento de la hoja: los da por buenos.
 

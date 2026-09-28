@@ -1,6 +1,6 @@
 # Plan de migración del backend (`apps/api`) a la arquitectura `init/backend`
 
-> **Alcance.** Plan para portar el backend actual de VerdePUCP (`apps/api`, desplegado, v1-propuesta-referencia `115a56d`) a la arquitectura por capas de la rama `init/backend` del repositorio del equipo `GRUPO-12-DP2/-areas-verdes-pucp` (copia local en `/workspace/grupo-init-backend`, HEAD `1e876dd chore: upd README`).
+> **Alcance.** Plan para portar el backend actual de VerdePUCP (`apps/api`, desplegado, v1-propuesta-referencia `115a56d`) a la arquitectura por capas de la rama `init/backend` del repositorio del equipo `GRUPO-12-DP2/-areas-verdes-pucp` (clon local de esa rama, HEAD `1e876dd chore: upd README`).
 > Este documento es **solo análisis y plan**: no cambia código ni esquema. Todo lo afirmado se verificó en el código; lo que no se pudo determinar se marca como **(no determinado)**.
 > Fecha: 2026-09-27.
 
@@ -119,7 +119,7 @@ El `backend/README.md` (línea 144) menciona `shared/` como «Configuración, lo
 | Paquetes | uno por carpeta (`controller`, `groups`, `routes`, `config`, `logger`, `database`) | — |
 | Comentarios | godoc en inglés en el código Go; README y docs en español | — |
 
-**No definidas en init** (las carpetas están vacías): nombres de archivos de entidades, DTO, contratos, casos de uso, servicios, modelos, mappers, repositorios, requests y middleware. Este plan propone, por analogía con `*.controller.go` / `*.group.go`, y **pendiente de ratificar por el arquitecto del equipo** (DECISIONES/onboarding: «Arquitecto: Josué»):
+**No definidas en init** (las carpetas están vacías): nombres de archivos de entidades, DTO, contratos, casos de uso, servicios, modelos, mappers, repositorios, requests y middleware. Este plan propone, por analogía con `*.controller.go` / `*.group.go`, y **pendiente de ratificar por el arquitecto del equipo** (rol de arquitecto definido en `docs/onboarding.md` del equipo):
 
 | Carpeta | Archivo propuesto | Tipos |
 |---|---|---|
@@ -550,7 +550,7 @@ Cambios de código asociados (lote 6):
 ### Lote 1: Esqueleto fiel de init/backend
 - **Alcance:** copiar `backend/` de `init/backend` (`Makefile`, `README.md`, `dockerfile`, `openapi/`, `app/` completo con los `.gitkeep`) a la raíz de este repo, sin cambios salvo el `README` (aviso de «port en curso»). Mismo `go.mod`.
 - **Archivos:** `backend/**` (nuevos).
-- **Aceptación:** `make build` genera `app/bin/api`; `make run` + `curl localhost:8080/areas-verdes/v1/health` → `{"status":"healthy",…}`; `diff -r` contra `/workspace/grupo-init-backend/backend` = solo el README; `git status` no muestra cambios fuera de `backend/`.
+- **Aceptación:** `make build` genera `app/bin/api`; `make run` + `curl localhost:8080/areas-verdes/v1/health` → `{"status":"healthy",…}`; `diff -r` contra la carpeta `backend/` de un clon de `init/backend` = solo el README; `git status` no muestra cambios fuera de `backend/`.
 
 ### Lote 2: Config, logger, Gin seguro y middlewares transversales
 - **Alcance:** ampliar `shared/config` (§3.1, incluido `DATABASE_URL`); `database.NewConnection` con URL y pool; provider de Gin con `SetTrustedProxies(cfg)`; middlewares `bitacora` (zerolog), `cors`, `cookie`, `limite_login` y `errores`; `domain/errors/base.errors.go`; `Setup` con `NoRoute` → 404 `{"error":"ruta no encontrada"}`; Swagger condicionado por `SWAGGER_ENABLED`.
