@@ -25,6 +25,8 @@ func RegisterContainer(container *dig.Container) error {
 		groups.NewSesionGroup,
 		groups.NewAccesosGroup,
 		groups.NewCatalogoGroup,
+		groups.NewGeoGroup,
+		groups.NewCatastroGroup,
 	} {
 		if err := container.Provide(constructor); err != nil {
 			return err
@@ -38,6 +40,8 @@ func RegisterContainer(container *dig.Container) error {
 		controller.NewSesionController,
 		controller.NewUsuarioController,
 		controller.NewCatalogoController,
+		controller.NewGeoController,
+		controller.NewAreaVerdeController,
 	} {
 		if err := container.Provide(constructor); err != nil {
 			return err

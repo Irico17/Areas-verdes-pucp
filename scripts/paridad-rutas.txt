@@ -35,12 +35,27 @@ jefatura GET /api/v1/catalogos
 norte GET /api/v1/catalogos
 
 # Lote 8: Geo de lectura y fichas de área
-# admin GET /api/v1/geo/resumen
-# admin GET /api/v1/geo/areas
-# admin GET /api/v1/geo/zonas
-# admin GET /api/v1/geo/capas
-# admin GET /api/v1/geo/edificios
-# admin GET /api/v1/catastro/areas
+admin GET /api/v1/geo/resumen
+admin GET /api/v1/geo/areas
+admin GET /api/v1/geo/areas?bbox=-77.09,-12.08,-77.07,-12.06&limit=50
+admin GET /api/v1/geo/zonas
+admin GET /api/v1/geo/capas
+admin GET /api/v1/geo/capas/jardines_reserva
+admin GET /api/v1/geo/capas/xerofitica
+admin GET /api/v1/geo/capas/desconocida 404
+admin GET /api/v1/geo/edificios
+admin GET /api/v1/catastro/areas
+admin GET /api/v1/catastro/areas?q=Bosque
+coordinacion GET /api/v1/geo/areas
+coordinacion GET /api/v1/geo/zonas
+coordinacion GET /api/v1/catastro/areas
+norte GET /api/v1/geo/areas
+norte GET /api/v1/geo/zonas
+norte GET /api/v1/catastro/areas
+jefatura GET /api/v1/geo/areas
+jefatura GET /api/v1/catastro/areas
+- GET /api/v1/geo/areas 401
+- GET /api/v1/catastro/areas 401
 
 # Lote 9: Catastro maestro
 # admin GET /api/v1/catastro/zonas-supervision

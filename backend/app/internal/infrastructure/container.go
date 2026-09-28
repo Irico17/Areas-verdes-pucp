@@ -15,6 +15,7 @@ func RegisterContainer(container *dig.Container) error {
 		ratelimit.NewLimitadorFromConfig,
 		seguridad.NewBcryptHasher,
 		archivos.NewContratoOpenAPIAdapter,
+		archivos.NewGeoJSONEstaticoAdapter,
 	} {
 		if err := container.Provide(provider); err != nil {
 			return err

@@ -16,6 +16,7 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/services"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
+	domainEntities "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/ratelimit"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/controller"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/routes"
@@ -100,6 +101,48 @@ func (mockCatalogoRoutesUC) Desactivar(_ context.Context, id int64) (*dto.Desact
 	}, nil
 }
 
+type mockGeoRoutesUC struct{}
+
+func (mockGeoRoutesUC) Areas(_ context.Context, _ dto.FiltroGeoDTO) (domainEntities.FeatureCollection, error) {
+	return domainEntities.Collection("areas_verdes"), nil
+}
+
+func (mockGeoRoutesUC) Zonas(_ context.Context, _ dto.FiltroGeoDTO) (domainEntities.FeatureCollection, error) {
+	return domainEntities.Collection("zonas"), nil
+}
+
+func (mockGeoRoutesUC) Capa(_ context.Context, capa string, _ dto.FiltroGeoDTO) (domainEntities.FeatureCollection, error) {
+	return domainEntities.Collection(capa), nil
+}
+
+func (mockGeoRoutesUC) Capas(_ context.Context) (dto.CapasIndexDTO, error) {
+	return dto.CapasIndexDTO{CapasConocidas: []string{"jardines_reserva", "xerofitica"}, Cargadas: []dto.CapaCountDTO{}}, nil
+}
+
+func (mockGeoRoutesUC) Resumen(_ context.Context) (dto.ResumenDTO, error) {
+	return dto.ResumenDTO{CRS: "EPSG:4326", Areas: 521, Zonas: 534}, nil
+}
+
+func (mockGeoRoutesUC) Edificios(_ context.Context) ([]byte, error) {
+	return []byte(`{"type":"FeatureCollection","name":"edificios","features":[]}`), nil
+}
+
+type mockAreaVerdeRoutesUC struct{}
+
+func (mockAreaVerdeRoutesUC) Fichas(_ context.Context, _ string) ([]dto.FichaDTO, error) {
+	return []dto.FichaDTO{
+		{FeatureID: "AV-0001", Nombre: "Área 1", ConGeom: true},
+	}, nil
+}
+
+func (mockAreaVerdeRoutesUC) ActualizarFicha(_ context.Context, id string, req dto.ActualizarFichaDTO, _ *int64) (*dto.FichaDTO, error) {
+	return &dto.FichaDTO{FeatureID: id, Nombre: req.Nombre, Uso: req.Uso, ConGeom: true}, nil
+}
+
+func (mockAreaVerdeRoutesUC) CrearSinGeom(_ context.Context, req dto.CrearAreaSinGeomDTO, _ *int64) (*dto.FichaDTO, error) {
+	return &dto.FichaDTO{FeatureID: req.FeatureID, Nombre: req.Nombre, Uso: req.Uso, ConGeom: false}, nil
+}
+
 func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
@@ -125,6 +168,8 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	sesionCtrl := controller.NewSesionController(mockSesionRoutesUC{})
 	usuarioCtrl := controller.NewUsuarioController(mockUsuarioRoutesUC{})
 	catalogoCtrl := controller.NewCatalogoController(mockCatalogoRoutesUC{})
+	geoCtrl := controller.NewGeoController(mockGeoRoutesUC{})
+	areaVerdeCtrl := controller.NewAreaVerdeController(mockAreaVerdeRoutesUC{})
 
 	permisosSvc := services.NewPermisosService()
 	limitador := ratelimit.NewMemoriaLimitador(100, time.Minute)
@@ -136,6 +181,8 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	sesionGrp := groups.NewSesionGroup(sesionCtrl)
 	accesosGrp := groups.NewAccesosGroup(usuarioCtrl)
 	catalogoGrp := groups.NewCatalogoGroup(catalogoCtrl, permisosSvc)
+	geoGrp := groups.NewGeoGroup(geoCtrl, permisosSvc)
+	catastroGrp := groups.NewCatastroGroup(areaVerdeCtrl, permisosSvc)
 
 	r := routes.NewRouter(routes.RouterParams{
 		Engine:        engine,
@@ -150,6 +197,8 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 		SesionGroup:   sesionGrp,
 		AccesosGroup:  accesosGrp,
 		CatalogoGroup: catalogoGrp,
+		GeoGroup:      geoGrp,
+		CatastroGroup: catastroGrp,
 	})
 	r.Setup()
 	return engine
@@ -257,6 +306,26 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 		{http.MethodPost, "/areas-verdes/v1/catalogos", 401},
 		{http.MethodPost, "/api/v1/catalogos/1/desactivar", 401},
 		{http.MethodPost, "/areas-verdes/v1/catalogos/1/desactivar", 401},
+		// Geo de lectura (Lote 8)
+		{http.MethodGet, "/api/v1/geo/resumen", 401},
+		{http.MethodGet, "/areas-verdes/v1/geo/resumen", 401},
+		{http.MethodGet, "/api/v1/geo/areas", 401},
+		{http.MethodGet, "/areas-verdes/v1/geo/areas", 401},
+		{http.MethodGet, "/api/v1/geo/zonas", 401},
+		{http.MethodGet, "/areas-verdes/v1/geo/zonas", 401},
+		{http.MethodGet, "/api/v1/geo/capas", 401},
+		{http.MethodGet, "/areas-verdes/v1/geo/capas", 401},
+		{http.MethodGet, "/api/v1/geo/capas/jardines_reserva", 401},
+		{http.MethodGet, "/areas-verdes/v1/geo/capas/jardines_reserva", 401},
+		{http.MethodGet, "/api/v1/geo/edificios", 401},
+		{http.MethodGet, "/areas-verdes/v1/geo/edificios", 401},
+		// Fichas de área (Lote 8)
+		{http.MethodGet, "/api/v1/catastro/areas", 401},
+		{http.MethodGet, "/areas-verdes/v1/catastro/areas", 401},
+		{http.MethodPost, "/api/v1/catastro/areas", 401},
+		{http.MethodPost, "/areas-verdes/v1/catastro/areas", 401},
+		{http.MethodPatch, "/api/v1/catastro/areas/AV-0001", 401},
+		{http.MethodPatch, "/areas-verdes/v1/catastro/areas/AV-0001", 401},
 		{http.MethodGet, "/api/v1/no-existe", 404},
 		{http.MethodGet, "/areas-verdes/v1/no-existe", 404},
 	}
@@ -271,10 +340,19 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 			continue
 		}
 		path := want.ruta
-		if path == "/api/v1/catalogos/1/desactivar" {
+		switch path {
+		case "/api/v1/catalogos/1/desactivar":
 			path = "/api/v1/catalogos/:id/desactivar"
-		} else if path == "/areas-verdes/v1/catalogos/1/desactivar" {
+		case "/areas-verdes/v1/catalogos/1/desactivar":
 			path = "/areas-verdes/v1/catalogos/:id/desactivar"
+		case "/api/v1/geo/capas/jardines_reserva":
+			path = "/api/v1/geo/capas/:capa"
+		case "/areas-verdes/v1/geo/capas/jardines_reserva":
+			path = "/areas-verdes/v1/geo/capas/:capa"
+		case "/api/v1/catastro/areas/AV-0001":
+			path = "/api/v1/catastro/areas/:id"
+		case "/areas-verdes/v1/catastro/areas/AV-0001":
+			path = "/areas-verdes/v1/catastro/areas/:id"
 		}
 		key := want.metodo + " " + path
 		if !vistas[key] {
@@ -359,6 +437,116 @@ func TestRutasCatalogos_PermisosPorRol(t *testing.T) {
 		{http.MethodPost, "/areas-verdes/v1/catalogos", "token-admin", `{"clase":"estado","codigo":"nuevo","nombre":"Nuevo"}`, 201, ""},
 		{http.MethodPost, "/api/v1/catalogos/1/desactivar", "token-admin", "", 200, ""},
 		{http.MethodPost, "/areas-verdes/v1/catalogos/1/desactivar", "token-admin", "", 200, ""},
+	}
+
+	for _, c := range casos {
+		w := httptest.NewRecorder()
+		var req *http.Request
+		if c.body != "" {
+			req = httptest.NewRequest(c.metodo, c.ruta, bytes.NewBufferString(c.body))
+			req.Header.Set("Content-Type", "application/json")
+		} else {
+			req = httptest.NewRequest(c.metodo, c.ruta, nil)
+		}
+		req.AddCookie(&http.Cookie{Name: "cv_sesion", Value: c.token})
+		engine.ServeHTTP(w, req)
+
+		if w.Code != c.statusEsperado {
+			t.Errorf("%s %s (token=%s): esperado status %d, obtenido %d (%s)", c.metodo, c.ruta, c.token, c.statusEsperado, w.Code, w.Body.String())
+		}
+		if c.errorEsperado != "" {
+			var body map[string]string
+			_ = json.Unmarshal(w.Body.Bytes(), &body)
+			if body["error"] != c.errorEsperado {
+				t.Errorf("%s %s (token=%s): error esperado %q, obtenido %q", c.metodo, c.ruta, c.token, c.errorEsperado, body["error"])
+			}
+		}
+	}
+}
+
+func TestRutasGeoYCatastro_SinAutenticacionDa401(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	rutas := []struct {
+		metodo string
+		ruta   string
+	}{
+		{http.MethodGet, "/api/v1/geo/resumen"},
+		{http.MethodGet, "/areas-verdes/v1/geo/resumen"},
+		{http.MethodGet, "/api/v1/geo/areas"},
+		{http.MethodGet, "/areas-verdes/v1/geo/areas"},
+		{http.MethodGet, "/api/v1/geo/zonas"},
+		{http.MethodGet, "/areas-verdes/v1/geo/zonas"},
+		{http.MethodGet, "/api/v1/geo/capas"},
+		{http.MethodGet, "/areas-verdes/v1/geo/capas"},
+		{http.MethodGet, "/api/v1/geo/capas/jardines_reserva"},
+		{http.MethodGet, "/areas-verdes/v1/geo/capas/jardines_reserva"},
+		{http.MethodGet, "/api/v1/geo/edificios"},
+		{http.MethodGet, "/areas-verdes/v1/geo/edificios"},
+		{http.MethodGet, "/api/v1/catastro/areas"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/areas"},
+		{http.MethodPost, "/api/v1/catastro/areas"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/areas"},
+		{http.MethodPatch, "/api/v1/catastro/areas/AV-0001"},
+		{http.MethodPatch, "/areas-verdes/v1/catastro/areas/AV-0001"},
+	}
+
+	for _, r := range rutas {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(r.metodo, r.ruta, bytes.NewBufferString(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		engine.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s sin auth: esperado 401, obtenido %d", r.metodo, r.ruta, w.Code)
+		}
+		if w.Body.String() != `{"error":"inicie sesión"}` {
+			t.Errorf("%s %s sin auth: cuerpo inesperado %s", r.metodo, r.ruta, w.Body.String())
+		}
+	}
+}
+
+func TestRutasGeoYCatastro_PermisosPorRol(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	type caso struct {
+		metodo         string
+		ruta           string
+		token          string
+		body           string
+		statusEsperado int
+		errorEsperado  string
+	}
+
+	casos := []caso{
+		// Capataz (norte): consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/geo/resumen", "token-norte", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/geo/resumen", "token-norte", "", 200, ""},
+		{http.MethodGet, "/api/v1/geo/areas", "token-norte", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/areas", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/areas", "token-norte", `{"nombre":"Nueva","uso":"jardín"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/catastro/areas/AV-0001", "token-norte", `{"nombre":"Modif","uso":"jardín"}`, 200, ""},
+
+		// Coordinación: consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/geo/zonas", "token-coordinacion", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/geo/zonas", "token-coordinacion", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/areas", "token-coordinacion", `{"nombre":"Nueva","uso":"jardín"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/catastro/areas/AV-0001", "token-coordinacion", `{"nombre":"Modif","uso":"jardín"}`, 200, ""},
+
+		// Jefatura: consultar=true, registrar=false
+		{http.MethodGet, "/api/v1/geo/capas", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/geo/capas", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/areas", "token-jefatura", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/areas", "token-jefatura", `{"nombre":"Nueva","uso":"jardín"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/areas", "token-jefatura", `{"nombre":"Nueva","uso":"jardín"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/catastro/areas/AV-0001", "token-jefatura", `{"nombre":"Modif","uso":"jardín"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/areas-verdes/v1/catastro/areas/AV-0001", "token-jefatura", `{"nombre":"Modif","uso":"jardín"}`, 403, "su rol no tiene ese permiso"},
+
+		// Admin: consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/geo/edificios", "token-admin", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/geo/edificios", "token-admin", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/areas", "token-admin", `{"nombre":"Nueva","uso":"jardín"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/catastro/areas/AV-0001", "token-admin", `{"nombre":"Modif","uso":"jardín"}`, 200, ""},
 	}
 
 	for _, c := range casos {

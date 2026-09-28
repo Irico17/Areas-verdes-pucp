@@ -34,6 +34,8 @@ type Router struct {
 	sesionGroup   *groups.SesionGroup
 	accesosGroup  *groups.AccesosGroup
 	catalogoGroup *groups.CatalogoGroup
+	geoGroup      *groups.GeoGroup
+	catastroGroup *groups.CatastroGroup
 }
 
 // RouterParams contains injected router dependencies.
@@ -52,6 +54,8 @@ type RouterParams struct {
 	SesionGroup   *groups.SesionGroup
 	AccesosGroup  *groups.AccesosGroup
 	CatalogoGroup *groups.CatalogoGroup
+	GeoGroup      *groups.GeoGroup
+	CatastroGroup *groups.CatastroGroup
 }
 
 // NewRouter creates the main router.
@@ -69,6 +73,8 @@ func NewRouter(p RouterParams) *Router {
 		sesionGroup:   p.SesionGroup,
 		accesosGroup:  p.AccesosGroup,
 		catalogoGroup: p.CatalogoGroup,
+		geoGroup:      p.GeoGroup,
+		catastroGroup: p.CatastroGroup,
 	}
 }
 
@@ -98,6 +104,8 @@ func (r *Router) Setup() {
 		r.sesionGroup.Register(prefix)
 		r.accesosGroup.Register(prefix)
 		r.catalogoGroup.Register(prefix)
+		r.geoGroup.Register(prefix)
+		r.catastroGroup.Register(prefix)
 	}
 
 	if r.cfg.Swagger.Enabled {
