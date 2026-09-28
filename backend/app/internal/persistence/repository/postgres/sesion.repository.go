@@ -1,0 +1,58 @@
+package postgres
+
+import (
+	"context"
+
+	"gorm.io/gorm"
+
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
+)
+
+type sesionRepository struct {
+	db *gorm.DB
+}
+
+// NewSesionRepository creates a new postgres repository for sessions.
+func NewSesionRepository(db *gorm.DB) contracts.ISesionRepository {
+	return &sesionRepository{db: db}
+}
+
+func (r *sesionRepository) Crear(ctx context.Context, sesion *entities.Sesion) error {
+	return r.db.WithContext(ctx).Exec(`
+		INSERT INTO sesiones (token_hash, usuario_id, expires_at)
+		VALUES ($1, $2, $3)`,
+		sesion.TokenHash, sesion.UsuarioID, sesion.ExpiresAt,
+	).Error
+}
+
+func (r *sesionRepository) ObtenerPorTokenHash(ctx context.Context, tokenHash string) (*entities.Usuario, error) {
+	var u entities.Usuario
+	var capataz *string
+	var rolNombre *string
+
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT u.id, u.usuario, u.nombre, u.rol, r.nombre, u.capataz_id
+		FROM sesiones s
+		JOIN usuarios u ON u.id = s.usuario_id
+		LEFT JOIN roles r ON r.codigo = u.rol
+		WHERE s.token_hash = $1 AND s.expires_at > now() AND u.activo`,
+		tokenHash,
+	).Row().Scan(&u.ID, &u.Usuario, &u.Nombre, &u.Rol, &rolNombre, &capataz)
+	if err != nil {
+		return nil, err
+	}
+
+	if rolNombre != nil {
+		u.RolNombre = *rolNombre
+	}
+	if capataz != nil {
+		u.CapatazID = *capataz
+	}
+	u.Activo = true
+	return &u, nil
+}
+
+func (r *sesionRepository) EliminarPorTokenHash(ctx context.Context, tokenHash string) error {
+	return r.db.WithContext(ctx).Exec(`DELETE FROM sesiones WHERE token_hash = $1`, tokenHash).Error
+}

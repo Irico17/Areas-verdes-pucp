@@ -20,8 +20,11 @@
 # Lotes posteriores (comentadas hasta su lote)
 # ==========================================
 # Lote 5: Sesión y accesos
-# admin GET /api/v1/sesion
-# admin GET /api/v1/accesos/usuarios
+admin GET /api/v1/sesion
+admin GET /api/v1/accesos/usuarios
+norte GET /api/v1/sesion
+coordinacion GET /api/v1/sesion
+jefatura GET /api/v1/sesion
 
 # Lote 7: Catálogos
 # admin GET /api/v1/catalogos

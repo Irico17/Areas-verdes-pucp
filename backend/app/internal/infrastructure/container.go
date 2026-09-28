@@ -8,12 +8,13 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/ratelimit"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/seguridad"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
 )
 
 // RegisterContainer registers infrastructure-layer dependencies.
 func RegisterContainer(container *dig.Container) error {
-	return container.Provide(func(cfg *config.Config) contracts.ILimitador {
+	if err := container.Provide(func(cfg *config.Config) contracts.ILimitador {
 		max := cfg.Seguridad.LoginMax
 		if max < 1 {
 			max = 8
@@ -23,5 +24,9 @@ func RegisterContainer(container *dig.Container) error {
 			ventana = time.Minute
 		}
 		return ratelimit.NewMemoriaLimitador(max, ventana)
-	})
+	}); err != nil {
+		return err
+	}
+
+	return container.Provide(seguridad.NewBcryptHasher)
 }

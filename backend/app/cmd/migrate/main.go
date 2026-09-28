@@ -1,7 +1,8 @@
-// Package main runs database migrations and ETL readiness checks.
+// Package main runs database migrations, seeds initial accounts, and checks ETL readiness.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/cmd/ioc"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/database"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
 )
@@ -24,7 +26,7 @@ func main() {
 		log.Fatalf("contenedor: %v", err)
 	}
 
-	err = container.Invoke(func(gdb *gorm.DB, cfg *config.Config) error {
+	err = container.Invoke(func(gdb *gorm.DB, cfg *config.Config, semillaUC contracts.ISemillaAccesosUseCase) error {
 		if *necesitaETL {
 			sqlDB, err := gdb.DB()
 			if err != nil {
@@ -57,6 +59,9 @@ func main() {
 
 		if err := database.Apply(gdb, cfg.Migraciones.Dir); err != nil {
 			log.Fatal(err)
+		}
+		if err := semillaUC.Ensure(context.Background(), cfg.Accesos.DevPassword); err != nil {
+			log.Fatalf("cuentas locales: %v", err)
 		}
 		log.Println("migraciones al día")
 		return nil

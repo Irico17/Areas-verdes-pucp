@@ -10,8 +10,18 @@ import (
 
 // RegisterContainer registers lazy persistence-layer providers.
 func RegisterContainer(container *dig.Container) error {
-	if err := container.Provide(database.NewConnection); err != nil {
-		return err
+	providers := []any{
+		database.NewConnection,
+		postgres.NewSaludRepository,
+		postgres.NewUsuarioRepository,
+		postgres.NewSesionRepository,
+		postgres.NewPermisoRepository,
 	}
-	return container.Provide(postgres.NewSaludRepository)
+
+	for _, provider := range providers {
+		if err := container.Provide(provider); err != nil {
+			return err
+		}
+	}
+	return nil
 }
