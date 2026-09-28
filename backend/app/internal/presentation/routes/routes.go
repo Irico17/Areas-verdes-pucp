@@ -21,34 +21,36 @@ const (
 
 // Router is the main HTTP router.
 type Router struct {
-	engine       *gin.Engine
-	cfg          *config.Config
-	logger       zerolog.Logger
-	limitador    contracts.ILimitador
-	sesionUC     contracts.ISesionUseCase
-	healthGroup  *groups.HealthGroup
-	metaGroup    *groups.MetaGroup
-	legadoGroup  *groups.LegadoGroup
-	swaggerGroup *groups.SwaggerGroup
-	sesionGroup  *groups.SesionGroup
-	accesosGroup *groups.AccesosGroup
+	engine        *gin.Engine
+	cfg           *config.Config
+	logger        zerolog.Logger
+	limitador     contracts.ILimitador
+	sesionUC      contracts.ISesionUseCase
+	healthGroup   *groups.HealthGroup
+	metaGroup     *groups.MetaGroup
+	legadoGroup   *groups.LegadoGroup
+	swaggerGroup  *groups.SwaggerGroup
+	sesionGroup   *groups.SesionGroup
+	accesosGroup  *groups.AccesosGroup
+	catalogoGroup *groups.CatalogoGroup
 }
 
 // RouterParams contains injected router dependencies.
 type RouterParams struct {
 	dig.In
 
-	Engine       *gin.Engine
-	Config       *config.Config
-	Logger       zerolog.Logger
-	Limitador    contracts.ILimitador     `optional:"true"`
-	SesionUC     contracts.ISesionUseCase `optional:"true"`
-	HealthGroup  *groups.HealthGroup
-	MetaGroup    *groups.MetaGroup
-	LegadoGroup  *groups.LegadoGroup
-	SwaggerGroup *groups.SwaggerGroup
-	SesionGroup  *groups.SesionGroup  `optional:"true"`
-	AccesosGroup *groups.AccesosGroup `optional:"true"`
+	Engine        *gin.Engine
+	Config        *config.Config
+	Logger        zerolog.Logger
+	Limitador     contracts.ILimitador     `optional:"true"`
+	SesionUC      contracts.ISesionUseCase `optional:"true"`
+	HealthGroup   *groups.HealthGroup
+	MetaGroup     *groups.MetaGroup
+	LegadoGroup   *groups.LegadoGroup
+	SwaggerGroup  *groups.SwaggerGroup
+	SesionGroup   *groups.SesionGroup   `optional:"true"`
+	AccesosGroup  *groups.AccesosGroup  `optional:"true"`
+	CatalogoGroup *groups.CatalogoGroup `optional:"true"`
 }
 
 // NewRouter creates the main router.
@@ -58,17 +60,18 @@ func NewRouter(p RouterParams) *Router {
 		cfg = config.New()
 	}
 	return &Router{
-		engine:       p.Engine,
-		cfg:          cfg,
-		logger:       p.Logger,
-		limitador:    p.Limitador,
-		sesionUC:     p.SesionUC,
-		healthGroup:  p.HealthGroup,
-		metaGroup:    p.MetaGroup,
-		legadoGroup:  p.LegadoGroup,
-		swaggerGroup: p.SwaggerGroup,
-		sesionGroup:  p.SesionGroup,
-		accesosGroup: p.AccesosGroup,
+		engine:        p.Engine,
+		cfg:           cfg,
+		logger:        p.Logger,
+		limitador:     p.Limitador,
+		sesionUC:      p.SesionUC,
+		healthGroup:   p.HealthGroup,
+		metaGroup:     p.MetaGroup,
+		legadoGroup:   p.LegadoGroup,
+		swaggerGroup:  p.SwaggerGroup,
+		sesionGroup:   p.SesionGroup,
+		accesosGroup:  p.AccesosGroup,
+		catalogoGroup: p.CatalogoGroup,
 	}
 }
 
@@ -108,6 +111,9 @@ func (r *Router) Setup() {
 		}
 		if r.accesosGroup != nil {
 			r.accesosGroup.Register(prefix)
+		}
+		if r.catalogoGroup != nil {
+			r.catalogoGroup.Register(prefix)
 		}
 	}
 

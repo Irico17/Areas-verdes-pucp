@@ -121,21 +121,42 @@ while IFS= read -r line || [ -n "$line" ]; do
     fi
   fi
 
+  # Cuerpo opcional con token @path/to/body.json
+  BODY_ARGS=()
+  if [ -n "${extra:-}" ]; then
+    if [[ "$extra" =~ ^@ ]]; then
+      BODY_PATH="${extra#@}"
+      if [ -f "$BODY_PATH" ]; then
+        BODY_ARGS=(-H "Content-Type: application/json" --data-binary "@$BODY_PATH")
+      else
+        echo "  [WARN] archivo de cuerpo no encontrado: $BODY_PATH"
+      fi
+    fi
+  fi
+
   # 1. Petición a la API vieja
   BODY_VIEJA="$TMPDIR/body_vieja.raw"
   HEAD_VIEJA="$TMPDIR/head_vieja.txt"
-  STATUS_VIEJA=$(curl -s -X "$metodo" "${JAR_VIEJA_ARG[@]}" -D "$HEAD_VIEJA" -o "$BODY_VIEJA" -w "%{http_code}" "$VIEJA$ruta")
+  STATUS_VIEJA=$(curl -s -X "$metodo" "${JAR_VIEJA_ARG[@]}" "${BODY_ARGS[@]}" -D "$HEAD_VIEJA" -o "$BODY_VIEJA" -w "%{http_code}" "$VIEJA$ruta")
 
   NORM_VIEJA="$TMPDIR/body_vieja.norm"
   normalize_response "$BODY_VIEJA" "$NORM_VIEJA"
 
-  # 2. Rutas a verificar en la nueva (ambos prefijos si aplica)
+  # 2. Rutas a verificar en la nueva (para no-GET solo se llama una vez en /areas-verdes/v1)
   RUTAS_NUEVA=()
-  if [[ "$ruta" =~ ^/api/v1 ]]; then
-    RUTAS_NUEVA+=("$ruta")
-    RUTAS_NUEVA+=("${ruta/\/api\/v1/\/areas-verdes\/v1}")
+  if [ "$metodo" != "GET" ]; then
+    if [[ "$ruta" =~ ^/api/v1 ]]; then
+      RUTAS_NUEVA+=("${ruta/\/api\/v1/\/areas-verdes\/v1}")
+    else
+      RUTAS_NUEVA+=("$ruta")
+    fi
   else
-    RUTAS_NUEVA+=("$ruta")
+    if [[ "$ruta" =~ ^/api/v1 ]]; then
+      RUTAS_NUEVA+=("$ruta")
+      RUTAS_NUEVA+=("${ruta/\/api\/v1/\/areas-verdes\/v1}")
+    else
+      RUTAS_NUEVA+=("$ruta")
+    fi
   fi
 
   ROUTE_OK=true
@@ -143,7 +164,7 @@ while IFS= read -r line || [ -n "$line" ]; do
   for r_nueva in "${RUTAS_NUEVA[@]}"; do
     BODY_NUEVA="$TMPDIR/body_nueva.raw"
     HEAD_NUEVA="$TMPDIR/head_nueva.txt"
-    STATUS_NUEVA=$(curl -s -X "$metodo" "${JAR_NUEVA_ARG[@]}" -D "$HEAD_NUEVA" -o "$BODY_NUEVA" -w "%{http_code}" "$NUEVA$r_nueva")
+    STATUS_NUEVA=$(curl -s -X "$metodo" "${JAR_NUEVA_ARG[@]}" "${BODY_ARGS[@]}" -D "$HEAD_NUEVA" -o "$BODY_NUEVA" -w "%{http_code}" "$NUEVA$r_nueva")
 
     NORM_NUEVA="$TMPDIR/body_nueva.norm"
     normalize_response "$BODY_NUEVA" "$NORM_NUEVA"

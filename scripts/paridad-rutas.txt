@@ -27,7 +27,12 @@ coordinacion GET /api/v1/sesion
 jefatura GET /api/v1/sesion
 
 # Lote 7: Catálogos
-# admin GET /api/v1/catalogos
+admin GET /api/v1/catalogos
+admin GET /api/v1/catalogos?clase=estado
+admin GET /api/v1/catalogos?clase=estado&activos=1
+coordinacion GET /api/v1/catalogos
+jefatura GET /api/v1/catalogos
+norte GET /api/v1/catalogos
 
 # Lote 8: Geo de lectura y fichas de área
 # admin GET /api/v1/geo/resumen

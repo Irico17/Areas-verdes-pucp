@@ -1,0 +1,6 @@
+# Escrituras para prueba de paridad en copias de base de datos (lote 7: catálogos)
+# Formato: <rol> <METODO> <ruta> [@path/al/cuerpo.json]
+admin POST /api/v1/catalogos @scripts/cuerpos/catalogo-crear.json
+norte POST /api/v1/catalogos @scripts/cuerpos/catalogo-crear-norte.json
+admin POST /api/v1/catalogos @scripts/cuerpos/catalogo-codigo-invalido.json
+admin POST /api/v1/catalogos/1/desactivar

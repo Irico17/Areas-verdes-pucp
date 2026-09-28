@@ -24,6 +24,7 @@ func RegisterContainer(container *dig.Container) error {
 		groups.NewLegadoGroup,
 		groups.NewSesionGroup,
 		groups.NewAccesosGroup,
+		groups.NewCatalogoGroup,
 	} {
 		if err := container.Provide(constructor); err != nil {
 			return err
@@ -36,6 +37,7 @@ func RegisterContainer(container *dig.Container) error {
 		controller.NewMetaController,
 		controller.NewSesionController,
 		controller.NewUsuarioController,
+		controller.NewCatalogoController,
 	} {
 		if err := container.Provide(constructor); err != nil {
 			return err
