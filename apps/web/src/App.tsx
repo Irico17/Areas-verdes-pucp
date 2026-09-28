@@ -30,7 +30,7 @@ import { conCategorias, conteoPorCategoria, normalizar, SECTORES, USOS, type Col
 import { BottomSheet } from "./ui/BottomSheet"
 import { ImportacionesPanel } from "./panel/Importaciones"
 import { AdminPanel, CatalogosPanel, Login, ReportesPanel, RiegoPanel, SolicitudesPanel } from "./panel/Modulos"
-import { fetchCatalogo, fetchSesion, salir, sugerirTipo, type CatalogoItem, type Usuario } from "./producto"
+import { etiquetaRol, fetchCatalogo, fetchSesion, salir, sugerirTipo, type CatalogoItem, type Usuario } from "./producto"
 import { readColorPor, readEquipo, writeColorPor, writeEquipo } from "./session"
 import { LAYERS, type FeatureCollection, type GeoFeature, type LayerId, type Rol } from "./types"
 import { MQ_MOVIL, useMedia } from "./ui/media"
@@ -148,6 +148,7 @@ export default function App() {
   const [inventory, setInventory] = useState<Partial<Record<string, FeatureCollection>>>({})
   const [inventoryOn, setInventoryOn] = useState<Record<string, boolean>>({})
   const reloadActivities = useCallback(async () => {
+    if (!sesion) return
     try {
       const fc = await fetchActividades(rol, equipoId)
       setActivities(fc)
@@ -163,7 +164,7 @@ export default function App() {
         setActivityError(message)
       }
     }
-  }, [rol, equipoId])
+  }, [sesion, rol, equipoId])
 
   const reloadQueue = useCallback(async () => {
     try {
@@ -174,6 +175,7 @@ export default function App() {
   }, [])
 
   const flush = useCallback(async () => {
+    if (!sesion) return
     const pending = await listQueue().catch(() => [] as QueuedLabor[])
     for (const item of pending) {
       try {
@@ -205,7 +207,7 @@ export default function App() {
     }
     await reloadQueue()
     await reloadActivities()
-  }, [reloadActivities, reloadQueue, rol, equipoId])
+  }, [sesion, reloadActivities, reloadQueue, rol, equipoId])
 
   useEffect(() => {
     let cancelled = false
@@ -230,6 +232,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (!sesion) return
     let cancelled = false
     Promise.all(LAYERS.map(async (layer) => [layer.id, await fetchCollection(layer.path)] as const))
       .then((rows) => {
@@ -270,9 +273,10 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [sesion])
 
   useEffect(() => {
+    if (!sesion) return
     let cancelled = false
     fetchActividades(rol, equipoId)
       .then((fc) => {
@@ -297,9 +301,10 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [rol, equipoId])
+  }, [sesion, rol, equipoId])
 
   useEffect(() => {
+    if (!sesion) return
     let cancelled = false
     void Promise.resolve().then(() => {
       if (!cancelled) return flush()
@@ -307,7 +312,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [flush])
+  }, [flush, sesion])
 
   const seleccionEnCola = selectedId != null && queue.some((item) => item.id === selectedId)
   const timelineVisible = selectedId && !seleccionEnCola ? timeline : []
@@ -603,6 +608,7 @@ export default function App() {
         </div>
         <div className="session">
           <span>{sesion.nombre}</span>
+          <span className="chip">{etiquetaRol(sesion.rol, sesion.rol_nombre)}</span>
           <button type="button" onClick={() => void salir().then(() => setSesion(null))}>Salir</button>
         </div>
       </header>

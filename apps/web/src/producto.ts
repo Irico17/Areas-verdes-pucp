@@ -1,4 +1,5 @@
 import { ApiError } from "./operacion"
+import { ROLES } from "./types"
 
 export type Usuario = {
   id: number
@@ -6,6 +7,14 @@ export type Usuario = {
   nombre: string
   rol: "capataz" | "coordinacion" | "jefatura" | "admin"
   capataz_id?: string
+  rol_nombre?: string
+}
+
+export function etiquetaRol(rol: string, rolNombre?: string): string {
+  if (rolNombre && rolNombre.trim() !== "") return rolNombre
+  const encontrado = ROLES.find((r) => r.id === rol)
+  if (encontrado) return encontrado.label
+  return rol
 }
 
 export type CatalogoItem = {

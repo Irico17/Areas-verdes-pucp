@@ -1,7 +1,7 @@
 import { EMPTY, type FeatureCollection } from "./types"
 
 export async function fetchCollection(path: string): Promise<FeatureCollection> {
-  const res = await fetch(path)
+  const res = await fetch(path, { credentials: "include" })
   if (!res.ok) {
     throw new Error(`${path} respondió ${res.status}`)
   }

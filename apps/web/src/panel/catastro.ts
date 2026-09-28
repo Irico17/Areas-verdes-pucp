@@ -245,7 +245,7 @@ export function zonaNueva(usadas: string[]): ZonaSupervision {
 }
 
 async function leer(path: string): Promise<unknown> {
-  const res = await fetch(path, { headers: { Accept: "application/json" } })
+  const res = await fetch(path, { headers: { Accept: "application/json" }, credentials: "include" })
   if (!res.ok) throw new Error(`La API respondió ${res.status}`)
   return res.json()
 }
@@ -253,6 +253,7 @@ async function leer(path: string): Promise<unknown> {
 async function enviar(path: string, method: string, body: unknown): Promise<void> {
   const res = await fetch(path, {
     method,
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   })

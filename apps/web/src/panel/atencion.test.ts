@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { Labores, type LaborItem } from "./Labores.tsx"
 import { PodaPanel } from "./Poda.tsx"
 import { codigoExterno, validarPoda, type PodaItem } from "./poda.ts"
+import { etiquetaRol } from "../producto.ts"
 import { ViveroPanel } from "./Vivero.tsx"
 import { validarVivero } from "./vivero.ts"
 
@@ -131,3 +132,13 @@ test("el vivero filtra por mes y no acepta un área libre", () => {
   assert.match(html, /Mes/)
   assert.equal(validarVivero({ id: "x", fecha: "", area: "Inventada", subproceso: "", etapa: "", descripcion: "", observaciones: "", responsables: "", lugar: "" }, { subproceso: [], etapa: [] }).length, 1)
 })
+
+test("etiquetaRol y roles v2 muestran los nombres visibles correctos", () => {
+  assert.equal(etiquetaRol("capataz"), "Capataz")
+  assert.equal(etiquetaRol("coordinacion"), "Ingeniería/Coordinación")
+  assert.equal(etiquetaRol("jefatura"), "Jefatura / Jefe de sección")
+  assert.equal(etiquetaRol("admin"), "Administrador del sistema")
+  assert.equal(etiquetaRol("otro", "Rol Personalizado"), "Rol Personalizado")
+  assert.equal(etiquetaRol("desconocido"), "desconocido")
+})
+

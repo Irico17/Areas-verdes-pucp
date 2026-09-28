@@ -13,7 +13,7 @@ import {
   type Capataz,
   type Evento,
 } from "../operacion"
-import type { CatalogoItem } from "../producto"
+import { etiquetaRol, type CatalogoItem } from "../producto"
 import type { Rol } from "../types"
 import { EvidenciasCampo } from "./EvidenciasCampo"
 
@@ -300,7 +300,7 @@ export function Labores(props: Props) {
                     <span>
                       {evento.estado ? etiquetaEstado(evento.estado) : ""}
                       {evento.equipo ? ` · ${evento.equipo}` : ""}
-                      {` · ${evento.actor_rol}`}
+                      {` · ${etiquetaRol(evento.actor_rol)}`}
                     </span>
                     <time dateTime={evento.created_at}>{formatFechaHora(evento.created_at)}</time>
                   </li>

@@ -11,6 +11,7 @@ import {
   crearSolicitud,
   desactivarCatalogo,
   entrar,
+  etiquetaRol,
   fetchCatalogo,
   fetchCuentas,
   fetchFichas,
@@ -685,7 +686,7 @@ export function AdminPanel() {
           <li key={user.id} className="agenda">
             <strong>{user.nombre}</strong>
             <small>
-              {user.usuario} · {user.rol}
+              {user.usuario} · {etiquetaRol(user.rol, user.rol_nombre)}
               {user.capataz_id ? ` · ${user.capataz_id}` : ""}
             </small>
           </li>
@@ -696,7 +697,7 @@ export function AdminPanel() {
         {(data?.permisos ?? []).map((item) => (
           <li key={`${item.rol}-${item.accion}`} className="agenda">
             <small>
-              {item.rol} · {item.accion}
+              {etiquetaRol(item.rol)} · {item.accion}
             </small>
           </li>
         ))}
