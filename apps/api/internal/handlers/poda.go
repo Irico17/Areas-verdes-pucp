@@ -229,7 +229,8 @@ func (h PodaVivero) EditarOrden(c *gin.Context) {
 }
 
 func (h PodaVivero) CrearAvance(c *gin.Context) {
-	if _, ok := exige(c, "registrar"); !ok {
+	u, ok := exige(c, "registrar")
+	if !ok {
 		return
 	}
 	if !h.ready(c) {
@@ -246,7 +247,7 @@ func (h PodaVivero) CrearAvance(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "JSON inválido"})
 		return
 	}
-	if err := h.Store.CrearAvance(c.Request.Context(), c.Param("id"), body.ID, body.Fecha, body.Nota, body.Area, body.Ejemplar); err != nil {
+	if err := h.Store.CrearAvance(c.Request.Context(), c.Param("id"), body.ID, body.Fecha, body.Nota, body.Area, body.Ejemplar, u.Rol, u.CapatazID); err != nil {
 		writeAtencion(c, err)
 		return
 	}

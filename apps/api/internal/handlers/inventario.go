@@ -19,6 +19,9 @@ type Inventario struct {
 }
 
 func (h Inventario) Index(c *gin.Context) {
+	if _, ok := exige(c, "consultar"); !ok {
+		return
+	}
 	if h.Store == nil {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
@@ -33,6 +36,9 @@ func (h Inventario) Index(c *gin.Context) {
 }
 
 func (h Inventario) Capa(c *gin.Context) {
+	if _, ok := exige(c, "consultar"); !ok {
+		return
+	}
 	if h.Store == nil {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
@@ -66,6 +72,9 @@ func RegistrarInventario(r *gin.Engine, deps Deps) {
 
 // Foto entrega un JPEG recuperado. No publica el índice ni ids de Drive.
 func (h Inventario) Foto(c *gin.Context) {
+	if _, ok := exige(c, "consultar"); !ok {
+		return
+	}
 	name := filepath.Base(c.Param("name"))
 	lower := strings.ToLower(name)
 	if name == "." || name == "/" || (!strings.HasSuffix(lower, ".jpg") && !strings.HasSuffix(lower, ".jpeg")) {

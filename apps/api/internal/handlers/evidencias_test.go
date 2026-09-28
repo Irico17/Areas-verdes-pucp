@@ -278,3 +278,74 @@ func postEvidencia(t *testing.T, h Atencion, id, labor, orden string, foto []byt
 	h.SubirEvidencia(c)
 	return rec
 }
+
+func TestJefaturaPuedeSubirEvidenciaYCapatazLimitadoASuLabor(t *testing.T) {
+	base := os.Getenv("MIGRATE_TEST_URL")
+	if base == "" {
+		base = "postgres://campus:campus@127.0.0.1:5432/postgres?sslmode=disable"
+	}
+	admin, err := sql.Open("pgx", base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer admin.Close()
+	if err := admin.Ping(); err != nil {
+		t.Skipf("sin postgres de prueba: %v", err)
+	}
+	name := "campus_verde_test_evid_perm"
+	if _, err := admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := admin.Exec("DROP DATABASE IF EXISTS " + name); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := admin.Exec("CREATE DATABASE " + name); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_, _ = admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name)
+		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + name)
+	}()
+
+	gdb, err := db.Open(fmt.Sprintf("postgres://campus:campus@127.0.0.1:5432/%s?sslmode=disable", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join("..", "..", "migrations")
+	if err := migrate.Apply(gdb, dir); err != nil {
+		t.Fatal(err)
+	}
+
+	gin.SetMode(gin.TestMode)
+	h := Atencion{Store: atencion.NewStore(gdb), Files: blobs.Disk{Dir: t.TempDir()}}
+	laborNorte := "11111111-1111-4111-8111-111111111111" // asignada a cap-norte en 003
+	foto := []byte{0xFF, 0xD8, 0xFF, 0xD9}
+
+	var uidJef, uidSur int64
+	if err := gdb.Raw(`
+		INSERT INTO usuarios (usuario, nombre, rol, password_hash)
+		VALUES ('test-jefatura', 'Jefe Test', 'jefatura', 'x')
+		RETURNING id`).Row().Scan(&uidJef); err != nil {
+		t.Fatal(err)
+	}
+	if err := gdb.Raw(`
+		INSERT INTO usuarios (usuario, nombre, rol, capataz_id, password_hash)
+		VALUES ('test-sur', 'Equipo Sur', 'capataz', 'cap-sur', 'x')
+		RETURNING id`).Row().Scan(&uidSur); err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. Jefatura puede subir evidencia
+	idJef := "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+	resJef := postEvidencia(t, h, idJef, laborNorte, "", foto, "jefatura", "", uidJef)
+	if resJef.Code != 201 {
+		t.Fatalf("jefatura subida status esperado 201, fue %d: %s", resJef.Code, resJef.Body.String())
+	}
+
+	// 2. Capataz ajeno (cap-sur en labor de cap-norte) recibe 403
+	idSur := "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+	resSur := postEvidencia(t, h, idSur, laborNorte, "", foto, "capataz", "cap-sur", uidSur)
+	if resSur.Code != 403 {
+		t.Fatalf("capataz ajeno status esperado 403, fue %d: %s", resSur.Code, resSur.Body.String())
+	}
+}

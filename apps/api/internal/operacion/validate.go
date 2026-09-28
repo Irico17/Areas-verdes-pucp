@@ -25,6 +25,12 @@ type InputError struct{ Reason string }
 func (e InputError) Error() string { return e.Reason }
 func (e InputError) Unwrap() error { return ErrValidacion }
 
+// ForbiddenError es un 403 con mensaje en español para la UI.
+type ForbiddenError struct{ Reason string }
+
+func (e ForbiddenError) Error() string { return e.Reason }
+func (e ForbiddenError) Unwrap() error { return ErrProhibido }
+
 var uuidRe = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 func rolConocido(rol string) bool {
@@ -106,8 +112,13 @@ func ValidateEstado(estado, actorRol, capatazID string) error {
 	if !slugRe.MatchString(estado) {
 		return InputError{Reason: "estado no reconocido"}
 	}
-	if actorRol == RolCapataz && strings.TrimSpace(capatazID) == "" {
-		return InputError{Reason: "capataz_id es obligatorio para cambiar el estado"}
+	if actorRol == RolCapataz {
+		if strings.TrimSpace(capatazID) == "" {
+			return InputError{Reason: "capataz_id es obligatorio para cambiar el estado"}
+		}
+		if estado == "cerrada" || estado == "cancelada" {
+			return ForbiddenError{Reason: "el capataz no puede cerrar ni cancelar una labor"}
+		}
 	}
 	return nil
 }

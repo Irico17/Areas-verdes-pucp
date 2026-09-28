@@ -41,6 +41,9 @@ func (h Geo) Zonas(c *gin.Context) {
 }
 
 func (h Geo) Capa(c *gin.Context) {
+	if _, ok := exige(c, "consultar"); !ok {
+		return
+	}
 	if h.Source == nil {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
@@ -64,6 +67,9 @@ func (h Geo) Capa(c *gin.Context) {
 }
 
 func (h Geo) Capas(c *gin.Context) {
+	if _, ok := exige(c, "consultar"); !ok {
+		return
+	}
 	if h.Source == nil {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
@@ -79,6 +85,9 @@ func (h Geo) Capas(c *gin.Context) {
 
 // Edificios sirve el extracto OSM commiteado. Si falta el archivo, responde colección vacía.
 func (h Geo) Edificios(c *gin.Context) {
+	if _, ok := exige(c, "consultar"); !ok {
+		return
+	}
 	body, err := os.ReadFile(h.EdificiosPath)
 	if err != nil {
 		writeFC(c, geojson.Collection("edificios"))
@@ -88,6 +97,9 @@ func (h Geo) Edificios(c *gin.Context) {
 }
 
 func (h Geo) Resumen(c *gin.Context) {
+	if _, ok := exige(c, "consultar"); !ok {
+		return
+	}
 	if h.Source == nil {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
@@ -102,6 +114,9 @@ func (h Geo) Resumen(c *gin.Context) {
 }
 
 func (h Geo) collection(c *gin.Context, load func(context.Context, catastro.Filter) (geojson.FeatureCollection, error)) {
+	if _, ok := exige(c, "consultar"); !ok {
+		return
+	}
 	if h.Source == nil {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return

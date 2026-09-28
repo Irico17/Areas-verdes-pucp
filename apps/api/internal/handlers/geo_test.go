@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"testing"
 
+	"campusverde/api/internal/accesos"
 	"campusverde/api/internal/catastro"
 	"campusverde/api/internal/geojson"
 
@@ -60,7 +61,23 @@ func TestGeoAreas(t *testing.T) {
 	r.GET("/api/v1/geo/areas", h.Areas)
 	r.GET("/api/v1/geo/capas/:capa", h.Capa)
 
+	// Sin sesión -> 401
 	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/geo/areas", nil))
+	if w.Code != 401 {
+		t.Fatalf("sin sesión status esperado 401, obtuve %d", w.Code)
+	}
+
+	// Con sesión -> 200
+	r = gin.New()
+	r.Use(func(c *gin.Context) {
+		c.Set("usuario", accesos.Usuario{Rol: "coordinacion", Usuario: "coord"})
+		c.Next()
+	})
+	r.GET("/api/v1/geo/areas", h.Areas)
+	r.GET("/api/v1/geo/capas/:capa", h.Capa)
+
+	w = httptest.NewRecorder()
 	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/geo/areas", nil))
 	if w.Code != 200 {
 		t.Fatalf("status %d", w.Code)
@@ -114,6 +131,10 @@ func TestGeoAreasSinLimite(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	const n = 521
 	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		c.Set("usuario", accesos.Usuario{Rol: "coordinacion", Usuario: "coord"})
+		c.Next()
+	})
 	h := Geo{Source: countingGeo{areas: n, limit: 0}}
 	r.GET("/api/v1/geo/areas", h.Areas)
 	w := httptest.NewRecorder()
@@ -133,6 +154,10 @@ func TestGeoAreasSinLimite(t *testing.T) {
 func TestGeoZonasIncluyeSector(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		c.Set("usuario", accesos.Usuario{Rol: "coordinacion", Usuario: "coord"})
+		c.Next()
+	})
 	h := Geo{Source: fakeGeo{}}
 	r.GET("/api/v1/geo/zonas", h.Zonas)
 
@@ -163,7 +188,19 @@ func TestGeoSinDB(t *testing.T) {
 	r.GET("/api/v1/geo/zonas", h.Zonas)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/geo/zonas", nil))
+	if w.Code != 401 {
+		t.Fatalf("sin sesión status esperado 401, obtuve %d", w.Code)
+	}
+
+	r = gin.New()
+	r.Use(func(c *gin.Context) {
+		c.Set("usuario", accesos.Usuario{Rol: "coordinacion", Usuario: "coord"})
+		c.Next()
+	})
+	r.GET("/api/v1/geo/zonas", h.Zonas)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/geo/zonas", nil))
 	if w.Code != 503 {
-		t.Fatalf("status %d", w.Code)
+		t.Fatalf("con sesión sin DB status esperado 503, obtuve %d", w.Code)
 	}
 }

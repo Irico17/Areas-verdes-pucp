@@ -33,6 +33,9 @@ func RegistrarReservas(r *gin.Engine, deps Deps) {
 }
 
 func (h Reservas) Get(c *gin.Context) {
+	if _, ok := exige(c, "consultar"); !ok {
+		return
+	}
 	aviso := "Agenda ficticia de demostración. No está conectada a una hoja de cálculo ni a una fuente institucional."
 	body, err := os.ReadFile(h.Path)
 	if err != nil {

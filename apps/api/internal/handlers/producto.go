@@ -141,7 +141,7 @@ func (h Sesion) Entrar(c *gin.Context) {
 		return
 	}
 	setCookie(c, token, 12*60*60)
-	c.JSON(200, gin.H{"usuario": user})
+	c.JSON(200, gin.H{"usuario": user, "rol_nombre": user.RolNombre})
 }
 
 func (h Sesion) Actual(c *gin.Context) {
@@ -150,7 +150,7 @@ func (h Sesion) Actual(c *gin.Context) {
 		c.JSON(401, gin.H{"error": "sin sesión"})
 		return
 	}
-	c.JSON(200, gin.H{"usuario": u})
+	c.JSON(200, gin.H{"usuario": u, "rol_nombre": u.RolNombre})
 }
 
 func (h Sesion) Salir(c *gin.Context) {
@@ -522,8 +522,13 @@ func (h Atencion) Evidencias(c *gin.Context) {
 }
 
 func (h Atencion) SubirEvidencia(c *gin.Context) {
-	u, ok := exige(c, "registrar")
+	u, ok := usuarioEn(c)
 	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "inicie sesión"})
+		return
+	}
+	if !accesos.PermiteAlguno(u.Rol, "registrar", "evidencias") {
+		c.JSON(http.StatusForbidden, gin.H{"error": "su rol no tiene ese permiso"})
 		return
 	}
 	if !h.ready(c) {

@@ -3,6 +3,7 @@ package atencion
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strings"
 	"time"
 
@@ -345,7 +346,7 @@ func (s *Store) EditarOrden(ctx context.Context, in OrdenInput) (Orden, error) {
 	return o, err
 }
 
-func (s *Store) CrearAvance(ctx context.Context, actividadID, id, fecha, nota, area, ejemplar string) error {
+func (s *Store) CrearAvance(ctx context.Context, actividadID, id, fecha, nota, area, ejemplar, actorRol, capatazID string) error {
 	if !operacionUUID(actividadID) || !operacionUUID(id) {
 		return operacion.InputError{Reason: "id debe ser un UUID"}
 	}
@@ -354,6 +355,27 @@ func (s *Store) CrearAvance(ctx context.Context, actividadID, id, fecha, nota, a
 	}
 	if strings.TrimSpace(area) == "" && strings.TrimSpace(ejemplar) == "" {
 		return operacion.InputError{Reason: "el avance se liga a un área o a un ejemplar"}
+	}
+	var row struct {
+		AssignedCapatazID *string
+		ArchivadaEn       *time.Time
+	}
+	err := s.db.WithContext(ctx).Raw(`
+		SELECT assigned_capataz_id, archivada_en
+		FROM actividades WHERE id = $1`, actividadID).Row().Scan(&row.AssignedCapatazID, &row.ArchivadaEn)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return operacion.ErrNoEncontrada
+		}
+		return err
+	}
+	if row.ArchivadaEn != nil {
+		return operacion.InputError{Reason: "la labor está archivada"}
+	}
+	if actorRol == operacion.RolCapataz {
+		if row.AssignedCapatazID == nil || *row.AssignedCapatazID != strings.TrimSpace(capatazID) {
+			return operacion.ForbiddenError{Reason: "el capataz solo puede registrar avances en sus propias labores"}
+		}
 	}
 	return s.db.WithContext(ctx).Exec(`
 		INSERT INTO actividad_avances (id, actividad_id, fecha, nota, area_feature_id, ejemplar_ref)

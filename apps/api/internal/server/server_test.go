@@ -38,8 +38,8 @@ func TestHealthYIndiceSinDB(t *testing.T) {
 
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/geo/areas", nil))
-	if w.Code != 503 {
-		t.Fatalf("areas sin db %d", w.Code)
+	if w.Code != 401 {
+		t.Fatalf("areas sin sesion %d", w.Code)
 	}
 }
 
@@ -53,23 +53,23 @@ var rutasCongeladas = []struct {
 	{http.MethodGet, "/health", 503},
 	{http.MethodGet, "/api/v1", 200},
 	{http.MethodGet, "/api/v1/openapi.yaml", 404},
-	{http.MethodGet, "/api/v1/geo/resumen", 503},
-	{http.MethodGet, "/api/v1/geo/areas", 503},
-	{http.MethodGet, "/api/v1/geo/zonas", 503},
-	{http.MethodGet, "/api/v1/geo/capas", 503},
-	{http.MethodGet, "/api/v1/geo/capas/jardines_reserva", 503},
-	{http.MethodGet, "/api/v1/geo/edificios", 200},
-	{http.MethodGet, "/api/v1/geo/inventario", 503},
-	{http.MethodGet, "/api/v1/geo/inventario/fotos/x.jpg", 404},
-	{http.MethodGet, "/api/v1/geo/inventario/bebederos", 503},
-	{http.MethodGet, "/api/v1/geo/reservas-mock", 200},
-	{http.MethodGet, "/api/v1/operacion/capataces", 503},
-	{http.MethodGet, "/api/v1/operacion/actividades", 503},
+	{http.MethodGet, "/api/v1/geo/resumen", 401},
+	{http.MethodGet, "/api/v1/geo/areas", 401},
+	{http.MethodGet, "/api/v1/geo/zonas", 401},
+	{http.MethodGet, "/api/v1/geo/capas", 401},
+	{http.MethodGet, "/api/v1/geo/capas/jardines_reserva", 401},
+	{http.MethodGet, "/api/v1/geo/edificios", 401},
+	{http.MethodGet, "/api/v1/geo/inventario", 401},
+	{http.MethodGet, "/api/v1/geo/inventario/fotos/x.jpg", 401},
+	{http.MethodGet, "/api/v1/geo/inventario/bebederos", 401},
+	{http.MethodGet, "/api/v1/geo/reservas-mock", 401},
+	{http.MethodGet, "/api/v1/operacion/capataces", 401},
+	{http.MethodGet, "/api/v1/operacion/actividades", 401},
 	{http.MethodPost, "/api/v1/operacion/actividades", 401},
 	{http.MethodPatch, "/api/v1/operacion/actividades/1/asignacion", 401},
 	{http.MethodPatch, "/api/v1/operacion/actividades/1/estado", 401},
 	{http.MethodPost, "/api/v1/operacion/actividades/1/archivar", 401},
-	{http.MethodGet, "/api/v1/operacion/actividades/1/timeline", 503},
+	{http.MethodGet, "/api/v1/operacion/actividades/1/timeline", 401},
 	{http.MethodPost, "/api/v1/sesion", 503},
 	{http.MethodGet, "/api/v1/sesion", 401},
 	{http.MethodDelete, "/api/v1/sesion", 200},

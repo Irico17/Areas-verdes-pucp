@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -198,12 +199,33 @@ func (s *Store) Create(ctx context.Context, in CreateInput) (geojson.Feature, bo
 	return f, created, err
 }
 
-func (s *Store) GuardarFicha(ctx context.Context, in FichaInput) error {
+func (s *Store) GuardarFicha(ctx context.Context, in FichaInput, actorRol, capatazID string) error {
 	if !uuidRe.MatchString(in.ID) {
 		return InputError{Reason: "id debe ser un UUID"}
 	}
 	if in.FechaSolicitud != "" && in.FechaAtencion != "" && in.FechaAtencion < in.FechaSolicitud {
 		return InputError{Reason: "la atención no puede ser anterior a la solicitud"}
+	}
+	if actorRol == RolCapataz {
+		var row struct {
+			AssignedCapatazID *string
+			ArchivadaEn       *time.Time
+		}
+		err := s.db.WithContext(ctx).Raw(`
+			SELECT assigned_capataz_id, archivada_en
+			FROM actividades WHERE id = $1`, in.ID).Row().Scan(&row.AssignedCapatazID, &row.ArchivadaEn)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return ErrNoEncontrada
+			}
+			return err
+		}
+		if row.ArchivadaEn != nil {
+			return InputError{Reason: "la labor está archivada"}
+		}
+		if row.AssignedCapatazID == nil || *row.AssignedCapatazID != strings.TrimSpace(capatazID) {
+			return ForbiddenError{Reason: "el capataz solo puede editar la ficha de sus propias labores"}
+		}
 	}
 	var lugarID any
 	lugar := strings.TrimSpace(in.Lugar)
@@ -297,7 +319,7 @@ func (s *Store) SetEstado(ctx context.Context, id, estado, actorRol, capatazID s
 			return InputError{Reason: "la labor está archivada"}
 		}
 		if actorRol == RolCapataz && row.capataz != strings.TrimSpace(capatazID) {
-			return ErrProhibido
+			return ForbiddenError{Reason: "el capataz solo puede modificar sus propias labores"}
 		}
 		if row.estado == estado {
 			return nil

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"campusverde/api/internal/accesos"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,8 +33,20 @@ func TestReservasSinSheet(t *testing.T) {
 		t.Fatal(err)
 	}
 	h := Reservas{Path: path}
+
+	// Sin sesión -> 401
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/geo/reservas-mock", nil)
+	h.Get(c)
+	if w.Code != 401 {
+		t.Fatalf("sin sesión código esperado 401, obtuve %d", w.Code)
+	}
+
+	// Con sesión -> 200
+	w = httptest.NewRecorder()
+	c, _ = gin.CreateTestContext(w)
+	c.Set("usuario", accesos.Usuario{Rol: "coordinacion", Usuario: "coord"})
 	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/geo/reservas-mock", nil)
 	h.Get(c)
 	if w.Code != 200 {

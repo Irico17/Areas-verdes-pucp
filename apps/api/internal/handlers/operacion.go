@@ -65,6 +65,9 @@ func RegistrarOperacion(r *gin.Engine, deps Deps) {
 }
 
 func (h Operacion) Capataces(c *gin.Context) {
+	if _, ok := exige(c, "consultar"); !ok {
+		return
+	}
 	if h.Store == nil {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
@@ -79,6 +82,10 @@ func (h Operacion) Capataces(c *gin.Context) {
 }
 
 func (h Operacion) List(c *gin.Context) {
+	u, ok := exige(c, "consultar")
+	if !ok {
+		return
+	}
 	q := operacion.Query{
 		Estado:            c.Query("estado"),
 		Tipo:              c.Query("tipo"),
@@ -87,14 +94,12 @@ func (h Operacion) List(c *gin.Context) {
 		Origen:            c.Query("origen"),
 		SoloAbiertas:      c.DefaultQuery("abiertas", "1") != "0",
 	}
-	if u, ok := usuarioEn(c); ok {
-		if u.Rol == "capataz" {
-			q.Rol = operacion.RolCapataz
-			q.CapatazID = u.CapatazID
-		} else {
-			q.Rol = c.Query("rol")
-			q.CapatazID = c.Query("capataz_id")
-		}
+	if u.Rol == "capataz" {
+		q.Rol = operacion.RolCapataz
+		q.CapatazID = u.CapatazID
+	} else {
+		q.Rol = c.Query("rol")
+		q.CapatazID = c.Query("capataz_id")
 	}
 	if err := operacion.ValidateQuery(q); err != nil {
 		writeOperacionErr(c, err)
@@ -252,7 +257,8 @@ func (h Operacion) Archive(c *gin.Context) {
 }
 
 func (h Operacion) Ficha(c *gin.Context) {
-	if _, ok := exige(c, "registrar"); !ok {
+	u, ok := exige(c, "registrar")
+	if !ok {
 		return
 	}
 	if h.Store == nil {
@@ -265,7 +271,7 @@ func (h Operacion) Ficha(c *gin.Context) {
 		return
 	}
 	body.ID = c.Param("id")
-	if err := h.Store.GuardarFicha(c.Request.Context(), body); err != nil {
+	if err := h.Store.GuardarFicha(c.Request.Context(), body, u.Rol, u.CapatazID); err != nil {
 		writeOperacionErr(c, err)
 		return
 	}
@@ -273,6 +279,9 @@ func (h Operacion) Ficha(c *gin.Context) {
 }
 
 func (h Operacion) Timeline(c *gin.Context) {
+	if _, ok := exige(c, "consultar"); !ok {
+		return
+	}
 	if h.Store == nil {
 		c.JSON(503, gin.H{"error": "base de datos no disponible"})
 		return
@@ -287,7 +296,10 @@ func (h Operacion) Timeline(c *gin.Context) {
 
 func writeOperacionErr(c *gin.Context, err error) {
 	var input operacion.InputError
+	var forb operacion.ForbiddenError
 	switch {
+	case errors.As(err, &forb):
+		c.JSON(403, gin.H{"error": forb.Reason})
 	case errors.Is(err, operacion.ErrProhibido):
 		c.JSON(403, gin.H{"error": "este rol no puede hacer esa acción"})
 	case errors.Is(err, operacion.ErrNoEncontrada):
