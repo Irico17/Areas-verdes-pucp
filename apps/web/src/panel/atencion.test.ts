@@ -6,6 +6,7 @@ import { Labores, type LaborItem } from "./Labores.tsx"
 import { PodaPanel } from "./Poda.tsx"
 import { codigoExterno, validarPoda, type PodaItem } from "./poda.ts"
 import { etiquetaRol } from "../producto.ts"
+import { estadosPermitidos, puedeEncolarEstado } from "../operacion.ts"
 import { ViveroPanel } from "./Vivero.tsx"
 import { validarVivero } from "./vivero.ts"
 
@@ -140,5 +141,74 @@ test("etiquetaRol y roles v2 muestran los nombres visibles correctos", () => {
   assert.equal(etiquetaRol("admin"), "Administrador del sistema")
   assert.equal(etiquetaRol("otro", "Rol Personalizado"), "Rol Personalizado")
   assert.equal(etiquetaRol("desconocido"), "desconocido")
+})
+
+test("capataz no puede cerrar ni cancelar labores ni encolar esos estados", () => {
+  const permitidosCapataz = estadosPermitidos("capataz")
+  assert.equal(permitidosCapataz.some((e) => e.id === "cerrada"), false)
+  assert.equal(permitidosCapataz.some((e) => e.id === "cancelada"), false)
+  assert.equal(permitidosCapataz.some((e) => e.id === "pendiente"), true)
+  assert.equal(permitidosCapataz.some((e) => e.id === "en_proceso"), true)
+
+  const permitidosCoord = estadosPermitidos("coordinacion")
+  assert.equal(permitidosCoord.some((e) => e.id === "cerrada"), true)
+  assert.equal(permitidosCoord.some((e) => e.id === "cancelada"), true)
+
+  assert.equal(puedeEncolarEstado("capataz", "cerrada"), false)
+  assert.equal(puedeEncolarEstado("capataz", "cancelada"), false)
+  assert.equal(puedeEncolarEstado("capataz", "en_proceso"), true)
+  assert.equal(puedeEncolarEstado("coordinacion", "cerrada"), true)
+  assert.equal(puedeEncolarEstado("jefatura", "cancelada"), true)
+
+  const htmlCapataz = renderToStaticMarkup(
+    createElement(Labores, {
+      rol: "capataz",
+      equipos: [],
+      equipoId: "cap-1",
+      onEquipo: () => {},
+      items: [labor],
+      estados: {},
+      onToggleEstado: () => {},
+      tipo: "",
+      onTipo: () => {},
+      pinMode: false,
+      onPinMode: () => {},
+      draft: null,
+      formTipo: "poda",
+      formTitulo: "",
+      formDetalle: "",
+      formEquipo: "",
+      onForm: () => {},
+      onCreate: () => {},
+      creating: false,
+      selected: labor,
+      onSelect: () => {},
+      timeline: [],
+      timelineError: "",
+      estadoNuevo: "pendiente",
+      onEstadoNuevo: () => {},
+      onEstado: () => {},
+      reasignarA: "",
+      onReasignarA: () => {},
+      onReasignar: () => {},
+      onArchivar: () => {},
+      confirmarArchivo: false,
+      notice: "",
+      queueCount: 0,
+      onFlush: () => {},
+      tipos: [{ id: "poda", label: "Poda" }],
+      formEjecutor: "propia",
+      motivos: [],
+      motivo: "",
+      onMotivo: () => {},
+      onSugerir: () => {},
+      sugerencia: "",
+      pista: null,
+      onConfirmarPista: () => {},
+    }),
+  )
+  assert.equal(htmlCapataz.includes('value="cerrada"'), false)
+  assert.equal(htmlCapataz.includes('value="cancelada"'), false)
+  assert.equal(htmlCapataz.includes('value="pendiente"'), true)
 })
 

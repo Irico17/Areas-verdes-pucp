@@ -29,6 +29,20 @@ export const ESTADOS = [
 
 export const ABIERTOS = ["pendiente", "en_proceso", "bloqueada"] as const
 
+export function estadosPermitidos(rol?: string) {
+  if (rol === "capataz") {
+    return ESTADOS.filter((estado) => estado.id !== "cerrada" && estado.id !== "cancelada")
+  }
+  return ESTADOS
+}
+
+export function puedeEncolarEstado(rol: string | undefined, estado: string): boolean {
+  if (rol === "capataz" && (estado === "cerrada" || estado === "cancelada")) {
+    return false
+  }
+  return true
+}
+
 export type Capataz = { id: string; equipo: string; turno: string }
 
 export type Evento = {

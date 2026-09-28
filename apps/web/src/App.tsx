@@ -15,6 +15,7 @@ import {
   fetchCapataces,
   fetchTimeline,
   lonLat,
+  puedeEncolarEstado,
   TIPOS,
   type Capataz,
   type CreateBody,
@@ -484,19 +485,30 @@ export default function App() {
 
   async function onEstado() {
     if (!selected || selected.queued) return
+    if (!puedeEncolarEstado(rol, estadoNuevo)) {
+      setNotice("El rol capataz no puede cerrar ni cancelar una labor.")
+      return
+    }
     try {
       await cambiarEstado(selected.id, estadoNuevo, rol, equipoId)
       setNotice("Estado actualizado.")
       await reloadActivities()
     } catch (error) {
       if (error instanceof ApiError && error.status === 0) {
-        await enqueueEstado({
-          id: crypto.randomUUID(),
-          actividadId: selected.id,
-          estado: estadoNuevo,
-          createdAt: new Date().toISOString(),
-        })
-        setNotice("Sin conexión: el cambio de estado quedó en la cola.")
+        try {
+          await enqueueEstado(
+            {
+              id: crypto.randomUUID(),
+              actividadId: selected.id,
+              estado: estadoNuevo,
+              createdAt: new Date().toISOString(),
+            },
+            rol,
+          )
+          setNotice("Sin conexión: el cambio de estado quedó en la cola.")
+        } catch (err) {
+          setNotice(err instanceof Error ? err.message : "No se pudo encolar el estado")
+        }
       } else {
         setNotice(error instanceof Error ? error.message : "No se pudo cambiar el estado")
       }

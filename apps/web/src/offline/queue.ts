@@ -1,4 +1,4 @@
-import type { CreateBody } from "../operacion"
+import { puedeEncolarEstado, type CreateBody } from "../operacion"
 
 export type QueuedLabor = {
   id: string
@@ -67,7 +67,10 @@ export async function listEstados(): Promise<QueuedEstado[]> {
   return (rows as QueuedEstado[]).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 }
 
-export async function enqueueEstado(item: QueuedEstado): Promise<void> {
+export async function enqueueEstado(item: QueuedEstado, rol?: string): Promise<void> {
+  if (!puedeEncolarEstado(rol, item.estado)) {
+    throw new Error("El rol capataz no puede cerrar ni cancelar una labor")
+  }
   const db = await openDb()
   await request(db.transaction(ESTADOS, "readwrite").objectStore(ESTADOS).put(item))
   db.close()

@@ -6,6 +6,7 @@ import { Esqueleto } from "../ui/Esqueleto"
 import {
   ABIERTOS,
   ESTADOS,
+  estadosPermitidos,
   TIPOS,
   etiquetaEstado,
   etiquetaEvento,
@@ -247,7 +248,7 @@ export function Labores(props: Props) {
               <label className="field">
                 Estado
                 <select value={props.estadoNuevo} onChange={(event) => props.onEstadoNuevo(event.target.value)}>
-                  {ESTADOS.map((estado) => (
+                  {estadosPermitidos(props.rol).map((estado) => (
                     <option key={estado.id} value={estado.id}>
                       {estado.label}
                     </option>
