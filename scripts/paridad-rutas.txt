@@ -125,10 +125,57 @@ jefatura GET /api/v1/geo/reservas-mock
 - GET /api/v1/geo/reservas-mock 401
 
 # Lote 11: Inventario 2B
-# admin GET /api/v1/inventario/tachos
-# admin GET /api/v1/inventario/bebederos
-# admin GET /api/v1/inventario/puntos
-# admin GET /api/v1/inventario/reservas
+admin GET /api/v1/inventario/tachos
+coordinacion GET /api/v1/inventario/tachos
+norte GET /api/v1/inventario/tachos
+jefatura GET /api/v1/inventario/tachos
+- GET /api/v1/inventario/tachos 401
+admin GET /api/v1/inventario/tachos.csv
+norte GET /api/v1/inventario/tachos.csv
+
+admin GET /api/v1/inventario/bebederos
+coordinacion GET /api/v1/inventario/bebederos
+norte GET /api/v1/inventario/bebederos
+jefatura GET /api/v1/inventario/bebederos
+- GET /api/v1/inventario/bebederos 401
+
+admin GET /api/v1/inventario/puntos
+admin GET /api/v1/inventario/puntos?q=central
+coordinacion GET /api/v1/inventario/puntos
+norte GET /api/v1/inventario/puntos
+jefatura GET /api/v1/inventario/puntos
+- GET /api/v1/inventario/puntos 401
+
+admin GET /api/v1/inventario/reservas
+admin GET /api/v1/inventario/reservas?desde=2026-09-01&hasta=2026-09-30
+coordinacion GET /api/v1/inventario/reservas
+norte GET /api/v1/inventario/reservas
+jefatura GET /api/v1/inventario/reservas
+- GET /api/v1/inventario/reservas 401
+
+admin GET /api/v1/inventario/capas/fauna
+admin GET /api/v1/inventario/capas/puertas
+admin GET /api/v1/inventario/capas/playas_estacionamiento
+admin GET /api/v1/inventario/capas/veredas_riesgo
+admin GET /api/v1/inventario/capas/xerofiticas
+admin GET /api/v1/inventario/capas/jardines_reserva
+admin GET /api/v1/inventario/capas/desconocida 404
+coordinacion GET /api/v1/inventario/capas/fauna
+norte GET /api/v1/inventario/capas/fauna
+jefatura GET /api/v1/inventario/capas/fauna
+- GET /api/v1/inventario/capas/fauna 401
+
+admin GET /api/v1/inventario/export/fauna
+admin GET /api/v1/inventario/export/puertas
+admin GET /api/v1/inventario/export/playas_estacionamiento
+admin GET /api/v1/inventario/export/veredas_riesgo
+admin GET /api/v1/inventario/export/xerofiticas
+admin GET /api/v1/inventario/export/jardines_reserva
+admin GET /api/v1/inventario/export/desconocida 404
+coordinacion GET /api/v1/inventario/export/fauna
+norte GET /api/v1/inventario/export/fauna
+jefatura GET /api/v1/inventario/export/fauna
+- GET /api/v1/inventario/export/fauna 401
 
 # Lote 12: Operación / labores
 # coordinacion GET /api/v1/operacion/capataces

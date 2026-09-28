@@ -18,6 +18,7 @@ func RegisterContainer(container *dig.Container) error {
 		archivos.NewGeoJSONEstaticoAdapter,
 		archivos.NewFotoDiscoAdapter,
 		archivos.NewReservasMockAdapter,
+		archivos.NewPuntosParser,
 	} {
 		if err := container.Provide(provider); err != nil {
 			return err

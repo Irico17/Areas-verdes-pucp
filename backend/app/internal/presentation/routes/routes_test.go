@@ -238,6 +238,88 @@ func (mockReservasMockRoutesUC) ObtenerAgenda(_ context.Context) (dto.ReservasMo
 	return dto.ReservasMockResponseDTO{Fake: true, Total: 0, Reservas: []dto.ReservaItemDTO{}}, []byte(`{"fake":true,"total":0,"reservas":[]}`), nil
 }
 
+type mockInventarioCampoRoutesUC struct{}
+
+func (mockInventarioCampoRoutesUC) ListarTachos(_ context.Context) (dto.ListarTachosResponseDTO, error) {
+	return dto.ListarTachosResponseDTO{Tachos: []dto.TachoDTO{}}, nil
+}
+func (mockInventarioCampoRoutesUC) GuardarTacho(_ context.Context, req dto.TachoDTO) (*dto.TachoDTO, error) {
+	req.ID = 1
+	return &req, nil
+}
+func (mockInventarioCampoRoutesUC) ActualizarTacho(_ context.Context, id int64, req dto.TachoDTO, _ []byte) (*dto.TachoDTO, error) {
+	req.ID = id
+	return &req, nil
+}
+func (mockInventarioCampoRoutesUC) CSVTachos(_ context.Context) (string, error) {
+	return "codigo,lugar\n", nil
+}
+func (mockInventarioCampoRoutesUC) BajaTacho(_ context.Context, _ int64) error {
+	return nil
+}
+func (mockInventarioCampoRoutesUC) ListarBebederos(_ context.Context) (dto.ListarBebederosResponseDTO, error) {
+	return dto.ListarBebederosResponseDTO{Bebederos: []dto.BebederoDTO{}}, nil
+}
+func (mockInventarioCampoRoutesUC) GuardarBebedero(_ context.Context, req dto.BebederoDTO) (*dto.BebederoDTO, error) {
+	req.ID = 1
+	return &req, nil
+}
+func (mockInventarioCampoRoutesUC) ActualizarBebedero(_ context.Context, id int64, req dto.BebederoDTO, _ []byte) (*dto.BebederoDTO, error) {
+	req.ID = id
+	return &req, nil
+}
+func (mockInventarioCampoRoutesUC) BajaBebedero(_ context.Context, _ int64) error {
+	return nil
+}
+func (mockInventarioCampoRoutesUC) ListarPuntos(_ context.Context, _ string) (dto.ListarPuntosResponseDTO, error) {
+	return dto.ListarPuntosResponseDTO{Puntos: []dto.PuntoDTO{}}, nil
+}
+func (mockInventarioCampoRoutesUC) GuardarPunto(_ context.Context, req dto.PuntoDTO, _ []byte) (*dto.PuntoDTO, error) {
+	req.ID = 1
+	return &req, nil
+}
+func (mockInventarioCampoRoutesUC) ActualizarPunto(_ context.Context, id int64, req dto.PuntoDTO, _ []byte) (*dto.PuntoDTO, error) {
+	req.ID = id
+	return &req, nil
+}
+func (mockInventarioCampoRoutesUC) BajaPunto(_ context.Context, _ int64) error {
+	return nil
+}
+func (mockInventarioCampoRoutesUC) FormatoPuntos(_ context.Context, _ []byte) (dto.FormatoPuntosResponseDTO, error) {
+	return dto.FormatoPuntosResponseDTO{Filas: 0, Rechazados: []dto.RechazoDTO{}, ColumnasOmitidas: []string{}, Nota: "columnas omitidas por datos personales"}, nil
+}
+func (mockInventarioCampoRoutesUC) ListarReservas(_ context.Context, _, _ string) (dto.ListarReservasResponseDTO, error) {
+	return dto.ListarReservasResponseDTO{Origen: "ficticio", Aviso: "Agenda ficticia", Reservas: []dto.ReservaDTO{}}, nil
+}
+func (mockInventarioCampoRoutesUC) GuardarReserva(_ context.Context, req dto.ReservaDTO) (*dto.ReservaDTO, error) {
+	req.ID = 1
+	return &req, nil
+}
+func (mockInventarioCampoRoutesUC) ActualizarReserva(_ context.Context, id int64, req dto.ReservaDTO, _ []byte) (*dto.ReservaDTO, error) {
+	req.ID = id
+	return &req, nil
+}
+func (mockInventarioCampoRoutesUC) BajaReserva(_ context.Context, _ int64) error {
+	return nil
+}
+func (mockInventarioCampoRoutesUC) ListarCapa(_ context.Context, _ string) (dto.ListarFichasCapaResponseDTO, error) {
+	return dto.ListarFichasCapaResponseDTO{Filas: []dto.FichaCapaDTO{}}, nil
+}
+func (mockInventarioCampoRoutesUC) GuardarCapa(_ context.Context, _ string, req dto.FichaCapaDTO) (*dto.FichaCapaDTO, error) {
+	req.ID = 1
+	return &req, nil
+}
+func (mockInventarioCampoRoutesUC) ActualizarCapa(_ context.Context, _ string, id int64, req dto.FichaCapaDTO, _ []byte) (*dto.FichaCapaDTO, error) {
+	req.ID = id
+	return &req, nil
+}
+func (mockInventarioCampoRoutesUC) CSVCapa(_ context.Context, _ string) (string, error) {
+	return "feature_id,nombre\n", nil
+}
+func (mockInventarioCampoRoutesUC) BajaCapa(_ context.Context, _ string, _ int64) error {
+	return nil
+}
+
 func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
@@ -276,6 +358,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	)
 	inventarioCtrl := controller.NewInventarioController(mockInventarioRoutesUC{}, zerolog.Nop())
 	reservasMockCtrl := controller.NewReservasMockController(mockReservasMockRoutesUC{}, zerolog.Nop())
+	inventarioCampoCtrl := controller.NewInventarioCampoController(mockInventarioCampoRoutesUC{}, zerolog.Nop())
 
 	permisosSvc := services.NewPermisosService()
 	limitador := ratelimit.NewMemoriaLimitador(100, time.Minute)
@@ -291,24 +374,26 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	catastroGrp := groups.NewCatastroGroup(areaVerdeCtrl, catastroCtrl, permisosSvc)
 	inventarioGrp := groups.NewInventarioGroup(inventarioCtrl, permisosSvc)
 	reservasMockGrp := groups.NewReservasMockGroup(reservasMockCtrl, permisosSvc)
+	inventarioCampoGrp := groups.NewInventarioCampoGroup(inventarioCampoCtrl, permisosSvc)
 
 	r := routes.NewRouter(routes.RouterParams{
-		Engine:            engine,
-		Config:            cfg,
-		Logger:            zerolog.Nop(),
-		Limitador:         limitador,
-		SesionUC:          mockSesionRoutesUC{},
-		HealthGroup:       healthGrp,
-		MetaGroup:         metaGrp,
-		LegadoGroup:       legadoGrp,
-		SwaggerGroup:      swaggerGrp,
-		SesionGroup:       sesionGrp,
-		AccesosGroup:      accesosGrp,
-		CatalogoGroup:     catalogoGrp,
-		GeoGroup:          geoGrp,
-		CatastroGroup:     catastroGrp,
-		InventarioGroup:   inventarioGrp,
-		ReservasMockGroup: reservasMockGrp,
+		Engine:               engine,
+		Config:               cfg,
+		Logger:               zerolog.Nop(),
+		Limitador:            limitador,
+		SesionUC:             mockSesionRoutesUC{},
+		HealthGroup:          healthGrp,
+		MetaGroup:            metaGrp,
+		LegadoGroup:          legadoGrp,
+		SwaggerGroup:         swaggerGrp,
+		SesionGroup:          sesionGrp,
+		AccesosGroup:         accesosGrp,
+		CatalogoGroup:        catalogoGrp,
+		GeoGroup:             geoGrp,
+		CatastroGroup:        catastroGrp,
+		InventarioGroup:      inventarioGrp,
+		ReservasMockGroup:    reservasMockGrp,
+		InventarioCampoGroup: inventarioCampoGrp,
 	})
 	r.Setup()
 	return engine
@@ -445,6 +530,53 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 		{http.MethodGet, "/areas-verdes/v1/geo/inventario/bebederos", 401},
 		{http.MethodGet, "/api/v1/geo/reservas-mock", 401},
 		{http.MethodGet, "/areas-verdes/v1/geo/reservas-mock", 401},
+		// Inventario campo frente 2B (Lote 11)
+		{http.MethodGet, "/api/v1/inventario/tachos", 401},
+		{http.MethodGet, "/areas-verdes/v1/inventario/tachos", 401},
+		{http.MethodPost, "/api/v1/inventario/tachos", 401},
+		{http.MethodPost, "/areas-verdes/v1/inventario/tachos", 401},
+		{http.MethodPatch, "/api/v1/inventario/tachos/1", 401},
+		{http.MethodPatch, "/areas-verdes/v1/inventario/tachos/1", 401},
+		{http.MethodGet, "/api/v1/inventario/tachos.csv", 401},
+		{http.MethodGet, "/areas-verdes/v1/inventario/tachos.csv", 401},
+		{http.MethodDelete, "/api/v1/inventario/tachos/1", 401},
+		{http.MethodDelete, "/areas-verdes/v1/inventario/tachos/1", 401},
+		{http.MethodGet, "/api/v1/inventario/bebederos", 401},
+		{http.MethodGet, "/areas-verdes/v1/inventario/bebederos", 401},
+		{http.MethodPost, "/api/v1/inventario/bebederos", 401},
+		{http.MethodPost, "/areas-verdes/v1/inventario/bebederos", 401},
+		{http.MethodPatch, "/api/v1/inventario/bebederos/1", 401},
+		{http.MethodPatch, "/areas-verdes/v1/inventario/bebederos/1", 401},
+		{http.MethodDelete, "/api/v1/inventario/bebederos/1", 401},
+		{http.MethodDelete, "/areas-verdes/v1/inventario/bebederos/1", 401},
+		{http.MethodGet, "/api/v1/inventario/puntos", 401},
+		{http.MethodGet, "/areas-verdes/v1/inventario/puntos", 401},
+		{http.MethodPost, "/api/v1/inventario/puntos", 401},
+		{http.MethodPost, "/areas-verdes/v1/inventario/puntos", 401},
+		{http.MethodPatch, "/api/v1/inventario/puntos/1", 401},
+		{http.MethodPatch, "/areas-verdes/v1/inventario/puntos/1", 401},
+		{http.MethodDelete, "/api/v1/inventario/puntos/1", 401},
+		{http.MethodDelete, "/areas-verdes/v1/inventario/puntos/1", 401},
+		{http.MethodPost, "/api/v1/inventario/formato/puntos", 401},
+		{http.MethodPost, "/areas-verdes/v1/inventario/formato/puntos", 401},
+		{http.MethodGet, "/api/v1/inventario/reservas", 401},
+		{http.MethodGet, "/areas-verdes/v1/inventario/reservas", 401},
+		{http.MethodPost, "/api/v1/inventario/reservas", 401},
+		{http.MethodPost, "/areas-verdes/v1/inventario/reservas", 401},
+		{http.MethodPatch, "/api/v1/inventario/reservas/1", 401},
+		{http.MethodPatch, "/areas-verdes/v1/inventario/reservas/1", 401},
+		{http.MethodDelete, "/api/v1/inventario/reservas/1", 401},
+		{http.MethodDelete, "/areas-verdes/v1/inventario/reservas/1", 401},
+		{http.MethodGet, "/api/v1/inventario/capas/fauna", 401},
+		{http.MethodGet, "/areas-verdes/v1/inventario/capas/fauna", 401},
+		{http.MethodPost, "/api/v1/inventario/capas/fauna", 401},
+		{http.MethodPost, "/areas-verdes/v1/inventario/capas/fauna", 401},
+		{http.MethodPatch, "/api/v1/inventario/capas/fauna/1", 401},
+		{http.MethodPatch, "/areas-verdes/v1/inventario/capas/fauna/1", 401},
+		{http.MethodGet, "/api/v1/inventario/export/fauna", 401},
+		{http.MethodGet, "/areas-verdes/v1/inventario/export/fauna", 401},
+		{http.MethodDelete, "/api/v1/inventario/capas/fauna/1", 401},
+		{http.MethodDelete, "/areas-verdes/v1/inventario/capas/fauna/1", 401},
 		{http.MethodGet, "/api/v1/no-existe", 404},
 		{http.MethodGet, "/areas-verdes/v1/no-existe", 404},
 	}
@@ -480,6 +612,34 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 			path = "/api/v1/geo/inventario/:capa"
 		case "/areas-verdes/v1/geo/inventario/bebederos":
 			path = "/areas-verdes/v1/geo/inventario/:capa"
+		case "/api/v1/inventario/tachos/1":
+			path = "/api/v1/inventario/tachos/:id"
+		case "/areas-verdes/v1/inventario/tachos/1":
+			path = "/areas-verdes/v1/inventario/tachos/:id"
+		case "/api/v1/inventario/bebederos/1":
+			path = "/api/v1/inventario/bebederos/:id"
+		case "/areas-verdes/v1/inventario/bebederos/1":
+			path = "/areas-verdes/v1/inventario/bebederos/:id"
+		case "/api/v1/inventario/puntos/1":
+			path = "/api/v1/inventario/puntos/:id"
+		case "/areas-verdes/v1/inventario/puntos/1":
+			path = "/areas-verdes/v1/inventario/puntos/:id"
+		case "/api/v1/inventario/reservas/1":
+			path = "/api/v1/inventario/reservas/:id"
+		case "/areas-verdes/v1/inventario/reservas/1":
+			path = "/areas-verdes/v1/inventario/reservas/:id"
+		case "/api/v1/inventario/capas/fauna":
+			path = "/api/v1/inventario/capas/:capa"
+		case "/areas-verdes/v1/inventario/capas/fauna":
+			path = "/areas-verdes/v1/inventario/capas/:capa"
+		case "/api/v1/inventario/capas/fauna/1":
+			path = "/api/v1/inventario/capas/:capa/:id"
+		case "/areas-verdes/v1/inventario/capas/fauna/1":
+			path = "/areas-verdes/v1/inventario/capas/:capa/:id"
+		case "/api/v1/inventario/export/fauna":
+			path = "/api/v1/inventario/export/:capa"
+		case "/areas-verdes/v1/inventario/export/fauna":
+			path = "/areas-verdes/v1/inventario/export/:capa"
 		}
 		key := want.metodo + " " + path
 		if !vistas[key] {
@@ -941,6 +1101,192 @@ func TestRutasInventarioYReservasMock_PermisosPorRol(t *testing.T) {
 
 		if w.Code != c.statusEsperado {
 			t.Errorf("%s %s (token=%s): esperado status %d, obtenido %d (%s)", c.metodo, c.ruta, c.token, c.statusEsperado, w.Code, w.Body.String())
+		}
+	}
+}
+
+func TestRutasInventarioCampo_SinAutenticacionDa401(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	rutas := []struct {
+		metodo string
+		ruta   string
+	}{
+		{http.MethodGet, "/api/v1/inventario/tachos"},
+		{http.MethodGet, "/areas-verdes/v1/inventario/tachos"},
+		{http.MethodPost, "/api/v1/inventario/tachos"},
+		{http.MethodPost, "/areas-verdes/v1/inventario/tachos"},
+		{http.MethodPatch, "/api/v1/inventario/tachos/1"},
+		{http.MethodPatch, "/areas-verdes/v1/inventario/tachos/1"},
+		{http.MethodGet, "/api/v1/inventario/tachos.csv"},
+		{http.MethodGet, "/areas-verdes/v1/inventario/tachos.csv"},
+		{http.MethodDelete, "/api/v1/inventario/tachos/1"},
+		{http.MethodDelete, "/areas-verdes/v1/inventario/tachos/1"},
+
+		{http.MethodGet, "/api/v1/inventario/bebederos"},
+		{http.MethodGet, "/areas-verdes/v1/inventario/bebederos"},
+		{http.MethodPost, "/api/v1/inventario/bebederos"},
+		{http.MethodPost, "/areas-verdes/v1/inventario/bebederos"},
+		{http.MethodPatch, "/api/v1/inventario/bebederos/1"},
+		{http.MethodPatch, "/areas-verdes/v1/inventario/bebederos/1"},
+		{http.MethodDelete, "/api/v1/inventario/bebederos/1"},
+		{http.MethodDelete, "/areas-verdes/v1/inventario/bebederos/1"},
+
+		{http.MethodGet, "/api/v1/inventario/puntos"},
+		{http.MethodGet, "/areas-verdes/v1/inventario/puntos"},
+		{http.MethodPost, "/api/v1/inventario/puntos"},
+		{http.MethodPost, "/areas-verdes/v1/inventario/puntos"},
+		{http.MethodPatch, "/api/v1/inventario/puntos/1"},
+		{http.MethodPatch, "/areas-verdes/v1/inventario/puntos/1"},
+		{http.MethodDelete, "/api/v1/inventario/puntos/1"},
+		{http.MethodDelete, "/areas-verdes/v1/inventario/puntos/1"},
+		{http.MethodPost, "/api/v1/inventario/formato/puntos"},
+		{http.MethodPost, "/areas-verdes/v1/inventario/formato/puntos"},
+
+		{http.MethodGet, "/api/v1/inventario/reservas"},
+		{http.MethodGet, "/areas-verdes/v1/inventario/reservas"},
+		{http.MethodPost, "/api/v1/inventario/reservas"},
+		{http.MethodPost, "/areas-verdes/v1/inventario/reservas"},
+		{http.MethodPatch, "/api/v1/inventario/reservas/1"},
+		{http.MethodPatch, "/areas-verdes/v1/inventario/reservas/1"},
+		{http.MethodDelete, "/api/v1/inventario/reservas/1"},
+		{http.MethodDelete, "/areas-verdes/v1/inventario/reservas/1"},
+
+		{http.MethodGet, "/api/v1/inventario/capas/fauna"},
+		{http.MethodGet, "/areas-verdes/v1/inventario/capas/fauna"},
+		{http.MethodPost, "/api/v1/inventario/capas/fauna"},
+		{http.MethodPost, "/areas-verdes/v1/inventario/capas/fauna"},
+		{http.MethodPatch, "/api/v1/inventario/capas/fauna/1"},
+		{http.MethodPatch, "/areas-verdes/v1/inventario/capas/fauna/1"},
+		{http.MethodGet, "/api/v1/inventario/export/fauna"},
+		{http.MethodGet, "/areas-verdes/v1/inventario/export/fauna"},
+		{http.MethodDelete, "/api/v1/inventario/capas/fauna/1"},
+		{http.MethodDelete, "/areas-verdes/v1/inventario/capas/fauna/1"},
+	}
+
+	for _, r := range rutas {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(r.metodo, r.ruta, bytes.NewBufferString(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		engine.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s sin auth: esperado 401, obtenido %d", r.metodo, r.ruta, w.Code)
+		}
+		if w.Body.String() != `{"error":"inicie sesión"}` {
+			t.Errorf("%s %s sin auth: cuerpo inesperado %s", r.metodo, r.ruta, w.Body.String())
+		}
+	}
+}
+
+func TestRutasInventarioCampo_PermisosPorRol(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	type caso struct {
+		metodo         string
+		ruta           string
+		token          string
+		body           string
+		statusEsperado int
+		errorEsperado  string
+	}
+
+	casos := []caso{
+		// Capataz (norte): consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/inventario/tachos", "token-norte", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/inventario/tachos", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/inventario/tachos", "token-norte", `{"lat":-12.0,"lon":-77.0,"tipo":"General"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/inventario/tachos/1", "token-norte", `{"tipo":"Plástico"}`, 200, ""},
+		{http.MethodGet, "/api/v1/inventario/tachos.csv", "token-norte", "", 200, ""},
+		{http.MethodDelete, "/api/v1/inventario/tachos/1", "token-norte", "", 200, ""},
+
+		{http.MethodGet, "/api/v1/inventario/bebederos", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/inventario/bebederos", "token-norte", `{"lat":-12.0,"lon":-77.0}`, 201, ""},
+		{http.MethodPatch, "/api/v1/inventario/bebederos/1", "token-norte", `{"operativo":true}`, 200, ""},
+		{http.MethodDelete, "/api/v1/inventario/bebederos/1", "token-norte", "", 200, ""},
+
+		{http.MethodGet, "/api/v1/inventario/puntos", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/inventario/puntos", "token-norte", `{"title":"P1","lat":-12.0,"lon":-77.0}`, 201, ""},
+		{http.MethodPatch, "/api/v1/inventario/puntos/1", "token-norte", `{"title":"P1-mod"}`, 200, ""},
+		{http.MethodDelete, "/api/v1/inventario/puntos/1", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/inventario/formato/puntos", "token-norte", `{"csv":"Title,Latitude,Longitude\nP1,-12.0,-77.0"}`, 200, ""},
+
+		{http.MethodGet, "/api/v1/inventario/reservas", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/inventario/reservas", "token-norte", `{"id_espacio":"E1","fecha":"2026-09-01"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/inventario/reservas/1", "token-norte", `{"solicitante":"Modif"}`, 200, ""},
+		{http.MethodDelete, "/api/v1/inventario/reservas/1", "token-norte", "", 200, ""},
+
+		{http.MethodGet, "/api/v1/inventario/capas/fauna", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/inventario/capas/fauna", "token-norte", `{"nombre":"F1","lat":-12.0,"lon":-77.0}`, 201, ""},
+		{http.MethodPatch, "/api/v1/inventario/capas/fauna/1", "token-norte", `{"nombre":"F1-mod"}`, 200, ""},
+		{http.MethodGet, "/api/v1/inventario/export/fauna", "token-norte", "", 200, ""},
+		{http.MethodDelete, "/api/v1/inventario/capas/fauna/1", "token-norte", "", 200, ""},
+
+		// Coordinación: consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/inventario/tachos", "token-coordinacion", "", 200, ""},
+		{http.MethodPost, "/api/v1/inventario/tachos", "token-coordinacion", `{"lat":-12.0,"lon":-77.0,"tipo":"General"}`, 201, ""},
+		{http.MethodGet, "/api/v1/inventario/reservas", "token-coordinacion", "", 200, ""},
+		{http.MethodPost, "/api/v1/inventario/reservas", "token-coordinacion", `{"id_espacio":"E1","fecha":"2026-09-01"}`, 201, ""},
+
+		// Admin: consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/inventario/tachos", "token-admin", "", 200, ""},
+		{http.MethodPost, "/api/v1/inventario/tachos", "token-admin", `{"lat":-12.0,"lon":-77.0,"tipo":"General"}`, 201, ""},
+		{http.MethodGet, "/api/v1/inventario/capas/fauna", "token-admin", "", 200, ""},
+		{http.MethodPost, "/api/v1/inventario/capas/fauna", "token-admin", `{"nombre":"F1","lat":-12.0,"lon":-77.0}`, 201, ""},
+
+		// Jefatura: consultar=true, registrar=false
+		{http.MethodGet, "/api/v1/inventario/tachos", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/inventario/tachos", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/inventario/bebederos", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/inventario/puntos", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/inventario/reservas", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/inventario/capas/fauna", "token-jefatura", "", 200, ""},
+		{http.MethodPost, "/api/v1/inventario/formato/puntos", "token-jefatura", `{"csv":"Title,Latitude,Longitude\nP1,-12.0,-77.0"}`, 200, ""}, // consultar=true permite formato/puntos
+
+		// Jefatura writes: forbidden 403
+		{http.MethodPost, "/api/v1/inventario/tachos", "token-jefatura", `{"lat":-12.0,"lon":-77.0}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/inventario/tachos", "token-jefatura", `{"lat":-12.0,"lon":-77.0}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/inventario/tachos/1", "token-jefatura", `{"tipo":"General"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodDelete, "/api/v1/inventario/tachos/1", "token-jefatura", "", 403, "su rol no tiene ese permiso"},
+
+		{http.MethodPost, "/api/v1/inventario/bebederos", "token-jefatura", `{"lat":-12.0,"lon":-77.0}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/inventario/bebederos/1", "token-jefatura", `{"operativo":true}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodDelete, "/api/v1/inventario/bebederos/1", "token-jefatura", "", 403, "su rol no tiene ese permiso"},
+
+		{http.MethodPost, "/api/v1/inventario/puntos", "token-jefatura", `{"title":"P1"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/inventario/puntos/1", "token-jefatura", `{"title":"P1"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodDelete, "/api/v1/inventario/puntos/1", "token-jefatura", "", 403, "su rol no tiene ese permiso"},
+
+		{http.MethodPost, "/api/v1/inventario/reservas", "token-jefatura", `{"id_espacio":"E1"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/inventario/reservas/1", "token-jefatura", `{"solicitante":"S"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodDelete, "/api/v1/inventario/reservas/1", "token-jefatura", "", 403, "su rol no tiene ese permiso"},
+
+		{http.MethodPost, "/api/v1/inventario/capas/fauna", "token-jefatura", `{"nombre":"F1"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/inventario/capas/fauna/1", "token-jefatura", `{"nombre":"F1"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodDelete, "/api/v1/inventario/capas/fauna/1", "token-jefatura", "", 403, "su rol no tiene ese permiso"},
+	}
+
+	for _, c := range casos {
+		w := httptest.NewRecorder()
+		var req *http.Request
+		if c.body != "" {
+			req = httptest.NewRequest(c.metodo, c.ruta, bytes.NewBufferString(c.body))
+			req.Header.Set("Content-Type", "application/json")
+		} else {
+			req = httptest.NewRequest(c.metodo, c.ruta, nil)
+		}
+		req.AddCookie(&http.Cookie{Name: "cv_sesion", Value: c.token})
+		engine.ServeHTTP(w, req)
+
+		if w.Code != c.statusEsperado {
+			t.Errorf("%s %s (token=%s): esperado status %d, obtenido %d (%s)", c.metodo, c.ruta, c.token, c.statusEsperado, w.Code, w.Body.String())
+		}
+		if c.errorEsperado != "" {
+			var body map[string]string
+			_ = json.Unmarshal(w.Body.Bytes(), &body)
+			if body["error"] != c.errorEsperado {
+				t.Errorf("%s %s (token=%s): error esperado %q, obtenido %q", c.metodo, c.ruta, c.token, c.errorEsperado, body["error"])
+			}
 		}
 	}
 }

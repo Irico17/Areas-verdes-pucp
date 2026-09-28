@@ -437,8 +437,12 @@ func geomFnCapa(capa string) string {
 }
 
 func (s *Store) devolverID(ctx context.Context, q string, args ...any) (int64, error) {
+	sqlDB, err := s.db.DB()
+	if err != nil {
+		return 0, err
+	}
 	var id int64
-	err := s.db.WithContext(ctx).Raw(q, args...).Scan(&id).Error
+	err = sqlDB.QueryRowContext(ctx, q, args...).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -673,9 +677,9 @@ func (s *Store) ActualizarReserva(ctx context.Context, id int64, r Reserva, doc 
 	nid, err := s.devolverID(ctx, `
 		UPDATE reservas_jardin SET
 		  jardin_id = CASE WHEN $9::jsonb ? 'jardin_id' THEN $1 ELSE jardin_id END,
-		  fecha = CASE WHEN $9::jsonb ? 'fecha' THEN $2 ELSE fecha END,
-		  hora_inicio = CASE WHEN $9::jsonb ? 'hora_inicio' THEN $3 ELSE hora_inicio END,
-		  hora_fin = CASE WHEN $9::jsonb ? 'hora_fin' THEN $4 ELSE hora_fin END,
+		  fecha = CASE WHEN $9::jsonb ? 'fecha' THEN NULLIF($2,'')::date ELSE fecha END,
+		  hora_inicio = CASE WHEN $9::jsonb ? 'hora_inicio' THEN NULLIF($3,'')::time ELSE hora_inicio END,
+		  hora_fin = CASE WHEN $9::jsonb ? 'hora_fin' THEN NULLIF($4,'')::time ELSE hora_fin END,
 		  estado = CASE WHEN $9::jsonb ? 'estado' THEN $5 ELSE estado END,
 		  evento = CASE WHEN $9::jsonb ? 'evento' THEN $6 ELSE evento END,
 		  unidad = CASE WHEN $9::jsonb ? 'unidad' THEN NULLIF($7,'') ELSE unidad END,

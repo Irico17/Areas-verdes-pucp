@@ -1,0 +1,6 @@
+{
+  "feature_id": "PUERTA-99",
+  "codigo": "P-99",
+  "nombre": "Puerta Universitaria Nueva",
+  "geojson": "{\"type\":\"Point\",\"coordinates\":[-77.080,-12.070]}"
+}

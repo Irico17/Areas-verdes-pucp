@@ -1,0 +1,8 @@
+{
+  "codigo": "PT-901",
+  "nota": "Tacho nuevo prueba",
+  "lugar": "Plaza Central",
+  "no_aprovechables": 10,
+  "papel_carton": 5,
+  "plastico": 3
+}

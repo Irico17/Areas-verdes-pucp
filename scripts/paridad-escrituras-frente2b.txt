@@ -1,0 +1,72 @@
+# Escrituras para prueba de paridad en copias de base de datos (lote 11: inventario de campo frente 2B)
+# Formato: <rol> <METODO> <ruta> [@path/al/cuerpo.json] [status_esperado]
+
+# --- Tachos ---
+admin POST /api/v1/inventario/tachos @scripts/cuerpos/tacho-crear.json 201
+admin POST /api/v1/inventario/tachos @scripts/cuerpos/tacho-crear-invalido.json 400
+jefatura POST /api/v1/inventario/tachos @scripts/cuerpos/tacho-crear.json 403
+norte PATCH /api/v1/inventario/tachos/1 @scripts/cuerpos/tacho-patch.json 200
+admin PATCH /api/v1/inventario/tachos/1 @scripts/cuerpos/tacho-patch-invalido.json 400
+jefatura PATCH /api/v1/inventario/tachos/1 @scripts/cuerpos/tacho-patch.json 403
+admin PATCH /api/v1/inventario/tachos/9999 @scripts/cuerpos/tacho-patch.json 400
+jefatura DELETE /api/v1/inventario/tachos/1 403
+admin DELETE /api/v1/inventario/tachos/1 200
+admin DELETE /api/v1/inventario/tachos/1 404
+admin DELETE /api/v1/inventario/tachos/9999 404
+
+# --- Bebederos ---
+coordinacion POST /api/v1/inventario/bebederos @scripts/cuerpos/bebedero-crear.json 201
+admin POST /api/v1/inventario/bebederos @scripts/cuerpos/bebedero-crear-invalido.json 400
+jefatura POST /api/v1/inventario/bebederos @scripts/cuerpos/bebedero-crear.json 403
+admin PATCH /api/v1/inventario/bebederos/1 @scripts/cuerpos/bebedero-patch.json 200
+admin PATCH /api/v1/inventario/bebederos/1 @scripts/cuerpos/bebedero-patch-invalido.json 400
+jefatura PATCH /api/v1/inventario/bebederos/1 @scripts/cuerpos/bebedero-patch.json 403
+admin PATCH /api/v1/inventario/bebederos/9999 @scripts/cuerpos/bebedero-patch.json 400
+admin DELETE /api/v1/inventario/bebederos/1 200
+admin DELETE /api/v1/inventario/bebederos/1 404
+admin DELETE /api/v1/inventario/bebederos/9999 404
+
+# --- Puntos ---
+admin POST /api/v1/inventario/puntos @scripts/cuerpos/punto-crear.json 201
+admin POST /api/v1/inventario/puntos @scripts/cuerpos/punto-crear-contacto.json 400
+admin POST /api/v1/inventario/puntos @scripts/cuerpos/punto-crear-invalido.json 400
+jefatura POST /api/v1/inventario/puntos @scripts/cuerpos/punto-crear.json 403
+norte PATCH /api/v1/inventario/puntos/1 @scripts/cuerpos/punto-patch.json 200
+admin PATCH /api/v1/inventario/puntos/1 @scripts/cuerpos/punto-patch-invalido.json 400
+jefatura PATCH /api/v1/inventario/puntos/1 @scripts/cuerpos/punto-patch.json 403
+admin PATCH /api/v1/inventario/puntos/9999 @scripts/cuerpos/punto-patch.json 400
+admin DELETE /api/v1/inventario/puntos/1 200
+admin DELETE /api/v1/inventario/puntos/1 404
+admin DELETE /api/v1/inventario/puntos/9999 404
+
+# --- Formato Puntos ---
+coordinacion POST /api/v1/inventario/formato/puntos @scripts/cuerpos/punto-formato.csv 200
+jefatura POST /api/v1/inventario/formato/puntos @scripts/cuerpos/punto-formato.csv 200
+
+# --- Reservas ---
+admin POST /api/v1/inventario/reservas @scripts/cuerpos/reserva-crear.json 201
+admin POST /api/v1/inventario/reservas @scripts/cuerpos/reserva-crear-invalido.json 400
+admin POST /api/v1/inventario/reservas @scripts/cuerpos/reserva-crear-origen-invalido.json 400
+jefatura POST /api/v1/inventario/reservas @scripts/cuerpos/reserva-crear.json 403
+norte PATCH /api/v1/inventario/reservas/1 @scripts/cuerpos/reserva-patch.json 200
+admin PATCH /api/v1/inventario/reservas/1 @scripts/cuerpos/reserva-patch-invalido.json 400
+jefatura PATCH /api/v1/inventario/reservas/1 @scripts/cuerpos/reserva-patch.json 403
+admin PATCH /api/v1/inventario/reservas/9999 @scripts/cuerpos/reserva-patch.json 400
+admin DELETE /api/v1/inventario/reservas/1 200
+admin DELETE /api/v1/inventario/reservas/1 404
+admin DELETE /api/v1/inventario/reservas/9999 404
+
+# --- Capas editables ---
+admin POST /api/v1/inventario/capas/fauna @scripts/cuerpos/capa-fauna-crear.json 201
+admin POST /api/v1/inventario/capas/fauna @scripts/cuerpos/capa-fauna-crear-invalido.json 400
+admin POST /api/v1/inventario/capas/no_existe @scripts/cuerpos/capa-fauna-crear.json 400
+jefatura POST /api/v1/inventario/capas/fauna @scripts/cuerpos/capa-fauna-crear.json 403
+coordinacion PATCH /api/v1/inventario/capas/fauna/1 @scripts/cuerpos/capa-fauna-patch.json 200
+jefatura PATCH /api/v1/inventario/capas/fauna/1 @scripts/cuerpos/capa-fauna-patch.json 403
+admin PATCH /api/v1/inventario/capas/fauna/9999 @scripts/cuerpos/capa-fauna-patch.json 400
+admin POST /api/v1/inventario/capas/puertas @scripts/cuerpos/capa-puertas-crear.json 201
+admin PATCH /api/v1/inventario/capas/puertas/1 @scripts/cuerpos/capa-puertas-patch.json 200
+admin DELETE /api/v1/inventario/capas/fauna/1 200
+admin DELETE /api/v1/inventario/capas/fauna/1 404
+admin DELETE /api/v1/inventario/capas/puertas/1 200
+admin DELETE /api/v1/inventario/capas/no_existe/1 404

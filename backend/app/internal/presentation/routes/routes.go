@@ -22,65 +22,68 @@ const (
 
 // Router is the main HTTP router.
 type Router struct {
-	engine            *gin.Engine
-	cfg               *config.Config
-	logger            zerolog.Logger
-	limitador         contracts.ILimitador
-	sesionUC          contracts.ISesionUseCase
-	healthGroup       *groups.HealthGroup
-	metaGroup         *groups.MetaGroup
-	legadoGroup       *groups.LegadoGroup
-	swaggerGroup      *groups.SwaggerGroup
-	sesionGroup       *groups.SesionGroup
-	accesosGroup      *groups.AccesosGroup
-	catalogoGroup     *groups.CatalogoGroup
-	geoGroup          *groups.GeoGroup
-	catastroGroup     *groups.CatastroGroup
-	inventarioGroup   *groups.InventarioGroup
-	reservasMockGroup *groups.ReservasMockGroup
+	engine               *gin.Engine
+	cfg                  *config.Config
+	logger               zerolog.Logger
+	limitador            contracts.ILimitador
+	sesionUC             contracts.ISesionUseCase
+	healthGroup          *groups.HealthGroup
+	metaGroup            *groups.MetaGroup
+	legadoGroup          *groups.LegadoGroup
+	swaggerGroup         *groups.SwaggerGroup
+	sesionGroup          *groups.SesionGroup
+	accesosGroup         *groups.AccesosGroup
+	catalogoGroup        *groups.CatalogoGroup
+	geoGroup             *groups.GeoGroup
+	catastroGroup        *groups.CatastroGroup
+	inventarioGroup      *groups.InventarioGroup
+	reservasMockGroup    *groups.ReservasMockGroup
+	inventarioCampoGroup *groups.InventarioCampoGroup
 }
 
 // RouterParams contains injected router dependencies.
 type RouterParams struct {
 	dig.In
 
-	Engine            *gin.Engine
-	Config            *config.Config
-	Logger            zerolog.Logger
-	Limitador         contracts.ILimitador
-	SesionUC          contracts.ISesionUseCase
-	HealthGroup       *groups.HealthGroup
-	MetaGroup         *groups.MetaGroup
-	LegadoGroup       *groups.LegadoGroup
-	SwaggerGroup      *groups.SwaggerGroup
-	SesionGroup       *groups.SesionGroup
-	AccesosGroup      *groups.AccesosGroup
-	CatalogoGroup     *groups.CatalogoGroup
-	GeoGroup          *groups.GeoGroup
-	CatastroGroup     *groups.CatastroGroup
-	InventarioGroup   *groups.InventarioGroup
-	ReservasMockGroup *groups.ReservasMockGroup
+	Engine               *gin.Engine
+	Config               *config.Config
+	Logger               zerolog.Logger
+	Limitador            contracts.ILimitador
+	SesionUC             contracts.ISesionUseCase
+	HealthGroup          *groups.HealthGroup
+	MetaGroup            *groups.MetaGroup
+	LegadoGroup          *groups.LegadoGroup
+	SwaggerGroup         *groups.SwaggerGroup
+	SesionGroup          *groups.SesionGroup
+	AccesosGroup         *groups.AccesosGroup
+	CatalogoGroup        *groups.CatalogoGroup
+	GeoGroup             *groups.GeoGroup
+	CatastroGroup        *groups.CatastroGroup
+	InventarioGroup      *groups.InventarioGroup
+	ReservasMockGroup    *groups.ReservasMockGroup
+	InventarioCampoGroup *groups.InventarioCampoGroup
 }
 
 // NewRouter creates the main router.
 func NewRouter(p RouterParams) *Router {
 	return &Router{
-		engine:            p.Engine,
-		cfg:               p.Config,
-		logger:            p.Logger,
-		limitador:         p.Limitador,
-		sesionUC:          p.SesionUC,
-		healthGroup:       p.HealthGroup,
-		metaGroup:         p.MetaGroup,
-		legadoGroup:       p.LegadoGroup,
-		swaggerGroup:      p.SwaggerGroup,
-		sesionGroup:       p.SesionGroup,
-		accesosGroup:      p.AccesosGroup,
-		catalogoGroup:     p.CatalogoGroup,
-		geoGroup:          p.GeoGroup,
-		catastroGroup:     p.CatastroGroup,
-		inventarioGroup:   p.InventarioGroup,
-		reservasMockGroup: p.ReservasMockGroup,
+		engine:               p.Engine,
+		cfg:                  p.Config,
+		logger:               p.Logger,
+		limitador:            p.Limitador,
+		sesionUC:             p.SesionUC,
+		healthGroup:          p.HealthGroup,
+		metaGroup:            p.MetaGroup,
+		legadoGroup:          p.LegadoGroup,
+		swaggerGroup:         p.SwaggerGroup,
+		sesionGroup:          p.SesionGroup,
+		accesosGroup:         p.AccesosGroup,
+		catalogoGroup:        p.CatalogoGroup,
+		geoGroup:             p.GeoGroup,
+		catastroGroup:        p.CatastroGroup,
+		inventarioGroup:      p.InventarioGroup,
+		reservasMockGroup:    p.ReservasMockGroup,
+		inventarioCampoGroup: p.InventarioCampoGroup,
 	}
 }
 
@@ -114,6 +117,7 @@ func (r *Router) Setup() {
 		r.catastroGroup.Register(prefix)
 		r.inventarioGroup.Register(prefix)
 		r.reservasMockGroup.Register(prefix)
+		r.inventarioCampoGroup.Register(prefix)
 	}
 
 	if r.cfg.Swagger.Enabled {

@@ -1,0 +1,9 @@
+{
+  "jardin_id": 1,
+  "fecha": "2026-11-10",
+  "hora_inicio": "10:00",
+  "hora_fin": "12:00",
+  "estado": "reservado",
+  "evento": "Exposicion Botanica",
+  "origen": "externo"
+}

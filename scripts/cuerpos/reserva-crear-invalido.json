@@ -1,0 +1,8 @@
+{
+  "jardin_id": 1,
+  "fecha": "2026-11-10",
+  "hora_inicio": "12:00",
+  "hora_fin": "10:00",
+  "estado": "reservado",
+  "evento": "Invalido fin antes de inicio"
+}
