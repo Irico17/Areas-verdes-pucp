@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -15,6 +16,7 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/services"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/ratelimit"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/controller"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/routes"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/routes/groups"
@@ -33,10 +35,6 @@ func (mockSesionRoutesUC) Login(_ context.Context, _, _ string) (string, *dto.Us
 	return "token", &dto.UsuarioSesionDTO{}, nil
 }
 
-func (mockSesionRoutesUC) Actual(_ context.Context, _ string) (*dto.UsuarioSesionDTO, error) {
-	return &dto.UsuarioSesionDTO{}, nil
-}
-
 func (mockSesionRoutesUC) Logout(_ context.Context, _ string) {
 }
 
@@ -53,6 +51,24 @@ func (mockSesionRoutesUC) Resolver(_ context.Context, token string) (*dto.Usuari
 	default:
 		return nil, errors.New("sin sesion")
 	}
+}
+
+type mockUsuarioRoutesUC struct{}
+
+func (mockUsuarioRoutesUC) ListarUsuarios(_ context.Context) (*dto.UsuariosResponseDTO, error) {
+	return &dto.UsuariosResponseDTO{
+		Usuarios: []dto.UsuarioSesionDTO{
+			{ID: 1, Usuario: "admin", Rol: enums.RolAdmin.String()},
+		},
+		Permisos: []dto.PermisoDTO{},
+		Aviso:    "aviso",
+	}, nil
+}
+
+type mockContratoOpenAPI struct{}
+
+func (mockContratoOpenAPI) ObtenerContrato() ([]byte, error) {
+	return []byte("openapi: 3.0.0"), nil
 }
 
 type mockCatalogoRoutesUC struct{}
@@ -89,30 +105,50 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	engine := gin.New()
 	_ = engine.SetTrustedProxies([]string{})
 
-	cfg := config.New()
-	cfg.Swagger.Enabled = swaggerEnabled
+	cfg := &config.Config{
+		Server: config.ServerConfig{
+			Port:    "8080",
+			GinMode: "release",
+		},
+		Swagger: config.SwaggerConfig{
+			Enabled: swaggerEnabled,
+		},
+		Seguridad: config.SeguridadConfig{
+			CORSOrigins:    []string{"*"},
+			CookieSecure:   false,
+			CookieSameSite: "lax",
+		},
+	}
 
 	healthCtrl := controller.NewHealthController(mockSaludUC{})
-	metaCtrl := controller.NewMetaController(cfg)
+	metaCtrl := controller.NewMetaController(mockContratoOpenAPI{})
+	sesionCtrl := controller.NewSesionController(mockSesionRoutesUC{})
+	usuarioCtrl := controller.NewUsuarioController(mockUsuarioRoutesUC{})
 	catalogoCtrl := controller.NewCatalogoController(mockCatalogoRoutesUC{})
 
 	permisosSvc := services.NewPermisosService()
+	limitador := ratelimit.NewMemoriaLimitador(100, time.Minute)
 
 	healthGrp := groups.NewHealthGroup(healthCtrl)
 	metaGrp := groups.NewMetaGroup(metaCtrl)
-	legadoGrp := groups.NewLegadoGroup(healthCtrl, metaCtrl)
+	legadoGrp := groups.NewLegadoGroup(healthCtrl)
 	swaggerGrp := groups.NewSwaggerGroup()
+	sesionGrp := groups.NewSesionGroup(sesionCtrl)
+	accesosGrp := groups.NewAccesosGroup(usuarioCtrl)
 	catalogoGrp := groups.NewCatalogoGroup(catalogoCtrl, permisosSvc)
 
 	r := routes.NewRouter(routes.RouterParams{
 		Engine:        engine,
 		Config:        cfg,
 		Logger:        zerolog.Nop(),
+		Limitador:     limitador,
 		SesionUC:      mockSesionRoutesUC{},
 		HealthGroup:   healthGrp,
 		MetaGroup:     metaGrp,
 		LegadoGroup:   legadoGrp,
 		SwaggerGroup:  swaggerGrp,
+		SesionGroup:   sesionGrp,
+		AccesosGroup:  accesosGrp,
 		CatalogoGroup: catalogoGrp,
 	})
 	r.Setup()
@@ -171,7 +207,6 @@ func TestMontajeDoblePrefijos(t *testing.T) {
 
 	for _, ruta := range []string{
 		"/areas-verdes/v1/health",
-		"/api/v1/health",
 		"/areas-verdes/v1",
 		"/api/v1",
 		"/health",
@@ -182,6 +217,76 @@ func TestMontajeDoblePrefijos(t *testing.T) {
 
 		if w.Code != http.StatusOK {
 			t.Errorf("se esperaba 200 en %s, obtenido %d", ruta, w.Code)
+		}
+	}
+
+	// /api/v1/health debe dar 404 para paridad con la API anterior (decisión 17)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
+	engine.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("se esperaba 404 en /api/v1/health, obtenido %d", w.Code)
+	}
+}
+
+func TestRutasActualesRespondenIgual(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	rutasCongeladas := []struct {
+		metodo string
+		ruta   string
+		codigo int
+	}{
+		{http.MethodGet, "/health", 200},
+		{http.MethodGet, "/api/v1", 200},
+		{http.MethodGet, "/areas-verdes/v1", 200},
+		{http.MethodGet, "/api/v1/openapi.yaml", 200},
+		{http.MethodGet, "/areas-verdes/v1/openapi.yaml", 200},
+		{http.MethodGet, "/areas-verdes/v1/health", 200},
+		{http.MethodGet, "/api/v1/health", 404},
+		{http.MethodGet, "/api/v1/sesion", 401},
+		{http.MethodGet, "/areas-verdes/v1/sesion", 401},
+		{http.MethodDelete, "/api/v1/sesion", 200},
+		{http.MethodDelete, "/areas-verdes/v1/sesion", 200},
+		// Accesos (sin sesión da 403 por paridad con API anterior)
+		{http.MethodGet, "/api/v1/accesos/usuarios", 403},
+		{http.MethodGet, "/areas-verdes/v1/accesos/usuarios", 403},
+		{http.MethodGet, "/api/v1/catalogos", 401},
+		{http.MethodGet, "/areas-verdes/v1/catalogos", 401},
+		{http.MethodPost, "/api/v1/catalogos", 401},
+		{http.MethodPost, "/areas-verdes/v1/catalogos", 401},
+		{http.MethodPost, "/api/v1/catalogos/1/desactivar", 401},
+		{http.MethodPost, "/areas-verdes/v1/catalogos/1/desactivar", 401},
+		{http.MethodGet, "/api/v1/no-existe", 404},
+		{http.MethodGet, "/areas-verdes/v1/no-existe", 404},
+	}
+
+	vistas := map[string]bool{}
+	for _, rt := range engine.Routes() {
+		vistas[rt.Method+" "+rt.Path] = true
+	}
+
+	for _, want := range rutasCongeladas {
+		if want.codigo == 404 {
+			continue
+		}
+		path := want.ruta
+		if path == "/api/v1/catalogos/1/desactivar" {
+			path = "/api/v1/catalogos/:id/desactivar"
+		} else if path == "/areas-verdes/v1/catalogos/1/desactivar" {
+			path = "/areas-verdes/v1/catalogos/:id/desactivar"
+		}
+		key := want.metodo + " " + path
+		if !vistas[key] {
+			t.Errorf("falta la ruta registrada %s", key)
+		}
+	}
+
+	for _, want := range rutasCongeladas {
+		w := httptest.NewRecorder()
+		engine.ServeHTTP(w, httptest.NewRequest(want.metodo, want.ruta, nil))
+		if w.Code != want.codigo {
+			t.Errorf("%s %s -> %d, se esperaba %d (%s)", want.metodo, want.ruta, w.Code, want.codigo, w.Body.String())
 		}
 	}
 }

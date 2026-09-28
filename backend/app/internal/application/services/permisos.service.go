@@ -6,8 +6,11 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 )
 
-// MatrizPermisos defines default role-action permissions.
-// jefatura includes 'evidencias' per current apps/api specification.
+// MatrizPermisos defines the seed permission matrix for roles and default actions.
+// In this phase (batches 1-6), enforcement runs against this in-memory matrix for strict
+// parity with the legacy API; reading dynamically from the database is deferred to
+// post-cutover per migration plan §9 lote 6.
+// Note: jefatura includes 'evidencias' per current apps/api specification.
 var MatrizPermisos = map[string][]string{
 	enums.RolCapataz.String():      {"consultar", "registrar"},
 	enums.RolCoordinacion.String(): {"consultar", "registrar", "validar", "solicitudes", "reportes"},
@@ -29,15 +32,6 @@ func (s *permisosService) Permite(rol, accion string) bool {
 	}
 	for _, a := range acciones {
 		if a == accion {
-			return true
-		}
-	}
-	return false
-}
-
-func (s *permisosService) PermiteAlguno(rol string, acciones ...string) bool {
-	for _, accion := range acciones {
-		if s.Permite(rol, accion) {
 			return true
 		}
 	}

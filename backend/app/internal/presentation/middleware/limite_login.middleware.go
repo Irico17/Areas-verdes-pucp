@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
+	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
 // LimiteLogin limits POST login requests per client IP.
@@ -13,7 +14,7 @@ func LimiteLogin(lim contracts.ILimitador) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Method == http.MethodPost && isLoginPath(c.Request.URL.Path) {
 			if !lim.Permitir(c.ClientIP()) {
-				c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "demasiados intentos de ingreso"})
+				c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": domainErrors.ErrDemasiadosIntentos.Error()})
 				return
 			}
 		}

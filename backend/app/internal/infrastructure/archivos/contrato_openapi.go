@@ -1,5 +1,5 @@
-// Package controller handles incoming HTTP requests.
-package controller
+// Package archivos provides file and document reading adapters.
+package archivos
 
 import (
 	"fmt"
@@ -9,7 +9,34 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
 )
+
+type contratoOpenAPIAdapter struct {
+	openAPIPath string
+}
+
+// NewContratoOpenAPIAdapter creates an adapter to load and merge OpenAPI YAML contracts.
+func NewContratoOpenAPIAdapter(cfg *config.Config) contracts.IContratoOpenAPI {
+	path := ""
+	if cfg != nil {
+		path = cfg.Datos.OpenAPIPath
+	}
+	return &contratoOpenAPIAdapter{openAPIPath: path}
+}
+
+// ObtenerContrato returns the merged OpenAPI contract bytes.
+func (a *contratoOpenAPIAdapter) ObtenerContrato() ([]byte, error) {
+	if a.openAPIPath == "" {
+		return nil, os.ErrNotExist
+	}
+	if _, err := os.Stat(a.openAPIPath); err != nil {
+		return nil, err
+	}
+	return UnirContrato(a.openAPIPath)
+}
 
 // UnirContrato reads openapi.yaml and merges paths from openapi/<tag>.yaml.
 func UnirContrato(path string) ([]byte, error) {

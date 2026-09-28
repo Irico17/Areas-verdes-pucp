@@ -5,10 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"gorm.io/gorm"
-
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/services"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 )
@@ -30,31 +27,31 @@ var semillas = []seedAccount{
 }
 
 type semillaAccesosUseCase struct {
-	db          *gorm.DB
+	transaccion contracts.ITransaccion
 	usuarioRepo contracts.IUsuarioRepository
 	permisoRepo contracts.IPermisoRepository
+	permisosSvc contracts.IPermisosService
 	hasher      contracts.IHasher
 }
 
 // NewSemillaAccesosUseCase creates a use case to seed accounts and default permissions.
 func NewSemillaAccesosUseCase(
-	db *gorm.DB,
+	transaccion contracts.ITransaccion,
 	usuarioRepo contracts.IUsuarioRepository,
 	permisoRepo contracts.IPermisoRepository,
+	permisosSvc contracts.IPermisosService,
 	hasher contracts.IHasher,
 ) contracts.ISemillaAccesosUseCase {
 	return &semillaAccesosUseCase{
-		db:          db,
+		transaccion: transaccion,
 		usuarioRepo: usuarioRepo,
 		permisoRepo: permisoRepo,
+		permisosSvc: permisosSvc,
 		hasher:      hasher,
 	}
 }
 
 func (uc *semillaAccesosUseCase) Ensure(ctx context.Context, password string) error {
-	if uc.db == nil {
-		return errors.New("sin base")
-	}
 	password = strings.TrimSpace(password)
 	if password == "" {
 		return errors.New("falta CAMPUS_DEV_PASSWORD")
@@ -65,26 +62,30 @@ func (uc *semillaAccesosUseCase) Ensure(ctx context.Context, password string) er
 		return err
 	}
 
-	return uc.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return uc.transaccion.Ejecutar(ctx, func(txCtx context.Context) error {
 		for _, s := range semillas {
-			var n int64
-			if err := tx.Raw(`SELECT count(*) FROM usuarios WHERE usuario = $1`, s.usuario).Scan(&n).Error; err != nil {
+			existe, err := uc.usuarioRepo.ExistePorUsuario(txCtx, s.usuario)
+			if err != nil {
 				return err
 			}
-			if n > 0 {
+			if existe {
 				continue
 			}
-			if err := tx.Exec(`
-				INSERT INTO usuarios (usuario, nombre, rol, capataz_id, password_hash)
-				VALUES ($1, $2, $3, NULLIF($4, ''), $5)`,
-				s.usuario, s.nombre, s.rol, s.capataz, hash,
-			).Error; err != nil {
+			u := &entities.Usuario{
+				Usuario:      s.usuario,
+				Nombre:       s.nombre,
+				Rol:          s.rol,
+				CapatazID:    s.capataz,
+				PasswordHash: hash,
+				Activo:       true,
+			}
+			if err := uc.usuarioRepo.Crear(txCtx, u); err != nil {
 				return err
 			}
 		}
 
 		permisosList := make([]entities.Permiso, 0)
-		for rol, acciones := range services.MatrizPermisos {
+		for rol, acciones := range uc.permisosSvc.Matriz() {
 			for _, accion := range acciones {
 				permisosList = append(permisosList, entities.Permiso{
 					Rol:    rol,
@@ -93,17 +94,6 @@ func (uc *semillaAccesosUseCase) Ensure(ctx context.Context, password string) er
 			}
 		}
 
-		for _, p := range permisosList {
-			if err := tx.Exec(`
-				INSERT INTO permisos (rol, accion)
-				VALUES ($1, $2)
-				ON CONFLICT (rol, accion) DO NOTHING`,
-				p.Rol, p.Accion,
-			).Error; err != nil {
-				return err
-			}
-		}
-
-		return nil
+		return uc.permisoRepo.Sembrar(txCtx, permisosList)
 	})
 }

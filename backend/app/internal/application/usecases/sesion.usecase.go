@@ -6,13 +6,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"strings"
-	"time"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
+
+// dummyHash is a valid bcrypt hash used to prevent timing attacks when credentials or users are invalid.
+const dummyHash = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
 
 type sesionUseCase struct {
 	sesionRepo  contracts.ISesionRepository
@@ -36,11 +38,13 @@ func NewSesionUseCase(
 func (uc *sesionUseCase) Login(ctx context.Context, usuario, clave string) (string, *dto.UsuarioSesionDTO, error) {
 	usuario = strings.TrimSpace(usuario)
 	if usuario == "" || clave == "" {
+		_ = uc.hasher.Compare(dummyHash, "dummy-password")
 		return "", nil, domainErrors.ErrCredencialesInvalidas
 	}
 
 	u, err := uc.usuarioRepo.ObtenerPorUsuario(ctx, usuario)
 	if err != nil || u == nil || !u.Activo {
+		_ = uc.hasher.Compare(dummyHash, clave)
 		return "", nil, domainErrors.ErrCredencialesInvalidas
 	}
 
@@ -59,7 +63,6 @@ func (uc *sesionUseCase) Login(ctx context.Context, usuario, clave string) (stri
 	sesion := &entities.Sesion{
 		TokenHash: tokenHash,
 		UsuarioID: u.ID,
-		ExpiresAt: time.Now().Add(12 * time.Hour),
 	}
 	if err := uc.sesionRepo.Crear(ctx, sesion); err != nil {
 		return "", nil, err
@@ -97,10 +100,6 @@ func (uc *sesionUseCase) Resolver(ctx context.Context, token string) (*dto.Usuar
 		RolNombre: u.RolNombre,
 		CapatazID: u.CapatazID,
 	}, nil
-}
-
-func (uc *sesionUseCase) Actual(ctx context.Context, token string) (*dto.UsuarioSesionDTO, error) {
-	return uc.Resolver(ctx, token)
 }
 
 func (uc *sesionUseCase) Logout(ctx context.Context, token string) {

@@ -15,11 +15,16 @@ func UsuarioToEntity(m *models.UsuarioModel) *entities.Usuario {
 	if m.CapatazID != nil {
 		capataz = *m.CapatazID
 	}
+	rolNombre := ""
+	if m.RolNombre != nil {
+		rolNombre = *m.RolNombre
+	}
 	return &entities.Usuario{
 		ID:           m.ID,
 		Usuario:      m.Usuario,
 		Nombre:       m.Nombre,
 		Rol:          m.Rol,
+		RolNombre:    rolNombre,
 		CapatazID:    capataz,
 		PasswordHash: m.PasswordHash,
 		Activo:       m.Activo,

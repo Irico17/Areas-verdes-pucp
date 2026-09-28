@@ -9,6 +9,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
+	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/middleware"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/routes/groups"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
@@ -42,26 +43,22 @@ type RouterParams struct {
 	Engine        *gin.Engine
 	Config        *config.Config
 	Logger        zerolog.Logger
-	Limitador     contracts.ILimitador     `optional:"true"`
-	SesionUC      contracts.ISesionUseCase `optional:"true"`
+	Limitador     contracts.ILimitador
+	SesionUC      contracts.ISesionUseCase
 	HealthGroup   *groups.HealthGroup
 	MetaGroup     *groups.MetaGroup
 	LegadoGroup   *groups.LegadoGroup
 	SwaggerGroup  *groups.SwaggerGroup
-	SesionGroup   *groups.SesionGroup   `optional:"true"`
-	AccesosGroup  *groups.AccesosGroup  `optional:"true"`
-	CatalogoGroup *groups.CatalogoGroup `optional:"true"`
+	SesionGroup   *groups.SesionGroup
+	AccesosGroup  *groups.AccesosGroup
+	CatalogoGroup *groups.CatalogoGroup
 }
 
 // NewRouter creates the main router.
 func NewRouter(p RouterParams) *Router {
-	cfg := p.Config
-	if cfg == nil {
-		cfg = config.New()
-	}
 	return &Router{
 		engine:        p.Engine,
-		cfg:           cfg,
+		cfg:           p.Config,
 		logger:        p.Logger,
 		limitador:     p.Limitador,
 		sesionUC:      p.SesionUC,
@@ -85,47 +82,31 @@ func (r *Router) Setup() {
 			Secure:   r.cfg.Seguridad.CookieSecure,
 			SameSite: middleware.ParseSameSite(r.cfg.Seguridad.CookieSameSite),
 		}),
-		middleware.Errores(),
+		middleware.Errores(r.logger),
+		middleware.LimiteLogin(r.limitador),
+		middleware.Auth(r.sesionUC),
 	)
-
-	if r.limitador != nil {
-		r.engine.Use(middleware.LimiteLogin(r.limitador))
-	}
-
-	if r.sesionUC != nil {
-		r.engine.Use(middleware.Auth(r.sesionUC))
-	}
 
 	servicePath := r.engine.Group(basePath)
 	legacyPath := r.engine.Group(legacyBasePath)
 
+	// Health group is mounted only on /areas-verdes/v1 per decision 17
+	r.healthGroup.Register(servicePath)
+
 	for _, prefix := range []gin.IRouter{servicePath, legacyPath} {
-		if r.healthGroup != nil {
-			r.healthGroup.Register(prefix)
-		}
-		if r.metaGroup != nil {
-			r.metaGroup.Register(prefix)
-		}
-		if r.sesionGroup != nil {
-			r.sesionGroup.Register(prefix)
-		}
-		if r.accesosGroup != nil {
-			r.accesosGroup.Register(prefix)
-		}
-		if r.catalogoGroup != nil {
-			r.catalogoGroup.Register(prefix)
-		}
+		r.metaGroup.Register(prefix)
+		r.sesionGroup.Register(prefix)
+		r.accesosGroup.Register(prefix)
+		r.catalogoGroup.Register(prefix)
 	}
 
-	if r.cfg.Swagger.Enabled && r.swaggerGroup != nil {
+	if r.cfg.Swagger.Enabled {
 		r.swaggerGroup.Register(servicePath)
 	}
 
-	if r.legadoGroup != nil {
-		r.legadoGroup.Register(r.engine)
-	}
+	r.legadoGroup.Register(r.engine)
 
 	r.engine.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "ruta no encontrada"})
+		c.JSON(http.StatusNotFound, gin.H{"error": domainErrors.ErrRutaNoEncontrada.Error()})
 	})
 }

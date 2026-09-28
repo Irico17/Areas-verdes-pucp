@@ -17,7 +17,6 @@ type ISesionRepository interface {
 // ISesionUseCase defines application operations for authentication and session management.
 type ISesionUseCase interface {
 	Login(ctx context.Context, usuario, clave string) (string, *dto.UsuarioSesionDTO, error)
-	Actual(ctx context.Context, token string) (*dto.UsuarioSesionDTO, error)
 	Logout(ctx context.Context, token string)
 	Resolver(ctx context.Context, token string) (*dto.UsuarioSesionDTO, error)
 }

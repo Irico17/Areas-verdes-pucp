@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
+	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/middleware"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/requests"
 )
@@ -39,11 +40,6 @@ func NewSesionController(sesionUC contracts.ISesionUseCase) ISesionController {
 // @Failure 503 {object} map[string]string "base de datos no disponible"
 // @Router /v1/sesion [post]
 func (ctrl *sesionController) Entrar(c *gin.Context) {
-	if ctrl.sesionUC == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "base de datos no disponible"})
-		return
-	}
-
 	var req requests.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido"})
@@ -52,7 +48,7 @@ func (ctrl *sesionController) Entrar(c *gin.Context) {
 
 	token, user, err := ctrl.sesionUC.Login(c.Request.Context(), req.Usuario, req.Clave)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "usuario o clave incorrectos"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": domainErrors.ErrCredencialesInvalidas.Error()})
 		return
 	}
 
@@ -72,7 +68,7 @@ func (ctrl *sesionController) Entrar(c *gin.Context) {
 func (ctrl *sesionController) Actual(c *gin.Context) {
 	u, ok := middleware.UsuarioEn(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "sin sesión"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": domainErrors.ErrSinSesion.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"usuario": u})
@@ -86,10 +82,8 @@ func (ctrl *sesionController) Actual(c *gin.Context) {
 // @Success 200 {object} map[string]bool "ok: true"
 // @Router /v1/sesion [delete]
 func (ctrl *sesionController) Salir(c *gin.Context) {
-	if ctrl.sesionUC != nil {
-		if cookie, err := c.Request.Cookie(middleware.CookieSesion); err == nil {
-			ctrl.sesionUC.Logout(c.Request.Context(), cookie.Value)
-		}
+	if cookie, err := c.Request.Cookie(middleware.CookieSesion); err == nil {
+		ctrl.sesionUC.Logout(c.Request.Context(), cookie.Value)
 	}
 	opts := middleware.ObtenerOpcionesCookie(c)
 	middleware.EscribirCookie(c.Writer, opts, "", -1)

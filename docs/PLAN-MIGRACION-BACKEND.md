@@ -137,6 +137,8 @@ El `backend/README.md` (línea 144) menciona `shared/` como «Configuración, lo
 | `presentation/requests` | `<entidad>.request.go` | cuerpos con `binding:"..."` |
 | `presentation/middleware` | `<nombre>.middleware.go` | `auth`, `permiso`, `cors`, `bitacora`, `limite_login`, `errores` |
 
+> **Desviación de contratos:** Las interfaces de casos de uso (`I<X>UseCase`) y servicios residen en `application/contracts` (en lugar de `application/usecases`) para mantener a la capa de presentación dependiendo exclusivamente de contratos abstractos.
+
 ### 1.6 Acceso a BD y migraciones
 
 - `persistence/database/database.go` → `NewConnection(cfg *config.Config) (*gorm.DB, error)` arma un DSN `host=… port=… user=… password=… dbname=… search_path=<schema> sslmode=…` y llama `gorm.Open(postgres.Open(dsn), &gorm.Config{})`. No configura pool, ni logger de GORM, ni reintentos, ni `DATABASE_URL`.
@@ -379,6 +381,8 @@ Reglas para los modelos GORM: `TableName()` apunta a nuestra tabla; **prohibido 
 ### 4.3 Migraciones aditivas hacia el núcleo (045+)
 
 > **Renumeración (fase 2).** La `045` se usó en la rama `fix/seguridad-datos-permisos` para las etiquetas de rol v2 (`045_roles_v2_etiquetas.sql`, con historial en `cambios`, columnas `roles.descripcion`/`activo` y el permiso `evidencias` de jefatura), y la `046` en el lote 6 para la FK `usuarios.rol → roles.codigo` (`046_usuarios_rol_fk.sql`). Las migraciones del núcleo de esta tabla se corren un número: `047_evidencia_evento.sql`, `048_sync_offline.sql`, `049_estados_nucleo.sql` y `050_vistas_nucleo.sql` (lote 24).
+>
+> **Nota sobre migración 046 (`046_usuarios_rol_fk.sql`):** La ejecución consecutiva de `NOT VALID` y `VALIDATE CONSTRAINT` dentro de la misma transacción en la migración 046 es intencional y completamente inofensiva en bases de datos con el volumen actual; se mantiene sin editar para preservar los checksums y el estado ya aplicado en entornos de prueba y producción.
 
 Todas idempotentes (`IF NOT EXISTS`, `ON CONFLICT DO NOTHING`, `DO $$ … IF NOT EXISTS (SELECT 1 FROM pg_constraint …)`), columnas nuevas **nulas o con DEFAULT** (para que la imagen anterior siga funcionando si hay rollback), y todo `UPDATE` de datos con su antes/después en `cambios`. Nada de `DROP TABLE`, `DROP COLUMN`, `TRUNCATE` ni `DELETE` de datos cargados.
 
@@ -577,7 +581,7 @@ Cambios de código asociados (lote 6):
 - **Aceptación:** login `norte`/`coordinacion`/`jefatura`/`admin` con `CAMPUS_DEV_PASSWORD` → misma cookie `cv_sesion` (atributos iguales); una sesión creada por la API vieja es válida en la nueva y al revés; `GET /sesion` sin cookie → 401 `{"error":…}` igual; paridad de `/sesion` y `/accesos/usuarios`; `SELECT count(*) FROM usuarios` sin cambios.
 
 ### Lote 6: Roles v2 (migración 045 y permisos configurables)
-- **Alcance:** `apps/api/migrations/045_roles_v2.sql` (§5; se agrega en la carpeta vigente para que **ambos** backends la vean); semilla de permisos por upsert; `rol_nombre` en la sesión; `enums/rol.enum.go`.
+- **Alcance:** `apps/api/migrations/045_roles_v2.sql` (§5; se agrega en la carpeta vigente para que **ambos** backends la vean); semilla de permisos por upsert; `rol_nombre` en la sesión; `enums/rol.enum.go`. Enforcement desde BD diferido a post-corte (enforcement en matriz en memoria por paridad con API previa).
 - **Aceptación:** ensayo en copia: `SELECT codigo, nombre FROM roles` = tabla del §5; `usuarios` y `sesiones` con conteo idéntico; `permisos` ≥ antes; `cambios` con exactamente 2 filas nuevas (`coordinacion`: «Coordinación» → «Ingeniería/Coordinación»; `admin`: «Administración» → «Administrador»); `capataz` y `jefatura` no cambian; aplicar dos veces no cambia nada; `apps/api` sigue arrancando y logueando con el esquema nuevo (compatibilidad hacia atrás); `GET /areas-verdes/v1/sesion` incluye `rol_nombre`.
 
 ### Lote 7: Catálogos
@@ -653,6 +657,7 @@ Cambios de código asociados (lote 6):
 
 ### Lote 22: Imagen, compose, CI y ensayo de corte
 - **Alcance:** §7 completo salvo la mudanza de migraciones: `backend/dockerfile`, entrypoint, UID/chown, compose, `deploy-learner-lab.sh` con tag por SHA, `ci.yml` (job backend), `Makefile` raíz, `bootstrap.sh`. Ensayo completo del §4.4 pasos 1-4 sobre un dump real.
+- **TODO (revisión Opus lote 22):** empaquetar en el Dockerfile: binario migrate, carpeta migrations, contrato openapi.yaml y variable de entorno OPENAPI_PATH.
 - **Aceptación:** `docker compose up -d --build` local levanta db + api nueva + web; `/health` ok; `scripts/counts.sh` igual antes y después; CI en verde en ambos jobs; informe del ensayo (conteos antes/después, versiones de `schema_migrations`, salida del arnés de paridad) adjunto al PR.
 
 ### Lote 23: Corte en producción y mudanza de migraciones

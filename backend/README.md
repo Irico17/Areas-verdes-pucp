@@ -9,7 +9,7 @@ por capas basada en el servicio de referencia del equipo.
 ## Requisitos
 
 - Go 1.25.3
-- PostgreSQL 16 (cuando se implementen casos de uso con persistencia)
+- PostgreSQL 16 con PostGIS 3.4+ (a diferencia de la API anterior, la nueva API valida la conexión a la base de datos al iniciar y falla si no está disponible; en producción el entrypoint corre `migrate` antes de iniciar la API)
 - Docker
 
 ## Ejecución local

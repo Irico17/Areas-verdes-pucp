@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
@@ -15,7 +16,7 @@ import (
 func TestErroresMiddlewareTraduceErrores(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.Use(Errores())
+	r.Use(Errores(zerolog.Nop()))
 
 	r.GET("/error-app", func(c *gin.Context) {
 		_ = c.Error(domainErrors.NewAppError(http.StatusBadRequest, "datos inválidos"))
@@ -51,7 +52,7 @@ func TestErroresMiddlewareTraduceErrores(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
 		t.Fatalf("error deserializando JSON: %v", err)
 	}
-	if res["error"] != "fallo inesperado" {
-		t.Fatalf("mensaje esperado 'fallo inesperado', obtenido %q", res["error"])
+	if res["error"] != "error interno" {
+		t.Fatalf("mensaje esperado 'error interno', obtenido %q", res["error"])
 	}
 }

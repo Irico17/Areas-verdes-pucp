@@ -12,41 +12,19 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func migrationsDir() string {
-	if env := os.Getenv("MIGRATIONS_DIR"); env != "" {
-		return env
-	}
-	cfg := config.New()
-	if cfg.Migraciones.Dir != "" {
-		if fi, err := os.Stat(cfg.Migraciones.Dir); err == nil && fi.IsDir() {
-			return cfg.Migraciones.Dir
-		}
-	}
-	wd, err := os.Getwd()
-	if err == nil {
-		for dir := wd; ; {
-			candidate := filepath.Join(dir, "apps", "api", "migrations")
-			if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
-				return candidate
-			}
-			parent := filepath.Dir(dir)
-			if parent == dir {
-				break
-			}
-			dir = parent
-		}
-	}
-	return filepath.Join("..", "..", "..", "..", "..", "apps", "api", "migrations")
-}
-
 func openTestDB(name string) (*gorm.DB, error) {
+	u := urlDe(name)
+	if u == "" {
+		return nil, fmt.Errorf("MIGRATE_TEST_URL no configurada o inválida")
+	}
 	return NewConnection(&config.Config{
 		Database: config.DatabaseConfig{
-			URL: urlDe(name),
+			URL: u,
 		},
 	})
 }
@@ -54,11 +32,11 @@ func openTestDB(name string) (*gorm.DB, error) {
 func urlDe(name string) string {
 	base := os.Getenv("MIGRATE_TEST_URL")
 	if base == "" {
-		return fmt.Sprintf("postgres://campus:campus@127.0.0.1:5432/%s?sslmode=disable", name)
+		return ""
 	}
 	u, err := url.Parse(base)
 	if err != nil {
-		return fmt.Sprintf("postgres://campus:campus@127.0.0.1:5432/%s?sslmode=disable", name)
+		return ""
 	}
 	u.Path = "/" + name
 	return u.String()
@@ -425,18 +403,18 @@ func assertDuplicadosResueltos(t *testing.T, name string) {
 func TestMigraciones001a019EnVacioYSobre008(t *testing.T) {
 	base := os.Getenv("MIGRATE_TEST_URL")
 	if base == "" {
-		base = "postgres://campus:campus@127.0.0.1:5432/postgres?sslmode=disable"
+		t.Skip("MIGRATE_TEST_URL no configurada; omitiendo test de base de datos")
 	}
 	admin, err := sql.Open("pgx", base)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("abrir conexion admin: %v", err)
 	}
 	defer admin.Close()
 	if err := admin.Ping(); err != nil {
-		t.Skipf("sin postgres de prueba: %v", err)
+		t.Fatalf("sin postgres de prueba: %v", err)
 	}
 
-	dir := migrationsDir()
+	dir := testutil.FindMigrationsDir()
 	vacia := "vp_c_ola1a_vacia"
 	actual := "vp_c_ola1a_actual"
 	recrear(t, admin, vacia)
@@ -517,18 +495,18 @@ func TestMigraciones001a019EnVacioYSobre008(t *testing.T) {
 func TestMigracionesConCodigosDuplicados(t *testing.T) {
 	base := os.Getenv("MIGRATE_TEST_URL")
 	if base == "" {
-		base = "postgres://campus:campus@127.0.0.1:5432/postgres?sslmode=disable"
+		t.Skip("MIGRATE_TEST_URL no configurada; omitiendo test de base de datos")
 	}
 	admin, err := sql.Open("pgx", base)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("abrir conexion admin: %v", err)
 	}
 	defer admin.Close()
 	if err := admin.Ping(); err != nil {
-		t.Skipf("sin postgres de prueba: %v", err)
+		t.Fatalf("sin postgres de prueba: %v", err)
 	}
 
-	dir := migrationsDir()
+	dir := testutil.FindMigrationsDir()
 	name := "vp_c_dup_codigo"
 	recrear(t, admin, name)
 	defer func() {
@@ -555,15 +533,15 @@ func TestMigracionesConCodigosDuplicados(t *testing.T) {
 func TestComprobarNecesitaETL(t *testing.T) {
 	base := os.Getenv("MIGRATE_TEST_URL")
 	if base == "" {
-		base = "postgres://campus:campus@127.0.0.1:5432/postgres?sslmode=disable"
+		t.Skip("MIGRATE_TEST_URL no configurada; omitiendo test de base de datos")
 	}
 	admin, err := sql.Open("pgx", base)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("abrir conexion admin: %v", err)
 	}
 	defer admin.Close()
 	if err := admin.Ping(); err != nil {
-		t.Skipf("sin postgres de prueba: %v", err)
+		t.Fatalf("sin postgres de prueba: %v", err)
 	}
 
 	name := "vp_c_test_necesita_etl"
@@ -573,7 +551,7 @@ func TestComprobarNecesitaETL(t *testing.T) {
 		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + name)
 	}()
 
-	dir := migrationsDir()
+	dir := testutil.FindMigrationsDir()
 	if err := aplicar(name, dir); err != nil {
 		t.Fatal(err)
 	}

@@ -73,3 +73,31 @@ func TestLimiteLoginNoConfiaEnXForwardedFor(t *testing.T) {
 		t.Fatalf("X-Forwarded-For no debió evadir el límite; status: %d (%s)", w.Code, w.Body.String())
 	}
 }
+
+func TestLimiteLoginCortaExcesosLegacyRuta(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	_ = r.SetTrustedProxies([]string{})
+	lim := ratelimit.NewMemoriaLimitador(2, time.Minute)
+	r.Use(LimiteLogin(lim))
+
+	r.POST("/api/v1/sesion", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	for i := 0; i < 2; i++ {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/sesion", nil)
+		r.ServeHTTP(w, req)
+		if w.Code == http.StatusTooManyRequests {
+			t.Fatalf("intento %d cortado antes de tiempo", i)
+		}
+	}
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/sesion", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("se esperaba 429 Too Many Requests en /api/v1/sesion, se obtuvo %d (%s)", w.Code, w.Body.String())
+	}
+}

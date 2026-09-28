@@ -8,6 +8,9 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/database"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/mapper"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/models"
 )
 
 type usuarioRepository struct {
@@ -19,71 +22,46 @@ func NewUsuarioRepository(db *gorm.DB) contracts.IUsuarioRepository {
 	return &usuarioRepository{db: db}
 }
 
-func (r *usuarioRepository) ObtenerPorUsuario(ctx context.Context, usuario string) (*entities.Usuario, error) {
-	var row struct {
-		ID        int64
-		Usuario   string
-		Nombre    string
-		Rol       string
-		RolNombre *string
-		CapatazID *string
-		Hash      string
-		Activo    bool
-	}
+func (r *usuarioRepository) dbWithCtx(ctx context.Context) *gorm.DB {
+	return database.DBFromContext(ctx, r.db).WithContext(ctx)
+}
 
-	err := r.db.WithContext(ctx).Raw(`
-		SELECT u.id, u.usuario, u.nombre, u.rol, r.nombre, u.capataz_id, u.password_hash, u.activo
+func (r *usuarioRepository) ObtenerPorUsuario(ctx context.Context, usuario string) (*entities.Usuario, error) {
+	var m models.UsuarioModel
+	err := r.dbWithCtx(ctx).Raw(`
+		SELECT u.id, u.usuario, u.nombre, u.rol, r.nombre AS rol_nombre, u.capataz_id, u.password_hash, u.activo
 		FROM usuarios u
 		LEFT JOIN roles r ON r.codigo = u.rol
 		WHERE u.usuario = $1`, strings.TrimSpace(usuario)).Row().Scan(
-		&row.ID, &row.Usuario, &row.Nombre, &row.Rol, &row.RolNombre, &row.CapatazID, &row.Hash, &row.Activo,
+		&m.ID, &m.Usuario, &m.Nombre, &m.Rol, &m.RolNombre, &m.CapatazID, &m.PasswordHash, &m.Activo,
 	)
 	if err != nil {
 		return nil, err
 	}
-
-	u := &entities.Usuario{
-		ID:           row.ID,
-		Usuario:      row.Usuario,
-		Nombre:       row.Nombre,
-		Rol:          row.Rol,
-		PasswordHash: row.Hash,
-		Activo:       row.Activo,
-	}
-	if row.RolNombre != nil {
-		u.RolNombre = *row.RolNombre
-	}
-	if row.CapatazID != nil {
-		u.CapatazID = *row.CapatazID
-	}
-	return u, nil
+	return mapper.UsuarioToEntity(&m), nil
 }
 
 func (r *usuarioRepository) Listar(ctx context.Context) ([]entities.Usuario, error) {
-	rows, err := r.db.WithContext(ctx).Raw(`
-		SELECT u.id, u.usuario, u.nombre, u.rol, COALESCE(r.nombre, u.rol), COALESCE(u.capataz_id, '')
+	var rows []models.UsuarioModel
+	err := r.dbWithCtx(ctx).Raw(`
+		SELECT u.id, u.usuario, u.nombre, u.rol, COALESCE(r.nombre, u.rol) AS rol_nombre, COALESCE(u.capataz_id, '') AS capataz_id
 		FROM usuarios u
 		LEFT JOIN roles r ON r.codigo = u.rol
-		ORDER BY u.rol, u.usuario`).Rows()
+		ORDER BY u.rol, u.usuario`).Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	out := []entities.Usuario{}
-	for rows.Next() {
-		var u entities.Usuario
-		if err := rows.Scan(&u.ID, &u.Usuario, &u.Nombre, &u.Rol, &u.RolNombre, &u.CapatazID); err != nil {
-			return nil, err
-		}
-		out = append(out, u)
+	out := make([]entities.Usuario, 0, len(rows))
+	for i := range rows {
+		out = append(out, *mapper.UsuarioToEntity(&rows[i]))
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 func (r *usuarioRepository) ExistePorUsuario(ctx context.Context, usuario string) (bool, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Raw(`SELECT count(*) FROM usuarios WHERE usuario = $1`, strings.TrimSpace(usuario)).Scan(&count).Error
+	err := r.dbWithCtx(ctx).Raw(`SELECT count(*) FROM usuarios WHERE usuario = $1`, strings.TrimSpace(usuario)).Scan(&count).Error
 	if err != nil {
 		return false, err
 	}
@@ -91,9 +69,10 @@ func (r *usuarioRepository) ExistePorUsuario(ctx context.Context, usuario string
 }
 
 func (r *usuarioRepository) Crear(ctx context.Context, usuario *entities.Usuario) error {
-	return r.db.WithContext(ctx).Exec(`
+	m := mapper.UsuarioToModel(usuario)
+	return r.dbWithCtx(ctx).Exec(`
 		INSERT INTO usuarios (usuario, nombre, rol, capataz_id, password_hash)
 		VALUES ($1, $2, $3, NULLIF($4, ''), $5)`,
-		usuario.Usuario, usuario.Nombre, usuario.Rol, usuario.CapatazID, usuario.PasswordHash,
+		m.Usuario, m.Nombre, m.Rol, m.CapatazID, m.PasswordHash,
 	).Error
 }

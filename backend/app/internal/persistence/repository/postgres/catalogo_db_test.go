@@ -14,6 +14,7 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/database"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/repository/postgres"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -31,7 +32,7 @@ func migrarDBCatalogoTemporal(t *testing.T, name string) (*sql.DB, *gorm.DB) {
 	}
 	defer admin.Close()
 	if err := admin.Ping(); err != nil {
-		t.Skipf("sin postgres de prueba: %v", err)
+		t.Fatalf("sin postgres de prueba: %v", err)
 	}
 
 	if _, err := admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name); err != nil {
@@ -74,7 +75,7 @@ func migrarDBCatalogoTemporal(t *testing.T, name string) (*sql.DB, *gorm.DB) {
 		t.Fatal(err)
 	}
 
-	migDir := findMigrationsDir()
+	migDir := testutil.FindMigrationsDir()
 	if err := database.Apply(gdb, migDir); err != nil {
 		t.Fatalf("error aplicando migraciones: %v", err)
 	}

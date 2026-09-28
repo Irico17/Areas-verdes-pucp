@@ -9,14 +9,12 @@ import (
 // LegadoGroup groups legacy root routes.
 type LegadoGroup struct {
 	healthController controller.IHealthController
-	metaController   controller.IMetaController
 }
 
 // NewLegadoGroup creates a new legacy route group.
-func NewLegadoGroup(health controller.IHealthController, meta controller.IMetaController) *LegadoGroup {
+func NewLegadoGroup(health controller.IHealthController) *LegadoGroup {
 	return &LegadoGroup{
 		healthController: health,
-		metaController:   meta,
 	}
 }
 

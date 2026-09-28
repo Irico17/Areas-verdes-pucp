@@ -9,8 +9,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/archivos"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/controller"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 )
 
 func TestMetaController_Index(t *testing.T) {
@@ -19,8 +21,7 @@ func TestMetaController_Index(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1", nil)
 
-	cfg := config.New()
-	ctrl := controller.NewMetaController(cfg)
+	ctrl := controller.NewMetaController(nil)
 	ctrl.Index(c)
 
 	if w.Code != http.StatusOK {
@@ -51,10 +52,13 @@ func TestMetaController_OpenAPI_Exitoso(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/openapi.yaml", nil)
 
-	cfg := config.New()
-	cfg.Datos.OpenAPIPath = filepath.Join(findRepoRoot(t), "apps", "api", "openapi.yaml")
-
-	ctrl := controller.NewMetaController(cfg)
+	cfg := &config.Config{
+		Datos: config.DatosConfig{
+			OpenAPIPath: filepath.Join(testutil.FindRepoRoot(), "apps", "api", "openapi.yaml"),
+		},
+	}
+	adapter := archivos.NewContratoOpenAPIAdapter(cfg)
+	ctrl := controller.NewMetaController(adapter)
 	ctrl.OpenAPI(c)
 
 	if w.Code != http.StatusOK {
@@ -76,10 +80,13 @@ func TestMetaController_OpenAPI_NoDisponible(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/openapi.yaml", nil)
 
-	cfg := config.New()
-	cfg.Datos.OpenAPIPath = "/ruta/inexistente/openapi.yaml"
-
-	ctrl := controller.NewMetaController(cfg)
+	cfg := &config.Config{
+		Datos: config.DatosConfig{
+			OpenAPIPath: "/ruta/inexistente/openapi.yaml",
+		},
+	}
+	adapter := archivos.NewContratoOpenAPIAdapter(cfg)
+	ctrl := controller.NewMetaController(adapter)
 	ctrl.OpenAPI(c)
 
 	if w.Code != http.StatusNotFound {

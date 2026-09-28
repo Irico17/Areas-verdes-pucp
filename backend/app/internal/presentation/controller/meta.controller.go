@@ -1,12 +1,13 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 )
 
 // Route documenta una ruta pública.
@@ -66,16 +67,12 @@ type IMetaController interface {
 }
 
 type metaController struct {
-	openAPIPath string
+	contrato contracts.IContratoOpenAPI
 }
 
 // NewMetaController creates a meta controller.
-func NewMetaController(cfg *config.Config) IMetaController {
-	openAPIPath := ""
-	if cfg != nil {
-		openAPIPath = cfg.Datos.OpenAPIPath
-	}
-	return &metaController{openAPIPath: openAPIPath}
+func NewMetaController(contrato contracts.IContratoOpenAPI) IMetaController {
+	return &metaController{contrato: contrato}
 }
 
 // Index serves the API index with routes and service details.
@@ -90,12 +87,16 @@ func (c *metaController) Index(ctx *gin.Context) {
 
 // OpenAPI serves the merged openapi.yaml contract.
 func (c *metaController) OpenAPI(ctx *gin.Context) {
-	if _, err := os.Stat(c.openAPIPath); err != nil {
+	if c.contrato == nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "openapi.yaml no disponible"})
 		return
 	}
-	body, err := UnirContrato(c.openAPIPath)
+	body, err := c.contrato.ObtenerContrato()
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "openapi.yaml no disponible"})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo armar el contrato"})
 		return
 	}

@@ -1,4 +1,4 @@
-package controller_test
+package archivos_test
 
 import (
 	"os"
@@ -8,31 +8,13 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/controller"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/archivos"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 )
 
-func findRepoRoot(t *testing.T) string {
-	t.Helper()
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	dir := wd
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "apps", "api", "openapi.yaml")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatal("no se pudo encontrar el repo root")
-		}
-		dir = parent
-	}
-}
-
 func TestContratoUneLosTags(t *testing.T) {
-	root := filepath.Join(findRepoRoot(t), "apps", "api", "openapi.yaml")
-	body, err := controller.UnirContrato(root)
+	root := filepath.Join(testutil.FindRepoRoot(), "apps", "api", "openapi.yaml")
+	body, err := archivos.UnirContrato(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,14 +69,14 @@ func TestContratoRechazaPathRepetido(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(part, "b.yaml"), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := controller.UnirContrato(root)
+	_, err := archivos.UnirContrato(root)
 	if err == nil || !strings.Contains(err.Error(), "repetido") {
 		t.Fatalf("se esperaba error de path repetido, fue %v", err)
 	}
 }
 
 func TestMigracionesNuevasSinTruncate(t *testing.T) {
-	dir := filepath.Join(findRepoRoot(t), "apps", "api", "migrations")
+	dir := filepath.Join(testutil.FindRepoRoot(), "apps", "api", "migrations")
 	for _, name := range []string{"007_auditoria.sql", "008_fk_minimas.sql", "020_labores.sql", "021_poda.sql", "022_vivero.sql", "023_riego_zona.sql", "024_ordenes_solicitud.sql", "041_lotes.sql"} {
 		body, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {

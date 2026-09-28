@@ -24,7 +24,7 @@ func TestNewConnection(t *testing.T) {
 	}
 	gdb, err := database.NewConnection(cfg)
 	if err != nil {
-		t.Skipf("skipping database connection test: %v", err)
+		t.Fatalf("failed to connect to database: %v", err)
 	}
 	sqlDB, err := gdb.DB()
 	if err != nil {
@@ -33,7 +33,7 @@ func TestNewConnection(t *testing.T) {
 	defer sqlDB.Close()
 
 	if err := sqlDB.Ping(); err != nil {
-		t.Skipf("database not reachable: %v", err)
+		t.Fatalf("database not reachable: %v", err)
 	}
 	stats := sqlDB.Stats()
 	if stats.MaxOpenConnections != 5 {

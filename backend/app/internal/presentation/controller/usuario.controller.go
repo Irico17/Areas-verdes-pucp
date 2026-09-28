@@ -7,6 +7,7 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
+	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/middleware"
 )
 
@@ -37,12 +38,7 @@ func NewUsuarioController(usuarioUC contracts.IUsuarioUseCase) IUsuarioControlle
 func (ctrl *usuarioController) Listar(c *gin.Context) {
 	u, ok := middleware.UsuarioEn(c)
 	if !ok || u.Rol != enums.RolAdmin.String() {
-		c.JSON(http.StatusForbidden, gin.H{"error": "solo administración ve las cuentas"})
-		return
-	}
-
-	if ctrl.usuarioUC == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "base de datos no disponible"})
+		c.JSON(http.StatusForbidden, gin.H{"error": domainErrors.ErrSoloAdmin.Error()})
 		return
 	}
 

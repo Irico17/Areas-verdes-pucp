@@ -34,7 +34,7 @@ echo "Nueva: $NUEVA"
 echo "Rutas: $RUTAS_FILE"
 echo ""
 
-# Intentar login por rol para generar cookie jars separados
+# Mapeo de roles a usuarios semilla
 declare -A ROLES_MAP=(
   ["norte"]="norte"
   ["sur"]="sur"
@@ -51,31 +51,60 @@ login_api() {
   local pass="$3"
   local jar_file="$4"
 
-  local code
-  code=$(curl -s -o /dev/null -w "%{http_code}" -c "$jar_file" \
-    -H "Content-Type: application/json" \
-    -d "{\"usuario\":\"$user\",\"clave\":\"$pass\"}" \
-    "$base_url/api/v1/sesion" 2>/dev/null || echo "000")
+  local intentos=0
+  while [ "$intentos" -lt 3 ]; do
+    local code
+    code=$(curl -s -o /dev/null -w "%{http_code}" -c "$jar_file" \
+      -H "Content-Type: application/json" \
+      -d "{\"usuario\":\"$user\",\"clave\":\"$pass\"}" \
+      "$base_url/api/v1/sesion" 2>/dev/null || echo "000")
 
-  if [ "$code" != "200" ] && [ "$code" != "201" ]; then
+    if [ "$code" = "429" ]; then
+      echo "  [INFO] 429 rate limit alcanzado en login, esperando 10s..."
+      sleep 10
+      intentos=$((intentos + 1))
+      continue
+    fi
+
+    if [ "$code" = "200" ] || [ "$code" = "201" ]; then
+      return 0
+    fi
+
+    # Intentar en prefijo alternativo
     code=$(curl -s -o /dev/null -w "%{http_code}" -c "$jar_file" \
       -H "Content-Type: application/json" \
       -d "{\"usuario\":\"$user\",\"clave\":\"$pass\"}" \
       "$base_url/areas-verdes/v1/sesion" 2>/dev/null || echo "000")
-  fi
 
-  if [ "$code" = "200" ] || [ "$code" = "201" ]; then
-    return 0
-  fi
+    if [ "$code" = "429" ]; then
+      echo "  [INFO] 429 rate limit alcanzado en login, esperando 10s..."
+      sleep 10
+      intentos=$((intentos + 1))
+      continue
+    fi
+
+    if [ "$code" = "200" ] || [ "$code" = "201" ]; then
+      return 0
+    fi
+
+    return 1
+  done
   return 1
 }
 
-# Inicializar sesiones para cuentas clave
+# Inicializar sesiones para cuentas clave (falla si algún login no tiene éxito)
 for r in admin coordinacion jefatura norte; do
-  login_api "$VIEJA" "$r" "$CAMPUS_DEV_PASSWORD" "$TMPDIR/jar_vieja_${r}.txt" || true
-  login_api "$NUEVA" "$r" "$CAMPUS_DEV_PASSWORD" "$TMPDIR/jar_nueva_${r}.txt" || true
+  if ! login_api "$VIEJA" "$r" "$CAMPUS_DEV_PASSWORD" "$TMPDIR/jar_vieja_${r}.txt"; then
+    echo "Error: login falló en API vieja para usuario '$r'"
+    exit 1
+  fi
+  if ! login_api "$NUEVA" "$r" "$CAMPUS_DEV_PASSWORD" "$TMPDIR/jar_nueva_${r}.txt"; then
+    echo "Error: login falló en API nueva para usuario '$r'"
+    exit 1
+  fi
 done
 
+# Normalizar respuestas JSON eliminando campos volátiles solo a nivel superior (decisión 24)
 normalize_response() {
   local in_file="$1"
   local out_file="$2"
@@ -86,17 +115,104 @@ normalize_response() {
   fi
 
   if jq -e . "$in_file" >/dev/null 2>&1; then
-    # Normalizar JSON con jq -S excluyendo campos volátiles
-    jq -S 'walk(if type == "object" then del(.timestamp, .request_id, .requestId, ."x-request-id", .duracion_ms) else . end)' \
+    jq -S 'if type == "object" then del(.timestamp, .request_id, .requestId, ."x-request-id", .duracion_ms) else . end' \
       "$in_file" > "$out_file" 2>/dev/null || cp "$in_file" "$out_file"
   else
     tr -d '\r' < "$in_file" > "$out_file"
   fi
 }
 
+# Normalizar subconjunto de cabeceras relevantes y enmascarar token de sesión (decisión 3)
+normalize_headers() {
+  local in_file="$1"
+  local out_file="$2"
+
+  if [ ! -s "$in_file" ]; then
+    : > "$out_file"
+    return 0
+  fi
+
+  awk '
+    BEGIN { IGNORECASE=1 }
+    /^[ \t\r]*$/ { next }
+    /^HTTP\// { next }
+    {
+      colon = index($0, ":")
+      if (colon == 0) next
+      name = tolower(substr($0, 1, colon - 1))
+      val = substr($0, colon + 1)
+      gsub(/^[ \t\r\n]+|[ \t\r\n]+$/, "", name)
+      gsub(/^[ \t\r\n]+|[ \t\r\n]+$/, "", val)
+
+      if (name == "content-type" || name == "cache-control" || name == "content-disposition" || name ~ /^access-control-/ || name == "set-cookie") {
+        if (name == "set-cookie") {
+          gsub(/cv_sesion=[^; \t\r\n]+/, "cv_sesion=***MASKED***", val)
+        }
+        print name ": " val
+      }
+    }
+  ' "$in_file" | sort > "$out_file"
+}
+
 PASS_COUNT=0
 FAIL_COUNT=0
 TOTAL_COUNT=0
+
+# Paso de verificación de paridad de login (decisión 3)
+echo "=== Verificando paridad de login (POST /sesion) ==="
+LOGIN_BODY="{\"usuario\":\"admin\",\"clave\":\"$CAMPUS_DEV_PASSWORD\"}"
+LOGIN_HEAD_VIEJA="$TMPDIR/login_head_vieja.txt"
+LOGIN_BODY_VIEJA="$TMPDIR/login_body_vieja.raw"
+STATUS_LOGIN_VIEJA=$(curl -s -X POST -H "Content-Type: application/json" -d "$LOGIN_BODY" -D "$LOGIN_HEAD_VIEJA" -o "$LOGIN_BODY_VIEJA" -w "%{http_code}" "$VIEJA/api/v1/sesion")
+
+NORM_LOGIN_VIEJA="$TMPDIR/login_body_vieja.norm"
+NORM_LOGIN_HEAD_VIEJA="$TMPDIR/login_head_vieja.norm"
+normalize_response "$LOGIN_BODY_VIEJA" "$NORM_LOGIN_VIEJA"
+normalize_headers "$LOGIN_HEAD_VIEJA" "$NORM_LOGIN_HEAD_VIEJA"
+
+TOTAL_COUNT=$((TOTAL_COUNT + 1))
+LOGIN_OK=true
+
+for r_login in "/api/v1/sesion" "/areas-verdes/v1/sesion"; do
+  LOGIN_HEAD_NUEVA="$TMPDIR/login_head_nueva.txt"
+  LOGIN_BODY_NUEVA="$TMPDIR/login_body_nueva.raw"
+  STATUS_LOGIN_NUEVA=$(curl -s -X POST -H "Content-Type: application/json" -d "$LOGIN_BODY" -D "$LOGIN_HEAD_NUEVA" -o "$LOGIN_BODY_NUEVA" -w "%{http_code}" "$NUEVA$r_login")
+
+  NORM_LOGIN_NUEVA="$TMPDIR/login_body_nueva.norm"
+  NORM_LOGIN_HEAD_NUEVA="$TMPDIR/login_head_nueva.norm"
+  normalize_response "$LOGIN_BODY_NUEVA" "$NORM_LOGIN_NUEVA"
+  normalize_headers "$LOGIN_HEAD_NUEVA" "$NORM_LOGIN_HEAD_NUEVA"
+
+  if [ "$STATUS_LOGIN_VIEJA" != "$STATUS_LOGIN_NUEVA" ]; then
+    echo "  [FAIL] POST /sesion -> $r_login: status code difiere (vieja=$STATUS_LOGIN_VIEJA, nueva=$STATUS_LOGIN_NUEVA)"
+    LOGIN_OK=false
+    continue
+  fi
+
+  if ! diff -u "$NORM_LOGIN_VIEJA" "$NORM_LOGIN_NUEVA" > "$TMPDIR/diff_login_body.patch" 2>&1; then
+    echo "  [FAIL] POST /sesion -> $r_login: cuerpo difiere"
+    head -n 30 "$TMPDIR/diff_login_body.patch"
+    LOGIN_OK=false
+    continue
+  fi
+
+  if ! diff -u "$NORM_LOGIN_HEAD_VIEJA" "$NORM_LOGIN_HEAD_NUEVA" > "$TMPDIR/diff_login_head.patch" 2>&1; then
+    echo "  [FAIL] POST /sesion -> $r_login: cabeceras (Set-Cookie) difieren"
+    head -n 30 "$TMPDIR/diff_login_head.patch"
+    LOGIN_OK=false
+    continue
+  fi
+done
+
+if [ "$LOGIN_OK" = true ]; then
+  echo "  [OK] POST /sesion (status: $STATUS_LOGIN_VIEJA, prefijos verificados: 2)"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+echo ""
+echo "=== Verificando rutas del archivo ==="
 
 while IFS= read -r line || [ -n "$line" ]; do
   # Ignorar comentarios y líneas en blanco
@@ -105,7 +221,7 @@ while IFS= read -r line || [ -n "$line" ]; do
     continue
   fi
 
-  read -r rol metodo ruta extra <<< "$line"
+  read -r rol metodo ruta extra1 extra2 <<< "$line"
   TOTAL_COUNT=$((TOTAL_COUNT + 1))
 
   # Cookie jar para rol
@@ -121,10 +237,13 @@ while IFS= read -r line || [ -n "$line" ]; do
     fi
   fi
 
-  # Cuerpo opcional con token @path/to/body.json
+  # Parsear argumentos opcionales: status esperado y cuerpo @body
+  expected_status=""
   BODY_ARGS=()
-  if [ -n "${extra:-}" ]; then
-    if [[ "$extra" =~ ^@ ]]; then
+  for extra in "${extra1:-}" "${extra2:-}"; do
+    if [[ "$extra" =~ ^[0-9]{3}$ ]]; then
+      expected_status="$extra"
+    elif [[ "$extra" =~ ^@ ]]; then
       BODY_PATH="${extra#@}"
       if [ -f "$BODY_PATH" ]; then
         BODY_ARGS=(-H "Content-Type: application/json" --data-binary "@$BODY_PATH")
@@ -132,7 +251,7 @@ while IFS= read -r line || [ -n "$line" ]; do
         echo "  [WARN] archivo de cuerpo no encontrado: $BODY_PATH"
       fi
     fi
-  fi
+  done
 
   # 1. Petición a la API vieja
   BODY_VIEJA="$TMPDIR/body_vieja.raw"
@@ -140,7 +259,15 @@ while IFS= read -r line || [ -n "$line" ]; do
   STATUS_VIEJA=$(curl -s -X "$metodo" "${JAR_VIEJA_ARG[@]}" "${BODY_ARGS[@]}" -D "$HEAD_VIEJA" -o "$BODY_VIEJA" -w "%{http_code}" "$VIEJA$ruta")
 
   NORM_VIEJA="$TMPDIR/body_vieja.norm"
+  NORM_HEAD_VIEJA="$TMPDIR/head_vieja.norm"
   normalize_response "$BODY_VIEJA" "$NORM_VIEJA"
+  normalize_headers "$HEAD_VIEJA" "$NORM_HEAD_VIEJA"
+
+  if [ -n "$expected_status" ] && [ "$STATUS_VIEJA" != "$expected_status" ]; then
+    echo "  [FAIL] $metodo $ruta: API vieja retornó $STATUS_VIEJA, se esperaba $expected_status"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+    continue
+  fi
 
   # 2. Rutas a verificar en la nueva (para no-GET solo se llama una vez en /areas-verdes/v1)
   RUTAS_NUEVA=()
@@ -167,7 +294,15 @@ while IFS= read -r line || [ -n "$line" ]; do
     STATUS_NUEVA=$(curl -s -X "$metodo" "${JAR_NUEVA_ARG[@]}" "${BODY_ARGS[@]}" -D "$HEAD_NUEVA" -o "$BODY_NUEVA" -w "%{http_code}" "$NUEVA$r_nueva")
 
     NORM_NUEVA="$TMPDIR/body_nueva.norm"
+    NORM_HEAD_NUEVA="$TMPDIR/head_nueva.norm"
     normalize_response "$BODY_NUEVA" "$NORM_NUEVA"
+    normalize_headers "$HEAD_NUEVA" "$NORM_HEAD_NUEVA"
+
+    if [ -n "$expected_status" ] && [ "$STATUS_NUEVA" != "$expected_status" ]; then
+      echo "  [FAIL] $metodo $ruta -> $r_nueva: API nueva retornó $STATUS_NUEVA, se esperaba $expected_status"
+      ROUTE_OK=false
+      continue
+    fi
 
     # Comparar status code
     if [ "$STATUS_VIEJA" != "$STATUS_NUEVA" ]; then
@@ -179,7 +314,15 @@ while IFS= read -r line || [ -n "$line" ]; do
     # Comparar cuerpo
     if ! diff -u "$NORM_VIEJA" "$NORM_NUEVA" > "$TMPDIR/diff.patch" 2>&1; then
       echo "  [FAIL] $metodo $ruta -> $r_nueva: cuerpo difiere"
-      cat "$TMPDIR/diff.patch" | head -n 30
+      head -n 30 "$TMPDIR/diff.patch"
+      ROUTE_OK=false
+      continue
+    fi
+
+    # Comparar cabeceras normalizadas
+    if ! diff -u "$NORM_HEAD_VIEJA" "$NORM_HEAD_NUEVA" > "$TMPDIR/diff_headers.patch" 2>&1; then
+      echo "  [FAIL] $metodo $ruta -> $r_nueva: cabeceras difieren"
+      head -n 30 "$TMPDIR/diff_headers.patch"
       ROUTE_OK=false
       continue
     fi

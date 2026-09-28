@@ -26,14 +26,3 @@ func TestPermiteCapatazNoAdministraCatalogos(t *testing.T) {
 		t.Fatal("jefatura debe tener permiso para registrar evidencias")
 	}
 }
-
-func TestPermiteAlguno(t *testing.T) {
-	svc := services.NewPermisosService()
-
-	if !svc.PermiteAlguno(enums.RolCapataz.String(), "catalogos", "registrar") {
-		t.Fatal("capataz debe permitir al menos registrar")
-	}
-	if svc.PermiteAlguno(enums.RolCapataz.String(), "catalogos", "validar") {
-		t.Fatal("capataz no tiene ni catalogos ni validar")
-	}
-}

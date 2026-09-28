@@ -13,17 +13,17 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/middleware"
 )
 
-func TestExigePermisoMiddleware(t *testing.T) {
+func TestRequierePermisoMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	permSvc := services.NewPermisosService()
 
 	setupApp := func() *gin.Engine {
 		r := gin.New()
-		r.GET("/protegido-catalogos", middleware.ExigePermiso(permSvc, "catalogos"), func(c *gin.Context) {
+		r.GET("/protegido-catalogos", middleware.RequierePermiso(permSvc, "catalogos"), func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"ok": true})
 		})
-		r.GET("/protegido-registrar", middleware.ExigePermiso(permSvc, "registrar"), func(c *gin.Context) {
+		r.GET("/protegido-registrar", middleware.RequierePermiso(permSvc, "registrar"), func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"ok": true})
 		})
 		return r
@@ -52,10 +52,10 @@ func TestExigePermisoMiddleware(t *testing.T) {
 		})
 		c.Next()
 	})
-	appWithCapataz.GET("/protegido-catalogos", middleware.ExigePermiso(permSvc, "catalogos"), func(c *gin.Context) {
+	appWithCapataz.GET("/protegido-catalogos", middleware.RequierePermiso(permSvc, "catalogos"), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	})
-	appWithCapataz.GET("/protegido-registrar", middleware.ExigePermiso(permSvc, "registrar"), func(c *gin.Context) {
+	appWithCapataz.GET("/protegido-registrar", middleware.RequierePermiso(permSvc, "registrar"), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	})
 

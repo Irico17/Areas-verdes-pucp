@@ -5,47 +5,21 @@ import (
 	"database/sql"
 	"net/url"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"gorm.io/gorm"
 
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/services"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/usecases"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/seguridad"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/database"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/repository/postgres"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
-
-func findMigrationsDir() string {
-	if env := os.Getenv("MIGRATIONS_DIR"); env != "" {
-		return env
-	}
-	cfg := config.New()
-	if cfg.Migraciones.Dir != "" {
-		if fi, err := os.Stat(cfg.Migraciones.Dir); err == nil && fi.IsDir() {
-			return cfg.Migraciones.Dir
-		}
-	}
-	wd, err := os.Getwd()
-	if err == nil {
-		for dir := wd; ; {
-			candidate := filepath.Join(dir, "apps", "api", "migrations")
-			if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
-				return candidate
-			}
-			parent := filepath.Dir(dir)
-			if parent == dir {
-				break
-			}
-			dir = parent
-		}
-	}
-	return filepath.Join("..", "..", "..", "..", "..", "apps", "api", "migrations")
-}
 
 func migrarDBTemporal(t *testing.T, name string) (*sql.DB, *gorm.DB) {
 	t.Helper()
@@ -60,7 +34,7 @@ func migrarDBTemporal(t *testing.T, name string) (*sql.DB, *gorm.DB) {
 	}
 	defer admin.Close()
 	if err := admin.Ping(); err != nil {
-		t.Skipf("sin postgres de prueba: %v", err)
+		t.Fatalf("sin postgres de prueba: %v", err)
 	}
 
 	if _, err := admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name); err != nil {
@@ -98,7 +72,7 @@ func migrarDBTemporal(t *testing.T, name string) (*sql.DB, *gorm.DB) {
 		t.Fatal(err)
 	}
 
-	if err := database.Apply(gdb, findMigrationsDir()); err != nil {
+	if err := database.Apply(gdb, testutil.FindMigrationsDir()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -106,6 +80,7 @@ func migrarDBTemporal(t *testing.T, name string) (*sql.DB, *gorm.DB) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	return sqlDB, gdb
 }
 
@@ -118,8 +93,10 @@ func TestEnsureConservaFilasExtraYEsIdempotente(t *testing.T) {
 	permisoRepo := postgres.NewPermisoRepository(gdb)
 	sesionRepo := postgres.NewSesionRepository(gdb)
 	hasher := seguridad.NewBcryptHasher()
+	tx := database.NewTransaccion(gdb)
+	permisosSvc := services.NewPermisosService()
 
-	semillaUC := usecases.NewSemillaAccesosUseCase(gdb, usuarioRepo, permisoRepo, hasher)
+	semillaUC := usecases.NewSemillaAccesosUseCase(tx, usuarioRepo, permisoRepo, permisosSvc, hasher)
 	sesionUC := usecases.NewSesionUseCase(sesionRepo, usuarioRepo, hasher)
 	usuarioUC := usecases.NewUsuarioUseCase(usuarioRepo, permisoRepo)
 	ctx := context.Background()
@@ -206,7 +183,7 @@ func TestEnsureConservaFilasExtraYEsIdempotente(t *testing.T) {
 	}
 }
 
-func TestUsuariosRolForeignKeyYRolesConfigurables(t *testing.T) {
+func TestUsuariosRolForeignKeyYCatalogoRoles(t *testing.T) {
 	name := "vp_c_test_usuarios_rol_fk"
 	sqlDB, gdb := migrarDBTemporal(t, name)
 	defer sqlDB.Close()
@@ -216,7 +193,7 @@ func TestUsuariosRolForeignKeyYRolesConfigurables(t *testing.T) {
 	permisoRepo := postgres.NewPermisoRepository(gdb)
 	hasher := seguridad.NewBcryptHasher()
 
-	semillaUC := usecases.NewSemillaAccesosUseCase(gdb, usuarioRepo, permisoRepo, hasher)
+	semillaUC := usecases.NewSemillaAccesosUseCase(database.NewTransaccion(gdb), usuarioRepo, permisoRepo, services.NewPermisosService(), hasher)
 	if err := semillaUC.Ensure(ctx, "pando-local"); err != nil {
 		t.Fatalf("Ensure falló: %v", err)
 	}
@@ -282,7 +259,7 @@ func TestUsuariosRolForeignKeyYRolesConfigurables(t *testing.T) {
 	}
 
 	// 6. Idempotencia: volver a aplicar las migraciones no causa error
-	if err := database.Apply(gdb, findMigrationsDir()); err != nil {
+	if err := database.Apply(gdb, testutil.FindMigrationsDir()); err != nil {
 		t.Fatalf("re-aplicar migraciones falló: %v", err)
 	}
 }

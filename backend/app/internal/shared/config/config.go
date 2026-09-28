@@ -92,11 +92,11 @@ func New() *Config {
 		_ = godotenv.Load(filepath.Join(root, ".env"))
 	}
 
-	ginMode := valueOrDefault("SERVER_GIN_MODE", "debug")
+	ginMode := valueOrDefault("SERVER_GIN_MODE", "release")
 
 	return &Config{
 		Server: ServerConfig{
-			Port:           valueOrDefault("SERVER_PORT", "8080"),
+			Port:           serverPort(),
 			GinMode:        ginMode,
 			TrustedProxies: trustedProxies(),
 		},
@@ -149,6 +149,17 @@ func valueOrDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func serverPort() string {
+	if apiAddr := strings.TrimSpace(os.Getenv("API_ADDR")); apiAddr != "" {
+		if idx := strings.LastIndex(apiAddr, ":"); idx != -1 {
+			return apiAddr[idx+1:]
+		}
+		return apiAddr
+	}
+	raw := strings.TrimSpace(valueOrDefault("SERVER_PORT", "8080"))
+	return strings.TrimPrefix(raw, ":")
 }
 
 func origenesCORS(raw string) []string {

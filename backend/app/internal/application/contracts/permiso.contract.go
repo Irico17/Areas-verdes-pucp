@@ -15,7 +15,6 @@ type IPermisoRepository interface {
 // IPermisosService checks role-based permissions in memory.
 type IPermisosService interface {
 	Permite(rol, accion string) bool
-	PermiteAlguno(rol string, acciones ...string) bool
 	Matriz() map[string][]string
 }
 

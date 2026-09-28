@@ -12,6 +12,7 @@ import (
 func RegisterContainer(container *dig.Container) error {
 	providers := []any{
 		database.NewConnection,
+		database.NewTransaccion,
 		postgres.NewSaludRepository,
 		postgres.NewUsuarioRepository,
 		postgres.NewSesionRepository,
