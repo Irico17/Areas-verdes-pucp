@@ -17,14 +17,22 @@ func RegisterContainer(container *dig.Container) error {
 	}
 
 	// Groups
-	for _, constructor := range []any{groups.NewHealthGroup, groups.NewSwaggerGroup} {
+	for _, constructor := range []any{
+		groups.NewHealthGroup,
+		groups.NewSwaggerGroup,
+		groups.NewMetaGroup,
+		groups.NewLegadoGroup,
+	} {
 		if err := container.Provide(constructor); err != nil {
 			return err
 		}
 	}
 
 	// Controllers
-	for _, constructor := range []any{controller.NewHealthController} {
+	for _, constructor := range []any{
+		controller.NewHealthController,
+		controller.NewMetaController,
+	} {
 		if err := container.Provide(constructor); err != nil {
 			return err
 		}

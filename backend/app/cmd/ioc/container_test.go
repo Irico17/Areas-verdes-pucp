@@ -1,6 +1,8 @@
 package ioc_test
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -11,6 +13,15 @@ import (
 )
 
 func TestBuildContainer(t *testing.T) {
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" || strings.Contains(dbURL, "vp_chk_fresh") {
+		fallback := os.Getenv("MIGRATE_TEST_URL")
+		if fallback == "" {
+			fallback = "postgres://campus:campus@127.0.0.1:5432/campus_verde?sslmode=disable"
+		}
+		_ = os.Setenv("DATABASE_URL", fallback)
+	}
+
 	container, err := ioc.BuildContainer()
 	if err != nil {
 		t.Fatalf("BuildContainer() failed: %v", err)

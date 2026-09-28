@@ -1,0 +1,79 @@
+# Rutas para el arnés de paridad (scripts/paridad-api.sh)
+# Formato: <rol> <METODO> <ruta> [status_esperado]
+# Roles soportados: - / publico / anon, norte, coordinacion, jefatura, admin
+
+# ==========================================
+# Lote 4: Sistema (activas para este lote)
+# ==========================================
+- GET /health
+- GET /api/v1
+- GET /api/v1/openapi.yaml
+
+# ==========================================
+# Rutas que dan 404 en el PWA (plan §2.3, lote 24)
+# ==========================================
+# admin POST /api/v1/catastro/areas/0/baja 404
+# admin PATCH /api/v1/catastro/zonas-supervision/0 404
+# admin POST /api/v1/catastro/zonas-supervision/0/baja 404
+
+# ==========================================
+# Lotes posteriores (comentadas hasta su lote)
+# ==========================================
+# Lote 5: Sesión y accesos
+# admin GET /api/v1/sesion
+# admin GET /api/v1/accesos/usuarios
+
+# Lote 7: Catálogos
+# admin GET /api/v1/catalogos
+
+# Lote 8: Geo de lectura y fichas de área
+# admin GET /api/v1/geo/resumen
+# admin GET /api/v1/geo/areas
+# admin GET /api/v1/geo/zonas
+# admin GET /api/v1/geo/capas
+# admin GET /api/v1/geo/edificios
+# admin GET /api/v1/catastro/areas
+
+# Lote 9: Catastro maestro
+# admin GET /api/v1/catastro/zonas-supervision
+# admin GET /api/v1/catastro/poligonos
+# admin GET /api/v1/catastro/cuadrillas
+# admin GET /api/v1/catastro/lugares
+# admin GET /api/v1/catastro/especies
+# admin GET /api/v1/catastro/ejemplares
+
+# Lote 10: Inventario heredado y reservas mock
+# admin GET /api/v1/geo/inventario
+# admin GET /api/v1/geo/reservas-mock
+
+# Lote 11: Inventario 2B
+# admin GET /api/v1/inventario/tachos
+# admin GET /api/v1/inventario/bebederos
+# admin GET /api/v1/inventario/puntos
+# admin GET /api/v1/inventario/reservas
+
+# Lote 12: Operación / labores
+# coordinacion GET /api/v1/operacion/capataces
+# coordinacion GET /api/v1/operacion/actividades
+
+# Lote 13: Solicitudes, órdenes y riego
+# coordinacion GET /api/v1/solicitudes
+# coordinacion GET /api/v1/ordenes
+# coordinacion GET /api/v1/riego
+
+# Lote 14: Poda y vivero
+# coordinacion GET /api/v1/podas
+# coordinacion GET /api/v1/vivero
+
+# Lote 15: Evidencias
+# coordinacion GET /api/v1/evidencias
+
+# Lote 16: Reportes e IA
+# jefatura GET /api/v1/reportes/labores
+
+# Lote 17: Auditoría
+# admin GET /api/v1/auditoria/cambios
+# admin GET /api/v1/auditoria/timeline
+
+# Lote 19: Importaciones
+# admin GET /api/v1/importaciones/entidades

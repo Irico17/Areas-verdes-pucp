@@ -66,6 +66,7 @@ type DatosConfig struct {
 	EdificiosPath string
 	ReservasPath  string
 	FotosDir      string
+	OpenAPIPath   string
 }
 
 // MigracionesConfig contains database migrations path.
@@ -129,6 +130,7 @@ func New() *Config {
 			EdificiosPath: valueOrDefault("EDIFICIOS_PATH", filepath.Join(root, "data", "osm", "edificios_pando.geojson")),
 			ReservasPath:  valueOrDefault("RESERVAS_MOCK_PATH", filepath.Join(root, "data", "mocks", "reservas_agenda.mock.json")),
 			FotosDir:      valueOrDefault("DRIVE_FOTOS_DIR", filepath.Join(root, "data", "drive_fotos")),
+			OpenAPIPath:   valueOrDefault("OPENAPI_PATH", filepath.Join(root, "apps", "api", "openapi.yaml")),
 		},
 		Migraciones: MigracionesConfig{
 			Dir: valueOrDefault("MIGRATIONS_DIR", filepath.Join(root, "apps", "api", "migrations")),

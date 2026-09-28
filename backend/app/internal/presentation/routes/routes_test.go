@@ -1,6 +1,7 @@
 package routes_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,11 +10,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/controller"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/routes"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/routes/groups"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
 )
+
+type mockSaludUC struct{}
+
+func (mockSaludUC) VerificarSalud(_ context.Context) (*dto.EstadoSaludDTO, error) {
+	return &dto.EstadoSaludDTO{Database: "up", PostGIS: "3.5"}, nil
+}
 
 func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	gin.SetMode(gin.TestMode)
@@ -23,8 +31,12 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	cfg := config.New()
 	cfg.Swagger.Enabled = swaggerEnabled
 
-	healthCtrl := controller.NewHealthController()
+	healthCtrl := controller.NewHealthController(mockSaludUC{})
+	metaCtrl := controller.NewMetaController(cfg)
+
 	healthGrp := groups.NewHealthGroup(healthCtrl)
+	metaGrp := groups.NewMetaGroup(metaCtrl)
+	legadoGrp := groups.NewLegadoGroup(healthCtrl, metaCtrl)
 	swaggerGrp := groups.NewSwaggerGroup()
 
 	r := routes.NewRouter(routes.RouterParams{
@@ -32,6 +44,8 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 		Config:       cfg,
 		Logger:       zerolog.Nop(),
 		HealthGroup:  healthGrp,
+		MetaGroup:    metaGrp,
+		LegadoGroup:  legadoGrp,
 		SwaggerGroup: swaggerGrp,
 	})
 	r.Setup()
@@ -82,5 +96,25 @@ func TestSwaggerCondicionadoPorConfiguracion(t *testing.T) {
 
 	if w.Code == http.StatusNotFound {
 		t.Fatalf("con swagger habilitado no debe dar 404")
+	}
+}
+
+func TestMontajeDoblePrefijos(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	for _, ruta := range []string{
+		"/areas-verdes/v1/health",
+		"/api/v1/health",
+		"/areas-verdes/v1",
+		"/api/v1",
+		"/health",
+	} {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, ruta, nil)
+		engine.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("se esperaba 200 en %s, obtenido %d", ruta, w.Code)
+		}
 	}
 }
