@@ -1,0 +1,67 @@
+// Package main runs database migrations and ETL readiness checks.
+package main
+
+import (
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	"gorm.io/gorm"
+
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/cmd/ioc"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/database"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
+)
+
+func main() {
+	necesitaETL := flag.Bool("necesita-etl", false, "comprueba si la base necesita carga inicial de ETL (exit 0: vacía, exit 10: con datos)")
+	flag.Parse()
+
+	container, err := ioc.BuildContainer()
+	if err != nil {
+		log.Fatalf("contenedor: %v", err)
+	}
+
+	err = container.Invoke(func(gdb *gorm.DB, cfg *config.Config) error {
+		if *necesitaETL {
+			sqlDB, err := gdb.DB()
+			if err != nil {
+				log.Fatalf("obtener conexion sql: %v", err)
+			}
+			necesita, conDatos, err := database.ComprobarNecesitaETL(sqlDB)
+			if err != nil {
+				log.Fatalf("comprobar datos para ETL: %v", err)
+			}
+			if !necesita {
+				fmt.Printf("BD con datos en: %s\n", strings.Join(conDatos, ", "))
+				hasAreas := false
+				hasInv := false
+				for _, item := range conDatos {
+					if strings.HasPrefix(item, "areas_verdes ") {
+						hasAreas = true
+					}
+					if strings.HasPrefix(item, "inventario ") {
+						hasInv = true
+					}
+				}
+				if hasAreas && !hasInv {
+					log.Println("ADVERTENCIA: areas_verdes contiene datos pero inventario está vacío")
+				}
+				os.Exit(10)
+			}
+			fmt.Println("BD vacía: requiere carga inicial de ETL")
+			os.Exit(0)
+		}
+
+		if err := database.Apply(gdb, cfg.Migraciones.Dir); err != nil {
+			log.Fatal(err)
+		}
+		log.Println("migraciones al día")
+		return nil
+	})
+	if err != nil {
+		log.Fatalf("base de datos: %v", err)
+	}
+}
