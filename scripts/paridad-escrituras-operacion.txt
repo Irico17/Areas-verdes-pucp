@@ -1,0 +1,32 @@
+# Escrituras para prueba de paridad en copias de base de datos (lote 12: operación e intervenciones)
+# Formato: <rol> <METODO> <ruta> [@path/al/cuerpo.json] [status_esperado]
+
+# --- Validaciones y permisos de creación ---
+admin POST /api/v1/operacion/actividades @scripts/cuerpos/labor-crear-invalido.json 400
+norte POST /api/v1/operacion/actividades @scripts/cuerpos/labor-crear.json 403
+
+# --- Creación idempotente (primera alta 201, reintento 200) ---
+coordinacion POST /api/v1/operacion/actividades @scripts/cuerpos/labor-crear.json 201
+coordinacion POST /api/v1/operacion/actividades @scripts/cuerpos/labor-crear.json 200
+
+# --- Asignación ---
+norte PATCH /api/v1/operacion/actividades/77777777-7777-4777-8777-777777777777/asignacion @scripts/cuerpos/labor-asignar.json 403
+coordinacion PATCH /api/v1/operacion/actividades/77777777-7777-4777-8777-777777777777/asignacion @scripts/cuerpos/labor-asignar-invalido.json 400
+coordinacion PATCH /api/v1/operacion/actividades/77777777-7777-4777-8777-777777777777/asignacion @scripts/cuerpos/labor-asignar.json 200
+
+# --- Cambio de estado ---
+coordinacion PATCH /api/v1/operacion/actividades/77777777-7777-4777-8777-777777777777/estado @scripts/cuerpos/labor-estado-invalido.json 400
+norte PATCH /api/v1/operacion/actividades/77777777-7777-4777-8777-777777777777/estado @scripts/cuerpos/labor-estado.json 403
+coordinacion PATCH /api/v1/operacion/actividades/77777777-7777-4777-8777-777777777777/estado @scripts/cuerpos/labor-estado.json 200
+
+# --- Ficha de labor ---
+coordinacion PATCH /api/v1/operacion/actividades/77777777-7777-4777-8777-777777777777/ficha @scripts/cuerpos/labor-ficha.json 200
+
+# --- Avances ---
+coordinacion POST /api/v1/operacion/actividades/77777777-7777-4777-8777-777777777777/avances @scripts/cuerpos/labor-avance-invalido.json 400
+coordinacion POST /api/v1/operacion/actividades/77777777-7777-4777-8777-777777777777/avances @scripts/cuerpos/labor-avance.json 201
+
+# --- Archivar ---
+coordinacion POST /api/v1/operacion/actividades/77777777-7777-4777-8777-777777777777/archivar 400
+norte POST /api/v1/operacion/actividades/77777777-7777-4777-8777-777777777777/archivar @scripts/cuerpos/labor-archivar.json 403
+coordinacion POST /api/v1/operacion/actividades/77777777-7777-4777-8777-777777777777/archivar @scripts/cuerpos/labor-archivar.json 200

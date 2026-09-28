@@ -39,6 +39,7 @@ type Router struct {
 	inventarioGroup      *groups.InventarioGroup
 	reservasMockGroup    *groups.ReservasMockGroup
 	inventarioCampoGroup *groups.InventarioCampoGroup
+	operacionGroup       *groups.OperacionGroup
 }
 
 // RouterParams contains injected router dependencies.
@@ -62,6 +63,7 @@ type RouterParams struct {
 	InventarioGroup      *groups.InventarioGroup
 	ReservasMockGroup    *groups.ReservasMockGroup
 	InventarioCampoGroup *groups.InventarioCampoGroup
+	OperacionGroup       *groups.OperacionGroup
 }
 
 // NewRouter creates the main router.
@@ -84,6 +86,7 @@ func NewRouter(p RouterParams) *Router {
 		inventarioGroup:      p.InventarioGroup,
 		reservasMockGroup:    p.ReservasMockGroup,
 		inventarioCampoGroup: p.InventarioCampoGroup,
+		operacionGroup:       p.OperacionGroup,
 	}
 }
 
@@ -118,6 +121,7 @@ func (r *Router) Setup() {
 		r.inventarioGroup.Register(prefix)
 		r.reservasMockGroup.Register(prefix)
 		r.inventarioCampoGroup.Register(prefix)
+		r.operacionGroup.Register(prefix)
 	}
 
 	if r.cfg.Swagger.Enabled {

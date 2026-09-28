@@ -42,3 +42,21 @@ func RequierePermiso(permisosSvc contracts.IPermisosService, accion string) gin.
 		c.Next()
 	}
 }
+
+// RequiereAlgunPermiso requires that the authenticated user's role has at least one of the specified permissions.
+func RequiereAlgunPermiso(permisosSvc contracts.IPermisosService, acciones ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		u, ok := UsuarioEn(c)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "inicie sesión"})
+			return
+		}
+		for _, accion := range acciones {
+			if permisosSvc.Permite(u.Rol, accion) {
+				c.Next()
+				return
+			}
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": domainErrors.ErrSinPermiso.Error()})
+	}
+}
