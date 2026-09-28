@@ -8,6 +8,8 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/mapper"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/models"
 )
 
 type lugarRepository struct {
@@ -20,46 +22,30 @@ func NewLugarRepository(db *gorm.DB) contracts.ILugarRepository {
 }
 
 func (r *lugarRepository) Listar(ctx context.Context) ([]entities.Lugar, error) {
-	rows, err := r.db.WithContext(ctx).Raw(`
-		SELECT id, nombre, nombre_norm, lat, lon, zona_supervision_id, activo
-		FROM lugares
-		WHERE activo
-		ORDER BY nombre_norm`).Rows()
+	var list []models.LugarModel
+	err := r.db.WithContext(ctx).Where("activo = ?", true).Order("nombre_norm").Find(&list).Error
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	out := []entities.Lugar{}
-	for rows.Next() {
-		var l entities.Lugar
-		var zona *int64
-		if err := rows.Scan(&l.ID, &l.Nombre, &l.NombreNorm, &l.Lat, &l.Lon, &zona, &l.Activo); err != nil {
-			return nil, err
-		}
-		l.ZonaSupervisionID = zona
-		out = append(out, l)
+	out := make([]entities.Lugar, len(list))
+	for i, m := range list {
+		out[i] = *mapper.LugarModelToEntity(&m)
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 func (r *lugarRepository) Crear(ctx context.Context, nombre string, lat, lon float64, zonaID *int64) (entities.Lugar, error) {
 	norm := entities.NormalizarNombre(nombre)
-	var id int64
-	err := r.db.WithContext(ctx).Raw(`
-		INSERT INTO lugares (nombre, nombre_norm, lat, lon, zona_supervision_id)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id`, nombre, norm, lat, lon, zonaID).Scan(&id).Error
-	if err != nil {
-		return entities.Lugar{}, domainErrors.ErrEntrada
-	}
-	return entities.Lugar{
-		ID:                id,
+	m := models.LugarModel{
 		Nombre:            nombre,
 		NombreNorm:        norm,
 		Lat:               lat,
 		Lon:               lon,
 		ZonaSupervisionID: zonaID,
 		Activo:            true,
-	}, nil
+	}
+	if err := r.db.WithContext(ctx).Create(&m).Error; err != nil {
+		return entities.Lugar{}, domainErrors.ErrEntrada
+	}
+	return *mapper.LugarModelToEntity(&m), nil
 }

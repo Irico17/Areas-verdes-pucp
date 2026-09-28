@@ -11,6 +11,4 @@ var (
 	ErrNombreObligatorio = errors.New("el nombre es obligatorio y de hasta 80 caracteres")
 	// ErrItemNoExiste is returned when deactivating a non-existent catalog item.
 	ErrItemNoExiste = errors.New("no existe ese ítem")
-	// ErrIDInvalido is returned when a catalog item ID cannot be parsed.
-	ErrIDInvalido = errors.New("id inválido")
 )

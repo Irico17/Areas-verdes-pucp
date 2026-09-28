@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
@@ -43,6 +44,7 @@ type catastroController struct {
 	especieUC   contracts.IEspecieUseCase
 	ejemplarUC  contracts.IEjemplarUseCase
 	refUC       contracts.ICatastroReferenciaUseCase
+	logger      zerolog.Logger
 }
 
 // NewCatastroController creates a new ICatastroController instance.
@@ -53,6 +55,7 @@ func NewCatastroController(
 	especieUC contracts.IEspecieUseCase,
 	ejemplarUC contracts.IEjemplarUseCase,
 	refUC contracts.ICatastroReferenciaUseCase,
+	logger zerolog.Logger,
 ) ICatastroController {
 	return &catastroController{
 		zonaUC:      zonaUC,
@@ -61,6 +64,7 @@ func NewCatastroController(
 		especieUC:   especieUC,
 		ejemplarUC:  ejemplarUC,
 		refUC:       refUC,
+		logger:      logger,
 	}
 }
 
@@ -87,10 +91,11 @@ func pagina(limitRaw, offsetRaw string) (int, int) {
 // @Tags catastro
 // @Produce json
 // @Success 200 {object} map[string][]dto.ZonaSupervisionDTO
-// @Router /catastro/zonas-supervision [get]
+// @Router /v1/catastro/zonas-supervision [get]
 func (ctrl *catastroController) Zonas(c *gin.Context) {
 	rows, err := ctrl.zonaUC.Listar(c.Request.Context())
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("catastro: error al leer zonas")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer las zonas de supervisión"})
 		return
 	}
@@ -105,7 +110,7 @@ func (ctrl *catastroController) Zonas(c *gin.Context) {
 // @Param body body requests.CrearZonaSupervisionRequest true "Supervision zone data"
 // @Success 201 {object} dto.ZonaSupervisionDTO
 // @Failure 400 {object} map[string]string
-// @Router /catastro/zonas-supervision [post]
+// @Router /v1/catastro/zonas-supervision [post]
 func (ctrl *catastroController) CrearZona(c *gin.Context) {
 	var body requests.CrearZonaSupervisionRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -130,10 +135,11 @@ func (ctrl *catastroController) CrearZona(c *gin.Context) {
 // @Tags catastro
 // @Produce json
 // @Success 200 {object} map[string][]dto.PoligonoCuadrillaDTO
-// @Router /catastro/poligonos [get]
+// @Router /v1/catastro/poligonos [get]
 func (ctrl *catastroController) Poligonos(c *gin.Context) {
 	rows, err := ctrl.refUC.ListarPoligonos(c.Request.Context())
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("catastro: error al leer poligonos")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer los polígonos"})
 		return
 	}
@@ -145,10 +151,11 @@ func (ctrl *catastroController) Poligonos(c *gin.Context) {
 // @Tags catastro
 // @Produce json
 // @Success 200 {object} map[string][]dto.CuadrillaDTO
-// @Router /catastro/cuadrillas [get]
+// @Router /v1/catastro/cuadrillas [get]
 func (ctrl *catastroController) Cuadrillas(c *gin.Context) {
 	rows, err := ctrl.cuadrillaUC.Listar(c.Request.Context())
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("catastro: error al leer cuadrillas")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer las cuadrillas"})
 		return
 	}
@@ -163,7 +170,7 @@ func (ctrl *catastroController) Cuadrillas(c *gin.Context) {
 // @Param body body requests.CrearCuadrillaRequest true "Work team data"
 // @Success 201 {object} dto.CuadrillaDTO
 // @Failure 400 {object} map[string]string
-// @Router /catastro/cuadrillas [post]
+// @Router /v1/catastro/cuadrillas [post]
 func (ctrl *catastroController) CrearCuadrilla(c *gin.Context) {
 	var body requests.CrearCuadrillaRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -187,10 +194,11 @@ func (ctrl *catastroController) CrearCuadrilla(c *gin.Context) {
 // @Tags catastro
 // @Produce json
 // @Success 200 {object} map[string][]dto.LugarDTO
-// @Router /catastro/lugares [get]
+// @Router /v1/catastro/lugares [get]
 func (ctrl *catastroController) Lugares(c *gin.Context) {
 	rows, err := ctrl.lugarUC.Listar(c.Request.Context())
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("catastro: error al leer lugares")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer los lugares"})
 		return
 	}
@@ -205,7 +213,7 @@ func (ctrl *catastroController) Lugares(c *gin.Context) {
 // @Param body body requests.CrearLugarRequest true "Place data"
 // @Success 201 {object} dto.LugarDTO
 // @Failure 400 {object} map[string]string
-// @Router /catastro/lugares [post]
+// @Router /v1/catastro/lugares [post]
 func (ctrl *catastroController) CrearLugar(c *gin.Context) {
 	var body requests.CrearLugarRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -230,10 +238,11 @@ func (ctrl *catastroController) CrearLugar(c *gin.Context) {
 // @Tags catastro
 // @Produce json
 // @Success 200 {object} map[string][]dto.EspecieDTO
-// @Router /catastro/especies [get]
+// @Router /v1/catastro/especies [get]
 func (ctrl *catastroController) Especies(c *gin.Context) {
 	rows, err := ctrl.especieUC.Listar(c.Request.Context())
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("catastro: error al leer especies")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer las especies"})
 		return
 	}
@@ -248,7 +257,7 @@ func (ctrl *catastroController) Especies(c *gin.Context) {
 // @Param body body requests.CrearEspecieRequest true "Species data"
 // @Success 201 {object} dto.EspecieDTO
 // @Failure 400 {object} map[string]string
-// @Router /catastro/especies [post]
+// @Router /v1/catastro/especies [post]
 func (ctrl *catastroController) CrearEspecie(c *gin.Context) {
 	var body requests.CrearEspecieRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -273,11 +282,12 @@ func (ctrl *catastroController) CrearEspecie(c *gin.Context) {
 // @Param limit query int false "Pagination limit"
 // @Param offset query int false "Pagination offset"
 // @Success 200 {object} dto.EjemplaresPaginadosDTO
-// @Router /catastro/ejemplares [get]
+// @Router /v1/catastro/ejemplares [get]
 func (ctrl *catastroController) Ejemplares(c *gin.Context) {
 	limit, offset := pagina(c.Query("limit"), c.Query("offset"))
 	res, err := ctrl.ejemplarUC.Listar(c.Request.Context(), limit, offset)
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("catastro: error al leer ejemplares")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer los ejemplares"})
 		return
 	}
@@ -297,7 +307,7 @@ func (ctrl *catastroController) Ejemplares(c *gin.Context) {
 // @Param body body requests.CrearEjemplarRequest true "Specimen data"
 // @Success 201 {object} dto.EjemplarDTO
 // @Failure 400 {object} map[string]string
-// @Router /catastro/ejemplares [post]
+// @Router /v1/catastro/ejemplares [post]
 func (ctrl *catastroController) CrearEjemplar(c *gin.Context) {
 	var body requests.CrearEjemplarRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -331,7 +341,7 @@ func (ctrl *catastroController) CrearEjemplar(c *gin.Context) {
 // @Param id path int true "Specimen ID"
 // @Success 200 {object} map[string][]dto.CodigoHistoricoDTO
 // @Failure 400 {object} map[string]string
-// @Router /catastro/ejemplares/{id}/codigos [get]
+// @Router /v1/catastro/ejemplares/{id}/codigos [get]
 func (ctrl *catastroController) Codigos(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -340,6 +350,7 @@ func (ctrl *catastroController) Codigos(c *gin.Context) {
 	}
 	rows, err := ctrl.ejemplarUC.ListarCodigos(c.Request.Context(), id)
 	if err != nil {
+		ctrl.logger.Error().Err(err).Int64("id", id).Msg("catastro: error al leer codigos")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer el historial"})
 		return
 	}
@@ -356,7 +367,7 @@ func (ctrl *catastroController) Codigos(c *gin.Context) {
 // @Success 201 {object} dto.CodigoHistoricoDTO
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /catastro/ejemplares/{id}/codigos [post]
+// @Router /v1/catastro/ejemplares/{id}/codigos [post]
 func (ctrl *catastroController) Recodificar(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -383,6 +394,7 @@ func (ctrl *catastroController) Recodificar(c *gin.Context) {
 func (ctrl *catastroController) capa(c *gin.Context, tabla string) {
 	rows, err := ctrl.refUC.ListarCapa(c.Request.Context(), tabla)
 	if err != nil {
+		ctrl.logger.Error().Err(err).Str("capa", tabla).Msg("catastro: error al leer capa")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer la capa"})
 		return
 	}
@@ -394,7 +406,7 @@ func (ctrl *catastroController) capa(c *gin.Context, tabla string) {
 // @Tags catastro
 // @Produce json
 // @Success 200 {object} map[string][]dto.CapaFichaDTO
-// @Router /catastro/fauna [get]
+// @Router /v1/catastro/fauna [get]
 func (ctrl *catastroController) Fauna(c *gin.Context) {
 	ctrl.capa(c, "fauna")
 }
@@ -404,7 +416,7 @@ func (ctrl *catastroController) Fauna(c *gin.Context) {
 // @Tags catastro
 // @Produce json
 // @Success 200 {object} map[string][]dto.CapaFichaDTO
-// @Router /catastro/puertas [get]
+// @Router /v1/catastro/puertas [get]
 func (ctrl *catastroController) Puertas(c *gin.Context) {
 	ctrl.capa(c, "puertas")
 }
@@ -414,7 +426,7 @@ func (ctrl *catastroController) Puertas(c *gin.Context) {
 // @Tags catastro
 // @Produce json
 // @Success 200 {object} map[string][]dto.CapaFichaDTO
-// @Router /catastro/playas [get]
+// @Router /v1/catastro/playas [get]
 func (ctrl *catastroController) Playas(c *gin.Context) {
 	ctrl.capa(c, "playas_estacionamiento")
 }
@@ -424,7 +436,7 @@ func (ctrl *catastroController) Playas(c *gin.Context) {
 // @Tags catastro
 // @Produce json
 // @Success 200 {object} map[string][]dto.CapaFichaDTO
-// @Router /catastro/veredas [get]
+// @Router /v1/catastro/veredas [get]
 func (ctrl *catastroController) Veredas(c *gin.Context) {
 	ctrl.capa(c, "veredas_riesgo")
 }
@@ -434,7 +446,7 @@ func (ctrl *catastroController) Veredas(c *gin.Context) {
 // @Tags catastro
 // @Produce json
 // @Success 200 {object} map[string][]dto.CapaFichaDTO
-// @Router /catastro/xerofiticas [get]
+// @Router /v1/catastro/xerofiticas [get]
 func (ctrl *catastroController) Xerofiticas(c *gin.Context) {
 	ctrl.capa(c, "xerofiticas")
 }
@@ -444,7 +456,7 @@ func (ctrl *catastroController) Xerofiticas(c *gin.Context) {
 // @Tags catastro
 // @Produce json
 // @Success 200 {object} map[string][]dto.CapaFichaDTO
-// @Router /catastro/jardines-reserva [get]
+// @Router /v1/catastro/jardines-reserva [get]
 func (ctrl *catastroController) JardinesReserva(c *gin.Context) {
 	ctrl.capa(c, "jardines_reserva")
 }

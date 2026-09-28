@@ -24,7 +24,21 @@ func NewInventarioUseCase(repo contracts.IInventarioRepository, fotoAdapter cont
 
 // Index returns the catalogue of inventory overlays and currently loaded feature counts.
 func (u *inventarioUseCase) Index(ctx context.Context) (dto.IndiceInventarioDTO, error) {
-	return u.repo.Index(ctx)
+	idx, err := u.repo.Index(ctx)
+	if err != nil {
+		return dto.IndiceInventarioDTO{}, err
+	}
+	cargadas := make([]dto.CapaCountDTO, len(idx.Cargadas))
+	for i, c := range idx.Cargadas {
+		cargadas[i] = dto.CapaCountDTO{
+			Capa:     c.Capa,
+			Features: c.Features,
+		}
+	}
+	return dto.IndiceInventarioDTO{
+		Capas:    idx.Capas,
+		Cargadas: cargadas,
+	}, nil
 }
 
 // Capa returns the GeoJSON FeatureCollection for a given inventory layer.

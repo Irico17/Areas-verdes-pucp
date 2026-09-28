@@ -8,10 +8,11 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/repository/postgres"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 )
 
 func TestAreaVerdeRepository_CRUD(t *testing.T) {
-	_, gdb := migrarDBGeoTemporal(t, "vp_c_test_area_verde_repo")
+	_, gdb := testutil.MigrarDBTemporal(t, "area_verde_repo")
 	ctx := context.Background()
 	repo := postgres.NewAreaVerdeRepository(gdb)
 	cambioRepo := postgres.NewCambioRepository(gdb)

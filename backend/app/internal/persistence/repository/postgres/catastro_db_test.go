@@ -6,10 +6,11 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/repository/postgres"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 )
 
 func TestCatastroRepositories_DB(t *testing.T) {
-	_, gdb := migrarDBGeoTemporal(t, "vp_c_test_catastro_repo")
+	_, gdb := testutil.MigrarDBTemporal(t, "catastro_repo")
 	ctx := context.Background()
 
 	// 1. Zona de supervisión

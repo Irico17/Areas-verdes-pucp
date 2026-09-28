@@ -18,3 +18,14 @@ type AreaVerde struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
+
+// AreaVerdeFicha represents green area card metadata for display and editing.
+type AreaVerdeFicha struct {
+	FeatureID  string
+	Nombre     string
+	Uso        string
+	RiegoAct   string
+	Referencia string
+	AreaM2     *float64
+	ConGeom    bool
+}

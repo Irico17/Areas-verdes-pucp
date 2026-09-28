@@ -11,6 +11,8 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/mapper"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/models"
 )
 
 type ejemplarRepository struct {
@@ -29,9 +31,9 @@ func (r *ejemplarRepository) Listar(ctx context.Context, limit, offset int) ([]e
 	}
 
 	q := `
-		SELECT id, numero_origen, COALESCE(codigo, ''), especie_id, COALESCE(nombre_comun, ''),
-		       COALESCE(tipo_vegetacion, ''), cantidad, ubicacion_lugar_id, COALESCE(referencia, ''),
-		       lat, lon, COALESCE(observacion_fen_2026, ''), salud, activo
+		SELECT id, numero_origen, codigo, especie_id, nombre_comun,
+		       tipo_vegetacion, cantidad, ubicacion_lugar_id, referencia,
+		       lat, lon, observacion_fen_2026, salud, activo, created_at, updated_at
 		FROM ejemplares
 		WHERE activo
 		ORDER BY numero_origen NULLS LAST, id`
@@ -44,29 +46,20 @@ func (r *ejemplarRepository) Listar(ctx context.Context, limit, offset int) ([]e
 		args = []any{limit, offset}
 	}
 
-	rows, err := r.db.WithContext(ctx).Raw(q, args...).Rows()
-	if err != nil {
+	var modelsList []models.EjemplarModel
+	if err := r.db.WithContext(ctx).Raw(q, args...).Scan(&modelsList).Error; err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
 
-	out := []entities.Ejemplar{}
-	for rows.Next() {
-		var e entities.Ejemplar
-		if err := rows.Scan(
-			&e.ID, &e.NumeroOrigen, &e.Codigo, &e.EspecieID, &e.NombreComun,
-			&e.TipoVegetacion, &e.Cantidad, &e.UbicacionLugarID, &e.Referencia,
-			&e.Lat, &e.Lon, &e.ObservacionFen2026, &e.Salud, &e.Activo,
-		); err != nil {
-			return nil, 0, err
-		}
-		out = append(out, e)
+	out := make([]entities.Ejemplar, len(modelsList))
+	for i, m := range modelsList {
+		out[i] = *mapper.EjemplarModelToEntity(&m)
 	}
-	return out, total, rows.Err()
+	return out, total, nil
 }
 
 func (r *ejemplarRepository) Crear(ctx context.Context, e entities.Ejemplar) (entities.Ejemplar, error) {
-	var id int64
+	var m models.EjemplarModel
 	err := r.db.WithContext(ctx).Raw(`
 		INSERT INTO ejemplares (
 		  numero_origen, codigo, especie_id, nombre_comun, tipo_vegetacion, cantidad,
@@ -77,26 +70,19 @@ func (r *ejemplarRepository) Crear(ctx context.Context, e entities.Ejemplar) (en
 		  CASE WHEN $9::float8 IS NULL THEN NULL
 		       ELSE ST_SetSRID(ST_MakePoint($10, $9), 4326) END
 		)
-		RETURNING id`,
+		RETURNING id, numero_origen, codigo, especie_id, nombre_comun, tipo_vegetacion, cantidad,
+		          ubicacion_lugar_id, referencia, lat, lon, observacion_fen_2026, salud, activo, created_at, updated_at`,
 		e.NumeroOrigen, strings.TrimSpace(e.Codigo), e.EspecieID, strings.TrimSpace(e.NombreComun),
 		strings.TrimSpace(e.TipoVegetacion), e.Cantidad, e.UbicacionLugarID, strings.TrimSpace(e.Referencia),
 		e.Lat, e.Lon, strings.TrimSpace(e.ObservacionFen2026),
-	).Scan(&id).Error
+	).Scan(&m).Error
 	if err != nil {
 		return entities.Ejemplar{}, domainErrors.ErrEntrada
 	}
-	e.ID = id
-	e.Salud = nil
-	e.Activo = true
-	return e, nil
+	return *mapper.EjemplarModelToEntity(&m), nil
 }
 
 func (r *ejemplarRepository) Recodificar(ctx context.Context, ejemplarID int64, codigoNuevo string) (entities.CodigoHistorico, error) {
-	codigoNuevo = strings.TrimSpace(codigoNuevo)
-	if ejemplarID < 1 || codigoNuevo == "" {
-		return entities.CodigoHistorico{}, domainErrors.ErrEntrada
-	}
-
 	var out entities.CodigoHistorico
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var anterior sql.NullString
@@ -115,11 +101,12 @@ func (r *ejemplarRepository) Recodificar(ctx context.Context, ejemplarID int64, 
 			out = entities.CodigoHistorico{EjemplarID: ejemplarID, CodigoAnterior: previo, CodigoNuevo: codigoNuevo}
 			return nil
 		}
+		var m models.CodigoHistoricoModel
 		if err := tx.Raw(`
 			INSERT INTO codigos_historicos (ejemplar_id, codigo_anterior, codigo_nuevo)
 			VALUES ($1, $2, $3)
-			RETURNING id, ejemplar_id, codigo_anterior, codigo_nuevo`,
-			ejemplarID, previo, codigoNuevo).Scan(&out).Error; err != nil {
+			RETURNING id, ejemplar_id, codigo_anterior, codigo_nuevo, created_at`,
+			ejemplarID, previo, codigoNuevo).Scan(&m).Error; err != nil {
 			return err
 		}
 		res := tx.Exec(`UPDATE ejemplares SET codigo = $2, updated_at = now() WHERE id = $1 AND activo`, ejemplarID, codigoNuevo)
@@ -129,6 +116,7 @@ func (r *ejemplarRepository) Recodificar(ctx context.Context, ejemplarID int64, 
 		if res.RowsAffected != 1 {
 			return domainErrors.ErrNoEncontrado
 		}
+		out = *mapper.CodigoHistoricoModelToEntity(&m)
 		return nil
 	})
 	if err != nil {
@@ -138,17 +126,14 @@ func (r *ejemplarRepository) Recodificar(ctx context.Context, ejemplarID int64, 
 }
 
 func (r *ejemplarRepository) ListarCodigos(ctx context.Context, ejemplarID int64) ([]entities.CodigoHistorico, error) {
-	var out []entities.CodigoHistorico
-	err := r.db.WithContext(ctx).Raw(`
-		SELECT id, ejemplar_id, codigo_anterior, COALESCE(codigo_nuevo, '')
-		FROM codigos_historicos
-		WHERE ejemplar_id = $1
-		ORDER BY id`, ejemplarID).Scan(&out).Error
+	var list []models.CodigoHistoricoModel
+	err := r.db.WithContext(ctx).Where("ejemplar_id = ?", ejemplarID).Order("id").Find(&list).Error
 	if err != nil {
 		return nil, err
 	}
-	if out == nil {
-		out = []entities.CodigoHistorico{}
+	out := make([]entities.CodigoHistorico, len(list))
+	for i, m := range list {
+		out[i] = *mapper.CodigoHistoricoModelToEntity(&m)
 	}
 	return out, nil
 }

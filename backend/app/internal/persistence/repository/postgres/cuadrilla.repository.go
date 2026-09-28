@@ -8,6 +8,8 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/mapper"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/models"
 )
 
 type cuadrillaRepository struct {
@@ -20,27 +22,27 @@ func NewCuadrillaRepository(db *gorm.DB) contracts.ICuadrillaRepository {
 }
 
 func (r *cuadrillaRepository) Listar(ctx context.Context) ([]entities.Cuadrilla, error) {
-	var out []entities.Cuadrilla
-	err := r.db.WithContext(ctx).Raw(`
-		SELECT id, nombre_ficticio, turno, activo
-		FROM cuadrillas
-		WHERE activo
-		ORDER BY id`).Scan(&out).Error
+	var list []models.CuadrillaModel
+	err := r.db.WithContext(ctx).Where("activo = ?", true).Order("id").Find(&list).Error
 	if err != nil {
 		return nil, err
 	}
-	if out == nil {
-		out = []entities.Cuadrilla{}
+	out := make([]entities.Cuadrilla, len(list))
+	for i, m := range list {
+		out[i] = *mapper.CuadrillaModelToEntity(&m)
 	}
 	return out, nil
 }
 
 func (r *cuadrillaRepository) Crear(ctx context.Context, id, nombre, turno string) (entities.Cuadrilla, error) {
-	err := r.db.WithContext(ctx).Exec(`
-		INSERT INTO cuadrillas (id, nombre_ficticio, turno) VALUES ($1, $2, $3)`,
-		id, nombre, turno).Error
-	if err != nil {
+	m := models.CuadrillaModel{
+		ID:             id,
+		NombreFicticio: nombre,
+		Turno:          turno,
+		Activo:         true,
+	}
+	if err := r.db.WithContext(ctx).Create(&m).Error; err != nil {
 		return entities.Cuadrilla{}, domainErrors.ErrEntrada
 	}
-	return entities.Cuadrilla{ID: id, NombreFicticio: nombre, Turno: turno, Activo: true}, nil
+	return *mapper.CuadrillaModelToEntity(&m), nil
 }

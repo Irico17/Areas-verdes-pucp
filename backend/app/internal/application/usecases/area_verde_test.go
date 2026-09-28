@@ -7,18 +7,19 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/usecases"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
 type mockAreaVerdeRepo struct {
-	fichas        map[string]dto.FichaDTO
+	fichas        map[string]entities.AreaVerdeFicha
 	crearError    error
 	actualizarErr error
 }
 
 func newMockAreaVerdeRepo() *mockAreaVerdeRepo {
 	return &mockAreaVerdeRepo{
-		fichas: map[string]dto.FichaDTO{
+		fichas: map[string]entities.AreaVerdeFicha{
 			"AV-0001": {
 				FeatureID:  "AV-0001",
 				Nombre:     "Bosque Húmedo",
@@ -31,8 +32,8 @@ func newMockAreaVerdeRepo() *mockAreaVerdeRepo {
 	}
 }
 
-func (m *mockAreaVerdeRepo) Fichas(_ context.Context, q string) ([]dto.FichaDTO, error) {
-	out := []dto.FichaDTO{}
+func (m *mockAreaVerdeRepo) Fichas(_ context.Context, q string) ([]entities.AreaVerdeFicha, error) {
+	out := []entities.AreaVerdeFicha{}
 	for _, f := range m.fichas {
 		if q == "" || strings.Contains(f.Nombre, q) || strings.Contains(f.FeatureID, q) {
 			out = append(out, f)
@@ -41,14 +42,14 @@ func (m *mockAreaVerdeRepo) Fichas(_ context.Context, q string) ([]dto.FichaDTO,
 	return out, nil
 }
 
-func (m *mockAreaVerdeRepo) ObtenerFichaPorFeatureID(_ context.Context, featureID string) (*dto.FichaDTO, error) {
+func (m *mockAreaVerdeRepo) ObtenerFichaPorFeatureID(_ context.Context, featureID string) (*entities.AreaVerdeFicha, error) {
 	if f, ok := m.fichas[featureID]; ok {
 		return &f, nil
 	}
 	return nil, domainErrors.ErrFichaNoEncontrada
 }
 
-func (m *mockAreaVerdeRepo) ActualizarFicha(_ context.Context, featureID, nombre, uso, riego, referencia string) (*dto.FichaDTO, error) {
+func (m *mockAreaVerdeRepo) ActualizarFicha(_ context.Context, featureID, nombre, uso, riego, referencia string) (*entities.AreaVerdeFicha, error) {
 	if m.actualizarErr != nil {
 		return nil, m.actualizarErr
 	}
@@ -64,11 +65,11 @@ func (m *mockAreaVerdeRepo) ActualizarFicha(_ context.Context, featureID, nombre
 	return &f, nil
 }
 
-func (m *mockAreaVerdeRepo) CrearSinGeom(_ context.Context, featureID, nombre, uso string) (*dto.FichaDTO, error) {
+func (m *mockAreaVerdeRepo) CrearSinGeom(_ context.Context, featureID, nombre, uso string) (*entities.AreaVerdeFicha, error) {
 	if m.crearError != nil {
 		return nil, m.crearError
 	}
-	f := dto.FichaDTO{
+	f := entities.AreaVerdeFicha{
 		FeatureID: featureID,
 		Nombre:    nombre,
 		Uso:       uso,

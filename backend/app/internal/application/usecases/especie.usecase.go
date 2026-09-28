@@ -18,7 +18,15 @@ func NewEspecieUseCase(repo contracts.IEspecieRepository) contracts.IEspecieUseC
 }
 
 func (uc *especieUseCase) Listar(ctx context.Context) ([]dto.EspecieDTO, error) {
-	return uc.repo.Listar(ctx)
+	rows, err := uc.repo.Listar(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]dto.EspecieDTO, len(rows))
+	for i, e := range rows {
+		out[i] = especieEntityToDTO(e)
+	}
+	return out, nil
 }
 
 func (uc *especieUseCase) Crear(ctx context.Context, req dto.CrearEspecieDTO) (dto.EspecieDTO, error) {
@@ -29,5 +37,18 @@ func (uc *especieUseCase) Crear(ctx context.Context, req dto.CrearEspecieDTO) (d
 	if err := e.Validar(); err != nil {
 		return dto.EspecieDTO{}, err
 	}
-	return uc.repo.Crear(ctx, e.NombreCientifico, e.NombreComun)
+	res, err := uc.repo.Crear(ctx, e.NombreCientifico, e.NombreComun)
+	if err != nil {
+		return dto.EspecieDTO{}, err
+	}
+	return especieEntityToDTO(res), nil
+}
+
+func especieEntityToDTO(e entities.Especie) dto.EspecieDTO {
+	return dto.EspecieDTO{
+		ID:               e.ID,
+		NombreCientifico: e.NombreCientifico,
+		NombreComun:      e.NombreComun,
+		Activo:           e.Activo,
+	}
 }

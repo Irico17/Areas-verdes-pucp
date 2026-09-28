@@ -13,30 +13,30 @@ import (
 type mockGeoRepo struct {
 	areas   domainEntities.FeatureCollection
 	zonas   domainEntities.FeatureCollection
-	resumen dto.ResumenDTO
-	capas   dto.CapasIndexDTO
+	resumen domainEntities.ResumenCatastro
+	capas   domainEntities.CapasIndex
 }
 
-func (m *mockGeoRepo) Areas(_ context.Context, _ dto.FiltroGeoDTO) (domainEntities.FeatureCollection, error) {
+func (m *mockGeoRepo) Areas(_ context.Context, _ domainEntities.FiltroGeo) (domainEntities.FeatureCollection, error) {
 	return m.areas, nil
 }
 
-func (m *mockGeoRepo) Zonas(_ context.Context, _ dto.FiltroGeoDTO) (domainEntities.FeatureCollection, error) {
+func (m *mockGeoRepo) Zonas(_ context.Context, _ domainEntities.FiltroGeo) (domainEntities.FeatureCollection, error) {
 	return m.zonas, nil
 }
 
-func (m *mockGeoRepo) Capa(_ context.Context, capa string, _ dto.FiltroGeoDTO) (domainEntities.FeatureCollection, error) {
+func (m *mockGeoRepo) Capa(_ context.Context, capa string, _ domainEntities.FiltroGeo) (domainEntities.FeatureCollection, error) {
 	if capa != "xerofitica" && capa != "jardines_reserva" {
 		return domainEntities.FeatureCollection{}, domainErrors.ErrCapaDesconocida
 	}
 	return domainEntities.Collection(capa), nil
 }
 
-func (m *mockGeoRepo) Capas(context.Context) (dto.CapasIndexDTO, error) {
+func (m *mockGeoRepo) Capas(context.Context) (domainEntities.CapasIndex, error) {
 	return m.capas, nil
 }
 
-func (m *mockGeoRepo) Resumen(context.Context) (dto.ResumenDTO, error) {
+func (m *mockGeoRepo) Resumen(context.Context) (domainEntities.ResumenCatastro, error) {
 	return m.resumen, nil
 }
 

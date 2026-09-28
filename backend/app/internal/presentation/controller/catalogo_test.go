@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	apperrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
@@ -46,30 +47,13 @@ func (m *mockCatalogoControllerUseCase) Desactivar(ctx context.Context, id int64
 func TestCatalogoController_Listar(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	t.Run("sin base de datos da 503", func(t *testing.T) {
-		ctrl := controller.NewCatalogoController(nil)
-		r := gin.New()
-		r.GET("/catalogos", ctrl.Listar)
-
-		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/catalogos", nil)
-		r.ServeHTTP(w, req)
-
-		if w.Code != http.StatusServiceUnavailable {
-			t.Fatalf("se esperaba 503, se obtuvo %d", w.Code)
-		}
-		if w.Body.String() != `{"error":"base de datos no disponible"}` {
-			t.Fatalf("cuerpo 503 inesperado: %s", w.Body.String())
-		}
-	})
-
 	t.Run("error de lectura da 500", func(t *testing.T) {
 		mockUC := &mockCatalogoControllerUseCase{
 			listarFn: func(ctx context.Context, filtro dto.FiltroCatalogoDTO) (*dto.CatalogoListResponseDTO, error) {
 				return nil, errors.New("db error")
 			},
 		}
-		ctrl := controller.NewCatalogoController(mockUC)
+		ctrl := controller.NewCatalogoController(mockUC, zerolog.Nop())
 		r := gin.New()
 		r.GET("/catalogos", ctrl.Listar)
 
@@ -98,7 +82,7 @@ func TestCatalogoController_Listar(t *testing.T) {
 				}, nil
 			},
 		}
-		ctrl := controller.NewCatalogoController(mockUC)
+		ctrl := controller.NewCatalogoController(mockUC, zerolog.Nop())
 		r := gin.New()
 		r.GET("/catalogos", ctrl.Listar)
 
@@ -126,22 +110,8 @@ func TestCatalogoController_Listar(t *testing.T) {
 func TestCatalogoController_Crear(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	t.Run("sin base de datos da 503", func(t *testing.T) {
-		ctrl := controller.NewCatalogoController(nil)
-		r := gin.New()
-		r.POST("/catalogos", ctrl.Crear)
-
-		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/catalogos", bytes.NewBufferString(`{"clase":"estado"}`))
-		r.ServeHTTP(w, req)
-
-		if w.Code != http.StatusServiceUnavailable {
-			t.Fatalf("se esperaba 503, se obtuvo %d", w.Code)
-		}
-	})
-
 	t.Run("JSON invalido da 400", func(t *testing.T) {
-		ctrl := controller.NewCatalogoController(&mockCatalogoControllerUseCase{})
+		ctrl := controller.NewCatalogoController(&mockCatalogoControllerUseCase{}, zerolog.Nop())
 		r := gin.New()
 		r.POST("/catalogos", ctrl.Crear)
 
@@ -170,7 +140,7 @@ func TestCatalogoController_Crear(t *testing.T) {
 					return nil, vErr
 				},
 			}
-			ctrl := controller.NewCatalogoController(mockUC)
+			ctrl := controller.NewCatalogoController(mockUC, zerolog.Nop())
 			r := gin.New()
 			r.POST("/catalogos", ctrl.Crear)
 
@@ -201,7 +171,7 @@ func TestCatalogoController_Crear(t *testing.T) {
 				}, nil
 			},
 		}
-		ctrl := controller.NewCatalogoController(mockUC)
+		ctrl := controller.NewCatalogoController(mockUC, zerolog.Nop())
 		r := gin.New()
 		r.POST("/catalogos", ctrl.Crear)
 
@@ -226,22 +196,8 @@ func TestCatalogoController_Crear(t *testing.T) {
 func TestCatalogoController_Desactivar(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	t.Run("sin base de datos da 503", func(t *testing.T) {
-		ctrl := controller.NewCatalogoController(nil)
-		r := gin.New()
-		r.POST("/catalogos/:id/desactivar", ctrl.Desactivar)
-
-		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/catalogos/1/desactivar", nil)
-		r.ServeHTTP(w, req)
-
-		if w.Code != http.StatusServiceUnavailable {
-			t.Fatalf("se esperaba 503, se obtuvo %d", w.Code)
-		}
-	})
-
 	t.Run("id invalido da 400", func(t *testing.T) {
-		ctrl := controller.NewCatalogoController(&mockCatalogoControllerUseCase{})
+		ctrl := controller.NewCatalogoController(&mockCatalogoControllerUseCase{}, zerolog.Nop())
 		r := gin.New()
 		r.POST("/catalogos/:id/desactivar", ctrl.Desactivar)
 
@@ -266,7 +222,7 @@ func TestCatalogoController_Desactivar(t *testing.T) {
 				return nil, apperrors.ErrItemNoExiste
 			},
 		}
-		ctrl := controller.NewCatalogoController(mockUC)
+		ctrl := controller.NewCatalogoController(mockUC, zerolog.Nop())
 		r := gin.New()
 		r.POST("/catalogos/:id/desactivar", ctrl.Desactivar)
 
@@ -288,7 +244,7 @@ func TestCatalogoController_Desactivar(t *testing.T) {
 				return &dto.DesactivarCatalogoResponseDTO{Activo: false, ID: id}, nil
 			},
 		}
-		ctrl := controller.NewCatalogoController(mockUC)
+		ctrl := controller.NewCatalogoController(mockUC, zerolog.Nop())
 		r := gin.New()
 		r.POST("/catalogos/:id/desactivar", ctrl.Desactivar)
 

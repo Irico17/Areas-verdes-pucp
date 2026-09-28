@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
@@ -63,7 +64,7 @@ func TestAreaVerdeController_Listar(t *testing.T) {
 			ConGeom:    true,
 		},
 	}
-	ctrl := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{fichas: fichas})
+	ctrl := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{fichas: fichas}, zerolog.Nop())
 	r := gin.New()
 	r.GET("/api/v1/catastro/areas", ctrl.Listar)
 
@@ -97,7 +98,7 @@ func TestAreaVerdeController_Actualizar(t *testing.T) {
 		ConGeom:    true,
 	}
 
-	ctrl := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{actualizarRes: res})
+	ctrl := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{actualizarRes: res}, zerolog.Nop())
 	r := gin.New()
 	r.PATCH("/api/v1/catastro/areas/:id", ctrl.Actualizar)
 
@@ -117,7 +118,7 @@ func TestAreaVerdeController_Actualizar(t *testing.T) {
 	}
 
 	// No encontrada -> 404
-	ctrlNotFound := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{actualizarErr: domainErrors.ErrFichaNoEncontrada})
+	ctrlNotFound := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{actualizarErr: domainErrors.ErrFichaNoEncontrada}, zerolog.Nop())
 	rNotFound := gin.New()
 	rNotFound.PATCH("/api/v1/catastro/areas/:id", ctrlNotFound.Actualizar)
 	w = httptest.NewRecorder()
@@ -127,7 +128,7 @@ func TestAreaVerdeController_Actualizar(t *testing.T) {
 	}
 
 	// Error validación / actualización -> 400
-	ctrlErr := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{actualizarErr: errors.New("entrada")})
+	ctrlErr := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{actualizarErr: errors.New("entrada")}, zerolog.Nop())
 	rErr := gin.New()
 	rErr.PATCH("/api/v1/catastro/areas/:id", ctrlErr.Actualizar)
 	w = httptest.NewRecorder()
@@ -149,7 +150,7 @@ func TestAreaVerdeController_Crear(t *testing.T) {
 		ConGeom:    false,
 	}
 
-	ctrl := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{crearRes: res})
+	ctrl := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{crearRes: res}, zerolog.Nop())
 	r := gin.New()
 	r.POST("/api/v1/catastro/areas", ctrl.Crear)
 
@@ -169,7 +170,7 @@ func TestAreaVerdeController_Crear(t *testing.T) {
 	}
 
 	// Error -> 400
-	ctrlErr := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{crearErr: errors.New("error al crear")})
+	ctrlErr := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{crearErr: errors.New("error al crear")}, zerolog.Nop())
 	rErr := gin.New()
 	rErr.POST("/api/v1/catastro/areas", ctrlErr.Crear)
 	w = httptest.NewRecorder()

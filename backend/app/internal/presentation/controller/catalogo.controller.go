@@ -2,10 +2,11 @@ package controller
 
 import (
 	"errors"
-	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
@@ -22,11 +23,12 @@ type ICatalogoController interface {
 
 type catalogoController struct {
 	catalogoUC contracts.ICatalogoUseCase
+	logger     zerolog.Logger
 }
 
 // NewCatalogoController creates a new catalog controller.
-func NewCatalogoController(catalogoUC contracts.ICatalogoUseCase) ICatalogoController {
-	return &catalogoController{catalogoUC: catalogoUC}
+func NewCatalogoController(catalogoUC contracts.ICatalogoUseCase, logger zerolog.Logger) ICatalogoController {
+	return &catalogoController{catalogoUC: catalogoUC, logger: logger}
 }
 
 // Listar handles GET /catalogos.
@@ -43,11 +45,6 @@ func NewCatalogoController(catalogoUC contracts.ICatalogoUseCase) ICatalogoContr
 // @Failure 503 {object} map[string]string "base de datos no disponible"
 // @Router /v1/catalogos [get]
 func (ctrl *catalogoController) Listar(c *gin.Context) {
-	if ctrl.catalogoUC == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "base de datos no disponible"})
-		return
-	}
-
 	filtro := dto.FiltroCatalogoDTO{
 		Clase:       c.Query("clase"),
 		SoloActivos: c.Query("activos") == "1",
@@ -55,6 +52,7 @@ func (ctrl *catalogoController) Listar(c *gin.Context) {
 
 	res, err := ctrl.catalogoUC.Listar(c.Request.Context(), filtro)
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("catalogo: error al listar catalogo")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer el catálogo"})
 		return
 	}
@@ -77,11 +75,6 @@ func (ctrl *catalogoController) Listar(c *gin.Context) {
 // @Failure 503 {object} map[string]string "base de datos no disponible"
 // @Router /v1/catalogos [post]
 func (ctrl *catalogoController) Crear(c *gin.Context) {
-	if ctrl.catalogoUC == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "base de datos no disponible"})
-		return
-	}
-
 	var req requests.CrearCatalogoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido"})
@@ -100,6 +93,7 @@ func (ctrl *catalogoController) Crear(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		ctrl.logger.Error().Err(err).Msg("catalogo: error al crear item")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo guardar el ítem"})
 		return
 	}
@@ -122,13 +116,8 @@ func (ctrl *catalogoController) Crear(c *gin.Context) {
 // @Failure 503 {object} map[string]string "base de datos no disponible"
 // @Router /v1/catalogos/{id}/desactivar [post]
 func (ctrl *catalogoController) Desactivar(c *gin.Context) {
-	if ctrl.catalogoUC == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "base de datos no disponible"})
-		return
-	}
-
-	id, err := parseCatalogoID(c.Param("id"))
-	if err != nil {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "id inválido"})
 		return
 	}
@@ -139,23 +128,10 @@ func (ctrl *catalogoController) Desactivar(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "no existe ese ítem"})
 			return
 		}
+		ctrl.logger.Error().Err(err).Msg("catalogo: error al desactivar item")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo desactivar"})
 		return
 	}
 
 	c.JSON(http.StatusOK, res)
-}
-
-func parseCatalogoID(raw string) (int64, error) {
-	var n int64
-	for _, r := range raw {
-		if r < '0' || r > '9' {
-			return 0, io.EOF
-		}
-		n = n*10 + int64(r-'0')
-	}
-	if n == 0 {
-		return 0, io.EOF
-	}
-	return n, nil
 }

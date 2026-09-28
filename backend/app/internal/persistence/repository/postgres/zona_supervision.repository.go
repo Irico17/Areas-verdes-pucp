@@ -8,6 +8,8 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/mapper"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/models"
 )
 
 type zonaSupervisionRepository struct {
@@ -21,7 +23,7 @@ func NewZonaSupervisionRepository(db *gorm.DB) contracts.IZonaSupervisionReposit
 
 func (r *zonaSupervisionRepository) Listar(ctx context.Context) ([]entities.ZonaSupervision, error) {
 	rows, err := r.db.WithContext(ctx).Raw(`
-		SELECT id, codigo, nombre, area_m2, geom IS NOT NULL, activo
+		SELECT id, codigo, nombre, area_m2, activo, geom IS NOT NULL
 		FROM zonas_supervision
 		WHERE activo
 		ORDER BY codigo`).Rows()
@@ -32,13 +34,14 @@ func (r *zonaSupervisionRepository) Listar(ctx context.Context) ([]entities.Zona
 
 	out := []entities.ZonaSupervision{}
 	for rows.Next() {
-		var z entities.ZonaSupervision
-		var area *float64
-		if err := rows.Scan(&z.ID, &z.Codigo, &z.Nombre, &area, &z.ConGeom, &z.Activo); err != nil {
+		var (
+			m       models.ZonaSupervisionModel
+			conGeom bool
+		)
+		if err := rows.Scan(&m.ID, &m.Codigo, &m.Nombre, &m.AreaM2, &m.Activo, &conGeom); err != nil {
 			return nil, err
 		}
-		z.AreaM2 = area
-		out = append(out, z)
+		out = append(out, *mapper.ZonaSupervisionModelToEntity(&m, conGeom))
 	}
 	return out, rows.Err()
 }

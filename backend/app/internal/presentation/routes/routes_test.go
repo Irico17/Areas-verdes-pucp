@@ -262,9 +262,9 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	metaCtrl := controller.NewMetaController(mockContratoOpenAPI{})
 	sesionCtrl := controller.NewSesionController(mockSesionRoutesUC{})
 	usuarioCtrl := controller.NewUsuarioController(mockUsuarioRoutesUC{})
-	catalogoCtrl := controller.NewCatalogoController(mockCatalogoRoutesUC{})
-	geoCtrl := controller.NewGeoController(mockGeoRoutesUC{})
-	areaVerdeCtrl := controller.NewAreaVerdeController(mockAreaVerdeRoutesUC{})
+	catalogoCtrl := controller.NewCatalogoController(mockCatalogoRoutesUC{}, zerolog.Nop())
+	geoCtrl := controller.NewGeoController(mockGeoRoutesUC{}, zerolog.Nop())
+	areaVerdeCtrl := controller.NewAreaVerdeController(mockAreaVerdeRoutesUC{}, zerolog.Nop())
 	catastroCtrl := controller.NewCatastroController(
 		mockZonaRoutesUC{},
 		mockCuadrillaRoutesUC{},
@@ -272,6 +272,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 		mockEspecieRoutesUC{},
 		mockEjemplarRoutesUC{},
 		mockCatastroRefRoutesUC{},
+		zerolog.Nop(),
 	)
 	inventarioCtrl := controller.NewInventarioController(mockInventarioRoutesUC{}, zerolog.Nop())
 	reservasMockCtrl := controller.NewReservasMockController(mockReservasMockRoutesUC{}, zerolog.Nop())

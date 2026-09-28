@@ -2,12 +2,7 @@ package postgres_test
 
 import (
 	"context"
-	"database/sql"
-	"net/url"
-	"os"
 	"testing"
-
-	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/services"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/usecases"
@@ -15,78 +10,13 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/seguridad"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/database"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/repository/postgres"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func migrarDBTemporal(t *testing.T, name string) (*sql.DB, *gorm.DB) {
-	t.Helper()
-	base := os.Getenv("MIGRATE_TEST_URL")
-	if base == "" {
-		t.Skip("MIGRATE_TEST_URL no configurada; omitiendo test de base de datos")
-	}
-
-	admin, err := sql.Open("pgx", base)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer admin.Close()
-	if err := admin.Ping(); err != nil {
-		t.Fatalf("sin postgres de prueba: %v", err)
-	}
-
-	if _, err := admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := admin.Exec("DROP DATABASE IF EXISTS " + name); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := admin.Exec("CREATE DATABASE " + name); err != nil {
-		t.Fatal(err)
-	}
-
-	t.Cleanup(func() {
-		admin2, err := sql.Open("pgx", base)
-		if err != nil {
-			return
-		}
-		defer admin2.Close()
-		_, _ = admin2.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name)
-		_, _ = admin2.Exec("DROP DATABASE IF EXISTS " + name)
-	})
-
-	u, err := url.Parse(base)
-	if err != nil {
-		t.Fatal(err)
-	}
-	u.Path = "/" + name
-
-	gdb, err := database.NewConnection(&config.Config{
-		Database: config.DatabaseConfig{
-			URL: u.String(),
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := database.Apply(gdb, testutil.FindMigrationsDir()); err != nil {
-		t.Fatal(err)
-	}
-
-	sqlDB, err := gdb.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return sqlDB, gdb
-}
-
 func TestEnsureConservaFilasExtraYEsIdempotente(t *testing.T) {
-	name := "vp_c_test_accesos_ensure"
-	sqlDB, gdb := migrarDBTemporal(t, name)
+	sqlDB, gdb := testutil.MigrarDBTemporal(t, "accesos_ensure")
 	defer sqlDB.Close()
 
 	usuarioRepo := postgres.NewUsuarioRepository(gdb)
@@ -184,8 +114,7 @@ func TestEnsureConservaFilasExtraYEsIdempotente(t *testing.T) {
 }
 
 func TestUsuariosRolForeignKeyYCatalogoRoles(t *testing.T) {
-	name := "vp_c_test_usuarios_rol_fk"
-	sqlDB, gdb := migrarDBTemporal(t, name)
+	sqlDB, gdb := testutil.MigrarDBTemporal(t, "usuarios_rol_fk")
 	defer sqlDB.Close()
 
 	ctx := context.Background()

@@ -33,7 +33,7 @@ func NewReservasMockController(uc contracts.IReservasMockUseCase, logger zerolog
 // @Produce json
 // @Success 200 {object} dto.ReservasMockResponseDTO
 // @Failure 500 {object} map[string]string
-// @Router /geo/reservas-mock [get]
+// @Router /v1/geo/reservas-mock [get]
 func (ctrl *reservasMockController) Get(c *gin.Context) {
 	_, encoded, err := ctrl.uc.ObtenerAgenda(c.Request.Context())
 	if errors.Is(err, domainErrors.ErrAgendaFicticiaReferenciaExterna) {

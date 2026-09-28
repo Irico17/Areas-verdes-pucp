@@ -8,6 +8,7 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/mapper"
 )
 
 type cambioRepository struct {
@@ -21,17 +22,21 @@ func NewCambioRepository(db *gorm.DB) contracts.ICambioRepository {
 
 // Crear persists an audit record into the cambios table.
 func (r *cambioRepository) Crear(ctx context.Context, c *entities.Cambio) error {
-	var antesVal, despuesVal any
-	if c.Antes != nil {
-		antesVal = *c.Antes
+	m := mapper.CambioEntityToModel(c)
+	if m == nil {
+		return nil
 	}
-	if c.Despues != nil {
-		despuesVal = *c.Despues
+	var antesVal, despuesVal any
+	if m.Antes != nil {
+		antesVal = *m.Antes
+	}
+	if m.Despues != nil {
+		despuesVal = *m.Despues
 	}
 
 	return r.db.WithContext(ctx).Exec(`
 		INSERT INTO cambios (entidad, entidad_id, accion, antes, despues, usuario_id, lote_id, created_at)
 		VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7, COALESCE(NULLIF($8, '0001-01-01 00:00:00+00'::timestamptz), now()))`,
-		c.Entidad, c.EntidadID, c.Accion, antesVal, despuesVal, c.UsuarioID, c.LoteID, c.CreatedAt,
+		m.Entidad, m.EntidadID, m.Accion, antesVal, despuesVal, m.UsuarioID, m.LoteID, m.CreatedAt,
 	).Error
 }

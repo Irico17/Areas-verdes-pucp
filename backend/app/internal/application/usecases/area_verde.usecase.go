@@ -9,6 +9,7 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
@@ -28,10 +29,11 @@ func (u *areaVerdeUseCase) Fichas(ctx context.Context, q string) ([]dto.FichaDTO
 	if err != nil {
 		return nil, err
 	}
-	if rows == nil {
-		return []dto.FichaDTO{}, nil
+	out := make([]dto.FichaDTO, len(rows))
+	for i, r := range rows {
+		out[i] = *fichaEntityToDTO(&r)
 	}
-	return rows, nil
+	return out, nil
 }
 
 func (u *areaVerdeUseCase) ActualizarFicha(ctx context.Context, featureID string, req dto.ActualizarFichaDTO, usuarioID *int64) (*dto.FichaDTO, error) {
@@ -50,7 +52,7 @@ func (u *areaVerdeUseCase) ActualizarFicha(ctx context.Context, featureID string
 		return nil, err
 	}
 
-	return item, nil
+	return fichaEntityToDTO(item), nil
 }
 
 func (u *areaVerdeUseCase) CrearSinGeom(ctx context.Context, req dto.CrearAreaSinGeomDTO, usuarioID *int64) (*dto.FichaDTO, error) {
@@ -75,5 +77,20 @@ func (u *areaVerdeUseCase) CrearSinGeom(ctx context.Context, req dto.CrearAreaSi
 		return nil, err
 	}
 
-	return item, nil
+	return fichaEntityToDTO(item), nil
+}
+
+func fichaEntityToDTO(e *entities.AreaVerdeFicha) *dto.FichaDTO {
+	if e == nil {
+		return nil
+	}
+	return &dto.FichaDTO{
+		FeatureID:  e.FeatureID,
+		Nombre:     e.Nombre,
+		Uso:        e.Uso,
+		RiegoAct:   e.RiegoAct,
+		Referencia: e.Referencia,
+		AreaM2:     e.AreaM2,
+		ConGeom:    e.ConGeom,
+	}
 }

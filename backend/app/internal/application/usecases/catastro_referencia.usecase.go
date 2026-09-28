@@ -5,7 +5,6 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 )
 
 type catastroReferenciaUseCase struct {
@@ -22,10 +21,20 @@ func (uc *catastroReferenciaUseCase) ListarPoligonos(ctx context.Context) ([]dto
 	if err != nil {
 		return nil, err
 	}
-	if rows == nil {
-		rows = []entities.PoligonoCuadrilla{}
+	out := make([]dto.PoligonoCuadrillaDTO, len(rows))
+	for i, r := range rows {
+		out[i] = dto.PoligonoCuadrillaDTO{
+			ID:                r.ID,
+			FeatureID:         r.FeatureID,
+			Codigo:            r.Codigo,
+			Nombre:            r.Nombre,
+			CuadrillaID:       r.CuadrillaID,
+			ZonaSupervisionID: r.ZonaSupervisionID,
+			ConGeom:           r.ConGeom,
+			Activo:            r.Activo,
+		}
 	}
-	return rows, nil
+	return out, nil
 }
 
 func (uc *catastroReferenciaUseCase) ListarCapa(ctx context.Context, tabla string) ([]dto.CapaFichaDTO, error) {
@@ -33,8 +42,19 @@ func (uc *catastroReferenciaUseCase) ListarCapa(ctx context.Context, tabla strin
 	if err != nil {
 		return nil, err
 	}
-	if rows == nil {
-		rows = []entities.CapaFicha{}
+	out := make([]dto.CapaFichaDTO, len(rows))
+	for i, r := range rows {
+		out[i] = dto.CapaFichaDTO{
+			ID:         r.ID,
+			FeatureID:  r.FeatureID,
+			Nombre:     r.Nombre,
+			Codigo:     r.Codigo,
+			Nota:       r.Nota,
+			Clase:      r.Clase,
+			Riego:      r.Riego,
+			Pertenecen: r.Pertenecen,
+			Activo:     r.Activo,
+		}
 	}
-	return rows, nil
+	return out, nil
 }

@@ -6,8 +6,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/usecases"
 	domainEntities "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/requests"
@@ -24,12 +26,13 @@ type IGeoController interface {
 }
 
 type geoController struct {
-	uc contracts.IGeoUseCase
+	uc     contracts.IGeoUseCase
+	logger zerolog.Logger
 }
 
 // NewGeoController creates a new GeoController.
-func NewGeoController(uc contracts.IGeoUseCase) IGeoController {
-	return &geoController{uc: uc}
+func NewGeoController(uc contracts.IGeoUseCase, logger zerolog.Logger) IGeoController {
+	return &geoController{uc: uc, logger: logger}
 }
 
 // Areas godoc
@@ -37,7 +40,7 @@ func NewGeoController(uc contracts.IGeoUseCase) IGeoController {
 // @Tags geo
 // @Produce application/geo+json
 // @Success 200 {object} entities.FeatureCollection
-// @Router /geo/areas [get]
+// @Router /v1/geo/areas [get]
 func (ctrl *geoController) Areas(c *gin.Context) {
 	f, err := requests.ParseFiltroGeo(c)
 	if err != nil {
@@ -46,6 +49,7 @@ func (ctrl *geoController) Areas(c *gin.Context) {
 	}
 	fc, err := ctrl.uc.Areas(c.Request.Context(), f)
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("geo: error al obtener areas")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer el catastro"})
 		return
 	}
@@ -57,7 +61,7 @@ func (ctrl *geoController) Areas(c *gin.Context) {
 // @Tags geo
 // @Produce application/geo+json
 // @Success 200 {object} entities.FeatureCollection
-// @Router /geo/zonas [get]
+// @Router /v1/geo/zonas [get]
 func (ctrl *geoController) Zonas(c *gin.Context) {
 	f, err := requests.ParseFiltroGeo(c)
 	if err != nil {
@@ -66,6 +70,7 @@ func (ctrl *geoController) Zonas(c *gin.Context) {
 	}
 	fc, err := ctrl.uc.Zonas(c.Request.Context(), f)
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("geo: error al obtener zonas")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer el catastro"})
 		return
 	}
@@ -79,7 +84,7 @@ func (ctrl *geoController) Zonas(c *gin.Context) {
 // @Param capa path string true "Layer name"
 // @Success 200 {object} entities.FeatureCollection
 // @Failure 404 {object} map[string]any
-// @Router /geo/capas/{capa} [get]
+// @Router /v1/geo/capas/{capa} [get]
 func (ctrl *geoController) Capa(c *gin.Context) {
 	f, err := requests.ParseFiltroGeo(c)
 	if err != nil {
@@ -91,11 +96,12 @@ func (ctrl *geoController) Capa(c *gin.Context) {
 	if errors.Is(err, domainErrors.ErrCapaDesconocida) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "capa desconocida",
-			"capas": []string{"jardines_reserva", "xerofitica"},
+			"capas": usecases.CapasConocidas,
 		})
 		return
 	}
 	if err != nil {
+		ctrl.logger.Error().Err(err).Str("capa", capa).Msg("geo: error al obtener capa")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer el catastro"})
 		return
 	}
@@ -107,10 +113,11 @@ func (ctrl *geoController) Capa(c *gin.Context) {
 // @Tags geo
 // @Produce json
 // @Success 200 {object} dto.CapasIndexDTO
-// @Router /geo/capas [get]
+// @Router /v1/geo/capas [get]
 func (ctrl *geoController) Capas(c *gin.Context) {
 	idx, err := ctrl.uc.Capas(c.Request.Context())
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("geo: error al obtener capas")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer el catastro"})
 		return
 	}
@@ -122,10 +129,11 @@ func (ctrl *geoController) Capas(c *gin.Context) {
 // @Tags geo
 // @Produce json
 // @Success 200 {object} dto.ResumenDTO
-// @Router /geo/resumen [get]
+// @Router /v1/geo/resumen [get]
 func (ctrl *geoController) Resumen(c *gin.Context) {
 	res, err := ctrl.uc.Resumen(c.Request.Context())
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("geo: error al obtener resumen")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer el catastro"})
 		return
 	}
@@ -137,13 +145,9 @@ func (ctrl *geoController) Resumen(c *gin.Context) {
 // @Tags geo
 // @Produce application/geo+json
 // @Success 200 {object} entities.FeatureCollection
-// @Router /geo/edificios [get]
+// @Router /v1/geo/edificios [get]
 func (ctrl *geoController) Edificios(c *gin.Context) {
-	body, err := ctrl.uc.Edificios(c.Request.Context())
-	if err != nil {
-		writeFC(c, domainEntities.Collection("edificios"))
-		return
-	}
+	body, _ := ctrl.uc.Edificios(c.Request.Context())
 	c.Data(http.StatusOK, "application/geo+json; charset=utf-8", body)
 }
 

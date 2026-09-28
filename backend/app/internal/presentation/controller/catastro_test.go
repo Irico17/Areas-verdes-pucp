@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
@@ -140,7 +141,7 @@ func setupCatastroTest(
 ) (*gin.Engine, controller.ICatastroController) {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
-	ctrl := controller.NewCatastroController(zonaUC, cuadUC, lugarUC, espUC, ejUC, refUC)
+	ctrl := controller.NewCatastroController(zonaUC, cuadUC, lugarUC, espUC, ejUC, refUC, zerolog.Nop())
 	return engine, ctrl
 }
 

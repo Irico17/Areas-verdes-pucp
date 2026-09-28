@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
@@ -21,12 +22,13 @@ type IAreaVerdeController interface {
 }
 
 type areaVerdeController struct {
-	uc contracts.IAreaVerdeUseCase
+	uc     contracts.IAreaVerdeUseCase
+	logger zerolog.Logger
 }
 
 // NewAreaVerdeController creates a new AreaVerdeController instance.
-func NewAreaVerdeController(uc contracts.IAreaVerdeUseCase) IAreaVerdeController {
-	return &areaVerdeController{uc: uc}
+func NewAreaVerdeController(uc contracts.IAreaVerdeUseCase, logger zerolog.Logger) IAreaVerdeController {
+	return &areaVerdeController{uc: uc, logger: logger}
 }
 
 // Listar godoc
@@ -35,10 +37,11 @@ func NewAreaVerdeController(uc contracts.IAreaVerdeUseCase) IAreaVerdeController
 // @Produce json
 // @Param q query string false "Search query"
 // @Success 200 {object} map[string][]dto.FichaDTO
-// @Router /catastro/areas [get]
+// @Router /v1/catastro/areas [get]
 func (ctrl *areaVerdeController) Listar(c *gin.Context) {
 	rows, err := ctrl.uc.Fichas(c.Request.Context(), c.Query("q"))
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("area_verde: error al listar fichas")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer el catastro"})
 		return
 	}
@@ -55,7 +58,7 @@ func (ctrl *areaVerdeController) Listar(c *gin.Context) {
 // @Success 200 {object} dto.FichaDTO
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /catastro/areas/{id} [patch]
+// @Router /v1/catastro/areas/{id} [patch]
 func (ctrl *areaVerdeController) Actualizar(c *gin.Context) {
 	var body requests.ActualizarFichaRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -93,7 +96,7 @@ func (ctrl *areaVerdeController) Actualizar(c *gin.Context) {
 // @Param body body requests.CrearAreaSinGeomRequest true "New area"
 // @Success 201 {object} dto.FichaDTO
 // @Failure 400 {object} map[string]string
-// @Router /catastro/areas [post]
+// @Router /v1/catastro/areas [post]
 func (ctrl *areaVerdeController) Crear(c *gin.Context) {
 	var body requests.CrearAreaSinGeomRequest
 	if err := c.ShouldBindJSON(&body); err != nil {

@@ -10,7 +10,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
@@ -25,10 +24,10 @@ func NewInventarioRepository(db *gorm.DB) contracts.IInventarioRepository {
 }
 
 // Index lists the known inventory catalogue and counts of loaded features.
-func (r *inventarioRepository) Index(ctx context.Context) (dto.IndiceInventarioDTO, error) {
-	out := dto.IndiceInventarioDTO{
+func (r *inventarioRepository) Index(ctx context.Context) (entities.IndiceInventario, error) {
+	out := entities.IndiceInventario{
 		Capas:    entities.CapasConocidas,
-		Cargadas: []dto.CapaCountDTO{},
+		Cargadas: []entities.CapaResumen{},
 	}
 	err := r.db.WithContext(ctx).Raw(`
 		SELECT capa, count(*) AS features
@@ -39,7 +38,7 @@ func (r *inventarioRepository) Index(ctx context.Context) (dto.IndiceInventarioD
 		return out, err
 	}
 	if out.Cargadas == nil {
-		out.Cargadas = []dto.CapaCountDTO{}
+		out.Cargadas = []entities.CapaResumen{}
 	}
 	return out, nil
 }
@@ -71,21 +70,21 @@ func (r *inventarioRepository) Capa(ctx context.Context, capa string) (entities.
 		if !json.Valid(raw) {
 			return fc, fmt.Errorf("geometría inválida %s", id)
 		}
-		props := dto.InventarioPropsDTO{FeatureID: id, Capa: capa}
+		props := entities.InventarioProperties{FeatureID: id, Capa: capa}
 		if nombre.Valid && nombre.String != "" {
-			props.Nombre = nombre.String
+			props.Nombre = &nombre.String
 		}
 		if sub.Valid && sub.String != "" {
-			props.Subtipo = sub.String
+			props.Subtipo = &sub.String
 		}
 		if det.Valid && det.String != "" {
-			props.Detalle = det.String
+			props.Detalle = &det.String
 		}
 		if lugar.Valid && lugar.String != "" {
-			props.Lugar = lugar.String
+			props.Lugar = &lugar.String
 		}
 		if foto.Valid && foto.String != "" {
-			props.Foto = foto.String
+			props.Foto = &foto.String
 		}
 		fc.Features = append(fc.Features, entities.Feature{
 			Type:       "Feature",

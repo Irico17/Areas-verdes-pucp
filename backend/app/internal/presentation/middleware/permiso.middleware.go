@@ -42,8 +42,3 @@ func RequierePermiso(permisosSvc contracts.IPermisosService, accion string) gin.
 		c.Next()
 	}
 }
-
-// ExigePermiso is an alias for RequierePermiso for backward compatibility.
-func ExigePermiso(permisosSvc contracts.IPermisosService, accion string) gin.HandlerFunc {
-	return RequierePermiso(permisosSvc, accion)
-}

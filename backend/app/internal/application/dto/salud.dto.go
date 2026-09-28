@@ -6,6 +6,3 @@ type EstadoSaludDTO struct {
 	Database string `json:"database,omitempty"`
 	PostGIS  string `json:"postgis,omitempty"`
 }
-
-// HealthDTO is an alias for EstadoSaludDTO for consistent naming across conventions.
-type HealthDTO = EstadoSaludDTO

@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/mapper"
@@ -25,7 +24,7 @@ func NewGeoRepository(db *gorm.DB) contracts.IGeoRepository {
 	return &geoRepository{db: db}
 }
 
-func (r *geoRepository) Areas(ctx context.Context, f dto.FiltroGeoDTO) (entities.FeatureCollection, error) {
+func (r *geoRepository) Areas(ctx context.Context, f entities.FiltroGeo) (entities.FeatureCollection, error) {
 	q, args := spatialSelect(`
 		SELECT id, feature_id, source_index, codigo, nombre, uso, proy_riego, riego_act,
 		       referencia, perimetro_m, area_m2, ST_AsGeoJSON(geom, 9)
@@ -33,7 +32,7 @@ func (r *geoRepository) Areas(ctx context.Context, f dto.FiltroGeoDTO) (entities
 	return r.scanCatastro(ctx, "areas_verdes", q, args)
 }
 
-func (r *geoRepository) Zonas(ctx context.Context, f dto.FiltroGeoDTO) (entities.FeatureCollection, error) {
+func (r *geoRepository) Zonas(ctx context.Context, f entities.FiltroGeo) (entities.FeatureCollection, error) {
 	q, args := spatialSelect(`
 		SELECT id, feature_id, source_index, codigo, nombre, uso, proy_riego, riego_act,
 		       referencia, perimetro_m, area_m2, sector, ST_AsGeoJSON(geom, 9)
@@ -41,7 +40,7 @@ func (r *geoRepository) Zonas(ctx context.Context, f dto.FiltroGeoDTO) (entities
 	return r.scanZonas(ctx, "zonas", q, args)
 }
 
-func (r *geoRepository) Capa(ctx context.Context, capa string, f dto.FiltroGeoDTO) (entities.FeatureCollection, error) {
+func (r *geoRepository) Capa(ctx context.Context, capa string, f entities.FiltroGeo) (entities.FeatureCollection, error) {
 	q, args := spatialSelect(`
 		SELECT id, feature_id, source_index, codigo, nombre, uso, proy_riego, riego_act,
 		       referencia, perimetro_m, area_m2, clase, pertenecen, ST_AsGeoJSON(geom, 9)
@@ -49,19 +48,19 @@ func (r *geoRepository) Capa(ctx context.Context, capa string, f dto.FiltroGeoDT
 	return r.scanCapa(ctx, capa, q, args)
 }
 
-func (r *geoRepository) Capas(ctx context.Context) (dto.CapasIndexDTO, error) {
+func (r *geoRepository) Capas(ctx context.Context) (entities.CapasIndex, error) {
 	cargadas, err := r.capaCounts(ctx)
 	if err != nil {
-		return dto.CapasIndexDTO{}, err
+		return entities.CapasIndex{}, err
 	}
 	if cargadas == nil {
-		cargadas = []dto.CapaCountDTO{}
+		cargadas = []entities.CapaResumen{}
 	}
-	return dto.CapasIndexDTO{Cargadas: cargadas}, nil
+	return entities.CapasIndex{Cargadas: cargadas}, nil
 }
 
-func (r *geoRepository) Resumen(ctx context.Context) (dto.ResumenDTO, error) {
-	var out dto.ResumenDTO
+func (r *geoRepository) Resumen(ctx context.Context) (entities.ResumenCatastro, error) {
+	var out entities.ResumenCatastro
 	out.CRS = "EPSG:4326"
 	db := r.db.WithContext(ctx)
 	if err := db.Model(&models.AreaVerdeModel{}).Count(&out.Areas).Error; err != nil {
@@ -84,8 +83,8 @@ func (r *geoRepository) Resumen(ctx context.Context) (dto.ResumenDTO, error) {
 	return out, nil
 }
 
-func (r *geoRepository) capaCounts(ctx context.Context) ([]dto.CapaCountDTO, error) {
-	var rows []dto.CapaCountDTO
+func (r *geoRepository) capaCounts(ctx context.Context) ([]entities.CapaResumen, error) {
+	var rows []entities.CapaResumen
 	err := r.db.WithContext(ctx).Raw(`
 		SELECT capa, count(*) AS features
 		FROM capas_auxiliares
@@ -95,7 +94,7 @@ func (r *geoRepository) capaCounts(ctx context.Context) ([]dto.CapaCountDTO, err
 		return nil, err
 	}
 	if rows == nil {
-		rows = []dto.CapaCountDTO{}
+		rows = []entities.CapaResumen{}
 	}
 	return rows, nil
 }
@@ -130,7 +129,7 @@ func (r *geoRepository) scanCatastro(ctx context.Context, name, query string, ar
 			Type:     "Feature",
 			ID:       featureID,
 			Geometry: mapper.GeomJSON(geom),
-			Properties: dto.CatastroPropertiesDTO{
+			Properties: entities.CatastroProperties{
 				ID:          id,
 				FeatureID:   featureID,
 				SourceIndex: sourceIndex,
@@ -140,8 +139,8 @@ func (r *geoRepository) scanCatastro(ctx context.Context, name, query string, ar
 				ProyRiego:   mapper.NullStr(proy),
 				RiegoAct:    mapper.NullStr(riego),
 				Referencia:  mapper.NullStr(ref),
-				PerimetroM:  dto.FloatPtr(mapper.NullFloat(per)),
-				AreaM2:      dto.FloatPtr(mapper.NullFloat(area)),
+				PerimetroM:  entities.FloatPtr(mapper.NullFloat(per)),
+				AreaM2:      entities.FloatPtr(mapper.NullFloat(area)),
 			},
 		})
 	}
@@ -186,8 +185,8 @@ func (r *geoRepository) scanZonas(ctx context.Context, name, query string, args 
 			Type:     "Feature",
 			ID:       featureID,
 			Geometry: mapper.GeomJSON(geom),
-			Properties: dto.ZonaPropertiesDTO{
-				CatastroPropertiesDTO: dto.CatastroPropertiesDTO{
+			Properties: entities.ZonaProperties{
+				CatastroProperties: entities.CatastroProperties{
 					ID:          id,
 					FeatureID:   featureID,
 					SourceIndex: sourceIndex,
@@ -197,8 +196,8 @@ func (r *geoRepository) scanZonas(ctx context.Context, name, query string, args 
 					ProyRiego:   mapper.NullStr(proy),
 					RiegoAct:    mapper.NullStr(riego),
 					Referencia:  mapper.NullStr(ref),
-					PerimetroM:  dto.FloatPtr(mapper.NullFloat(per)),
-					AreaM2:      dto.FloatPtr(mapper.NullFloat(area)),
+					PerimetroM:  entities.FloatPtr(mapper.NullFloat(per)),
+					AreaM2:      entities.FloatPtr(mapper.NullFloat(area)),
 				},
 				Sector:         sectorPtr,
 				SectorEtiqueta: etiquetaPtr,
@@ -243,8 +242,8 @@ func (r *geoRepository) scanCapa(ctx context.Context, name, query string, args [
 			Type:     "Feature",
 			ID:       featureID,
 			Geometry: mapper.GeomJSON(geom),
-			Properties: dto.CapaPropertiesDTO{
-				CatastroPropertiesDTO: dto.CatastroPropertiesDTO{
+			Properties: entities.CapaProperties{
+				CatastroProperties: entities.CatastroProperties{
 					ID:          id,
 					FeatureID:   featureID,
 					SourceIndex: sourceIndex,
@@ -254,8 +253,8 @@ func (r *geoRepository) scanCapa(ctx context.Context, name, query string, args [
 					ProyRiego:   mapper.NullStr(proy),
 					RiegoAct:    mapper.NullStr(riego),
 					Referencia:  mapper.NullStr(ref),
-					PerimetroM:  dto.FloatPtr(mapper.NullFloat(per)),
-					AreaM2:      dto.FloatPtr(mapper.NullFloat(area)),
+					PerimetroM:  entities.FloatPtr(mapper.NullFloat(per)),
+					AreaM2:      entities.FloatPtr(mapper.NullFloat(area)),
 				},
 				Capa:       name,
 				Clase:      mapper.NullStr(clase),
@@ -266,7 +265,7 @@ func (r *geoRepository) scanCapa(ctx context.Context, name, query string, args [
 	return fc, rows.Err()
 }
 
-func spatialSelect(base, extraWhere string, extraArgs []any, f dto.FiltroGeoDTO) (string, []any) {
+func spatialSelect(base, extraWhere string, extraArgs []any, f entities.FiltroGeo) (string, []any) {
 	args := append([]any{}, extraArgs...)
 	conds := make([]string, 0, 2)
 	if extraWhere != "" {

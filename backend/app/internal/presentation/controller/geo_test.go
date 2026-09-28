@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	domainEntities "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
@@ -101,7 +102,7 @@ func TestGeoController_Areas(t *testing.T) {
 		Properties: dto.CatastroPropertiesDTO{ID: 1, FeatureID: "AV-0001"},
 	})
 
-	ctrl := controller.NewGeoController(fakeGeoUseCase{areas: fc})
+	ctrl := controller.NewGeoController(fakeGeoUseCase{areas: fc}, zerolog.Nop())
 	r := gin.New()
 	r.GET("/api/v1/geo/areas", ctrl.Areas)
 	r.GET("/api/v1/geo/capas/:capa", ctrl.Capa)
@@ -169,7 +170,7 @@ func (c countingGeoUseCase) Areas(_ context.Context, f dto.FiltroGeoDTO) (domain
 func TestGeoController_AreasSinLimite(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	const n = 521
-	ctrl := controller.NewGeoController(countingGeoUseCase{areas: n, limit: 0})
+	ctrl := controller.NewGeoController(countingGeoUseCase{areas: n, limit: 0}, zerolog.Nop())
 	r := gin.New()
 	r.GET("/api/v1/geo/areas", ctrl.Areas)
 
@@ -189,7 +190,7 @@ func TestGeoController_AreasSinLimite(t *testing.T) {
 
 func TestGeoController_ZonasIncluyeSector(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	ctrl := controller.NewGeoController(fakeGeoUseCase{})
+	ctrl := controller.NewGeoController(fakeGeoUseCase{}, zerolog.Nop())
 	r := gin.New()
 	r.GET("/api/v1/geo/zonas", ctrl.Zonas)
 
@@ -220,7 +221,7 @@ func TestGeoController_ZonasIncluyeSector(t *testing.T) {
 func TestGeoController_Edificios(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	edificiosJSON := []byte(`{"type":"FeatureCollection","name":"edificios","features":[{"type":"Feature","id":"b-1"}]}`)
-	ctrl := controller.NewGeoController(fakeGeoUseCase{edificios: edificiosJSON})
+	ctrl := controller.NewGeoController(fakeGeoUseCase{edificios: edificiosJSON}, zerolog.Nop())
 	r := gin.New()
 	r.GET("/api/v1/geo/edificios", ctrl.Edificios)
 
@@ -239,7 +240,7 @@ func TestGeoController_Edificios(t *testing.T) {
 
 func TestGeoController_CapasYResumen(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	ctrl := controller.NewGeoController(fakeGeoUseCase{})
+	ctrl := controller.NewGeoController(fakeGeoUseCase{}, zerolog.Nop())
 	r := gin.New()
 	r.GET("/api/v1/geo/capas", ctrl.Capas)
 	r.GET("/api/v1/geo/resumen", ctrl.Resumen)

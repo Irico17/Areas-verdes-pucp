@@ -8,6 +8,8 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/mapper"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/models"
 )
 
 type catastroReferenciaRepository struct {
@@ -21,8 +23,8 @@ func NewCatastroReferenciaRepository(db *gorm.DB) contracts.ICatastroReferenciaR
 
 func (r *catastroReferenciaRepository) ListarPoligonos(ctx context.Context) ([]entities.PoligonoCuadrilla, error) {
 	rows, err := r.db.WithContext(ctx).Raw(`
-		SELECT id, feature_id, COALESCE(codigo, ''), COALESCE(nombre, ''),
-		       COALESCE(cuadrilla_id, ''), zona_supervision_id, geom IS NOT NULL, activo
+		SELECT id, feature_id, source_index, codigo, nombre, cuadrilla_id,
+		       zona_supervision_id, activo, geom IS NOT NULL
 		FROM poligonos_cuadrilla
 		WHERE activo
 		ORDER BY source_index
@@ -34,11 +36,14 @@ func (r *catastroReferenciaRepository) ListarPoligonos(ctx context.Context) ([]e
 
 	out := []entities.PoligonoCuadrilla{}
 	for rows.Next() {
-		var p entities.PoligonoCuadrilla
-		if err := rows.Scan(&p.ID, &p.FeatureID, &p.Codigo, &p.Nombre, &p.CuadrillaID, &p.ZonaSupervisionID, &p.ConGeom, &p.Activo); err != nil {
+		var (
+			m       models.PoligonoCuadrillaModel
+			conGeom bool
+		)
+		if err := rows.Scan(&m.ID, &m.FeatureID, &m.SourceIndex, &m.Codigo, &m.Nombre, &m.CuadrillaID, &m.ZonaSupervisionID, &m.Activo, &conGeom); err != nil {
 			return nil, err
 		}
-		out = append(out, p)
+		out = append(out, *mapper.PoligonoCuadrillaModelToEntity(&m, conGeom))
 	}
 	return out, rows.Err()
 }
@@ -56,11 +61,11 @@ func (r *catastroReferenciaRepository) ListarCapa(ctx context.Context, tabla str
 
 	out := []entities.CapaFicha{}
 	for rows.Next() {
-		var f entities.CapaFicha
-		if err := rows.Scan(&f.ID, &f.FeatureID, &f.Nombre, &f.Codigo, &f.Nota, &f.Clase, &f.Riego, &f.Pertenecen, &f.Activo); err != nil {
+		var m models.CapaAuxiliarModel
+		if err := rows.Scan(&m.ID, &m.FeatureID, &m.Nombre, &m.Codigo, &m.Referencia, &m.Clase, &m.RiegoAct, &m.Pertenecen, &m.Capa); err != nil {
 			return nil, err
 		}
-		out = append(out, f)
+		out = append(out, *mapper.CapaAuxiliarModelToEntity(&m))
 	}
 	return out, rows.Err()
 }

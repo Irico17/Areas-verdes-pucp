@@ -1,7 +1,6 @@
 package mapper
 
 import (
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/models"
 )
@@ -28,31 +27,31 @@ func AreaVerdeModelToEntity(m *models.AreaVerdeModel) *entities.AreaVerde {
 	}
 }
 
-// AreaVerdeEntityToFichaDTO converts an AreaVerde entity to FichaDTO.
-func AreaVerdeEntityToFichaDTO(e *entities.AreaVerde, conGeom bool) dto.FichaDTO {
-	if e == nil {
-		return dto.FichaDTO{}
+// AreaVerdeModelToFicha converts an AreaVerdeModel to entities.AreaVerdeFicha.
+func AreaVerdeModelToFicha(m *models.AreaVerdeModel, conGeom bool) entities.AreaVerdeFicha {
+	if m == nil {
+		return entities.AreaVerdeFicha{}
 	}
 	var nombre, uso, riego, ref string
-	if e.Nombre != nil {
-		nombre = *e.Nombre
+	if m.Nombre != nil {
+		nombre = *m.Nombre
 	}
-	if e.Uso != nil {
-		uso = *e.Uso
+	if m.Uso != nil {
+		uso = *m.Uso
 	}
-	if e.RiegoAct != nil {
-		riego = *e.RiegoAct
+	if m.RiegoAct != nil {
+		riego = *m.RiegoAct
 	}
-	if e.Referencia != nil {
-		ref = *e.Referencia
+	if m.Referencia != nil {
+		ref = *m.Referencia
 	}
-	return dto.FichaDTO{
-		FeatureID:  e.FeatureID,
+	return entities.AreaVerdeFicha{
+		FeatureID:  m.FeatureID,
 		Nombre:     nombre,
 		Uso:        uso,
 		RiegoAct:   riego,
 		Referencia: ref,
-		AreaM2:     e.AreaM2,
+		AreaM2:     m.AreaM2,
 		ConGeom:    conGeom,
 	}
 }

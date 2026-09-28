@@ -5,22 +5,21 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/usecases"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
 type mockInventarioRepo struct {
-	indexFunc func(ctx context.Context) (dto.IndiceInventarioDTO, error)
+	indexFunc func(ctx context.Context) (entities.IndiceInventario, error)
 	capaFunc  func(ctx context.Context, capa string) (entities.FeatureCollection, error)
 }
 
-func (m *mockInventarioRepo) Index(ctx context.Context) (dto.IndiceInventarioDTO, error) {
+func (m *mockInventarioRepo) Index(ctx context.Context) (entities.IndiceInventario, error) {
 	if m.indexFunc != nil {
 		return m.indexFunc(ctx)
 	}
-	return dto.IndiceInventarioDTO{}, nil
+	return entities.IndiceInventario{}, nil
 }
 
 func (m *mockInventarioRepo) Capa(ctx context.Context, capa string) (entities.FeatureCollection, error) {
@@ -43,10 +42,10 @@ func (m *mockFotoDiscoAdapter) RutaFoto(name string) (string, error) {
 
 func TestInventarioUseCase_Index(t *testing.T) {
 	repo := &mockInventarioRepo{
-		indexFunc: func(_ context.Context) (dto.IndiceInventarioDTO, error) {
-			return dto.IndiceInventarioDTO{
+		indexFunc: func(_ context.Context) (entities.IndiceInventario, error) {
+			return entities.IndiceInventario{
 				Capas: entities.CapasConocidas,
-				Cargadas: []dto.CapaCountDTO{
+				Cargadas: []entities.CapaResumen{
 					{Capa: "bebederos", Features: 10},
 				},
 			}, nil

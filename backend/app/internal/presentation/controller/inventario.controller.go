@@ -36,7 +36,7 @@ func NewInventarioController(uc contracts.IInventarioUseCase, logger zerolog.Log
 // @Produce json
 // @Success 200 {object} dto.IndiceInventarioDTO
 // @Failure 500 {object} map[string]string
-// @Router /geo/inventario [get]
+// @Router /v1/geo/inventario [get]
 func (ctrl *inventarioController) Index(c *gin.Context) {
 	idx, err := ctrl.uc.Index(c.Request.Context())
 	if err != nil {
@@ -55,7 +55,7 @@ func (ctrl *inventarioController) Index(c *gin.Context) {
 // @Success 200 {object} entities.FeatureCollection
 // @Failure 404 {object} dto.CapaDesconocidaErrorDTO
 // @Failure 500 {object} map[string]string
-// @Router /geo/inventario/{capa} [get]
+// @Router /v1/geo/inventario/{capa} [get]
 func (ctrl *inventarioController) Capa(c *gin.Context) {
 	capa := c.Param("capa")
 	fc, err := ctrl.uc.Capa(c.Request.Context(), capa)
@@ -82,7 +82,7 @@ func (ctrl *inventarioController) Capa(c *gin.Context) {
 // @Param name path string true "Photo file name"
 // @Success 200
 // @Failure 404 {object} map[string]string
-// @Router /geo/inventario/fotos/{name} [get]
+// @Router /v1/geo/inventario/fotos/{name} [get]
 func (ctrl *inventarioController) Foto(c *gin.Context) {
 	path, err := ctrl.uc.Foto(c.Request.Context(), c.Param("name"))
 	if errors.Is(err, domainErrors.ErrFotografiaNoDisponible) {

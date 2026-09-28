@@ -14,9 +14,6 @@ var (
 	// ErrFotografiaNoRecuperada is returned when the photo file cannot be found or read from disk.
 	ErrFotografiaNoRecuperada = errors.New("fotografía no recuperada")
 
-	// ErrLeerInventario is returned when querying inventory data fails.
-	ErrLeerInventario = errors.New("no se pudo leer el inventario")
-
 	// ErrLeerAgendaFicticia is returned when reading or decoding the mock agenda fails.
 	ErrLeerAgendaFicticia = errors.New("no se pudo leer la agenda ficticia")
 

@@ -10,7 +10,8 @@ import (
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
-var capasConocidas = []string{"jardines_reserva", "xerofitica"}
+// CapasConocidas defines the auxiliary reference layers.
+var CapasConocidas = []string{"jardines_reserva", "xerofitica"}
 
 type geoUseCase struct {
 	repo          contracts.IGeoRepository
@@ -26,18 +27,18 @@ func NewGeoUseCase(repo contracts.IGeoRepository, staticAdapter contracts.IArchi
 }
 
 func (u *geoUseCase) Areas(ctx context.Context, f dto.FiltroGeoDTO) (entities.FeatureCollection, error) {
-	return u.repo.Areas(ctx, f)
+	return u.repo.Areas(ctx, filtroGeoDTOToEntity(f))
 }
 
 func (u *geoUseCase) Zonas(ctx context.Context, f dto.FiltroGeoDTO) (entities.FeatureCollection, error) {
-	return u.repo.Zonas(ctx, f)
+	return u.repo.Zonas(ctx, filtroGeoDTOToEntity(f))
 }
 
 func (u *geoUseCase) Capa(ctx context.Context, capa string, f dto.FiltroGeoDTO) (entities.FeatureCollection, error) {
 	if !isKnownCapa(capa) {
 		return entities.FeatureCollection{}, domainErrors.ErrCapaDesconocida
 	}
-	return u.repo.Capa(ctx, capa, f)
+	return u.repo.Capa(ctx, capa, filtroGeoDTOToEntity(f))
 }
 
 func (u *geoUseCase) Capas(ctx context.Context) (dto.CapasIndexDTO, error) {
@@ -45,15 +46,55 @@ func (u *geoUseCase) Capas(ctx context.Context) (dto.CapasIndexDTO, error) {
 	if err != nil {
 		return dto.CapasIndexDTO{}, err
 	}
-	idx.CapasConocidas = capasConocidas
-	if idx.Cargadas == nil {
-		idx.Cargadas = []dto.CapaCountDTO{}
+	cargadas := make([]dto.CapaCountDTO, len(idx.Cargadas))
+	for i, c := range idx.Cargadas {
+		cargadas[i] = dto.CapaCountDTO{
+			Capa:     c.Capa,
+			Features: c.Features,
+		}
 	}
-	return idx, nil
+	return dto.CapasIndexDTO{
+		CapasConocidas: CapasConocidas,
+		Cargadas:       cargadas,
+	}, nil
 }
 
 func (u *geoUseCase) Resumen(ctx context.Context) (dto.ResumenDTO, error) {
-	return u.repo.Resumen(ctx)
+	res, err := u.repo.Resumen(ctx)
+	if err != nil {
+		return dto.ResumenDTO{}, err
+	}
+	capas := make([]dto.CapaCountDTO, len(res.Capas))
+	for i, c := range res.Capas {
+		capas[i] = dto.CapaCountDTO{
+			Capa:     c.Capa,
+			Features: c.Features,
+		}
+	}
+	return dto.ResumenDTO{
+		CRS:               res.CRS,
+		Areas:             res.Areas,
+		AreasConGeometria: res.AreasConGeometria,
+		Zonas:             res.Zonas,
+		ZonasConGeometria: res.ZonasConGeometria,
+		Capas:             capas,
+	}, nil
+}
+
+func filtroGeoDTOToEntity(f dto.FiltroGeoDTO) entities.FiltroGeo {
+	var bbox *entities.BBox
+	if f.BBox != nil {
+		bbox = &entities.BBox{
+			MinX: f.BBox.MinX,
+			MinY: f.BBox.MinY,
+			MaxX: f.BBox.MaxX,
+			MaxY: f.BBox.MaxY,
+		}
+	}
+	return entities.FiltroGeo{
+		BBox:  bbox,
+		Limit: f.Limit,
+	}
 }
 
 func (u *geoUseCase) Edificios(ctx context.Context) ([]byte, error) {
@@ -65,7 +106,7 @@ func (u *geoUseCase) Edificios(ctx context.Context) ([]byte, error) {
 }
 
 func isKnownCapa(name string) bool {
-	for _, c := range capasConocidas {
+	for _, c := range CapasConocidas {
 		if c == name {
 			return true
 		}

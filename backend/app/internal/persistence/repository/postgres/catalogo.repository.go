@@ -8,6 +8,7 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	apperrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/mapper"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/models"
 )
 
@@ -39,14 +40,7 @@ func (r *catalogoRepository) List(ctx context.Context, clase string, soloActivos
 	}
 	out := make([]entities.CatalogoItem, 0, len(rows))
 	for _, m := range rows {
-		out = append(out, entities.CatalogoItem{
-			ID:     m.ID,
-			Clase:  m.Clase,
-			Codigo: m.Codigo,
-			Nombre: m.Nombre,
-			Activo: m.Activo,
-			Orden:  m.Orden,
-		})
+		out = append(out, *mapper.CatalogoToEntity(&m))
 	}
 	return out, nil
 }
@@ -70,14 +64,7 @@ func (r *catalogoRepository) Create(ctx context.Context, clase, codigo, nombre s
 	if err != nil {
 		return nil, err
 	}
-	return &entities.CatalogoItem{
-		ID:     m.ID,
-		Clase:  m.Clase,
-		Codigo: m.Codigo,
-		Nombre: m.Nombre,
-		Activo: m.Activo,
-		Orden:  m.Orden,
-	}, nil
+	return mapper.CatalogoToEntity(&m), nil
 }
 
 func (r *catalogoRepository) Deactivate(ctx context.Context, id int64) error {

@@ -2,10 +2,12 @@ package usecases
 
 import (
 	"context"
+	"strings"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
+	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
 type ejemplarUseCase struct {
@@ -22,11 +24,12 @@ func (uc *ejemplarUseCase) Listar(ctx context.Context, limit, offset int) (dto.E
 	if err != nil {
 		return dto.EjemplaresPaginadosDTO{}, err
 	}
-	if rows == nil {
-		rows = []entities.Ejemplar{}
+	ejemplares := make([]dto.EjemplarDTO, len(rows))
+	for i, r := range rows {
+		ejemplares[i] = ejemplarEntityToDTO(r)
 	}
 	return dto.EjemplaresPaginadosDTO{
-		Ejemplares: rows,
+		Ejemplares: ejemplares,
 		Total:      total,
 		Limit:      limit,
 		Offset:     offset,
@@ -34,15 +37,27 @@ func (uc *ejemplarUseCase) Listar(ctx context.Context, limit, offset int) (dto.E
 }
 
 func (uc *ejemplarUseCase) Crear(ctx context.Context, req dto.EjemplarDTO) (dto.EjemplarDTO, error) {
-	e := entities.Ejemplar(req)
+	e := ejemplarDTOToEntity(req)
 	if err := e.Validar(); err != nil {
 		return dto.EjemplarDTO{}, err
 	}
-	return uc.repo.Crear(ctx, e)
+	creado, err := uc.repo.Crear(ctx, e)
+	if err != nil {
+		return dto.EjemplarDTO{}, err
+	}
+	return ejemplarEntityToDTO(creado), nil
 }
 
 func (uc *ejemplarUseCase) Recodificar(ctx context.Context, ejemplarID int64, req dto.RecodificarDTO) (dto.CodigoHistoricoDTO, error) {
-	return uc.repo.Recodificar(ctx, ejemplarID, req.Codigo)
+	codigo := strings.TrimSpace(req.Codigo)
+	if ejemplarID < 1 || codigo == "" {
+		return dto.CodigoHistoricoDTO{}, domainErrors.ErrEntrada
+	}
+	ch, err := uc.repo.Recodificar(ctx, ejemplarID, codigo)
+	if err != nil {
+		return dto.CodigoHistoricoDTO{}, err
+	}
+	return codigoHistoricoEntityToDTO(ch), nil
 }
 
 func (uc *ejemplarUseCase) ListarCodigos(ctx context.Context, ejemplarID int64) ([]dto.CodigoHistoricoDTO, error) {
@@ -50,8 +65,56 @@ func (uc *ejemplarUseCase) ListarCodigos(ctx context.Context, ejemplarID int64) 
 	if err != nil {
 		return nil, err
 	}
-	if rows == nil {
-		rows = []dto.CodigoHistoricoDTO{}
+	codigos := make([]dto.CodigoHistoricoDTO, len(rows))
+	for i, r := range rows {
+		codigos[i] = codigoHistoricoEntityToDTO(r)
 	}
-	return rows, nil
+	return codigos, nil
+}
+
+func ejemplarEntityToDTO(e entities.Ejemplar) dto.EjemplarDTO {
+	return dto.EjemplarDTO{
+		ID:                 e.ID,
+		NumeroOrigen:       e.NumeroOrigen,
+		Codigo:             e.Codigo,
+		EspecieID:          e.EspecieID,
+		NombreComun:        e.NombreComun,
+		TipoVegetacion:     e.TipoVegetacion,
+		Cantidad:           e.Cantidad,
+		UbicacionLugarID:   e.UbicacionLugarID,
+		Referencia:         e.Referencia,
+		Lat:                e.Lat,
+		Lon:                e.Lon,
+		ObservacionFen2026: e.ObservacionFen2026,
+		Salud:              e.Salud,
+		Activo:             e.Activo,
+	}
+}
+
+func ejemplarDTOToEntity(d dto.EjemplarDTO) entities.Ejemplar {
+	return entities.Ejemplar{
+		ID:                 d.ID,
+		NumeroOrigen:       d.NumeroOrigen,
+		Codigo:             d.Codigo,
+		EspecieID:          d.EspecieID,
+		NombreComun:        d.NombreComun,
+		TipoVegetacion:     d.TipoVegetacion,
+		Cantidad:           d.Cantidad,
+		UbicacionLugarID:   d.UbicacionLugarID,
+		Referencia:         d.Referencia,
+		Lat:                d.Lat,
+		Lon:                d.Lon,
+		ObservacionFen2026: d.ObservacionFen2026,
+		Salud:              d.Salud,
+		Activo:             d.Activo,
+	}
+}
+
+func codigoHistoricoEntityToDTO(c entities.CodigoHistorico) dto.CodigoHistoricoDTO {
+	return dto.CodigoHistoricoDTO{
+		ID:             c.ID,
+		EjemplarID:     c.EjemplarID,
+		CodigoAnterior: c.CodigoAnterior,
+		CodigoNuevo:    c.CodigoNuevo,
+	}
 }

@@ -12,7 +12,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -40,6 +39,31 @@ func urlDe(name string) string {
 	}
 	u.Path = "/" + name
 	return u.String()
+}
+
+func findMigrationsDir() string {
+	if env := os.Getenv("MIGRATIONS_DIR"); env != "" {
+		if fi, err := os.Stat(env); err == nil && fi.IsDir() {
+			return env
+		}
+	}
+	wd, err := os.Getwd()
+	if err == nil {
+		for dir := wd; ; {
+			candidate := filepath.Join(dir, "apps", "api", "migrations")
+			if fi, err := os.Stat(candidate); err == nil && !fi.IsDir() || (err == nil && fi.IsDir()) {
+				if fi.IsDir() {
+					return candidate
+				}
+			}
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
+	}
+	return filepath.Join("..", "..", "..", "..", "..", "apps", "api", "migrations")
 }
 
 func recrear(t *testing.T, admin *sql.DB, name string) {
@@ -414,7 +438,7 @@ func TestMigraciones001a019EnVacioYSobre008(t *testing.T) {
 		t.Fatalf("sin postgres de prueba: %v", err)
 	}
 
-	dir := testutil.FindMigrationsDir()
+	dir := findMigrationsDir()
 	vacia := "vp_c_ola1a_vacia"
 	actual := "vp_c_ola1a_actual"
 	recrear(t, admin, vacia)
@@ -506,7 +530,7 @@ func TestMigracionesConCodigosDuplicados(t *testing.T) {
 		t.Fatalf("sin postgres de prueba: %v", err)
 	}
 
-	dir := testutil.FindMigrationsDir()
+	dir := findMigrationsDir()
 	name := "vp_c_dup_codigo"
 	recrear(t, admin, name)
 	defer func() {
@@ -551,7 +575,7 @@ func TestComprobarNecesitaETL(t *testing.T) {
 		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + name)
 	}()
 
-	dir := testutil.FindMigrationsDir()
+	dir := findMigrationsDir()
 	if err := aplicar(name, dir); err != nil {
 		t.Fatal(err)
 	}

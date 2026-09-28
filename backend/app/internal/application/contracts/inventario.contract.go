@@ -10,7 +10,7 @@ import (
 
 // IInventarioRepository defines database operations for legacy inventory overlays.
 type IInventarioRepository interface {
-	Index(ctx context.Context) (dto.IndiceInventarioDTO, error)
+	Index(ctx context.Context) (entities.IndiceInventario, error)
 	Capa(ctx context.Context, capa string) (entities.FeatureCollection, error)
 }
 

@@ -18,7 +18,15 @@ func NewLugarUseCase(repo contracts.ILugarRepository) contracts.ILugarUseCase {
 }
 
 func (uc *lugarUseCase) Listar(ctx context.Context) ([]dto.LugarDTO, error) {
-	return uc.repo.Listar(ctx)
+	rows, err := uc.repo.Listar(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]dto.LugarDTO, len(rows))
+	for i, l := range rows {
+		out[i] = lugarEntityToDTO(l)
+	}
+	return out, nil
 }
 
 func (uc *lugarUseCase) Crear(ctx context.Context, req dto.CrearLugarDTO) (dto.LugarDTO, error) {
@@ -31,5 +39,21 @@ func (uc *lugarUseCase) Crear(ctx context.Context, req dto.CrearLugarDTO) (dto.L
 	if err := l.Validar(); err != nil {
 		return dto.LugarDTO{}, err
 	}
-	return uc.repo.Crear(ctx, l.Nombre, l.Lat, l.Lon, l.ZonaSupervisionID)
+	res, err := uc.repo.Crear(ctx, l.Nombre, l.Lat, l.Lon, l.ZonaSupervisionID)
+	if err != nil {
+		return dto.LugarDTO{}, err
+	}
+	return lugarEntityToDTO(res), nil
+}
+
+func lugarEntityToDTO(l entities.Lugar) dto.LugarDTO {
+	return dto.LugarDTO{
+		ID:                l.ID,
+		Nombre:            l.Nombre,
+		NombreNorm:        l.NombreNorm,
+		Lat:               l.Lat,
+		Lon:               l.Lon,
+		ZonaSupervisionID: l.ZonaSupervisionID,
+		Activo:            l.Activo,
+	}
 }

@@ -60,6 +60,23 @@ var RutasV1 = []Route{
 	{Metodo: "POST", Ruta: "/api/v1/ia/sugerir-tipo", Descripcion: "Sugerencia local de tipo a partir del título"},
 }
 
+// RutasAreasVerdesV1 es el índice para el prefijo canónico /areas-verdes/v1.
+var RutasAreasVerdesV1 = func() []Route {
+	rutas := make([]Route, len(RutasV1))
+	for i, r := range RutasV1 {
+		nuevaRuta := r.Ruta
+		if len(nuevaRuta) >= 7 && nuevaRuta[:7] == "/api/v1" {
+			nuevaRuta = "/areas-verdes/v1" + nuevaRuta[7:]
+		}
+		rutas[i] = Route{
+			Metodo:      r.Metodo,
+			Ruta:        nuevaRuta,
+			Descripcion: r.Descripcion,
+		}
+	}
+	return rutas
+}()
+
 // IMetaController defines operations for API metadata and contract.
 type IMetaController interface {
 	Index(*gin.Context)
@@ -77,20 +94,20 @@ func NewMetaController(contrato contracts.IContratoOpenAPI) IMetaController {
 
 // Index serves the API index with routes and service details.
 func (c *metaController) Index(ctx *gin.Context) {
+	rutas := RutasV1
+	if len(ctx.Request.URL.Path) >= 13 && ctx.Request.URL.Path[:13] == "/areas-verdes" {
+		rutas = RutasAreasVerdesV1
+	}
 	ctx.JSON(http.StatusOK, gin.H{
 		"servicio": "campus-verde-api",
 		"version":  "v1",
 		"crs":      "EPSG:4326",
-		"rutas":    RutasV1,
+		"rutas":    rutas,
 	})
 }
 
 // OpenAPI serves the merged openapi.yaml contract.
 func (c *metaController) OpenAPI(ctx *gin.Context) {
-	if c.contrato == nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "openapi.yaml no disponible"})
-		return
-	}
 	body, err := c.contrato.ObtenerContrato()
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
