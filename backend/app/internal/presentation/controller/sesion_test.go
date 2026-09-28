@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/controller"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/middleware"
@@ -68,7 +69,7 @@ func TestSesionController_Entrar(t *testing.T) {
 					ID:        6,
 					Usuario:   "admin",
 					Nombre:    "Administración",
-					Rol:       "admin",
+					Rol:       enums.RolAdmin.String(),
 					RolNombre: "Administrador del sistema",
 				}, nil
 			}
@@ -155,7 +156,7 @@ func TestSesionController_Actual(t *testing.T) {
 			ID:        4,
 			Usuario:   "coordinacion",
 			Nombre:    "Coordinación",
-			Rol:       "coordinacion",
+			Rol:       enums.RolCoordinacion.String(),
 			RolNombre: "Ingeniería/Coordinación",
 		})
 		c.Next()

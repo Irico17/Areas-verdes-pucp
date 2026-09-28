@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/usecases"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/seguridad"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/database"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/repository/postgres"
@@ -202,5 +203,86 @@ func TestEnsureConservaFilasExtraYEsIdempotente(t *testing.T) {
 	}
 	if !encontrado {
 		t.Fatal("usuario coordinacion no encontrado en ListarUsuarios()")
+	}
+}
+
+func TestUsuariosRolForeignKeyYRolesConfigurables(t *testing.T) {
+	name := "vp_c_test_usuarios_rol_fk"
+	sqlDB, gdb := migrarDBTemporal(t, name)
+	defer sqlDB.Close()
+
+	ctx := context.Background()
+	usuarioRepo := postgres.NewUsuarioRepository(gdb)
+	permisoRepo := postgres.NewPermisoRepository(gdb)
+	hasher := seguridad.NewBcryptHasher()
+
+	semillaUC := usecases.NewSemillaAccesosUseCase(gdb, usuarioRepo, permisoRepo, hasher)
+	if err := semillaUC.Ensure(ctx, "pando-local"); err != nil {
+		t.Fatalf("Ensure falló: %v", err)
+	}
+
+	// 1. Verificar que usuarios_rol_fkey existe y usuarios_rol_chk fue eliminado
+	var fkCount int
+	if err := gdb.Raw(`SELECT count(*) FROM pg_constraint WHERE conname = 'usuarios_rol_fkey'`).Scan(&fkCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if fkCount != 1 {
+		t.Fatalf("falta restricción usuarios_rol_fkey en usuarios (count=%d)", fkCount)
+	}
+
+	var chkCount int
+	if err := gdb.Raw(`SELECT count(*) FROM pg_constraint WHERE conname = 'usuarios_rol_chk'`).Scan(&chkCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if chkCount != 0 {
+		t.Fatalf("usuarios_rol_chk no debe existir tras migración 046 (count=%d)", chkCount)
+	}
+
+	// 2. Verificar que insertar un rol inexistente falla por FK
+	err := usuarioRepo.Crear(ctx, &entities.Usuario{
+		Usuario:      "invalido",
+		Nombre:       "Rol Inválido",
+		Rol:          "rol_inexistente",
+		PasswordHash: "$2a$10$abcdefghijklmnopqrstuu",
+	})
+	if err == nil {
+		t.Fatal("se esperaba error al insertar usuario con rol inexistente en catálogo roles")
+	}
+
+	// 3. Demostrar roles configurables (RNF-05): agregar nuevo rol en catálogo roles
+	if err := gdb.Exec(`
+		INSERT INTO roles (codigo, nombre, orden, descripcion, activo)
+		VALUES ('supervisor_nuevo', 'Supervisor Nuevo', 5, 'Rol de prueba configurable', true)
+		ON CONFLICT (codigo) DO NOTHING
+	`).Error; err != nil {
+		t.Fatalf("no se pudo insertar rol configurable: %v", err)
+	}
+
+	// 4. Insertar usuario con el nuevo rol configurable debe tener éxito
+	err = usuarioRepo.Crear(ctx, &entities.Usuario{
+		Usuario:      "nuevo_supervisor",
+		Nombre:       "Nuevo Supervisor",
+		Rol:          "supervisor_nuevo",
+		PasswordHash: "$2a$10$abcdefghijklmnopqrstuu",
+	})
+	if err != nil {
+		t.Fatalf("falló inserción de usuario con rol configurable: %v", err)
+	}
+
+	// 5. Verificar que ObtenerPorUsuario resuelve rol_nombre del nuevo rol
+	uNuevo, err := usuarioRepo.ObtenerPorUsuario(ctx, "nuevo_supervisor")
+	if err != nil {
+		t.Fatalf("ObtenerPorUsuario falló: %v", err)
+	}
+	if uNuevo.Rol != "supervisor_nuevo" {
+		t.Errorf("uNuevo.Rol = %q, esperado 'supervisor_nuevo'", uNuevo.Rol)
+	}
+	if uNuevo.RolNombre != "Supervisor Nuevo" {
+		t.Errorf("uNuevo.RolNombre = %q, esperado 'Supervisor Nuevo'", uNuevo.RolNombre)
+	}
+
+	// 6. Idempotencia: volver a aplicar las migraciones no causa error
+	if err := database.Apply(gdb, findMigrationsDir()); err != nil {
+		t.Fatalf("re-aplicar migraciones falló: %v", err)
 	}
 }

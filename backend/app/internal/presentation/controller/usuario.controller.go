@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/middleware"
 )
 
@@ -35,7 +36,7 @@ func NewUsuarioController(usuarioUC contracts.IUsuarioUseCase) IUsuarioControlle
 // @Router /v1/accesos/usuarios [get]
 func (ctrl *usuarioController) Listar(c *gin.Context) {
 	u, ok := middleware.UsuarioEn(c)
-	if !ok || u.Rol != "admin" {
+	if !ok || u.Rol != enums.RolAdmin.String() {
 		c.JSON(http.StatusForbidden, gin.H{"error": "solo administración ve las cuentas"})
 		return
 	}

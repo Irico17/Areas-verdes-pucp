@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/middleware"
 )
@@ -44,7 +45,7 @@ func TestAuthMiddleware(t *testing.T) {
 				ID:        1,
 				Usuario:   "admin",
 				Nombre:    "Administrador",
-				Rol:       "admin",
+				Rol:       enums.RolAdmin.String(),
 				RolNombre: "Administrador del sistema",
 			},
 		},

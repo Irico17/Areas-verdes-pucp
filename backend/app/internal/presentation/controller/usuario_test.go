@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/controller"
 )
 
@@ -35,10 +36,10 @@ func TestUsuarioController_Listar(t *testing.T) {
 		listarFn: func(ctx context.Context) (*dto.UsuariosResponseDTO, error) {
 			return &dto.UsuariosResponseDTO{
 				Usuarios: []dto.UsuarioSesionDTO{
-					{ID: 1, Usuario: "admin", Rol: "admin", RolNombre: "Administrador"},
+					{ID: 1, Usuario: "admin", Rol: enums.RolAdmin.String(), RolNombre: "Administrador"},
 				},
 				Permisos: []dto.PermisoDTO{
-					{Rol: "admin", Accion: "consultar"},
+					{Rol: enums.RolAdmin.String(), Accion: "consultar"},
 				},
 				Aviso: "Cuentas locales de desarrollo. El SSO de la PUCP sigue pendiente de validación.",
 			}, nil
@@ -67,7 +68,7 @@ func TestUsuarioController_Listar(t *testing.T) {
 		c.Set("usuario", dto.UsuarioSesionDTO{
 			ID:      2,
 			Usuario: "norte",
-			Rol:     "capataz",
+			Rol:     enums.RolCapataz.String(),
 		})
 		c.Next()
 	})
@@ -89,7 +90,7 @@ func TestUsuarioController_Listar(t *testing.T) {
 		c.Set("usuario", dto.UsuarioSesionDTO{
 			ID:      1,
 			Usuario: "admin",
-			Rol:     "admin",
+			Rol:     enums.RolAdmin.String(),
 		})
 		c.Next()
 	})

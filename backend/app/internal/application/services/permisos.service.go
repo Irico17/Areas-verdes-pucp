@@ -3,15 +3,16 @@ package services
 
 import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 )
 
 // MatrizPermisos defines default role-action permissions.
 // jefatura includes 'evidencias' per current apps/api specification.
 var MatrizPermisos = map[string][]string{
-	"capataz":      {"consultar", "registrar"},
-	"coordinacion": {"consultar", "registrar", "validar", "solicitudes", "reportes"},
-	"jefatura":     {"consultar", "validar", "reportes", "solicitudes", "evidencias"},
-	"admin":        {"consultar", "registrar", "validar", "reportes", "catalogos", "solicitudes"},
+	enums.RolCapataz.String():      {"consultar", "registrar"},
+	enums.RolCoordinacion.String(): {"consultar", "registrar", "validar", "solicitudes", "reportes"},
+	enums.RolJefatura.String():     {"consultar", "validar", "reportes", "solicitudes", "evidencias"},
+	enums.RolAdmin.String():        {"consultar", "registrar", "validar", "reportes", "catalogos", "solicitudes"},
 }
 
 type permisosService struct{}

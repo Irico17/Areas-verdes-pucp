@@ -160,6 +160,20 @@ func assertEsquema(t *testing.T, name string) {
 	if fk != 1 {
 		t.Fatalf("%s: falta permisos_rol_fkey", name)
 	}
+	var fkUsuarios int
+	if err := gdb.Raw(`SELECT count(*) FROM pg_constraint WHERE conname = 'usuarios_rol_fkey'`).Scan(&fkUsuarios).Error; err != nil {
+		t.Fatal(err)
+	}
+	if fkUsuarios != 1 {
+		t.Fatalf("%s: falta usuarios_rol_fkey", name)
+	}
+	var chkUsuarios int
+	if err := gdb.Raw(`SELECT count(*) FROM pg_constraint WHERE conname = 'usuarios_rol_chk'`).Scan(&chkUsuarios).Error; err != nil {
+		t.Fatal(err)
+	}
+	if chkUsuarios != 0 {
+		t.Fatalf("%s: usuarios_rol_chk no debe existir tras migración 046", name)
+	}
 	var roles int
 	if err := gdb.Raw(`SELECT count(*) FROM roles`).Scan(&roles).Error; err != nil {
 		t.Fatal(err)

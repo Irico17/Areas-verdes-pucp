@@ -9,6 +9,7 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/services"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 )
 
@@ -20,12 +21,12 @@ type seedAccount struct {
 }
 
 var semillas = []seedAccount{
-	{"norte", "Equipo Norte", "capataz", "cap-norte"},
-	{"sur", "Equipo Sur", "capataz", "cap-sur"},
-	{"riego", "Equipo Riego", "capataz", "cap-riego"},
-	{"coordinacion", "Coordinación", "coordinacion", ""},
-	{"jefatura", "Jefatura", "jefatura", ""},
-	{"admin", "Administración", "admin", ""},
+	{"norte", "Equipo Norte", enums.RolCapataz.String(), "cap-norte"},
+	{"sur", "Equipo Sur", enums.RolCapataz.String(), "cap-sur"},
+	{"riego", "Equipo Riego", enums.RolCapataz.String(), "cap-riego"},
+	{"coordinacion", "Coordinación", enums.RolCoordinacion.String(), ""},
+	{"jefatura", "Jefatura", enums.RolJefatura.String(), ""},
+	{"admin", "Administración", enums.RolAdmin.String(), ""},
 }
 
 type semillaAccesosUseCase struct {

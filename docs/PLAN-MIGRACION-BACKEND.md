@@ -378,6 +378,8 @@ Reglas para los modelos GORM: `TableName()` apunta a nuestra tabla; **prohibido 
 
 ### 4.3 Migraciones aditivas hacia el núcleo (045+)
 
+> **Renumeración (fase 2).** La `045` se usó en la rama `fix/seguridad-datos-permisos` para las etiquetas de rol v2 (`045_roles_v2_etiquetas.sql`, con historial en `cambios`, columnas `roles.descripcion`/`activo` y el permiso `evidencias` de jefatura), y la `046` en el lote 6 para la FK `usuarios.rol → roles.codigo` (`046_usuarios_rol_fk.sql`). Las migraciones del núcleo de esta tabla se corren un número: `047_evidencia_evento.sql`, `048_sync_offline.sql`, `049_estados_nucleo.sql` y `050_vistas_nucleo.sql` (lote 24).
+
 Todas idempotentes (`IF NOT EXISTS`, `ON CONFLICT DO NOTHING`, `DO $$ … IF NOT EXISTS (SELECT 1 FROM pg_constraint …)`), columnas nuevas **nulas o con DEFAULT** (para que la imagen anterior siga funcionando si hay rollback), y todo `UPDATE` de datos con su antes/después en `cambios`. Nada de `DROP TABLE`, `DROP COLUMN`, `TRUNCATE` ni `DELETE` de datos cargados.
 
 | Archivo | Contenido | Motivo |

@@ -9,6 +9,7 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/services"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/middleware"
 )
 
@@ -47,7 +48,7 @@ func TestExigePermisoMiddleware(t *testing.T) {
 		c.Set("usuario", dto.UsuarioSesionDTO{
 			ID:      1,
 			Usuario: "norte",
-			Rol:     "capataz",
+			Rol:     enums.RolCapataz.String(),
 		})
 		c.Next()
 	})
