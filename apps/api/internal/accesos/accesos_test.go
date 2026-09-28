@@ -15,4 +15,7 @@ func TestPermiteCapatazNoAdministraCatalogos(t *testing.T) {
 	if Permite("jefatura", "registrar") {
 		t.Fatal("jefatura no da de alta labores en esta matriz")
 	}
+	if !Permite("jefatura", "evidencias") {
+		t.Fatal("jefatura debe tener permiso para registrar evidencias")
+	}
 }

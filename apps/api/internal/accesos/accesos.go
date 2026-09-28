@@ -21,6 +21,7 @@ type Usuario struct {
 	Usuario   string `json:"usuario"`
 	Nombre    string `json:"nombre"`
 	Rol       string `json:"rol"`
+	RolNombre string `json:"rol_nombre,omitempty"`
 	CapatazID string `json:"capataz_id,omitempty"`
 }
 
@@ -41,7 +42,7 @@ var semillas = []seedUser{
 var Matriz = map[string][]string{
 	"capataz":      {"consultar", "registrar"},
 	"coordinacion": {"consultar", "registrar", "validar", "solicitudes", "reportes"},
-	"jefatura":     {"consultar", "validar", "reportes", "solicitudes"},
+	"jefatura":     {"consultar", "validar", "reportes", "solicitudes", "evidencias"},
 	"admin":        {"consultar", "registrar", "validar", "reportes", "catalogos", "solicitudes"},
 }
 
@@ -96,12 +97,14 @@ func Ensure(db *gorm.DB, password string) error {
 				return err
 			}
 		}
-		if err := tx.Exec(`DELETE FROM permisos`).Error; err != nil {
-			return err
-		}
 		for rol, acciones := range Matriz {
 			for _, accion := range acciones {
-				if err := tx.Exec(`INSERT INTO permisos (rol, accion) VALUES ($1, $2)`, rol, accion).Error; err != nil {
+				if err := tx.Exec(`
+					INSERT INTO permisos (rol, accion)
+					VALUES ($1, $2)
+					ON CONFLICT (rol, accion) DO NOTHING`,
+					rol, accion,
+				).Error; err != nil {
 					return err
 				}
 			}
@@ -124,14 +127,17 @@ func (s *Store) Login(ctx context.Context, usuario, clave string) (string, Usuar
 		Usuario   string
 		Nombre    string
 		Rol       string
+		RolNombre *string
 		CapatazID *string
 		Hash      string
 		Activo    bool
 	}
 	err := s.db.WithContext(ctx).Raw(`
-		SELECT id, usuario, nombre, rol, capataz_id, password_hash, activo
-		FROM usuarios WHERE usuario = $1`, strings.TrimSpace(usuario)).Row().Scan(
-		&row.ID, &row.Usuario, &row.Nombre, &row.Rol, &row.CapatazID, &row.Hash, &row.Activo,
+		SELECT u.id, u.usuario, u.nombre, u.rol, r.nombre, u.capataz_id, u.password_hash, u.activo
+		FROM usuarios u
+		LEFT JOIN roles r ON r.codigo = u.rol
+		WHERE u.usuario = $1`, strings.TrimSpace(usuario)).Row().Scan(
+		&row.ID, &row.Usuario, &row.Nombre, &row.Rol, &row.RolNombre, &row.CapatazID, &row.Hash, &row.Activo,
 	)
 	if err != nil || !row.Activo || bcrypt.CompareHashAndPassword([]byte(row.Hash), []byte(clave)) != nil {
 		return "", Usuario{}, errors.New("credenciales")
@@ -150,6 +156,9 @@ func (s *Store) Login(ctx context.Context, usuario, clave string) (string, Usuar
 		return "", Usuario{}, err
 	}
 	u := Usuario{ID: row.ID, Usuario: row.Usuario, Nombre: row.Nombre, Rol: row.Rol}
+	if row.RolNombre != nil {
+		u.RolNombre = *row.RolNombre
+	}
 	if row.CapatazID != nil {
 		u.CapatazID = *row.CapatazID
 	}
@@ -161,15 +170,20 @@ func (s *Store) FromToken(ctx context.Context, token string) (Usuario, error) {
 	sum := sha256.Sum256([]byte(token))
 	var u Usuario
 	var cap *string
+	var rolNombre *string
 	err := s.db.WithContext(ctx).Raw(`
-		SELECT u.id, u.usuario, u.nombre, u.rol, u.capataz_id
+		SELECT u.id, u.usuario, u.nombre, u.rol, r.nombre, u.capataz_id
 		FROM sesiones s
 		JOIN usuarios u ON u.id = s.usuario_id
+		LEFT JOIN roles r ON r.codigo = u.rol
 		WHERE s.token_hash = $1 AND s.expires_at > now() AND u.activo`,
 		hex.EncodeToString(sum[:]),
-	).Row().Scan(&u.ID, &u.Usuario, &u.Nombre, &u.Rol, &cap)
+	).Row().Scan(&u.ID, &u.Usuario, &u.Nombre, &u.Rol, &rolNombre, &cap)
 	if err != nil {
 		return Usuario{}, err
+	}
+	if rolNombre != nil {
+		u.RolNombre = *rolNombre
 	}
 	if cap != nil {
 		u.CapatazID = *cap
@@ -189,8 +203,10 @@ func (s *Store) Logout(ctx context.Context, token string) {
 // Listado de cuentas, sin hash.
 func (s *Store) Usuarios(ctx context.Context) ([]Usuario, error) {
 	rows, err := s.db.WithContext(ctx).Raw(`
-		SELECT id, usuario, nombre, rol, COALESCE(capataz_id, '')
-		FROM usuarios ORDER BY rol, usuario`).Rows()
+		SELECT u.id, u.usuario, u.nombre, u.rol, COALESCE(r.nombre, u.rol), COALESCE(u.capataz_id, '')
+		FROM usuarios u
+		LEFT JOIN roles r ON r.codigo = u.rol
+		ORDER BY u.rol, u.usuario`).Rows()
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +214,7 @@ func (s *Store) Usuarios(ctx context.Context) ([]Usuario, error) {
 	out := []Usuario{}
 	for rows.Next() {
 		var u Usuario
-		if err := rows.Scan(&u.ID, &u.Usuario, &u.Nombre, &u.Rol, &u.CapatazID); err != nil {
+		if err := rows.Scan(&u.ID, &u.Usuario, &u.Nombre, &u.Rol, &u.RolNombre, &u.CapatazID); err != nil {
 			return nil, err
 		}
 		out = append(out, u)
