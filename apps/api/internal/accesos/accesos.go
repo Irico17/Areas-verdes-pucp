@@ -96,6 +96,7 @@ func Ensure(db *gorm.DB, password string) error {
 			).Error; err != nil {
 				return err
 			}
+		}
 		// El sembrado con ON CONFLICT DO NOTHING conserva permisos previos y no elimina
 		// aquellos que hayan sido retirados de Matriz. Esto no afecta la aplicación de permisos
 		// (Permite consulta directamente Matriz en memoria), pero /accesos/usuarios podría
