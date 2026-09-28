@@ -31,9 +31,13 @@ func BuildContainer() (*dig.Container, error) {
 	}
 
 	// Gin
-	if err := container.Provide(func(cfg *config.Config) *gin.Engine {
+	if err := container.Provide(func(cfg *config.Config) (*gin.Engine, error) {
 		gin.SetMode(cfg.Server.GinMode)
-		return gin.New()
+		engine := gin.New()
+		if err := engine.SetTrustedProxies(cfg.Server.TrustedProxies); err != nil {
+			return nil, err
+		}
+		return engine, nil
 	}); err != nil {
 		return nil, err
 	}
