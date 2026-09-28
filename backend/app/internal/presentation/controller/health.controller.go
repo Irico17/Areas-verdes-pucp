@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/usecases"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 )
 
 // HealthResponse is returned by the health endpoint.
@@ -24,11 +24,11 @@ type IHealthController interface {
 }
 
 type healthController struct {
-	saludUseCase usecases.ISaludUseCase
+	saludUseCase contracts.ISaludUseCase
 }
 
 // NewHealthController creates a health controller.
-func NewHealthController(saludUseCase usecases.ISaludUseCase) IHealthController {
+func NewHealthController(saludUseCase contracts.ISaludUseCase) IHealthController {
 	return &healthController{saludUseCase: saludUseCase}
 }
 

@@ -12,7 +12,7 @@ import (
 func TestNewConnection(t *testing.T) {
 	dbURL := os.Getenv("MIGRATE_TEST_URL")
 	if dbURL == "" {
-		dbURL = "postgres://campus:campus@127.0.0.1:5432/campus_verde?sslmode=disable"
+		t.Skip("MIGRATE_TEST_URL no definido: se omite la prueba con base de datos")
 	}
 	cfg := &config.Config{
 		Database: config.DatabaseConfig{

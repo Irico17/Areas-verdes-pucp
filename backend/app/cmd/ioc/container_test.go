@@ -2,7 +2,6 @@ package ioc_test
 
 import (
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -13,14 +12,11 @@ import (
 )
 
 func TestBuildContainer(t *testing.T) {
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" || strings.Contains(dbURL, "vp_chk_fresh") {
-		fallback := os.Getenv("MIGRATE_TEST_URL")
-		if fallback == "" {
-			fallback = "postgres://campus:campus@127.0.0.1:5432/campus_verde?sslmode=disable"
-		}
-		_ = os.Setenv("DATABASE_URL", fallback)
+	dbURL := os.Getenv("MIGRATE_TEST_URL")
+	if dbURL == "" {
+		t.Skip("MIGRATE_TEST_URL no definido: se omite la prueba del contenedor con base de datos")
 	}
+	t.Setenv("DATABASE_URL", dbURL)
 
 	container, err := ioc.BuildContainer()
 	if err != nil {

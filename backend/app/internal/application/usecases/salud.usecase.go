@@ -9,17 +9,12 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 )
 
-// ISaludUseCase defines health-checking use cases.
-type ISaludUseCase interface {
-	VerificarSalud(ctx context.Context) (*dto.EstadoSaludDTO, error)
-}
-
 type saludUseCase struct {
 	repo contracts.ISaludRepository
 }
 
 // NewSaludUseCase creates a new salud use case.
-func NewSaludUseCase(repo contracts.ISaludRepository) ISaludUseCase {
+func NewSaludUseCase(repo contracts.ISaludRepository) contracts.ISaludUseCase {
 	return &saludUseCase{repo: repo}
 }
 
