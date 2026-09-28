@@ -143,6 +143,81 @@ func (mockAreaVerdeRoutesUC) CrearSinGeom(_ context.Context, req dto.CrearAreaSi
 	return &dto.FichaDTO{FeatureID: req.FeatureID, Nombre: req.Nombre, Uso: req.Uso, ConGeom: false}, nil
 }
 
+type mockZonaRoutesUC struct{}
+
+func (mockZonaRoutesUC) Listar(_ context.Context) ([]dto.ZonaSupervisionDTO, error) {
+	return []dto.ZonaSupervisionDTO{{ID: 1, Codigo: "Z1", Nombre: "Zona 1", ConGeom: true, Activo: true}}, nil
+}
+
+func (mockZonaRoutesUC) Crear(_ context.Context, req dto.CrearZonaSupervisionDTO) (dto.ZonaSupervisionDTO, error) {
+	return dto.ZonaSupervisionDTO{ID: 1, Codigo: req.Codigo, Nombre: req.Nombre, ConGeom: true, Activo: true}, nil
+}
+
+type mockCuadrillaRoutesUC struct{}
+
+func (mockCuadrillaRoutesUC) Listar(_ context.Context) ([]dto.CuadrillaDTO, error) {
+	return []dto.CuadrillaDTO{{ID: "C1", NombreFicticio: "Equipo 1", Turno: "manana", Activo: true}}, nil
+}
+
+func (mockCuadrillaRoutesUC) Crear(_ context.Context, req dto.CrearCuadrillaDTO) (dto.CuadrillaDTO, error) {
+	return dto.CuadrillaDTO{ID: req.ID, NombreFicticio: req.Nombre, Turno: req.Turno, Activo: true}, nil
+}
+
+type mockLugarRoutesUC struct{}
+
+func (mockLugarRoutesUC) Listar(_ context.Context) ([]dto.LugarDTO, error) {
+	return []dto.LugarDTO{{ID: 1, Nombre: "Lugar 1", Lat: -12.07, Lon: -77.08, Activo: true}}, nil
+}
+
+func (mockLugarRoutesUC) Crear(_ context.Context, req dto.CrearLugarDTO) (dto.LugarDTO, error) {
+	return dto.LugarDTO{ID: 1, Nombre: req.Nombre, Lat: req.Lat, Lon: req.Lon, Activo: true}, nil
+}
+
+type mockEspecieRoutesUC struct{}
+
+func (mockEspecieRoutesUC) Listar(_ context.Context) ([]dto.EspecieDTO, error) {
+	return []dto.EspecieDTO{{ID: 1, NombreCientifico: "Species 1", NombreComun: "Comun 1", Activo: true}}, nil
+}
+
+func (mockEspecieRoutesUC) Crear(_ context.Context, req dto.CrearEspecieDTO) (dto.EspecieDTO, error) {
+	return dto.EspecieDTO{ID: 1, NombreCientifico: req.Cientifico, NombreComun: req.Comun, Activo: true}, nil
+}
+
+type mockEjemplarRoutesUC struct{}
+
+func (mockEjemplarRoutesUC) Listar(_ context.Context, limit, offset int) (dto.EjemplaresPaginadosDTO, error) {
+	return dto.EjemplaresPaginadosDTO{
+		Ejemplares: []dto.EjemplarDTO{{ID: 1, Codigo: "EJ-1", Activo: true}},
+		Total:      1,
+		Limit:      limit,
+		Offset:     offset,
+	}, nil
+}
+
+func (mockEjemplarRoutesUC) Crear(_ context.Context, req dto.EjemplarDTO) (dto.EjemplarDTO, error) {
+	req.ID = 10
+	req.Activo = true
+	return req, nil
+}
+
+func (mockEjemplarRoutesUC) Recodificar(_ context.Context, id int64, req dto.RecodificarDTO) (dto.CodigoHistoricoDTO, error) {
+	return dto.CodigoHistoricoDTO{ID: 1, EjemplarID: id, CodigoAnterior: "OLD", CodigoNuevo: req.Codigo}, nil
+}
+
+func (mockEjemplarRoutesUC) ListarCodigos(_ context.Context, id int64) ([]dto.CodigoHistoricoDTO, error) {
+	return []dto.CodigoHistoricoDTO{{ID: 1, EjemplarID: id, CodigoAnterior: "OLD", CodigoNuevo: "EJ-1"}}, nil
+}
+
+type mockCatastroRefRoutesUC struct{}
+
+func (mockCatastroRefRoutesUC) ListarPoligonos(_ context.Context) ([]dto.PoligonoCuadrillaDTO, error) {
+	return []dto.PoligonoCuadrillaDTO{{ID: 1, FeatureID: "POL-1", Codigo: "P1", Nombre: "Poligono 1", Activo: true}}, nil
+}
+
+func (mockCatastroRefRoutesUC) ListarCapa(_ context.Context, _ string) ([]dto.CapaFichaDTO, error) {
+	return []dto.CapaFichaDTO{{ID: 1, FeatureID: "F-1", Activo: true}}, nil
+}
+
 func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
@@ -170,6 +245,14 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	catalogoCtrl := controller.NewCatalogoController(mockCatalogoRoutesUC{})
 	geoCtrl := controller.NewGeoController(mockGeoRoutesUC{})
 	areaVerdeCtrl := controller.NewAreaVerdeController(mockAreaVerdeRoutesUC{})
+	catastroCtrl := controller.NewCatastroController(
+		mockZonaRoutesUC{},
+		mockCuadrillaRoutesUC{},
+		mockLugarRoutesUC{},
+		mockEspecieRoutesUC{},
+		mockEjemplarRoutesUC{},
+		mockCatastroRefRoutesUC{},
+	)
 
 	permisosSvc := services.NewPermisosService()
 	limitador := ratelimit.NewMemoriaLimitador(100, time.Minute)
@@ -182,7 +265,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	accesosGrp := groups.NewAccesosGroup(usuarioCtrl)
 	catalogoGrp := groups.NewCatalogoGroup(catalogoCtrl, permisosSvc)
 	geoGrp := groups.NewGeoGroup(geoCtrl, permisosSvc)
-	catastroGrp := groups.NewCatastroGroup(areaVerdeCtrl, permisosSvc)
+	catastroGrp := groups.NewCatastroGroup(areaVerdeCtrl, catastroCtrl, permisosSvc)
 
 	r := routes.NewRouter(routes.RouterParams{
 		Engine:        engine,
@@ -547,6 +630,171 @@ func TestRutasGeoYCatastro_PermisosPorRol(t *testing.T) {
 		{http.MethodGet, "/areas-verdes/v1/geo/edificios", "token-admin", "", 200, ""},
 		{http.MethodPost, "/api/v1/catastro/areas", "token-admin", `{"nombre":"Nueva","uso":"jardín"}`, 201, ""},
 		{http.MethodPatch, "/api/v1/catastro/areas/AV-0001", "token-admin", `{"nombre":"Modif","uso":"jardín"}`, 200, ""},
+	}
+
+	for _, c := range casos {
+		w := httptest.NewRecorder()
+		var req *http.Request
+		if c.body != "" {
+			req = httptest.NewRequest(c.metodo, c.ruta, bytes.NewBufferString(c.body))
+			req.Header.Set("Content-Type", "application/json")
+		} else {
+			req = httptest.NewRequest(c.metodo, c.ruta, nil)
+		}
+		req.AddCookie(&http.Cookie{Name: "cv_sesion", Value: c.token})
+		engine.ServeHTTP(w, req)
+
+		if w.Code != c.statusEsperado {
+			t.Errorf("%s %s (token=%s): esperado status %d, obtenido %d (%s)", c.metodo, c.ruta, c.token, c.statusEsperado, w.Code, w.Body.String())
+		}
+		if c.errorEsperado != "" {
+			var body map[string]string
+			_ = json.Unmarshal(w.Body.Bytes(), &body)
+			if body["error"] != c.errorEsperado {
+				t.Errorf("%s %s (token=%s): error esperado %q, obtenido %q", c.metodo, c.ruta, c.token, c.errorEsperado, body["error"])
+			}
+		}
+	}
+}
+
+func TestRutasCatastroMaestro_SinAutenticacionDa401(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	rutas := []struct {
+		metodo string
+		ruta   string
+	}{
+		{http.MethodGet, "/api/v1/catastro/zonas-supervision"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/zonas-supervision"},
+		{http.MethodPost, "/api/v1/catastro/zonas-supervision"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/zonas-supervision"},
+
+		{http.MethodGet, "/api/v1/catastro/poligonos"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/poligonos"},
+
+		{http.MethodGet, "/api/v1/catastro/cuadrillas"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/cuadrillas"},
+		{http.MethodPost, "/api/v1/catastro/cuadrillas"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/cuadrillas"},
+
+		{http.MethodGet, "/api/v1/catastro/lugares"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/lugares"},
+		{http.MethodPost, "/api/v1/catastro/lugares"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/lugares"},
+
+		{http.MethodGet, "/api/v1/catastro/especies"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/especies"},
+		{http.MethodPost, "/api/v1/catastro/especies"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/especies"},
+
+		{http.MethodGet, "/api/v1/catastro/ejemplares"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/ejemplares"},
+		{http.MethodPost, "/api/v1/catastro/ejemplares"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/ejemplares"},
+
+		{http.MethodGet, "/api/v1/catastro/ejemplares/1/codigos"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/ejemplares/1/codigos"},
+		{http.MethodPost, "/api/v1/catastro/ejemplares/1/codigos"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/ejemplares/1/codigos"},
+
+		{http.MethodGet, "/api/v1/catastro/fauna"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/fauna"},
+		{http.MethodGet, "/api/v1/catastro/puertas"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/puertas"},
+		{http.MethodGet, "/api/v1/catastro/playas"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/playas"},
+		{http.MethodGet, "/api/v1/catastro/veredas"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/veredas"},
+		{http.MethodGet, "/api/v1/catastro/xerofiticas"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/xerofiticas"},
+		{http.MethodGet, "/api/v1/catastro/jardines-reserva"},
+		{http.MethodGet, "/areas-verdes/v1/catastro/jardines-reserva"},
+	}
+
+	for _, r := range rutas {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(r.metodo, r.ruta, bytes.NewBufferString(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		engine.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s sin auth: esperado 401, obtenido %d", r.metodo, r.ruta, w.Code)
+		}
+		if w.Body.String() != `{"error":"inicie sesión"}` {
+			t.Errorf("%s %s sin auth: cuerpo inesperado %s", r.metodo, r.ruta, w.Body.String())
+		}
+	}
+}
+
+func TestRutasCatastroMaestro_PermisosPorRol(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	type caso struct {
+		metodo         string
+		ruta           string
+		token          string
+		body           string
+		statusEsperado int
+		errorEsperado  string
+	}
+
+	casos := []caso{
+		// 1. Capataz (norte): consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/catastro/zonas-supervision", "token-norte", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/catastro/zonas-supervision", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/zonas-supervision", "token-norte", `{"codigo":"Z1","nombre":"Zona 1"}`, 201, ""},
+		{http.MethodGet, "/api/v1/catastro/poligonos", "token-norte", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/cuadrillas", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/cuadrillas", "token-norte", `{"id":"C1","nombre_ficticio":"N1","turno":"manana"}`, 201, ""},
+		{http.MethodGet, "/api/v1/catastro/lugares", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/lugares", "token-norte", `{"nombre":"L1","lat":-12.07,"lon":-77.08}`, 201, ""},
+		{http.MethodGet, "/api/v1/catastro/especies", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/especies", "token-norte", `{"nombre_cientifico":"S1","nombre_comun":"C1"}`, 201, ""},
+		{http.MethodGet, "/api/v1/catastro/ejemplares", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/ejemplares", "token-norte", `{"codigo":"EJ-1","tipo_vegetacion":"Árbol","cantidad":1}`, 201, ""},
+		{http.MethodGet, "/api/v1/catastro/ejemplares/1/codigos", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/ejemplares/1/codigos", "token-norte", `{"codigo_nuevo":"AV-NEW"}`, 201, ""},
+		{http.MethodGet, "/api/v1/catastro/fauna", "token-norte", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/puertas", "token-norte", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/playas", "token-norte", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/veredas", "token-norte", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/xerofiticas", "token-norte", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/jardines-reserva", "token-norte", "", 200, ""},
+
+		// 2. Coordinación: consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/catastro/zonas-supervision", "token-coordinacion", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/zonas-supervision", "token-coordinacion", `{"codigo":"Z1","nombre":"Zona 1"}`, 201, ""},
+		{http.MethodGet, "/api/v1/catastro/ejemplares", "token-coordinacion", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/ejemplares", "token-coordinacion", `{"codigo":"EJ-1","tipo_vegetacion":"Árbol","cantidad":1}`, 201, ""},
+		{http.MethodPost, "/api/v1/catastro/ejemplares/1/codigos", "token-coordinacion", `{"codigo_nuevo":"AV-NEW"}`, 201, ""},
+
+		// 3. Admin: consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/catastro/zonas-supervision", "token-admin", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/zonas-supervision", "token-admin", `{"codigo":"Z1","nombre":"Zona 1"}`, 201, ""},
+		{http.MethodPost, "/api/v1/catastro/cuadrillas", "token-admin", `{"id":"C1","nombre_ficticio":"N1","turno":"manana"}`, 201, ""},
+		{http.MethodPost, "/api/v1/catastro/lugares", "token-admin", `{"nombre":"L1","lat":-12.07,"lon":-77.08}`, 201, ""},
+		{http.MethodPost, "/api/v1/catastro/especies", "token-admin", `{"nombre_cientifico":"S1","nombre_comun":"C1"}`, 201, ""},
+		{http.MethodPost, "/api/v1/catastro/ejemplares", "token-admin", `{"codigo":"EJ-1","tipo_vegetacion":"Árbol","cantidad":1}`, 201, ""},
+		{http.MethodPost, "/api/v1/catastro/ejemplares/1/codigos", "token-admin", `{"codigo_nuevo":"AV-NEW"}`, 201, ""},
+
+		// 4. Jefatura: consultar=true, registrar=false
+		{http.MethodGet, "/api/v1/catastro/zonas-supervision", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/catastro/zonas-supervision", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/poligonos", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/cuadrillas", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/lugares", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/especies", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/ejemplares", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/ejemplares/1/codigos", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/catastro/fauna", "token-jefatura", "", 200, ""},
+		{http.MethodPost, "/api/v1/catastro/zonas-supervision", "token-jefatura", `{"codigo":"Z1","nombre":"Zona 1"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/zonas-supervision", "token-jefatura", `{"codigo":"Z1","nombre":"Zona 1"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/catastro/cuadrillas", "token-jefatura", `{"id":"C1","nombre_ficticio":"N1","turno":"manana"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/catastro/lugares", "token-jefatura", `{"nombre":"L1","lat":-12.07,"lon":-77.08}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/catastro/especies", "token-jefatura", `{"nombre_cientifico":"S1","nombre_comun":"C1"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/catastro/ejemplares", "token-jefatura", `{"codigo":"EJ-1","tipo_vegetacion":"Árbol","cantidad":1}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/catastro/ejemplares/1/codigos", "token-jefatura", `{"codigo_nuevo":"AV-NEW"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/ejemplares/1/codigos", "token-jefatura", `{"codigo_nuevo":"AV-NEW"}`, 403, "su rol no tiene ese permiso"},
 	}
 
 	for _, c := range casos {

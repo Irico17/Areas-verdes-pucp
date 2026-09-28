@@ -42,6 +42,7 @@ func RegisterContainer(container *dig.Container) error {
 		controller.NewCatalogoController,
 		controller.NewGeoController,
 		controller.NewAreaVerdeController,
+		controller.NewCatastroController,
 	} {
 		if err := container.Provide(constructor); err != nil {
 			return err

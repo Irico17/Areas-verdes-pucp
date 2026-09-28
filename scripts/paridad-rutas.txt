@@ -58,12 +58,36 @@ jefatura GET /api/v1/catastro/areas
 - GET /api/v1/catastro/areas 401
 
 # Lote 9: Catastro maestro
-# admin GET /api/v1/catastro/zonas-supervision
-# admin GET /api/v1/catastro/poligonos
-# admin GET /api/v1/catastro/cuadrillas
-# admin GET /api/v1/catastro/lugares
-# admin GET /api/v1/catastro/especies
-# admin GET /api/v1/catastro/ejemplares
+admin GET /api/v1/catastro/zonas-supervision
+admin GET /api/v1/catastro/poligonos
+admin GET /api/v1/catastro/cuadrillas
+admin GET /api/v1/catastro/lugares
+admin GET /api/v1/catastro/especies
+admin GET /api/v1/catastro/ejemplares
+admin GET /api/v1/catastro/ejemplares?limit=20&offset=40
+admin GET /api/v1/catastro/ejemplares/1/codigos
+admin GET /api/v1/catastro/fauna
+admin GET /api/v1/catastro/puertas
+admin GET /api/v1/catastro/playas
+admin GET /api/v1/catastro/veredas
+admin GET /api/v1/catastro/xerofiticas
+admin GET /api/v1/catastro/jardines-reserva
+coordinacion GET /api/v1/catastro/zonas-supervision
+coordinacion GET /api/v1/catastro/poligonos
+coordinacion GET /api/v1/catastro/cuadrillas
+coordinacion GET /api/v1/catastro/ejemplares
+norte GET /api/v1/catastro/zonas-supervision
+norte GET /api/v1/catastro/poligonos
+norte GET /api/v1/catastro/cuadrillas
+norte GET /api/v1/catastro/ejemplares
+jefatura GET /api/v1/catastro/zonas-supervision
+jefatura GET /api/v1/catastro/poligonos
+jefatura GET /api/v1/catastro/cuadrillas
+jefatura GET /api/v1/catastro/ejemplares
+- GET /api/v1/catastro/zonas-supervision 401
+- GET /api/v1/catastro/poligonos 401
+- GET /api/v1/catastro/cuadrillas 401
+- GET /api/v1/catastro/ejemplares 401
 
 # Lote 10: Inventario heredado y reservas mock
 # admin GET /api/v1/geo/inventario
