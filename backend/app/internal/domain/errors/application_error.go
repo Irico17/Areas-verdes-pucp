@@ -2,6 +2,7 @@ package errors
 
 import (
 	stderrors "errors"
+	"strings"
 )
 
 // ApplicationError represents an application error with an HTTP status.
@@ -13,7 +14,20 @@ type ApplicationError struct {
 }
 
 func (e *ApplicationError) Error() string {
-	return e.Code
+	parts := make([]string, 0, 3)
+	if e.Code != "" {
+		parts = append(parts, e.Code)
+	}
+	if e.Message != "" {
+		parts = append(parts, e.Message)
+	}
+	if e.Cause != nil && e.Cause.Error() != "" {
+		parts = append(parts, e.Cause.Error())
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.Join(parts, ": ")
 }
 
 // Unwrap returns the underlying error, when present.

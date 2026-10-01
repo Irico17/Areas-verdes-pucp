@@ -124,11 +124,37 @@ Respuesta esperada:
 ## Comandos
 
 ```bash
-make run     # Ejecuta la API
-make build   # Genera app/bin/api
-make test    # Ejecuta las pruebas
-make tidy    # Ordena las dependencias del módulo
-make swagger # Regenera las documentación swagger
+make run        # Ejecuta la API
+make build      # Genera app/bin/api
+make test       # Ejecuta las pruebas
+make tidy       # Ordena las dependencias del módulo
+make swagger    # Regenera la documentación swagger
+make gen-models # Genera modelos GORM y ejecuta control de deriva contra BD desechable
+```
+
+### Control de deriva y generación de modelos (`make gen-models`)
+
+`make gen-models` ejecuta `cmd/modelgen` como control de deriva de nuestros modelos en `internal/persistence/models/*.model.go` y genera modelos GORM en un directorio temporal o `$MODELGEN_OUT`.
+
+Por seguridad, `modelgen` cuenta con guardas estrictas que abortan si:
+1. Apunta a la base de datos de datos reales (`campus_verde`).
+2. El nombre de la base de datos no comienza con el prefijo desechable `vp_` o `modelgen_`.
+3. La base de datos no fue construida con nuestras migraciones (falta `schema_migrations`).
+4. La tabla `areas_verdes` contiene datos (debe ser una BD vacía creada por `cmd/migrate` sin ETL).
+
+**Flujo de uso:**
+```bash
+# 1. Crear una base de datos desechable con prefijo vp_ o modelgen_
+psql "postgres://campus:campus@127.0.0.1:5432/campus_verde?sslmode=disable" -c "CREATE DATABASE vp_modelgen_x"
+
+# 2. Aplicar nuestras migraciones con cmd/migrate
+(cd app && DATABASE_URL="postgres://campus:campus@127.0.0.1:5432/vp_modelgen_x?sslmode=disable" MIGRATIONS_DIR="../../apps/api/migrations" go run ./cmd/migrate)
+
+# 3. Ejecutar gen-models apuntando a la base desechable
+DATABASE_URL="postgres://campus:campus@127.0.0.1:5432/vp_modelgen_x?sslmode=disable" make gen-models
+
+# 4. Eliminar la base de datos desechable
+psql "postgres://campus:campus@127.0.0.1:5432/campus_verde?sslmode=disable" -c "DROP DATABASE vp_modelgen_x"
 ```
 
 ## Estructura

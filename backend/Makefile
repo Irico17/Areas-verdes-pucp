@@ -16,12 +16,12 @@ tidy:
 	@echo "Tidying modules..."
 	cd app && go mod tidy
 
-# Introspects the configured PostgreSQL schema without running migrations.
-# Requires the database to be available and DATABASE_* to be set in the
-# environment or backend/app/.env.
-# Output goes to a temp directory or MODELGEN_OUT. Aborts if pointed at campus_verde.
+# Genera modelos GORM y ejecuta control de deriva contra una base de datos desechable
+# construida a partir de nuestras migraciones (apps/api/migrations).
+# Requiere una base de datos desechable (prefijo vp_ o modelgen_) migrada con cmd/migrate.
+# La salida va a un directorio temporal o MODELGEN_OUT. Aborta si apunta a campus_verde o bases con datos.
 gen-models:
-	@echo "Generating GORM models from PostgreSQL..."
+	@echo "Ejecutando modelgen y control de deriva contra PostgreSQL..."
 	cd app && go run ./cmd/modelgen
 
 swagger:
