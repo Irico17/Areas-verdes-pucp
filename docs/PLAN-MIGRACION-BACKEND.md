@@ -3,6 +3,31 @@
 > **Alcance.** Plan para portar el backend actual de VerdePUCP (`apps/api`, desplegado, v1-propuesta-referencia `115a56d`) a la arquitectura por capas de la rama `init/backend` del repositorio del equipo `GRUPO-12-DP2/-areas-verdes-pucp` (clon local de esa rama, HEAD `1e876dd chore: upd README`).
 > Este documento es **solo análisis y plan**: no cambia código ni esquema. Todo lo afirmado se verificó en el código; lo que no se pudo determinar se marca como **(no determinado)**.
 > Fecha: 2026-09-27.
+> **Actualización 2026-10-01.** El `main` del repo del equipo cambió (`0807825`: esquema v1.1, config/errores/conexión nuevos, `gorm.io/gen`). El análisis completo está en `docs/ANALISIS-CAMBIOS-EQUIPO-2026-10-01.md`; los ajustes acordados se recogen en la sección «Ajustes 2026-10-01» (justo debajo) y en los lotes 12b, 13, 22, 23 y 24 y en §4.3/§8. Donde el texto histórico de este documento diga «núcleo v0.2», «`nucleo.*`» o «`postgres:16`», prevalece esa sección.
+
+---
+
+## Ajustes 2026-10-01 (sobre el `main` `0807825` del equipo)
+
+Referencia nueva: `db/schema_v1.1.sql` (26 tablas, 2 vistas, `ambito_de()`), `postgis/postgis:16-3.5`, `config.GetConfig()`, `database.NewDatabaseConnection`, `ApplicationError`, `cmd/modelgen` + `make gen-models`. El clon `init/backend` @ `1e876dd` deja de ser la referencia (queda como histórico).
+
+| # | Sección | Ajuste |
+|---|---|---|
+| 1 | §0 / §4.2 | El **modelo conceptual de referencia pasa del núcleo v0.2 a `schema_v1.1.sql`**. Se mantiene la decisión: nuestras migraciones son la fuente de verdad y **nunca** se aplica el esquema del equipo sobre la BD desplegada. La compatibilidad se ofrece con vistas de solo lectura en el esquema **`v11`** (no `nucleo`). |
+| 2 | §1.6, §1.11, §7 | Las referencias a `postgres:16`/núcleo v0.2 del compose de init son históricas. El equipo usa `postgis/postgis:16-3.5` y monta solo `db/schema_v1.1.sql`. Nosotros mantenemos `docker-compose.yml` **sin initdb** (R-08) y agregamos `docker-compose.v11.yml` (BD desechable de v1.1, puerto 5433) para `gen-models` y la prueba de conformidad. La imagen de la BD desplegada (`16-3.4`) se sube a `16-3.5` solo en el ensayo del lote 22 (con `ALTER EXTENSION postgis UPDATE` probado en copia). |
+| 3 | §3.1 | `config/config.go`: se añade `GetConfig()` (singleton, `sync.Once`) sobre nuestro cargador; **se conservan `DATABASE_URL`, pool configurable y `SSLMode` string** (acepta `true/false`). `envconfig` es opcional. `db/db.go` → `NewDatabaseConnection` (nombre del equipo). Logger: `InitLogger` en `main.go`; el contenedor sigue proveyendo `zerolog.Logger` desde el logger global. |
+| 4 | §3.1 | `domain/errors`: se copian `application_error.go` y `error_codes.go` del equipo; `errores.middleware.go` traduce `ApplicationError` a `{"error": ...}` (503 para `DB-7000`). Nuestros `AppError` y errores por módulo siguen. |
+| 5 | §4.2 (reglas de modelos) | Nuestros `*.model.go` siguen a mano y apuntan a las tablas reales. `cmd/modelgen` + `make gen-models` se incorporan como **herramienta de contrato**, con salida a un directorio temporal y una guarda que impide ejecutarla contra la BD de datos; solo corre contra la BD desechable de v1.1. Los `*.gen.go` del equipo **no se copian** a `backend/`. |
+| 6 | §4.3 | Las migraciones previstas se redefinen (tabla abajo en §4.3): `047` se mantiene, `048` se reduce a `uuid_cliente` (v1.1 no tiene `sync_estado`), `049` queda obsoleta (vista `v11.estado_atencion`), `050` se reescribe como esquema `v11`; nuevas `051`–`053`. Todas aditivas e idempotentes; ninguna aplicada hasta el lote 24. |
+| 7 | §5 | Los nombres de rol v2 coinciden con la semilla v1.1 (Jefatura, Ingeniería/Coordinación, Capataz). **`admin` (Administrador) no está en v1.1**: se conserva y se expone en `v11.rol` solo si el equipo lo confirma (decisión D1 del análisis). D-15 (permisos = `usuario → rol`, matriz en el backend, sin tablas de permisos) respalda nuestra matriz en memoria; la tabla `permisos` queda como configuración local. |
+| 8 | Lote 12b (nuevo) | Alineación con las convenciones del equipo (ver abajo), antes del lote 13. |
+| 9 | Lotes 13–22 | **Sin cambio de alcance ni de orden**: siguen siendo paridad contra `apps/api` sobre nuestras tablas. Notas por lote abajo. |
+| 10 | Lote 22 | Añade el ensayo de la imagen `16-3.5`, `docker-compose.v11.yml`, alias `setup`/`docker-up`/`docker-down` en el `Makefile` raíz y el job de CI de conformidad `v11`. |
+| 11 | Lote 23 | **Sin cambios y fuera de toda automatización**: no se ejecuta sin orden expresa del responsable, ni por agentes. Se añade al checklist del §4.4 la verificación de que `docker-compose.v11.yml`/`schema_v1.1.sql` no estén montados en initdb de la BD real. |
+| 12 | Lote 24 | Reescrito para v1.1 (migraciones `047`–`053`, esquema `v11`, prueba de conformidad). |
+| 13 | §8 | Riesgos R-18 a R-21 (abajo). |
+
+**Qué se descarta de lo planeado antes:** el esquema `nucleo.*` (v0.2), `sync_estado`, las columnas `color`/`es_final` en `catalogos` y la `049_estados_nucleo`.
 
 ---
 
@@ -394,6 +419,20 @@ Todas idempotentes (`IF NOT EXISTS`, `ON CONFLICT DO NOTHING`, `DO $$ … IF NOT
 | `048_estados_nucleo.sql` | En `catalogos` (clase `estado`): `ejecutado` y `archivado` si faltan, y columnas `color`/`es_final` **nullable** en `catalogos` rellenadas con los colores del núcleo | RF-16, D-08 |
 | `049_vistas_nucleo.sql` | `CREATE SCHEMA IF NOT EXISTS nucleo;` y vistas de solo lectura `nucleo.intervencion`, `nucleo.actividad_evento`, `nucleo.evidencia`, `nucleo.solicitud`, `nucleo.servicio_tercerizado`, `nucleo.turno_riego`, `nucleo.area_verde`, `nucleo.ejemplar`, `nucleo.usuario`, `nucleo.rol` con los nombres de columna del núcleo (p. ej. `intervencion.uuid_cliente = actividades.id`, `latitud = ST_Y(geom)`, estado traducido a los nombres del núcleo, `Archivado` si `archivada_en IS NOT NULL`) | Reportes como vistas (README §6); SQL del equipo contra el vocabulario del núcleo, sin tocar `public` |
 
+> **Redefinición 2026-10-01 (v1.1).** La tabla anterior se sustituye por la siguiente; los nombres de archivo `047`–`050` se conservan donde aplican.
+>
+> | Archivo | Contenido | Estado |
+> |---|---|---|
+> | `047_evidencia_evento.sql` | `evidencias.evento_id BIGINT REFERENCES actividad_eventos(id)` nulo + índice | Se mantiene (RF-19/31) |
+> | `048_uuid_cliente_eventos.sql` | `actividad_eventos.uuid_cliente uuid` (índice único parcial); **sin `sync_estado`** | Reducida |
+> | `049_estados_nucleo.sql` | — | **Obsoleta**: reemplazada por la vista `v11.estado_atencion` |
+> | `050_vistas_v11.sql` | `CREATE SCHEMA IF NOT EXISTS v11;` + vistas con el nombre y tipos de las 26 tablas de `schema_v1.1.sql`, `v11.ambito_de()`, `v11.vw_actividad_retraso`, `v11.vw_jardin_disponibilidad`. Requiere `id_v11` (ver `051`) | Reescrita |
+> | `051_id_v11.sql` | `id_v11 bigint GENERATED ALWAYS AS IDENTITY UNIQUE` en `actividades`, `solicitudes`, `ordenes_servicio`, `evidencias` (PK y FK no cambian) | Nueva |
+> | `052_usuario_empresa_tipo_uso.sql` | Columnas nulas en `usuarios` (`apellidos`, `email`, `telefono`, `debe_cambiar_password`, `ultimo_acceso`); tablas `empresa` y `tipo_uso` pobladas con `SELECT DISTINCT` | Nueva |
+> | `053_servicio_conformidad.sql` | `ordenes_servicio.conformidad_por`, `resultado_conformidad`, `empresa_id` nulos; `actividad_id` admite NULL (se relaja, no se borra) | Nueva |
+>
+> Las `041`–`046` ya existentes no se editan. Detalle del mapeo columna a columna: `docs/ANALISIS-CAMBIOS-EQUIPO-2026-10-01.md` §3.
+
 Los datos maestros que faltan (insumos, fitosanitario, empresas, sede, checklist) **no son parte del port**: se crean después, cuando exista su historia, en tablas nuevas que siguen el DDL del núcleo en `public` (sin choque de nombres) y con importación masiva e historial.
 
 ### 4.4 Procedimiento sobre la BD PostGIS desplegada
@@ -541,6 +580,12 @@ Cambios de código asociados (lote 6):
 | R-15 | Convenciones de archivos no definidas en init (§1.5) → estilos distintos entre integrantes | Alta / medio | Ratificar la tabla del §1.5 como ADR antes del lote 5 |
 | R-16 | Rutas llamadas por la PWA que no existen (§2.3) se confunden con regresiones del port | Media / bajo | Lista explícita en el arnés como «404 esperado» hasta el lote 24 |
 | R-17 | El port se alarga y el equipo sigue desarrollando en `apps/api` | Media / alto | Congelar features nuevas en `apps/api` desde el lote 5 (solo fixes, replicados en `backend/`); orden de lotes por dependencia |
+| R-18 | Adoptar el pool del equipo (10 idle / 100 open, sin vida máxima) agota `max_connections` (100) de PostgreSQL y deja conexiones muertas tras reinicios | Media / alto | Se conserva el pool configurable (10 open / 4 idle / 30 min) y solo se adopta el `Ping` |
+| R-19 | La semilla de `rol` de v1.1 no tiene Administrador; sincronizar a ciegas dejaría sin acceso a las cuentas técnicas | Media / alto | `admin` se conserva; `v11.rol` lo expone solo tras confirmar con el equipo (D1) |
+| R-20 | `make gen-models` contra la BD de datos reescribe `*.gen.go` y no ve las vistas `v11` (solo `BASE TABLE`) | Media / medio | Salida a directorio temporal, guarda por nombre de BD, solo contra `docker-compose.v11.yml` |
+| R-21 | `ordenes_servicio.actividad_id NOT NULL` impide el servicio tercerizado independiente de v1.1 (D-19) | Alta / medio | `053_servicio_conformidad.sql` relaja la restricción (aditiva); el flujo desacoplado se implementa después del corte |
+| R-22 | Montar `schema_v1.1.sql` en initdb de la BD real (como hace el compose del equipo) crea 26 tablas paralelas | Media / alto | Compose principal sin initdb; `docker-compose.v11.yml` aparte; `grep` en CI; checklist del lote 23 |
+| R-23 | Los ids `bigint` de v1.1 contra nuestros UUID: `row_number()` no es estable | Alta si se improvisa / medio | Columna `id_v11 identity` (`051`), PK y FK intactas |
 
 ---
 
@@ -613,8 +658,15 @@ Cambios de código asociados (lote 6):
 - **Tests portados:** `operacion/*_test.go`, `handlers/operacion_test.go`.
 - **Aceptación:** paridad de la lista (`?abiertas=1`, `?estado=`, `?cuadrilla_id=`) con sesión de coordinación y de capataz; crear la misma labor dos veces → mismo resultado que hoy (idempotente); cada mutación agrega exactamente un `actividad_eventos` con `usuario_id`; archivar exige motivo.
 
+### Lote 12b: Alineación con las convenciones del equipo (`main` 0807825)
+- **Alcance:** (1) `config.GetConfig()` singleton sobre el cargador actual; `.env.example` fusionado; `SSLMode` acepta `true/false`. (2) `database.NewConnection` → `NewDatabaseConnection` con `Ping()`; pool y `DATABASE_URL` se conservan. (3) `InitLogger` en `main.go`; el contenedor sigue proveyendo `zerolog.Logger`. (4) `domain/errors/application_error.go` y `error_codes.go` copiados del equipo; `errores.middleware.go` traduce `ApplicationError` (503 en `DB-7000`). (5) `cmd/modelgen/main.go` y target `gen-models` en `backend/Makefile` con guarda anti-BD-de-datos; `gorm.io/gen` y `envconfig` en `go.mod`. (6) Makefile raíz: alias `setup`, `docker-up`, `docker-down`. (7) `docker-compose.v11.yml` (BD desechable `postgis/postgis:16-3.5` + `db/schema_v1.1.sql` copiado como **referencia** en `db/referencia/`, nunca en el compose principal).
+- **Archivos:** `shared/config/config.go`, `persistence/database/database.go`, `persistence/container.go`, `cmd/main.go`, `cmd/ioc/container.go`, `domain/errors/*`, `presentation/middleware/errores.middleware.go`, `cmd/modelgen/main.go`, `backend/Makefile`, `Makefile`, `docker-compose.v11.yml`, `backend/app/go.mod`.
+- **Aceptación:** `make build && make test` verdes; la config resultante es idéntica a la anterior con las mismas variables (test); el arnés de paridad de los lotes 4–12 no muestra diferencias; `make gen-models` contra `docker-compose.v11.yml` genera 26 archivos en un directorio temporal y `go vet` los acepta; ejecutar `gen-models` con `DATABASE_NAME=campus_verde` aborta con mensaje.
+- **No incluye:** migraciones, esquema `v11` ni cambios de datos.
+
 ### Lote 13: Solicitudes, órdenes de servicio y riego
 - **Alcance:** `/solicitudes` (GET, POST, PATCH), `/ordenes` (GET, POST, PATCH), `/riego` (GET, POST).
+- **Nota 2026-10-01:** sin cambios de alcance (paridad). Con v1.1 `solicitud` → `intervencion`/`servicio_tercerizado` son flujos separados (D-14/D-19) y el riego es un `tipo_actividad`; eso se resuelve en el lote 24 con vistas `v11`, **no** reestructurando estos endpoints.
 - **Tests portados:** `atencion/riego_test.go`, `atencion/riego_cierre_test.go`.
 - **Aceptación:** paridad; `codigo_externo` duplicado → mismo 409; el capataz solo ve el riego de su equipo; no se puede cerrar una labor tercerizada sin orden (test `TestCierreTercerizada`).
 
@@ -658,16 +710,18 @@ Cambios de código asociados (lote 6):
 
 ### Lote 22: Imagen, compose, CI y ensayo de corte
 - **Alcance:** §7 completo salvo la mudanza de migraciones: `backend/dockerfile`, entrypoint, UID/chown, compose, `deploy-learner-lab.sh` con tag por SHA, `ci.yml` (job backend), `Makefile` raíz, `bootstrap.sh`. Ensayo completo del §4.4 pasos 1-4 sobre un dump real.
+- **Añadido 2026-10-01:** ensayo de la imagen `postgis/postgis:16-3.5` sobre la copia restaurada (`ALTER EXTENSION postgis UPDATE`, conteos antes = después); `docker-compose.v11.yml` documentado; job de CI «conformidad v11» (compara `schema_v1.1.sql` contra `v11.*` una vez exista el lote 24; antes solo `gen-models`+`go vet`).
 - **TODO (revisión Opus lote 22):** empaquetar en el Dockerfile: binario migrate, carpeta migrations, contrato openapi.yaml y variable de entorno OPENAPI_PATH.
 - **Aceptación:** `docker compose up -d --build` local levanta db + api nueva + web; `/health` ok; `scripts/counts.sh` igual antes y después; CI en verde en ambos jobs; informe del ensayo (conteos antes/después, versiones de `schema_migrations`, salida del arnés de paridad) adjunto al PR.
 
 ### Lote 23: Corte en producción y mudanza de migraciones
+- **EXCLUIDO de toda ejecución automática (2026-10-01):** ni agentes ni scripts ejecutan este lote; se hace solo con orden expresa del responsable, siguiendo el §4.4 completo.
 - **Alcance:** `git mv apps/api/migrations/*.sql db/migrations/` (**mismos nombres**), `MIGRATIONS_DIR=/opt/campus/migrations` apuntando al nuevo origen en el dockerfile, `db/schema_nucleo_v0.2.sql` a `db/referencia/`, ADR en `docs/DECISIONES.md`, actualización de `DESPLIEGUE.md`, `DEPLOY-AWS.md`, `OPERACION.md`, `ARQUITECTURA.md` y `README.md`. Ejecutar el §4.4 completo en la EC2.
 - **Aceptación:** checklist del §4.4 firmado: backup y snapshot con fecha; conteos antes = después en todas las tablas existentes; `/health` ok desde `campus-healthcheck`; login, mapa, labor y evidencia verificados en producción; tag de rollback anotado. `apps/api` queda **solo como referencia** (código, no datos) y su retiro se hace en un PR aparte, ≥14 días después y sin tráfico en `/api/v1`.
 
-### Lote 24: Alineación con el núcleo v0.2 y huecos del frontend
-- **Alcance:** migraciones `046_evidencia_evento.sql`, `047_sync_offline.sql`, `048_estados_nucleo.sql` y `049_vistas_nucleo.sql` (§4.3) con sus campos opcionales en DTO y entidades; decisión e implementación (o eliminación en la PWA) de las 3 rutas inexistentes (§2.3) como bajas lógicas con historial en `cambios`.
-- **Aceptación:** cada migración aplicada dos veces sin cambios; conteos de las tablas existentes idénticos; `SELECT count(*) FROM nucleo.intervencion` = `SELECT count(*) FROM actividades`; `apps/api` en su último tag sigue funcionando con el esquema (compatibilidad hacia atrás); las rutas de baja responden 200 y la fila sigue existiendo con `activo=false`.
+### Lote 24: Alineación con el esquema v1.1 y huecos del frontend
+- **Alcance (reescrito 2026-10-01):** migraciones `047`–`053` (§4.3 redefinido) con sus campos opcionales en DTO y entidades; esquema `v11` (vistas sobre nuestras tablas con los nombres y tipos de `schema_v1.1.sql`, `v11.ambito_de()`, `v11.vw_actividad_retraso`, `v11.vw_jardin_disponibilidad`); prueba de conformidad contra una BD desechable cargada con `schema_v1.1.sql`; decisión e implementación (o eliminación en la PWA) de las 3 rutas inexistentes (§2.3) como bajas lógicas con historial en `cambios`. Las decisiones D1–D5 del análisis deben estar resueltas por el responsable antes de empezar.
+- **Aceptación:** cada migración aplicada dos veces sin cambios; conteos de las tablas existentes idénticos; `SELECT count(*) FROM v11.intervencion` = `SELECT count(*) FROM actividades WHERE ejecutor='propia'`; para cada tabla/vista de v1.1 existe `v11.<nombre>` con las mismas columnas y tipos (test automatizado); `apps/api` en su último tag sigue funcionando con el esquema (compatibilidad hacia atrás); las rutas de baja responden 200 y la fila sigue existiendo con `activo=false`. Se ensaya solo en copia; la aplicación en producción forma parte del procedimiento manual del lote 23/posterior.
 
 ---
 
