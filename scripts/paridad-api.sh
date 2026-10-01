@@ -232,7 +232,7 @@ normalize_headers() {
       gsub(/^[ \t\r\n]+|[ \t\r\n]+$/, "", name)
       gsub(/^[ \t\r\n]+|[ \t\r\n]+$/, "", val)
 
-      if (name == "content-type" || name == "cache-control" || name == "content-disposition" || name ~ /^access-control-/ || name == "set-cookie") {
+      if (name == "content-type" || name == "cache-control" || name == "content-disposition" || name == "x-content-type-options" || name ~ /^access-control-/ || name == "set-cookie") {
         if (name == "set-cookie") {
           gsub(/cv_sesion=[^; \t\r\n]+/, "cv_sesion=***MASKED***", val)
         }
@@ -356,7 +356,16 @@ while IFS= read -r line || [ -n "$line" ]; do
     elif [[ "$extra" =~ ^@ ]]; then
       BODY_PATH="${extra#@}"
       if [ -f "$BODY_PATH" ]; then
-        BODY_ARGS=(-H "Content-Type: application/json" --data-binary "@$BODY_PATH")
+        if [[ "$BODY_PATH" =~ \.form$ ]]; then
+          while IFS= read -r fline || [ -n "$fline" ]; do
+            fline=$(echo "$fline" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            if [ -n "$fline" ] && [[ ! "$fline" =~ ^# ]]; then
+              BODY_ARGS+=(-F "$fline")
+            fi
+          done < "$BODY_PATH"
+        else
+          BODY_ARGS=(-H "Content-Type: application/json" --data-binary "@$BODY_PATH")
+        fi
       else
         echo "  [WARN] archivo de cuerpo no encontrado: $BODY_PATH"
       fi

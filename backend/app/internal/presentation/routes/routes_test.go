@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -443,6 +444,20 @@ func (mockViveroRoutesUC) Archivar(_ context.Context, _ string) error {
 	return nil
 }
 
+type mockEvidenciaRoutesUC struct{}
+
+func (mockEvidenciaRoutesUC) Listar(_ context.Context, _ string) (*dto.ListarEvidenciasResponseDTO, error) {
+	return &dto.ListarEvidenciasResponseDTO{Evidencias: []dto.EvidenciaDTO{}}, nil
+}
+
+func (mockEvidenciaRoutesUC) Subir(_ context.Context, in dto.SubirEvidenciaDTO) (*dto.SubirEvidenciaResponseDTO, error) {
+	return &dto.SubirEvidenciaResponseDTO{ID: in.ID, Idempotente: false}, nil
+}
+
+func (mockEvidenciaRoutesUC) Abrir(_ context.Context, _ string) (io.ReadCloser, string, error) {
+	return io.NopCloser(bytes.NewReader([]byte("test"))), "image/jpeg", nil
+}
+
 func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
@@ -488,6 +503,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	riegoCtrl := controller.NewRiegoController(mockRiegoRoutesUC{}, zerolog.Nop())
 	podaCtrl := controller.NewPodaController(mockPodaRoutesUC{}, zerolog.Nop())
 	viveroCtrl := controller.NewViveroController(mockViveroRoutesUC{}, zerolog.Nop())
+	evidenciaCtrl := controller.NewEvidenciaController(mockEvidenciaRoutesUC{}, zerolog.Nop())
 
 	permisosSvc := services.NewPermisosService()
 	limitador := ratelimit.NewMemoriaLimitador(100, time.Minute)
@@ -508,6 +524,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	atencionGrp := groups.NewAtencionGroup(solicitudCtrl, ordenCtrl, riegoCtrl, permisosSvc)
 	podaGrp := groups.NewPodaGroup(podaCtrl, permisosSvc)
 	viveroGrp := groups.NewViveroGroup(viveroCtrl, permisosSvc)
+	evidenciaGrp := groups.NewEvidenciaGroup(evidenciaCtrl, permisosSvc)
 
 	r := routes.NewRouter(routes.RouterParams{
 		Engine:               engine,
@@ -531,6 +548,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 		AtencionGroup:        atencionGrp,
 		PodaGroup:            podaGrp,
 		ViveroGroup:          viveroGrp,
+		EvidenciaGroup:       evidenciaGrp,
 	})
 	r.Setup()
 	return engine
@@ -1890,6 +1908,81 @@ func TestRutasPodaVivero_PermisosPorRol(t *testing.T) {
 			if body["error"] != c.errorEsperado {
 				t.Errorf("%s %s (token=%s): error esperado %q, obtenido %q", c.metodo, c.ruta, c.token, c.errorEsperado, body["error"])
 			}
+		}
+	}
+}
+
+func TestRutasEvidencias_SinAutenticacionRetorna401(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	rutas := []struct {
+		metodo string
+		ruta   string
+	}{
+		{http.MethodGet, "/api/v1/evidencias"},
+		{http.MethodGet, "/areas-verdes/v1/evidencias"},
+		{http.MethodPost, "/api/v1/evidencias"},
+		{http.MethodPost, "/areas-verdes/v1/evidencias"},
+		{http.MethodGet, "/api/v1/evidencias/1/archivo"},
+		{http.MethodGet, "/areas-verdes/v1/evidencias/1/archivo"},
+	}
+
+	for _, r := range rutas {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(r.metodo, r.ruta, nil)
+		engine.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s sin auth: esperado 401, obtenido %d", r.metodo, r.ruta, w.Code)
+		}
+		if w.Body.String() != `{"error":"inicie sesión"}` {
+			t.Errorf("%s %s sin auth: cuerpo inesperado %s", r.metodo, r.ruta, w.Body.String())
+		}
+	}
+}
+
+func TestRutasEvidencias_PermisosPorRol(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	casos := []struct {
+		metodo         string
+		ruta           string
+		token          string
+		statusEsperado int
+	}{
+		// 1. Capataz: consultar=true -> GET 200
+		{http.MethodGet, "/api/v1/evidencias", "token-norte", 200},
+		{http.MethodGet, "/areas-verdes/v1/evidencias", "token-norte", 200},
+		{http.MethodGet, "/api/v1/evidencias/1/archivo", "token-norte", 200},
+		{http.MethodGet, "/areas-verdes/v1/evidencias/1/archivo", "token-norte", 200},
+
+		// 2. Coordinación: consultar=true -> GET 200
+		{http.MethodGet, "/api/v1/evidencias", "token-coordinacion", 200},
+		{http.MethodGet, "/areas-verdes/v1/evidencias", "token-coordinacion", 200},
+		{http.MethodGet, "/api/v1/evidencias/1/archivo", "token-coordinacion", 200},
+		{http.MethodGet, "/areas-verdes/v1/evidencias/1/archivo", "token-coordinacion", 200},
+
+		// 3. Jefatura: consultar=true -> GET 200
+		{http.MethodGet, "/api/v1/evidencias", "token-jefatura", 200},
+		{http.MethodGet, "/areas-verdes/v1/evidencias", "token-jefatura", 200},
+		{http.MethodGet, "/api/v1/evidencias/1/archivo", "token-jefatura", 200},
+		{http.MethodGet, "/areas-verdes/v1/evidencias/1/archivo", "token-jefatura", 200},
+
+		// 4. Admin: consultar=true -> GET 200
+		{http.MethodGet, "/api/v1/evidencias", "token-admin", 200},
+		{http.MethodGet, "/areas-verdes/v1/evidencias", "token-admin", 200},
+		{http.MethodGet, "/api/v1/evidencias/1/archivo", "token-admin", 200},
+		{http.MethodGet, "/areas-verdes/v1/evidencias/1/archivo", "token-admin", 200},
+	}
+
+	for _, c := range casos {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(c.metodo, c.ruta, nil)
+		req.AddCookie(&http.Cookie{Name: "cv_sesion", Value: c.token})
+		engine.ServeHTTP(w, req)
+
+		if w.Code != c.statusEsperado {
+			t.Errorf("%s %s (token=%s): esperado status %d, obtenido %d (%s)", c.metodo, c.ruta, c.token, c.statusEsperado, w.Code, w.Body.String())
 		}
 	}
 }

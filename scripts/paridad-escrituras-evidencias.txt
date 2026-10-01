@@ -1,0 +1,30 @@
+# Escrituras para prueba de paridad en copias de base de datos (lote 15: evidencias y almacenamiento)
+# Formato: <rol> <METODO> <ruta> [@path/al/cuerpo.form] [status_esperado]
+
+# --- Validaciones y errores de entrada ---
+norte POST /api/v1/evidencias @scripts/cuerpos/evidencia-uuid-invalido.form 400
+norte POST /api/v1/evidencias @scripts/cuerpos/evidencia-lat-sin-lon.form 400
+norte POST /api/v1/evidencias @scripts/cuerpos/evidencia-sha256-mismatch.form 400
+norte POST /api/v1/evidencias @scripts/cuerpos/evidencia-labor-inexistente.form 404
+
+# --- Permisos: capataz intentando subir a labor ajena ---
+norte POST /api/v1/evidencias @scripts/cuerpos/evidencia-otra-labor.form 403
+
+# --- Subida exitosa por capataz asignado (201) ---
+norte POST /api/v1/evidencias @scripts/cuerpos/evidencia-crear-norte.form 201
+
+# --- Idempotencia: reenvío con mismo id y mismo contenido (200) ---
+norte POST /api/v1/evidencias @scripts/cuerpos/evidencia-crear-norte.form 200
+
+# --- Conflicto 409: mismo id con contenido / hash distinto ---
+norte POST /api/v1/evidencias @scripts/cuerpos/evidencia-conflicto-hash.form 409
+
+# --- Subida por jefatura a cualquier labor (201) ---
+jefatura POST /api/v1/evidencias @scripts/cuerpos/evidencia-crear-jefatura.form 201
+
+# --- Descarga de archivo existente (200) ---
+norte GET /api/v1/evidencias/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/archivo 200
+jefatura GET /api/v1/evidencias/dddddddd-dddd-4ddd-8ddd-dddddddddddd/archivo 200
+
+# --- Descarga de archivo inexistente (404) ---
+norte GET /api/v1/evidencias/00000000-0000-0000-0000-000000000000/archivo 404
