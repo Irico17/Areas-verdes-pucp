@@ -33,6 +33,8 @@ func RegisterContainer(container *dig.Container) error {
 		postgres.NewSolicitudRepository,
 		postgres.NewServicioTercerizadoRepository,
 		postgres.NewRiegoRepository,
+		postgres.NewPodaRepository,
+		postgres.NewViveroRepository,
 	}
 
 	for _, provider := range providers {

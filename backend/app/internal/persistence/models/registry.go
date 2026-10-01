@@ -22,6 +22,7 @@ func AllModels() []any {
 		&OrdenServicioModel{},
 		&PermisoModel{},
 		&PersonalLaborModel{},
+		&PodaModel{},
 		&PoligonoCuadrillaModel{},
 		&PuntoPUCPModel{},
 		&ReservaJardinModel{},
@@ -30,6 +31,8 @@ func AllModels() []any {
 		&SolicitudModel{},
 		&TachoModel{},
 		&UsuarioModel{},
+		&ViveroCatalogoModel{},
+		&ViveroRegistroModel{},
 		&ZonaSupervisionModel{},
 	}
 }

@@ -1,0 +1,17 @@
+{
+  "codigo": "PO-900",
+  "codigo_externo": "OSG-900",
+  "tipo": "Mantenimiento",
+  "tipo_actividad": "Descope",
+  "fecha_reporte": "2026-06-01",
+  "fecha_ejecucion": "2026-06-03",
+  "personal": "Cuadrilla Norte",
+  "ubicacion": "Jardín de Letras",
+  "unidad": "árboles",
+  "cantidad_pedida": 2,
+  "cantidad_ejecutada": 2,
+  "prioridad": "media",
+  "comentario": "Poda completada y revisada",
+  "nombre_comun": "Molle",
+  "nombre_cientifico": "Schinus molle"
+}

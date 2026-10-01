@@ -407,6 +407,42 @@ func (mockRiegoRoutesUC) Crear(_ context.Context, in dto.CrearRiegoDTO, _, _ str
 	return &dto.CrearRiegoResponseDTO{ID: in.ID}, nil
 }
 
+type mockPodaRoutesUC struct{}
+
+func (mockPodaRoutesUC) Listar(_ context.Context) (*dto.PodasResponseDTO, error) {
+	return &dto.PodasResponseDTO{Podas: []dto.PodaDTO{}}, nil
+}
+
+func (mockPodaRoutesUC) Crear(_ context.Context, in dto.GuardarPodaDTO) (*dto.PodaDTO, error) {
+	return &dto.PodaDTO{ID: in.ID, Codigo: in.Codigo}, nil
+}
+
+func (mockPodaRoutesUC) Editar(_ context.Context, in dto.GuardarPodaDTO) (*dto.PodaDTO, error) {
+	return &dto.PodaDTO{ID: in.ID, Codigo: in.Codigo}, nil
+}
+
+func (mockPodaRoutesUC) Archivar(_ context.Context, _ string) error {
+	return nil
+}
+
+type mockViveroRoutesUC struct{}
+
+func (mockViveroRoutesUC) Listar(_ context.Context, _ string) (*dto.ViveroResponseDTO, error) {
+	return &dto.ViveroResponseDTO{Registros: []dto.ViveroDTO{}}, nil
+}
+
+func (mockViveroRoutesUC) Crear(_ context.Context, in dto.GuardarViveroDTO) (*dto.ViveroDTO, error) {
+	return &dto.ViveroDTO{ID: in.ID, Area: in.Area}, nil
+}
+
+func (mockViveroRoutesUC) Editar(_ context.Context, in dto.GuardarViveroDTO) (*dto.ViveroDTO, error) {
+	return &dto.ViveroDTO{ID: in.ID, Area: in.Area}, nil
+}
+
+func (mockViveroRoutesUC) Archivar(_ context.Context, _ string) error {
+	return nil
+}
+
 func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
@@ -450,6 +486,8 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	solicitudCtrl := controller.NewSolicitudController(mockSolicitudRoutesUC{}, zerolog.Nop())
 	ordenCtrl := controller.NewServicioTercerizadoController(mockServicioTercerizadoRoutesUC{}, zerolog.Nop())
 	riegoCtrl := controller.NewRiegoController(mockRiegoRoutesUC{}, zerolog.Nop())
+	podaCtrl := controller.NewPodaController(mockPodaRoutesUC{}, zerolog.Nop())
+	viveroCtrl := controller.NewViveroController(mockViveroRoutesUC{}, zerolog.Nop())
 
 	permisosSvc := services.NewPermisosService()
 	limitador := ratelimit.NewMemoriaLimitador(100, time.Minute)
@@ -468,6 +506,8 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	inventarioCampoGrp := groups.NewInventarioCampoGroup(inventarioCampoCtrl, permisosSvc)
 	operacionGrp := groups.NewOperacionGroup(operacionCtrl, permisosSvc)
 	atencionGrp := groups.NewAtencionGroup(solicitudCtrl, ordenCtrl, riegoCtrl, permisosSvc)
+	podaGrp := groups.NewPodaGroup(podaCtrl, permisosSvc)
+	viveroGrp := groups.NewViveroGroup(viveroCtrl, permisosSvc)
 
 	r := routes.NewRouter(routes.RouterParams{
 		Engine:               engine,
@@ -489,6 +529,8 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 		InventarioCampoGroup: inventarioCampoGrp,
 		OperacionGroup:       operacionGrp,
 		AtencionGroup:        atencionGrp,
+		PodaGroup:            podaGrp,
+		ViveroGroup:          viveroGrp,
 	})
 	r.Setup()
 	return engine
@@ -689,6 +731,23 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 		{http.MethodGet, "/areas-verdes/v1/riego", 401},
 		{http.MethodPost, "/api/v1/riego", 401},
 		{http.MethodPost, "/areas-verdes/v1/riego", 401},
+		// Poda y vivero (Lote 14)
+		{http.MethodGet, "/api/v1/podas", 401},
+		{http.MethodGet, "/areas-verdes/v1/podas", 401},
+		{http.MethodPost, "/api/v1/podas", 401},
+		{http.MethodPost, "/areas-verdes/v1/podas", 401},
+		{http.MethodPatch, "/api/v1/podas/1", 401},
+		{http.MethodPatch, "/areas-verdes/v1/podas/1", 401},
+		{http.MethodPost, "/api/v1/podas/1/archivar", 401},
+		{http.MethodPost, "/areas-verdes/v1/podas/1/archivar", 401},
+		{http.MethodGet, "/api/v1/vivero", 401},
+		{http.MethodGet, "/areas-verdes/v1/vivero", 401},
+		{http.MethodPost, "/api/v1/vivero", 401},
+		{http.MethodPost, "/areas-verdes/v1/vivero", 401},
+		{http.MethodPatch, "/api/v1/vivero/1", 401},
+		{http.MethodPatch, "/areas-verdes/v1/vivero/1", 401},
+		{http.MethodPost, "/api/v1/vivero/1/archivar", 401},
+		{http.MethodPost, "/areas-verdes/v1/vivero/1/archivar", 401},
 		{http.MethodGet, "/api/v1/no-existe", 404},
 		{http.MethodGet, "/areas-verdes/v1/no-existe", 404},
 	}
@@ -760,6 +819,22 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 			path = "/api/v1/ordenes/:id"
 		case "/areas-verdes/v1/ordenes/1":
 			path = "/areas-verdes/v1/ordenes/:id"
+		case "/api/v1/podas/1":
+			path = "/api/v1/podas/:id"
+		case "/areas-verdes/v1/podas/1":
+			path = "/areas-verdes/v1/podas/:id"
+		case "/api/v1/podas/1/archivar":
+			path = "/api/v1/podas/:id/archivar"
+		case "/areas-verdes/v1/podas/1/archivar":
+			path = "/areas-verdes/v1/podas/:id/archivar"
+		case "/api/v1/vivero/1":
+			path = "/api/v1/vivero/:id"
+		case "/areas-verdes/v1/vivero/1":
+			path = "/areas-verdes/v1/vivero/:id"
+		case "/api/v1/vivero/1/archivar":
+			path = "/api/v1/vivero/:id/archivar"
+		case "/areas-verdes/v1/vivero/1/archivar":
+			path = "/areas-verdes/v1/vivero/:id/archivar"
 		}
 		key := want.metodo + " " + path
 		if !vistas[key] {
@@ -1656,6 +1731,142 @@ func TestRutasAtencion_PermisosPorRol(t *testing.T) {
 		{http.MethodPatch, "/api/v1/ordenes/1", "token-admin", `{"estado":"ejecutada"}`, 200, ""},
 		{http.MethodGet, "/api/v1/riego", "token-admin", "", 200, ""},
 		{http.MethodPost, "/api/v1/riego", "token-admin", `{"fecha":"2026-10-01","turno":"manana"}`, 201, ""},
+	}
+
+	for _, c := range casos {
+		w := httptest.NewRecorder()
+		var req *http.Request
+		if c.body != "" {
+			req = httptest.NewRequest(c.metodo, c.ruta, bytes.NewBufferString(c.body))
+			req.Header.Set("Content-Type", "application/json")
+		} else {
+			req = httptest.NewRequest(c.metodo, c.ruta, nil)
+		}
+		req.AddCookie(&http.Cookie{Name: "cv_sesion", Value: c.token})
+		engine.ServeHTTP(w, req)
+
+		if w.Code != c.statusEsperado {
+			t.Errorf("%s %s (token=%s): esperado status %d, obtenido %d (%s)", c.metodo, c.ruta, c.token, c.statusEsperado, w.Code, w.Body.String())
+		}
+		if c.errorEsperado != "" {
+			var body map[string]string
+			_ = json.Unmarshal(w.Body.Bytes(), &body)
+			if body["error"] != c.errorEsperado {
+				t.Errorf("%s %s (token=%s): error esperado %q, obtenido %q", c.metodo, c.ruta, c.token, c.errorEsperado, body["error"])
+			}
+		}
+	}
+}
+
+func TestRutasPodaVivero_SinAutenticacionRetorna401(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	rutas := []struct {
+		metodo string
+		ruta   string
+	}{
+		{http.MethodGet, "/api/v1/podas"},
+		{http.MethodGet, "/areas-verdes/v1/podas"},
+		{http.MethodPost, "/api/v1/podas"},
+		{http.MethodPost, "/areas-verdes/v1/podas"},
+		{http.MethodPatch, "/api/v1/podas/1"},
+		{http.MethodPatch, "/areas-verdes/v1/podas/1"},
+		{http.MethodPost, "/api/v1/podas/1/archivar"},
+		{http.MethodPost, "/areas-verdes/v1/podas/1/archivar"},
+
+		{http.MethodGet, "/api/v1/vivero"},
+		{http.MethodGet, "/areas-verdes/v1/vivero"},
+		{http.MethodPost, "/api/v1/vivero"},
+		{http.MethodPost, "/areas-verdes/v1/vivero"},
+		{http.MethodPatch, "/api/v1/vivero/1"},
+		{http.MethodPatch, "/areas-verdes/v1/vivero/1"},
+		{http.MethodPost, "/api/v1/vivero/1/archivar"},
+		{http.MethodPost, "/areas-verdes/v1/vivero/1/archivar"},
+	}
+
+	for _, r := range rutas {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(r.metodo, r.ruta, bytes.NewBufferString(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		engine.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s sin auth: esperado 401, obtenido %d", r.metodo, r.ruta, w.Code)
+		}
+		if w.Body.String() != `{"error":"inicie sesión"}` {
+			t.Errorf("%s %s sin auth: cuerpo inesperado %s", r.metodo, r.ruta, w.Body.String())
+		}
+	}
+}
+
+func TestRutasPodaVivero_PermisosPorRol(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	type caso struct {
+		metodo         string
+		ruta           string
+		token          string
+		body           string
+		statusEsperado int
+		errorEsperado  string
+	}
+
+	casos := []caso{
+		// 1. Capataz (norte):
+		// Poda: consultar=true, registrar=true, validar=false (archivar -> 403)
+		{http.MethodGet, "/api/v1/podas", "token-norte", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/podas", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/podas", "token-norte", `{"codigo":"PO-001"}`, 201, ""},
+		{http.MethodPost, "/areas-verdes/v1/podas", "token-norte", `{"codigo":"PO-001"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/podas/1", "token-norte", `{"prioridad":"alta"}`, 200, ""},
+		{http.MethodPatch, "/areas-verdes/v1/podas/1", "token-norte", `{"prioridad":"alta"}`, 200, ""},
+		{http.MethodPost, "/api/v1/podas/1/archivar", "token-norte", "", 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/podas/1/archivar", "token-norte", "", 403, "su rol no tiene ese permiso"},
+
+		// Vivero: consultar=true, registrar=true, validar=false (archivar -> 403)
+		{http.MethodGet, "/api/v1/vivero", "token-norte", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/vivero", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/vivero", "token-norte", `{"area":"Fauna"}`, 201, ""},
+		{http.MethodPost, "/areas-verdes/v1/vivero", "token-norte", `{"area":"Fauna"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/vivero/1", "token-norte", `{"area":"Fauna"}`, 200, ""},
+		{http.MethodPatch, "/areas-verdes/v1/vivero/1", "token-norte", `{"area":"Fauna"}`, 200, ""},
+		{http.MethodPost, "/api/v1/vivero/1/archivar", "token-norte", "", 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/vivero/1/archivar", "token-norte", "", 403, "su rol no tiene ese permiso"},
+
+		// 2. Coordinación: tiene consultar, registrar, validar
+		{http.MethodGet, "/api/v1/podas", "token-coordinacion", "", 200, ""},
+		{http.MethodPost, "/api/v1/podas", "token-coordinacion", `{"codigo":"PO-001"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/podas/1", "token-coordinacion", `{"prioridad":"alta"}`, 200, ""},
+		{http.MethodPost, "/api/v1/podas/1/archivar", "token-coordinacion", "", 200, ""},
+		{http.MethodGet, "/api/v1/vivero", "token-coordinacion", "", 200, ""},
+		{http.MethodPost, "/api/v1/vivero", "token-coordinacion", `{"area":"Fauna"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/vivero/1", "token-coordinacion", `{"area":"Fauna"}`, 200, ""},
+		{http.MethodPost, "/api/v1/vivero/1/archivar", "token-coordinacion", "", 200, ""},
+
+		// 3. Jefatura: consultar=true, validar=true, registrar=false (POST/PATCH -> 403)
+		{http.MethodGet, "/api/v1/podas", "token-jefatura", "", 200, ""},
+		{http.MethodPost, "/api/v1/podas", "token-jefatura", `{"codigo":"PO-001"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/podas", "token-jefatura", `{"codigo":"PO-001"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/podas/1", "token-jefatura", `{"prioridad":"alta"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/areas-verdes/v1/podas/1", "token-jefatura", `{"prioridad":"alta"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/podas/1/archivar", "token-jefatura", "", 200, ""},
+
+		{http.MethodGet, "/api/v1/vivero", "token-jefatura", "", 200, ""},
+		{http.MethodPost, "/api/v1/vivero", "token-jefatura", `{"area":"Fauna"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/vivero", "token-jefatura", `{"area":"Fauna"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/vivero/1", "token-jefatura", `{"area":"Fauna"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/areas-verdes/v1/vivero/1", "token-jefatura", `{"area":"Fauna"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/vivero/1/archivar", "token-jefatura", "", 200, ""},
+
+		// 4. Admin: todos los permisos
+		{http.MethodGet, "/api/v1/podas", "token-admin", "", 200, ""},
+		{http.MethodPost, "/api/v1/podas", "token-admin", `{"codigo":"PO-001"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/podas/1", "token-admin", `{"prioridad":"alta"}`, 200, ""},
+		{http.MethodPost, "/api/v1/podas/1/archivar", "token-admin", "", 200, ""},
+		{http.MethodGet, "/api/v1/vivero", "token-admin", "", 200, ""},
+		{http.MethodPost, "/api/v1/vivero", "token-admin", `{"area":"Fauna"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/vivero/1", "token-admin", `{"area":"Fauna"}`, 200, ""},
+		{http.MethodPost, "/api/v1/vivero/1/archivar", "token-admin", "", 200, ""},
 	}
 
 	for _, c := range casos {

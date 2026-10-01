@@ -222,8 +222,20 @@ norte GET /api/v1/riego
 - GET /api/v1/riego 401
 
 # Lote 14: Poda y vivero
-# coordinacion GET /api/v1/podas
-# coordinacion GET /api/v1/vivero
+admin GET /api/v1/podas
+coordinacion GET /api/v1/podas
+jefatura GET /api/v1/podas
+norte GET /api/v1/podas
+- GET /api/v1/podas 401
+
+admin GET /api/v1/vivero
+coordinacion GET /api/v1/vivero
+jefatura GET /api/v1/vivero
+norte GET /api/v1/vivero
+coordinacion GET /api/v1/vivero?mes=2026-05
+norte GET /api/v1/vivero?mes=2026-05
+coordinacion GET /api/v1/vivero?mes=invalido 400
+- GET /api/v1/vivero 401
 
 # Lote 15: Evidencias
 # coordinacion GET /api/v1/evidencias
