@@ -1,0 +1,25 @@
+# BD desechable de referencia para el esquema v1.1
+# Uso exclusivo: introspección con make gen-models y prueba de conformidad v11.
+# NUNCA montar en el docker-compose.yml principal ni usar como BD de datos.
+services:
+  db:
+    image: postgis/postgis:16-3.5
+    container_name: areasverdes_v11_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-areasverdes_v11}
+      POSTGRES_USER: ${POSTGRES_USER:-areasverdes}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-areasverdes}
+    ports:
+      - "${POSTGRES_PORT_V11:-5433}:5432"
+    volumes:
+      - pgdata_v11:/var/lib/postgresql/data
+      - ./db/referencia/schema_v1.1.sql:/docker-entrypoint-initdb.d/01_schema_v1.1.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-areasverdes} -d ${POSTGRES_DB:-areasverdes_v11}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata_v11:

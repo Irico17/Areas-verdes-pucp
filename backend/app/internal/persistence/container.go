@@ -11,7 +11,7 @@ import (
 // RegisterContainer registers lazy persistence-layer providers.
 func RegisterContainer(container *dig.Container) error {
 	providers := []any{
-		database.NewConnection,
+		database.NewDatabaseConnection,
 		database.NewTransaccion,
 		postgres.NewSaludRepository,
 		postgres.NewUsuarioRepository,

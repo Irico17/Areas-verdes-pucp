@@ -82,7 +82,7 @@ func MigrarDBTemporal(t *testing.T, prefix string) (*sql.DB, *gorm.DB) {
 	}
 	u.Path = "/" + name
 
-	gdb, err := database.NewConnection(&config.Config{
+	gdb, err := database.NewDatabaseConnection(&config.Config{
 		Database: config.DatabaseConfig{
 			URL: u.String(),
 		},

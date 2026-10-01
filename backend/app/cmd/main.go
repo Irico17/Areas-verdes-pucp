@@ -11,6 +11,7 @@ import (
 	_ "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/docs"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/routes"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/logger"
 )
 
 // @title           Areas Verdes API $SWAGGER_ENV
@@ -24,6 +25,9 @@ import (
 // @host            localhost:8080
 // @BasePath        /areas-verdes
 func main() {
+	cfg := config.GetConfig()
+	logger.InitLogger(cfg.Server.GinMode)
+
 	container, err := ioc.BuildContainer()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to build dependency container")

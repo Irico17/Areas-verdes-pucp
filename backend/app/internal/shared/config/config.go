@@ -5,10 +5,30 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/joho/godotenv"
 )
+
+var (
+	instance *Config
+	once     sync.Once
+)
+
+// GetConfig returns the singleton application configuration.
+func GetConfig() *Config {
+	once.Do(func() {
+		instance = New()
+	})
+	return instance
+}
+
+// resetConfigForTesting resets the singleton instance for unit testing.
+func resetConfigForTesting() {
+	instance = nil
+	once = sync.Once{}
+}
 
 // Config contains all application configuration.
 type Config struct {
@@ -110,7 +130,7 @@ func New() *Config {
 			Password:        valueOrDefault("DATABASE_PASSWORD", "areasverdes"),
 			Name:            valueOrDefault("DATABASE_NAME", "areasverdes"),
 			Schema:          valueOrDefault("DATABASE_SCHEMA", "public"),
-			SSLMode:         valueOrDefault("DATABASE_SSL_MODE", "disable"),
+			SSLMode:         databaseSSLMode(),
 			MaxOpenConns:    10,
 			MaxIdleConns:    4,
 			ConnMaxLifetime: 30 * time.Minute,
@@ -151,6 +171,21 @@ func valueOrDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func databaseSSLMode() string {
+	raw := strings.TrimSpace(os.Getenv("DATABASE_SSL_MODE"))
+	if raw == "" {
+		return "disable"
+	}
+	switch strings.ToLower(raw) {
+	case "false", "0", "no":
+		return "disable"
+	case "true", "1", "yes":
+		return "require"
+	default:
+		return raw
+	}
 }
 
 func serverPort() string {

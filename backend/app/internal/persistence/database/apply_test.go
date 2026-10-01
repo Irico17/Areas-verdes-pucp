@@ -21,7 +21,7 @@ func openTestDB(name string) (*gorm.DB, error) {
 	if u == "" {
 		return nil, fmt.Errorf("MIGRATE_TEST_URL no configurada o inválida")
 	}
-	return NewConnection(&config.Config{
+	return NewDatabaseConnection(&config.Config{
 		Database: config.DatabaseConfig{
 			URL: u,
 		},

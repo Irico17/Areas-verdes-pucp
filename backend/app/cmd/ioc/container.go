@@ -4,6 +4,7 @@ package ioc
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"go.uber.org/dig"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application"
@@ -11,7 +12,6 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/logger"
 )
 
 // BuildContainer registers all application layers in a single container.
@@ -19,13 +19,13 @@ func BuildContainer() (*dig.Container, error) {
 	container := dig.New()
 
 	// Config
-	if err := container.Provide(config.New); err != nil {
+	if err := container.Provide(config.GetConfig); err != nil {
 		return nil, err
 	}
 
-	// Logger
-	if err := container.Provide(func(cfg *config.Config) zerolog.Logger {
-		return logger.InitLogger(cfg.Server.GinMode)
+	// Logger: provide zerolog.Logger from the global logger
+	if err := container.Provide(func() zerolog.Logger {
+		return log.Logger
 	}); err != nil {
 		return nil, err
 	}
