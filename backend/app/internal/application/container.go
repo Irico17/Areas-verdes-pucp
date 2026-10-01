@@ -37,6 +37,9 @@ func RegisterContainer(container *dig.Container) error {
 		usecases.NewViveroUseCase,
 		services.NewExifService,
 		usecases.NewEvidenciaUseCase,
+		services.NewSugeridorTipoService,
+		usecases.NewReporteUseCase,
+		usecases.NewIAUseCase,
 	}
 
 	for _, provider := range providers {

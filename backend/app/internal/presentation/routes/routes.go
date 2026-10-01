@@ -44,6 +44,8 @@ type Router struct {
 	podaGroup            *groups.PodaGroup
 	viveroGroup          *groups.ViveroGroup
 	evidenciaGroup       *groups.EvidenciaGroup
+	reporteGroup         *groups.ReporteGroup
+	iaGroup              *groups.IAGroup
 }
 
 // RouterParams contains injected router dependencies.
@@ -72,6 +74,8 @@ type RouterParams struct {
 	PodaGroup            *groups.PodaGroup
 	ViveroGroup          *groups.ViveroGroup
 	EvidenciaGroup       *groups.EvidenciaGroup
+	ReporteGroup         *groups.ReporteGroup
+	IAGroup              *groups.IAGroup
 }
 
 // NewRouter creates the main router.
@@ -99,6 +103,8 @@ func NewRouter(p RouterParams) *Router {
 		podaGroup:            p.PodaGroup,
 		viveroGroup:          p.ViveroGroup,
 		evidenciaGroup:       p.EvidenciaGroup,
+		reporteGroup:         p.ReporteGroup,
+		iaGroup:              p.IAGroup,
 	}
 }
 
@@ -138,6 +144,8 @@ func (r *Router) Setup() {
 		r.podaGroup.Register(prefix)
 		r.viveroGroup.Register(prefix)
 		r.evidenciaGroup.Register(prefix)
+		r.reporteGroup.Register(prefix)
+		r.iaGroup.Register(prefix)
 	}
 
 	if r.cfg.Swagger.Enabled {

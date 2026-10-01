@@ -5,6 +5,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/archivos"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/exportacion"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/ratelimit"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/seguridad"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/storage"
@@ -21,6 +22,7 @@ func RegisterContainer(container *dig.Container) error {
 		archivos.NewReservasMockAdapter,
 		archivos.NewPuntosParser,
 		storage.NewAlmacenArchivos,
+		exportacion.NewExportadorReporteAdapter,
 	} {
 		if err := container.Provide(provider); err != nil {
 			return err

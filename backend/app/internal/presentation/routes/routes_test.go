@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -458,6 +459,34 @@ func (mockEvidenciaRoutesUC) Abrir(_ context.Context, _ string) (io.ReadCloser, 
 	return io.NopCloser(bytes.NewReader([]byte("test"))), "image/jpeg", nil
 }
 
+type mockReporteRoutesUC struct{}
+
+func (mockReporteRoutesUC) ObtenerReporte(_ context.Context, _ dto.FiltroReporteDTO) (*dto.ReporteResponseDTO, error) {
+	return &dto.ReporteResponseDTO{
+		Aviso:      "aviso",
+		PorEstado:  []dto.ConteoReporteDTO{},
+		Filas:      []dto.FilaReporteDTO{},
+		Pendientes: []dto.HuecoIndicadorDTO{},
+	}, nil
+}
+
+func (mockReporteRoutesUC) Exportar(_ context.Context, _ dto.FiltroReporteDTO, _ string, w io.Writer) error {
+	_, err := io.WriteString(w, "export")
+	return err
+}
+
+type mockIARoutesUC struct{}
+
+func (mockIARoutesUC) Sugerir(_ context.Context, _ string) dto.SugerenciaIADTO {
+	return dto.SugerenciaIADTO{
+		Codigo:         "riego",
+		Etiqueta:       "Riego",
+		Explicacion:    "regla",
+		Confianza:      "baja",
+		RequiereHumano: true,
+	}
+}
+
 func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
@@ -504,6 +533,8 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	podaCtrl := controller.NewPodaController(mockPodaRoutesUC{}, zerolog.Nop())
 	viveroCtrl := controller.NewViveroController(mockViveroRoutesUC{}, zerolog.Nop())
 	evidenciaCtrl := controller.NewEvidenciaController(mockEvidenciaRoutesUC{}, zerolog.Nop())
+	reporteCtrl := controller.NewReporteController(mockReporteRoutesUC{}, zerolog.Nop())
+	iaCtrl := controller.NewIAController(mockIARoutesUC{}, zerolog.Nop())
 
 	permisosSvc := services.NewPermisosService()
 	limitador := ratelimit.NewMemoriaLimitador(100, time.Minute)
@@ -525,6 +556,8 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	podaGrp := groups.NewPodaGroup(podaCtrl, permisosSvc)
 	viveroGrp := groups.NewViveroGroup(viveroCtrl, permisosSvc)
 	evidenciaGrp := groups.NewEvidenciaGroup(evidenciaCtrl, permisosSvc)
+	reporteGrp := groups.NewReporteGroup(reporteCtrl, permisosSvc)
+	iaGrp := groups.NewIAGroup(iaCtrl, permisosSvc)
 
 	r := routes.NewRouter(routes.RouterParams{
 		Engine:               engine,
@@ -549,6 +582,8 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 		PodaGroup:            podaGrp,
 		ViveroGroup:          viveroGrp,
 		EvidenciaGroup:       evidenciaGrp,
+		ReporteGroup:         reporteGrp,
+		IAGroup:              iaGrp,
 	})
 	r.Setup()
 	return engine
@@ -766,6 +801,11 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 		{http.MethodPatch, "/areas-verdes/v1/vivero/1", 401},
 		{http.MethodPost, "/api/v1/vivero/1/archivar", 401},
 		{http.MethodPost, "/areas-verdes/v1/vivero/1/archivar", 401},
+		// Reportes e IA (Lote 16)
+		{http.MethodGet, "/api/v1/reportes/labores", 401},
+		{http.MethodGet, "/areas-verdes/v1/reportes/labores", 401},
+		{http.MethodPost, "/api/v1/ia/sugerir-tipo", 401},
+		{http.MethodPost, "/areas-verdes/v1/ia/sugerir-tipo", 401},
 		{http.MethodGet, "/api/v1/no-existe", 404},
 		{http.MethodGet, "/areas-verdes/v1/no-existe", 404},
 	}
@@ -1983,6 +2023,94 @@ func TestRutasEvidencias_PermisosPorRol(t *testing.T) {
 
 		if w.Code != c.statusEsperado {
 			t.Errorf("%s %s (token=%s): esperado status %d, obtenido %d (%s)", c.metodo, c.ruta, c.token, c.statusEsperado, w.Code, w.Body.String())
+		}
+	}
+}
+
+func TestRutasReportesEIA_SinAutenticacionRetorna401(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	rutas := []struct {
+		metodo string
+		ruta   string
+	}{
+		{http.MethodGet, "/api/v1/reportes/labores"},
+		{http.MethodGet, "/areas-verdes/v1/reportes/labores"},
+		{http.MethodPost, "/api/v1/ia/sugerir-tipo"},
+		{http.MethodPost, "/areas-verdes/v1/ia/sugerir-tipo"},
+	}
+
+	for _, r := range rutas {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(r.metodo, r.ruta, nil)
+		engine.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s sin auth: esperado 401, obtenido %d", r.metodo, r.ruta, w.Code)
+		}
+		if w.Body.String() != `{"error":"inicie sesión"}` {
+			t.Errorf("%s %s sin auth: cuerpo inesperado %s", r.metodo, r.ruta, w.Body.String())
+		}
+	}
+}
+
+func TestRutasReportesEIA_PermisosPorRol(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	casos := []struct {
+		metodo         string
+		ruta           string
+		token          string
+		statusEsperado int
+		errorEsperado  string
+	}{
+		// 1. Capataz: reportes=false -> 403; consultar=true -> 200
+		{http.MethodGet, "/api/v1/reportes/labores", "token-norte", 403, "su rol no tiene ese permiso"},
+		{http.MethodGet, "/areas-verdes/v1/reportes/labores", "token-norte", 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/ia/sugerir-tipo", "token-norte", 200, ""},
+		{http.MethodPost, "/areas-verdes/v1/ia/sugerir-tipo", "token-norte", 200, ""},
+
+		// 2. Coordinación: reportes=true -> 200; consultar=true -> 200
+		{http.MethodGet, "/api/v1/reportes/labores", "token-coordinacion", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/reportes/labores", "token-coordinacion", 200, ""},
+		{http.MethodPost, "/api/v1/ia/sugerir-tipo", "token-coordinacion", 200, ""},
+		{http.MethodPost, "/areas-verdes/v1/ia/sugerir-tipo", "token-coordinacion", 200, ""},
+
+		// 3. Jefatura: reportes=true -> 200; consultar=true -> 200
+		{http.MethodGet, "/api/v1/reportes/labores", "token-jefatura", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/reportes/labores", "token-jefatura", 200, ""},
+		{http.MethodPost, "/api/v1/ia/sugerir-tipo", "token-jefatura", 200, ""},
+		{http.MethodPost, "/areas-verdes/v1/ia/sugerir-tipo", "token-jefatura", 200, ""},
+
+		// 4. Admin: reportes=true -> 200; consultar=true -> 200
+		{http.MethodGet, "/api/v1/reportes/labores", "token-admin", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/reportes/labores", "token-admin", 200, ""},
+		{http.MethodPost, "/api/v1/ia/sugerir-tipo", "token-admin", 200, ""},
+		{http.MethodPost, "/areas-verdes/v1/ia/sugerir-tipo", "token-admin", 200, ""},
+	}
+
+	for _, c := range casos {
+		w := httptest.NewRecorder()
+		var body io.Reader
+		if c.metodo == http.MethodPost {
+			body = strings.NewReader(`{"titulo":"Revisar aspersores del eje"}`)
+		}
+		req := httptest.NewRequest(c.metodo, c.ruta, body)
+		if c.metodo == http.MethodPost {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		req.AddCookie(&http.Cookie{Name: "cv_sesion", Value: c.token})
+		engine.ServeHTTP(w, req)
+
+		if w.Code != c.statusEsperado {
+			t.Errorf("%s %s (token=%s): esperado status %d, obtenido %d (%s)", c.metodo, c.ruta, c.token, c.statusEsperado, w.Code, w.Body.String())
+		}
+		if c.errorEsperado != "" {
+			var resp map[string]string
+			_ = json.Unmarshal(w.Body.Bytes(), &resp)
+			if resp["error"] != c.errorEsperado {
+				t.Errorf("%s %s (token=%s): error esperado %q, obtenido %q", c.metodo, c.ruta, c.token, c.errorEsperado, resp["error"])
+			}
 		}
 	}
 }
