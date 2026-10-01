@@ -369,6 +369,44 @@ func (mockOperacionRoutesUC) CrearAvance(_ context.Context, _ dto.CrearAvanceDTO
 	return nil
 }
 
+type mockSolicitudRoutesUC struct{}
+
+func (mockSolicitudRoutesUC) Listar(_ context.Context) (*dto.SolicitudesResponseDTO, error) {
+	return &dto.SolicitudesResponseDTO{Solicitudes: []dto.SolicitudDTO{}}, nil
+}
+
+func (mockSolicitudRoutesUC) Crear(_ context.Context, in dto.CrearSolicitudDTO) (*dto.SolicitudDTO, error) {
+	return &dto.SolicitudDTO{ID: in.ID, Titulo: in.Titulo}, nil
+}
+
+func (mockSolicitudRoutesUC) Editar(_ context.Context, in dto.EditarSolicitudDTO) (*dto.SolicitudDTO, error) {
+	return &dto.SolicitudDTO{ID: in.ID, Titulo: in.Titulo}, nil
+}
+
+type mockServicioTercerizadoRoutesUC struct{}
+
+func (mockServicioTercerizadoRoutesUC) Listar(_ context.Context) (*dto.OrdenesResponseDTO, error) {
+	return &dto.OrdenesResponseDTO{Ordenes: []dto.OrdenDTO{}}, nil
+}
+
+func (mockServicioTercerizadoRoutesUC) Crear(_ context.Context, in dto.CrearOrdenDTO, _, _ string) (*dto.OrdenDTO, error) {
+	return &dto.OrdenDTO{ID: in.ID, ActividadID: in.ActividadID}, nil
+}
+
+func (mockServicioTercerizadoRoutesUC) Editar(_ context.Context, in dto.EditarOrdenDTO, _, _ string) (*dto.EditarOrdenResponseDTO, error) {
+	return &dto.EditarOrdenResponseDTO{Orden: dto.OrdenDTO{ID: in.ID}}, nil
+}
+
+type mockRiegoRoutesUC struct{}
+
+func (mockRiegoRoutesUC) Listar(_ context.Context, _ string) (*dto.RiegoResponseDTO, error) {
+	return &dto.RiegoResponseDTO{Registros: []dto.RiegoDTO{}}, nil
+}
+
+func (mockRiegoRoutesUC) Crear(_ context.Context, in dto.CrearRiegoDTO, _, _ string) (*dto.CrearRiegoResponseDTO, error) {
+	return &dto.CrearRiegoResponseDTO{ID: in.ID}, nil
+}
+
 func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
@@ -409,6 +447,9 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	reservasMockCtrl := controller.NewReservasMockController(mockReservasMockRoutesUC{}, zerolog.Nop())
 	inventarioCampoCtrl := controller.NewInventarioCampoController(mockInventarioCampoRoutesUC{}, zerolog.Nop())
 	operacionCtrl := controller.NewIntervencionController(mockOperacionRoutesUC{}, zerolog.Nop())
+	solicitudCtrl := controller.NewSolicitudController(mockSolicitudRoutesUC{}, zerolog.Nop())
+	ordenCtrl := controller.NewServicioTercerizadoController(mockServicioTercerizadoRoutesUC{}, zerolog.Nop())
+	riegoCtrl := controller.NewRiegoController(mockRiegoRoutesUC{}, zerolog.Nop())
 
 	permisosSvc := services.NewPermisosService()
 	limitador := ratelimit.NewMemoriaLimitador(100, time.Minute)
@@ -426,6 +467,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	reservasMockGrp := groups.NewReservasMockGroup(reservasMockCtrl, permisosSvc)
 	inventarioCampoGrp := groups.NewInventarioCampoGroup(inventarioCampoCtrl, permisosSvc)
 	operacionGrp := groups.NewOperacionGroup(operacionCtrl, permisosSvc)
+	atencionGrp := groups.NewAtencionGroup(solicitudCtrl, ordenCtrl, riegoCtrl, permisosSvc)
 
 	r := routes.NewRouter(routes.RouterParams{
 		Engine:               engine,
@@ -446,6 +488,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 		ReservasMockGroup:    reservasMockGrp,
 		InventarioCampoGroup: inventarioCampoGrp,
 		OperacionGroup:       operacionGrp,
+		AtencionGroup:        atencionGrp,
 	})
 	r.Setup()
 	return engine
@@ -629,6 +672,23 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 		{http.MethodGet, "/areas-verdes/v1/inventario/export/fauna", 401},
 		{http.MethodDelete, "/api/v1/inventario/capas/fauna/1", 401},
 		{http.MethodDelete, "/areas-verdes/v1/inventario/capas/fauna/1", 401},
+		// Solicitudes, órdenes y riego (Lote 13)
+		{http.MethodGet, "/api/v1/solicitudes", 401},
+		{http.MethodGet, "/areas-verdes/v1/solicitudes", 401},
+		{http.MethodPost, "/api/v1/solicitudes", 401},
+		{http.MethodPost, "/areas-verdes/v1/solicitudes", 401},
+		{http.MethodPatch, "/api/v1/solicitudes/1", 401},
+		{http.MethodPatch, "/areas-verdes/v1/solicitudes/1", 401},
+		{http.MethodGet, "/api/v1/ordenes", 401},
+		{http.MethodGet, "/areas-verdes/v1/ordenes", 401},
+		{http.MethodPost, "/api/v1/ordenes", 401},
+		{http.MethodPost, "/areas-verdes/v1/ordenes", 401},
+		{http.MethodPatch, "/api/v1/ordenes/1", 401},
+		{http.MethodPatch, "/areas-verdes/v1/ordenes/1", 401},
+		{http.MethodGet, "/api/v1/riego", 401},
+		{http.MethodGet, "/areas-verdes/v1/riego", 401},
+		{http.MethodPost, "/api/v1/riego", 401},
+		{http.MethodPost, "/areas-verdes/v1/riego", 401},
 		{http.MethodGet, "/api/v1/no-existe", 404},
 		{http.MethodGet, "/areas-verdes/v1/no-existe", 404},
 	}
@@ -692,6 +752,14 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 			path = "/api/v1/inventario/export/:capa"
 		case "/areas-verdes/v1/inventario/export/fauna":
 			path = "/areas-verdes/v1/inventario/export/:capa"
+		case "/api/v1/solicitudes/1":
+			path = "/api/v1/solicitudes/:id"
+		case "/areas-verdes/v1/solicitudes/1":
+			path = "/areas-verdes/v1/solicitudes/:id"
+		case "/api/v1/ordenes/1":
+			path = "/api/v1/ordenes/:id"
+		case "/areas-verdes/v1/ordenes/1":
+			path = "/areas-verdes/v1/ordenes/:id"
 		}
 		key := want.metodo + " " + path
 		if !vistas[key] {
@@ -1438,6 +1506,156 @@ func TestRutasOperacion_PermisosPorRol(t *testing.T) {
 		// Jefatura no tiene registrar:
 		{http.MethodPatch, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/ficha", "token-jefatura", `{"comentario":"test"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/avances", "token-jefatura", `{"id":"22222222-2222-4222-8222-222222222222","fecha":"2026-09-28","area_feature_id":"AV-0001"}`, 403, "su rol no tiene ese permiso"},
+	}
+
+	for _, c := range casos {
+		w := httptest.NewRecorder()
+		var req *http.Request
+		if c.body != "" {
+			req = httptest.NewRequest(c.metodo, c.ruta, bytes.NewBufferString(c.body))
+			req.Header.Set("Content-Type", "application/json")
+		} else {
+			req = httptest.NewRequest(c.metodo, c.ruta, nil)
+		}
+		req.AddCookie(&http.Cookie{Name: "cv_sesion", Value: c.token})
+		engine.ServeHTTP(w, req)
+
+		if w.Code != c.statusEsperado {
+			t.Errorf("%s %s (token=%s): esperado status %d, obtenido %d (%s)", c.metodo, c.ruta, c.token, c.statusEsperado, w.Code, w.Body.String())
+		}
+		if c.errorEsperado != "" {
+			var body map[string]string
+			_ = json.Unmarshal(w.Body.Bytes(), &body)
+			if body["error"] != c.errorEsperado {
+				t.Errorf("%s %s (token=%s): error esperado %q, obtenido %q", c.metodo, c.ruta, c.token, c.errorEsperado, body["error"])
+			}
+		}
+	}
+}
+
+func TestRutasAtencion_SinAutenticacionRetorna401(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	rutas := []struct {
+		metodo string
+		ruta   string
+	}{
+		{http.MethodGet, "/api/v1/solicitudes"},
+		{http.MethodGet, "/areas-verdes/v1/solicitudes"},
+		{http.MethodPost, "/api/v1/solicitudes"},
+		{http.MethodPost, "/areas-verdes/v1/solicitudes"},
+		{http.MethodPatch, "/api/v1/solicitudes/1"},
+		{http.MethodPatch, "/areas-verdes/v1/solicitudes/1"},
+
+		{http.MethodGet, "/api/v1/ordenes"},
+		{http.MethodGet, "/areas-verdes/v1/ordenes"},
+		{http.MethodPost, "/api/v1/ordenes"},
+		{http.MethodPost, "/areas-verdes/v1/ordenes"},
+		{http.MethodPatch, "/api/v1/ordenes/1"},
+		{http.MethodPatch, "/areas-verdes/v1/ordenes/1"},
+
+		{http.MethodGet, "/api/v1/riego"},
+		{http.MethodGet, "/areas-verdes/v1/riego"},
+		{http.MethodPost, "/api/v1/riego"},
+		{http.MethodPost, "/areas-verdes/v1/riego"},
+	}
+
+	for _, r := range rutas {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(r.metodo, r.ruta, bytes.NewBufferString(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		engine.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s sin auth: esperado 401, obtenido %d", r.metodo, r.ruta, w.Code)
+		}
+		if w.Body.String() != `{"error":"inicie sesión"}` {
+			t.Errorf("%s %s sin auth: cuerpo inesperado %s", r.metodo, r.ruta, w.Body.String())
+		}
+	}
+}
+
+func TestRutasAtencion_PermisosPorRol(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	type caso struct {
+		metodo         string
+		ruta           string
+		token          string
+		body           string
+		statusEsperado int
+		errorEsperado  string
+	}
+
+	casos := []caso{
+		// 1. Capataz (norte):
+		// Solicitudes requiere permiso "solicitudes" (capataz no lo tiene)
+		{http.MethodGet, "/api/v1/solicitudes", "token-norte", "", 403, "su rol no tiene ese permiso"},
+		{http.MethodGet, "/areas-verdes/v1/solicitudes", "token-norte", "", 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/solicitudes", "token-norte", `{"fuente":"interna","titulo":"Solicitud"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/solicitudes", "token-norte", `{"fuente":"interna","titulo":"Solicitud"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/solicitudes/1", "token-norte", `{"titulo":"Modif"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/areas-verdes/v1/solicitudes/1", "token-norte", `{"titulo":"Modif"}`, 403, "su rol no tiene ese permiso"},
+
+		// Ordenes: consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/ordenes", "token-norte", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/ordenes", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/ordenes", "token-norte", `{"actividad_id":"act-1","empresa":"Contratista"}`, 201, ""},
+		{http.MethodPost, "/areas-verdes/v1/ordenes", "token-norte", `{"actividad_id":"act-1","empresa":"Contratista"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/ordenes/1", "token-norte", `{"estado":"ejecutada"}`, 200, ""},
+		{http.MethodPatch, "/areas-verdes/v1/ordenes/1", "token-norte", `{"estado":"ejecutada"}`, 200, ""},
+
+		// Riego: consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/riego", "token-norte", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/riego", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/riego", "token-norte", `{"fecha":"2026-10-01","turno":"manana"}`, 201, ""},
+		{http.MethodPost, "/areas-verdes/v1/riego", "token-norte", `{"fecha":"2026-10-01","turno":"manana"}`, 201, ""},
+
+		// 2. Coordinación:
+		// Solicitudes: solicitudes=true
+		{http.MethodGet, "/api/v1/solicitudes", "token-coordinacion", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/solicitudes", "token-coordinacion", "", 200, ""},
+		{http.MethodPost, "/api/v1/solicitudes", "token-coordinacion", `{"fuente":"interna","titulo":"Solicitud"}`, 201, ""},
+		{http.MethodPost, "/areas-verdes/v1/solicitudes", "token-coordinacion", `{"fuente":"interna","titulo":"Solicitud"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/solicitudes/1", "token-coordinacion", `{"titulo":"Modif"}`, 200, ""},
+		{http.MethodPatch, "/areas-verdes/v1/solicitudes/1", "token-coordinacion", `{"titulo":"Modif"}`, 200, ""},
+
+		// Ordenes: consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/ordenes", "token-coordinacion", "", 200, ""},
+		{http.MethodPost, "/api/v1/ordenes", "token-coordinacion", `{"actividad_id":"act-1","empresa":"Contratista"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/ordenes/1", "token-coordinacion", `{"estado":"ejecutada"}`, 200, ""},
+
+		// Riego: consultar=true, registrar=true
+		{http.MethodGet, "/api/v1/riego", "token-coordinacion", "", 200, ""},
+		{http.MethodPost, "/api/v1/riego", "token-coordinacion", `{"fecha":"2026-10-01","turno":"manana"}`, 201, ""},
+
+		// 3. Jefatura:
+		// Solicitudes: solicitudes=true
+		{http.MethodGet, "/api/v1/solicitudes", "token-jefatura", "", 200, ""},
+		{http.MethodPost, "/api/v1/solicitudes", "token-jefatura", `{"fuente":"interna","titulo":"Solicitud"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/solicitudes/1", "token-jefatura", `{"titulo":"Modif"}`, 200, ""},
+
+		// Ordenes: consultar=true, registrar=false (403 para POST/PATCH)
+		{http.MethodGet, "/api/v1/ordenes", "token-jefatura", "", 200, ""},
+		{http.MethodPost, "/api/v1/ordenes", "token-jefatura", `{"actividad_id":"act-1","empresa":"Contratista"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/ordenes", "token-jefatura", `{"actividad_id":"act-1","empresa":"Contratista"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/ordenes/1", "token-jefatura", `{"estado":"ejecutada"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/areas-verdes/v1/ordenes/1", "token-jefatura", `{"estado":"ejecutada"}`, 403, "su rol no tiene ese permiso"},
+
+		// Riego: consultar=true, registrar=false (403 para POST)
+		{http.MethodGet, "/api/v1/riego", "token-jefatura", "", 200, ""},
+		{http.MethodPost, "/api/v1/riego", "token-jefatura", `{"fecha":"2026-10-01","turno":"manana"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/riego", "token-jefatura", `{"fecha":"2026-10-01","turno":"manana"}`, 403, "su rol no tiene ese permiso"},
+
+		// 4. Admin: todos los permisos
+		{http.MethodGet, "/api/v1/solicitudes", "token-admin", "", 200, ""},
+		{http.MethodPost, "/api/v1/solicitudes", "token-admin", `{"fuente":"interna","titulo":"Solicitud"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/solicitudes/1", "token-admin", `{"titulo":"Modif"}`, 200, ""},
+		{http.MethodGet, "/api/v1/ordenes", "token-admin", "", 200, ""},
+		{http.MethodPost, "/api/v1/ordenes", "token-admin", `{"actividad_id":"act-1","empresa":"Contratista"}`, 201, ""},
+		{http.MethodPatch, "/api/v1/ordenes/1", "token-admin", `{"estado":"ejecutada"}`, 200, ""},
+		{http.MethodGet, "/api/v1/riego", "token-admin", "", 200, ""},
+		{http.MethodPost, "/api/v1/riego", "token-admin", `{"fecha":"2026-10-01","turno":"manana"}`, 201, ""},
 	}
 
 	for _, c := range casos {

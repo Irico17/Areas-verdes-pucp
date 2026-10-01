@@ -172,7 +172,7 @@ login_api() {
 }
 
 # Inicializar sesiones para cuentas clave (falla si algún login no tiene éxito)
-for r in admin coordinacion jefatura norte; do
+for r in admin coordinacion jefatura norte sur riego; do
   if ! login_api "$VIEJA" "$r" "$CAMPUS_DEV_PASSWORD" "$TMPDIR/jar_vieja_${r}.txt"; then
     echo "Error: login falló en API vieja para usuario '$r'"
     exit 1

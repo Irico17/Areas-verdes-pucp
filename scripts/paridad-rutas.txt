@@ -201,9 +201,25 @@ norte GET /api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/tim
 coordinacion GET /api/v1/operacion/actividades/00000000-0000-0000-0000-000000000000/timeline 404
 
 # Lote 13: Solicitudes, órdenes y riego
-# coordinacion GET /api/v1/solicitudes
-# coordinacion GET /api/v1/ordenes
-# coordinacion GET /api/v1/riego
+coordinacion GET /api/v1/solicitudes
+admin GET /api/v1/solicitudes
+jefatura GET /api/v1/solicitudes
+norte GET /api/v1/solicitudes 403
+- GET /api/v1/solicitudes 401
+coordinacion GET /api/v1/solicitudes?estado=por_iniciar
+coordinacion GET /api/v1/solicitudes?q=Fuga
+
+admin GET /api/v1/ordenes
+coordinacion GET /api/v1/ordenes
+jefatura GET /api/v1/ordenes
+norte GET /api/v1/ordenes
+- GET /api/v1/ordenes 401
+
+admin GET /api/v1/riego
+coordinacion GET /api/v1/riego
+jefatura GET /api/v1/riego
+norte GET /api/v1/riego
+- GET /api/v1/riego 401
 
 # Lote 14: Poda y vivero
 # coordinacion GET /api/v1/podas

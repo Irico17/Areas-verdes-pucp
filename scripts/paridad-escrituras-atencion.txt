@@ -1,0 +1,37 @@
+# Escrituras para prueba de paridad en copias de base de datos (lote 13: solicitudes, órdenes y riego)
+# Formato: <rol> <METODO> <ruta> [@path/al/cuerpo.json] [status_esperado]
+
+# --- Solicitudes: validaciones y permisos ---
+coordinacion POST /api/v1/solicitudes @scripts/cuerpos/solicitud-crear-invalido.json 400
+norte POST /api/v1/solicitudes @scripts/cuerpos/solicitud-crear.json 403
+norte PATCH /api/v1/solicitudes/77777777-7777-4777-8777-777777777777 @scripts/cuerpos/solicitud-patch.json 403
+
+# --- Solicitudes: creación exitosa y duplicado de código externo ---
+coordinacion POST /api/v1/solicitudes @scripts/cuerpos/solicitud-crear.json 201
+coordinacion POST /api/v1/solicitudes @scripts/cuerpos/solicitud-crear.json 400
+
+# --- Solicitudes: edición ---
+coordinacion PATCH /api/v1/solicitudes/55555555-5555-4555-8555-555555555555 @scripts/cuerpos/solicitud-patch-invalido.json 400
+coordinacion PATCH /api/v1/solicitudes/55555555-5555-4555-8555-555555555555 @scripts/cuerpos/solicitud-patch.json 200
+
+# --- Órdenes: validaciones y permisos ---
+coordinacion POST /api/v1/ordenes @scripts/cuerpos/orden-crear-invalido.json 400
+jefatura POST /api/v1/ordenes @scripts/cuerpos/orden-crear.json 403
+jefatura PATCH /api/v1/ordenes/99999999-9999-4999-8999-999999999991 @scripts/cuerpos/orden-patch.json 403
+norte POST /api/v1/ordenes @scripts/cuerpos/orden-crear.json 403
+norte PATCH /api/v1/ordenes/99999999-9999-4999-8999-999999999991 @scripts/cuerpos/orden-patch.json 403
+
+# --- Órdenes: creación y edición exitosa ---
+sur POST /api/v1/ordenes @scripts/cuerpos/orden-crear.json 201
+sur PATCH /api/v1/ordenes/99999999-9999-4999-8999-999999999991 @scripts/cuerpos/orden-patch-invalido.json 400
+sur PATCH /api/v1/ordenes/99999999-9999-4999-8999-999999999991 @scripts/cuerpos/orden-patch.json 200
+
+# --- Riego: validaciones y permisos ---
+jefatura POST /api/v1/riego @scripts/cuerpos/riego-crear.json 403
+coordinacion POST /api/v1/riego @scripts/cuerpos/riego-crear-invalido.json 400
+coordinacion POST /api/v1/riego @scripts/cuerpos/riego-crear.json 400
+
+# --- Riego: alta de zona Z1 y creación exitosa de riego ---
+admin POST /api/v1/catastro/zonas-supervision @scripts/cuerpos/zona-crear.json 201
+norte POST /api/v1/riego @scripts/cuerpos/riego-crear.json 201
+norte POST /api/v1/riego @scripts/cuerpos/riego-crear.json 400
