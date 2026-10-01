@@ -11,14 +11,14 @@ import (
 // IIntervencionRepository defines persistence operations for interventions and work logs.
 type IIntervencionRepository interface {
 	Capataces(ctx context.Context) ([]entities.Capataz, error)
-	List(ctx context.Context, f dto.FiltroIntervencionesDTO) (entities.FeatureCollection, error)
-	Create(ctx context.Context, in dto.CrearIntervencionDTO) (entities.Feature, bool, error)
-	Assign(ctx context.Context, in dto.AsignarIntervencionDTO) (entities.Feature, error)
-	SetEstado(ctx context.Context, in dto.CambiarEstadoDTO) (entities.Feature, error)
-	Archive(ctx context.Context, in dto.ArchivarIntervencionDTO) error
-	Timeline(ctx context.Context, id string) (dto.TimelineResponseDTO, error)
-	GuardarFicha(ctx context.Context, in dto.FichaIntervencionDTO) error
-	CrearAvance(ctx context.Context, in dto.CrearAvanceDTO) error
+	List(ctx context.Context, f entities.FiltroIntervenciones) (entities.FeatureCollection, error)
+	Create(ctx context.Context, in entities.NuevaIntervencion) (entities.Feature, bool, error)
+	Assign(ctx context.Context, in entities.AsignarIntervencion) (entities.Feature, error)
+	SetEstado(ctx context.Context, in entities.CambiarEstadoIntervencion) (entities.Feature, error)
+	Archive(ctx context.Context, in entities.ArchivarIntervencion) error
+	Timeline(ctx context.Context, id string) ([]entities.ActividadEvento, error)
+	GuardarFicha(ctx context.Context, in entities.FichaIntervencion) error
+	CrearAvance(ctx context.Context, in entities.NuevoAvance) error
 	One(ctx context.Context, id string) (entities.Feature, error)
 }
 

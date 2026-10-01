@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
@@ -18,11 +19,12 @@ type IUsuarioController interface {
 
 type usuarioController struct {
 	usuarioUC contracts.IUsuarioUseCase
+	logger    zerolog.Logger
 }
 
 // NewUsuarioController creates a new user controller.
-func NewUsuarioController(usuarioUC contracts.IUsuarioUseCase) IUsuarioController {
-	return &usuarioController{usuarioUC: usuarioUC}
+func NewUsuarioController(usuarioUC contracts.IUsuarioUseCase, logger zerolog.Logger) IUsuarioController {
+	return &usuarioController{usuarioUC: usuarioUC, logger: logger}
 }
 
 // Listar handles GET /accesos/usuarios.
@@ -44,6 +46,7 @@ func (ctrl *usuarioController) Listar(c *gin.Context) {
 
 	res, err := ctrl.usuarioUC.ListarUsuarios(c.Request.Context())
 	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("usuario: error al listar cuentas")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudieron leer las cuentas"})
 		return
 	}

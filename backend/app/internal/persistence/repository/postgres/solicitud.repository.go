@@ -10,7 +10,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
@@ -112,7 +111,7 @@ func (r *solicitudRepository) ObtenerPorID(ctx context.Context, id string) (*ent
 	return &item, rows.Err()
 }
 
-func (r *solicitudRepository) Crear(ctx context.Context, in dto.CrearSolicitudDTO) (*entities.Solicitud, error) {
+func (r *solicitudRepository) Crear(ctx context.Context, in entities.NuevaSolicitud) (*entities.Solicitud, error) {
 	err := r.db.WithContext(ctx).Exec(`
 		INSERT INTO solicitudes (
 		  id, codigo_externo, fuente, titulo, detalle, prioridad, lugar, cantidad, actividad_id
@@ -128,7 +127,7 @@ func (r *solicitudRepository) Crear(ctx context.Context, in dto.CrearSolicitudDT
 	return r.ObtenerPorID(ctx, in.ID)
 }
 
-func (r *solicitudRepository) Editar(ctx context.Context, in dto.EditarSolicitudDTO) (*entities.Solicitud, error) {
+func (r *solicitudRepository) Editar(ctx context.Context, in entities.EditarSolicitud) (*entities.Solicitud, error) {
 	res := r.db.WithContext(ctx).Exec(`
 		UPDATE solicitudes SET
 		  codigo_externo = CASE WHEN btrim($2) = '' THEN codigo_externo ELSE $2 END,

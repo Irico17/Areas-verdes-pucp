@@ -12,8 +12,8 @@ import (
 type ISolicitudRepository interface {
 	Listar(ctx context.Context) ([]*entities.Solicitud, error)
 	ObtenerPorID(ctx context.Context, id string) (*entities.Solicitud, error)
-	Crear(ctx context.Context, in dto.CrearSolicitudDTO) (*entities.Solicitud, error)
-	Editar(ctx context.Context, in dto.EditarSolicitudDTO) (*entities.Solicitud, error)
+	Crear(ctx context.Context, in entities.NuevaSolicitud) (*entities.Solicitud, error)
+	Editar(ctx context.Context, in entities.EditarSolicitud) (*entities.Solicitud, error)
 }
 
 // ISolicitudUseCase defines application operations for solicitudes.

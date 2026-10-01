@@ -18,3 +18,16 @@ type TurnoRiego struct {
 	SuperficieM2        *float64
 	CreatedAt           time.Time
 }
+
+// NuevoTurnoRiego contains domain input parameters to create an irrigation record.
+type NuevoTurnoRiego struct {
+	ID         string
+	Sector     string
+	Turno      string
+	CapatazID  string
+	Fecha      string
+	Nota       string
+	ZonaID     string
+	Ciclo      string
+	Superficie float64
+}

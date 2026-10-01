@@ -34,7 +34,4 @@ var (
 
 	// ErrCSVInvalido is returned when CSV content is malformed.
 	ErrCSVInvalido = errors.New("CSV inválido")
-
-	// ErrIDInvalido is returned when an ID parameter is invalid or non-positive.
-	ErrIDInvalido = errors.New("id inválido")
 )

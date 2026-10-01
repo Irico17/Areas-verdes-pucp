@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
@@ -66,7 +65,7 @@ func (r *servicioTercerizadoRepository) ObtenerPorID(ctx context.Context, id str
 	return &o, nil
 }
 
-func (r *servicioTercerizadoRepository) Crear(ctx context.Context, in dto.CrearOrdenDTO, actorRol, capatazID string) (*entities.ServicioTercerizado, error) {
+func (r *servicioTercerizadoRepository) Crear(ctx context.Context, in entities.NuevaOrdenServicio, actorRol, capatazID string) (*entities.ServicioTercerizado, error) {
 	var o entities.ServicioTercerizado
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		row, err := lockActividadDB(tx, in.ActividadID)
@@ -105,7 +104,7 @@ func (r *servicioTercerizadoRepository) Crear(ctx context.Context, in dto.CrearO
 	return &o, nil
 }
 
-func (r *servicioTercerizadoRepository) Editar(ctx context.Context, in dto.EditarOrdenDTO, actorRol, capatazID string) (*entities.ServicioTercerizado, error) {
+func (r *servicioTercerizadoRepository) Editar(ctx context.Context, in entities.EditarOrdenServicio, actorRol, capatazID string) (*entities.ServicioTercerizado, error) {
 	var o entities.ServicioTercerizado
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var actividadID string

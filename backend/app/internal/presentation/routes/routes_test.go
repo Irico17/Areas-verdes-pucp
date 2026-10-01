@@ -464,9 +464,9 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	}
 
 	healthCtrl := controller.NewHealthController(mockSaludUC{})
-	metaCtrl := controller.NewMetaController(mockContratoOpenAPI{})
+	metaCtrl := controller.NewMetaController(mockContratoOpenAPI{}, zerolog.Nop())
 	sesionCtrl := controller.NewSesionController(mockSesionRoutesUC{})
-	usuarioCtrl := controller.NewUsuarioController(mockUsuarioRoutesUC{})
+	usuarioCtrl := controller.NewUsuarioController(mockUsuarioRoutesUC{}, zerolog.Nop())
 	catalogoCtrl := controller.NewCatalogoController(mockCatalogoRoutesUC{}, zerolog.Nop())
 	geoCtrl := controller.NewGeoController(mockGeoRoutesUC{}, zerolog.Nop())
 	areaVerdeCtrl := controller.NewAreaVerdeController(mockAreaVerdeRoutesUC{}, zerolog.Nop())

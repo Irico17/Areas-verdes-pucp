@@ -12,11 +12,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/usecases"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/repository/postgres"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 )
 
 type mockIntervencionUC struct {
@@ -255,22 +252,33 @@ func TestCapatazNoPuedeCerrarNiCancelar(t *testing.T) {
 }
 
 func TestCapatazFichaYAvancesPermisos(t *testing.T) {
-	_, gdb := testutil.MigrarDBTemporal(t, "op_perm")
 	gin.SetMode(gin.TestMode)
 
-	repo := postgres.NewIntervencionRepository(gdb)
-	uc := usecases.NewIntervencionUseCase(repo)
-	ctrl := NewIntervencionController(uc, zerolog.Nop())
-	laborNorte := "11111111-1111-4111-8111-111111111111" // asignada a cap-norte en 003
-
-	if err := gdb.Exec(`
-		INSERT INTO usuarios (id, usuario, nombre, rol, capataz_id, password_hash) VALUES
-		(1, 'norte', 'Norte', 'capataz', 'cap-norte', 'hash'),
-		(2, 'sur', 'Sur', 'capataz', 'cap-sur', 'hash'),
-		(4, 'coordinacion', 'Coordinación', 'coordinacion', NULL, 'hash')
-		ON CONFLICT (id) DO NOTHING`).Error; err != nil {
-		t.Fatal(err)
+	uc := &mockIntervencionUC{
+		guardarFichaFunc: func(ctx context.Context, in dto.FichaIntervencionDTO) error {
+			if in.ActorRol == "capataz" && in.CapatazID != "cap-norte" {
+				return domainErrors.ForbiddenError{Reason: "el capataz solo puede editar la ficha de sus propias labores"}
+			}
+			return nil
+		},
+		crearAvanceFunc: func(ctx context.Context, in dto.CrearAvanceDTO) error {
+			if in.ActorRol == "capataz" && in.CapatazID != "cap-norte" {
+				return domainErrors.ForbiddenError{Reason: "el capataz solo puede registrar avances en sus propias labores"}
+			}
+			return nil
+		},
+		setEstadoFunc: func(ctx context.Context, in dto.CambiarEstadoDTO) (entities.Feature, error) {
+			if in.ActorRol == "capataz" && (in.Estado == "cerrada" || in.Estado == "cancelada") {
+				return entities.Feature{}, domainErrors.ForbiddenError{Reason: "el capataz no puede cerrar ni cancelar una labor"}
+			}
+			if in.ActorRol == "capataz" && in.Estado == "pendiente" {
+				return entities.Feature{}, domainErrors.ForbiddenError{Reason: "solo jefatura/coordinacion reabre una labor cerrada"}
+			}
+			return entities.Feature{ID: in.ID}, nil
+		},
 	}
+	ctrl := NewIntervencionController(uc, zerolog.Nop())
+	laborNorte := "11111111-1111-4111-8111-111111111111"
 
 	// 1. PATCH /ficha por cap-sur (capataz ajeno) -> 403
 	{

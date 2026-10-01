@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/mapper"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 )
@@ -59,7 +59,7 @@ func TestListLaborSinGeom(t *testing.T) {
 	}
 
 	repo := NewIntervencionRepository(gdb)
-	fc, err := repo.List(context.Background(), dto.FiltroIntervencionesDTO{Rol: "coordinacion"})
+	fc, err := repo.List(context.Background(), entities.FiltroIntervenciones{Rol: "coordinacion"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestIntervencionRepository_MutacionesYEventos(t *testing.T) {
 	}
 
 	// 1. Create labor
-	in := dto.CrearIntervencionDTO{
+	in := entities.NuevaIntervencion{
 		ID:                laborID,
 		Tipo:              "riego",
 		Titulo:            "Riego sector norte",
@@ -123,7 +123,7 @@ func TestIntervencionRepository_MutacionesYEventos(t *testing.T) {
 	}
 
 	// 3. Assign to cap-sur
-	feat3, err := repo.Assign(ctx, dto.AsignarIntervencionDTO{
+	feat3, err := repo.Assign(ctx, entities.AsignarIntervencion{
 		ID:        laborID,
 		CapatazID: "cap-sur",
 		ActorRol:  "coordinacion",
@@ -137,7 +137,7 @@ func TestIntervencionRepository_MutacionesYEventos(t *testing.T) {
 	}
 
 	// 4. Change state to en_proceso
-	feat4, err := repo.SetEstado(ctx, dto.CambiarEstadoDTO{
+	feat4, err := repo.SetEstado(ctx, entities.CambiarEstadoIntervencion{
 		ID:        laborID,
 		Estado:    "en_proceso",
 		ActorRol:  "coordinacion",
@@ -152,7 +152,7 @@ func TestIntervencionRepository_MutacionesYEventos(t *testing.T) {
 	}
 
 	// 5. Guardar ficha
-	err = repo.GuardarFicha(ctx, dto.FichaIntervencionDTO{
+	err = repo.GuardarFicha(ctx, entities.FichaIntervencion{
 		ID:             laborID,
 		Comentario:     "Comentario ficha",
 		FechaSolicitud: "2026-09-20",
@@ -165,7 +165,7 @@ func TestIntervencionRepository_MutacionesYEventos(t *testing.T) {
 
 	// 6. Crear avance
 	avanceID := "55555555-5555-4555-8555-555555555555"
-	err = repo.CrearAvance(ctx, dto.CrearAvanceDTO{
+	err = repo.CrearAvance(ctx, entities.NuevoAvance{
 		ActividadID:   laborID,
 		ID:            avanceID,
 		Fecha:         "2026-09-28",
@@ -178,22 +178,22 @@ func TestIntervencionRepository_MutacionesYEventos(t *testing.T) {
 	}
 
 	// 7. Timeline
-	tl, err := repo.Timeline(ctx, laborID)
+	eventos, err := repo.Timeline(ctx, laborID)
 	if err != nil {
 		t.Fatalf("error al leer timeline: %v", err)
 	}
-	if tl.ActividadID != laborID || len(tl.Eventos) < 4 {
-		t.Fatalf("timeline inesperado: %+v", tl)
+	if len(eventos) < 4 {
+		t.Fatalf("timeline inesperado: %+v", eventos)
 	}
 	// Verify usuario_id was populated in eventos
-	for _, ev := range tl.Eventos {
-		if ev.UsuarioID == nil || *ev.UsuarioID != 4 {
+	for _, ev := range eventos {
+		if ev.ActividadID != laborID || ev.UsuarioID == nil || *ev.UsuarioID != 4 {
 			t.Fatalf("evento sin usuario_id esperado: %+v", ev)
 		}
 	}
 
 	// 8. Archivar labor
-	err = repo.Archive(ctx, dto.ArchivarIntervencionDTO{
+	err = repo.Archive(ctx, entities.ArchivarIntervencion{
 		ID:        laborID,
 		ActorRol:  "coordinacion",
 		Motivo:    "duplicada",

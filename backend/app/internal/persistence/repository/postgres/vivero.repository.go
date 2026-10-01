@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
@@ -59,7 +58,7 @@ func (r *viveroRepository) Listar(ctx context.Context, mes string) ([]*entities.
 	return out, rows.Err()
 }
 
-func (r *viveroRepository) Guardar(ctx context.Context, in dto.GuardarViveroDTO) (*entities.Vivero, error) {
+func (r *viveroRepository) Guardar(ctx context.Context, in entities.GuardarVivero) (*entities.Vivero, error) {
 	err := r.db.WithContext(ctx).Exec(`
 		INSERT INTO vivero_registros (
 		  id, fecha, area, subproceso, etapa, descripcion, observaciones, responsables, lugar_id, lugar_libre

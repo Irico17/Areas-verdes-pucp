@@ -10,6 +10,7 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
@@ -106,7 +107,17 @@ func (u *riegoUseCase) Crear(ctx context.Context, in dto.CrearRiegoDTO, actorRol
 	if !uuidRe.MatchString(in.ID) {
 		return nil, domainErrors.InputError{Reason: "id debe ser un UUID"}
 	}
-	if err := u.repo.Crear(ctx, in); err != nil {
+	if err := u.repo.Crear(ctx, entities.NuevoTurnoRiego{
+		ID:         in.ID,
+		Sector:     in.Sector,
+		Turno:      in.Turno,
+		CapatazID:  in.CapatazID,
+		Fecha:      in.Fecha,
+		Nota:       in.Nota,
+		ZonaID:     in.ZonaID,
+		Ciclo:      in.Ciclo,
+		Superficie: in.Superficie,
+	}); err != nil {
 		return nil, err
 	}
 	return &dto.CrearRiegoResponseDTO{ID: in.ID}, nil

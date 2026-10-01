@@ -7,6 +7,7 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
@@ -70,7 +71,18 @@ func (u *viveroUseCase) Crear(ctx context.Context, in dto.GuardarViveroDTO) (*dt
 		return nil, err
 	}
 	in.Area = area
-	entity, err := u.repo.Guardar(ctx, in)
+	entity, err := u.repo.Guardar(ctx, entities.GuardarVivero{
+		ID:            in.ID,
+		Fecha:         in.Fecha,
+		Area:          in.Area,
+		Subproceso:    in.Subproceso,
+		Etapa:         in.Etapa,
+		Descripcion:   in.Descripcion,
+		Observaciones: in.Observaciones,
+		Responsables:  in.Responsables,
+		LugarID:       in.LugarID,
+		LugarLibre:    in.LugarLibre,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +113,18 @@ func (u *viveroUseCase) Editar(ctx context.Context, in dto.GuardarViveroDTO) (*d
 		return nil, err
 	}
 	in.Area = area
-	entity, err := u.repo.Guardar(ctx, in)
+	entity, err := u.repo.Guardar(ctx, entities.GuardarVivero{
+		ID:            in.ID,
+		Fecha:         in.Fecha,
+		Area:          in.Area,
+		Subproceso:    in.Subproceso,
+		Etapa:         in.Etapa,
+		Descripcion:   in.Descripcion,
+		Observaciones: in.Observaciones,
+		Responsables:  in.Responsables,
+		LugarID:       in.LugarID,
+		LugarLibre:    in.LugarLibre,
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -11,7 +11,7 @@ import (
 // IRiegoRepository defines persistence operations for irrigation logs (riego_registros).
 type IRiegoRepository interface {
 	Listar(ctx context.Context, capatazID string) ([]*entities.TurnoRiego, error)
-	Crear(ctx context.Context, in dto.CrearRiegoDTO) error
+	Crear(ctx context.Context, in entities.NuevoTurnoRiego) error
 }
 
 // IRiegoUseCase defines application operations for irrigation logs.

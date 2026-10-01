@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
@@ -56,7 +55,7 @@ func (r *podaRepository) Listar(ctx context.Context) ([]*entities.Poda, error) {
 	return out, rows.Err()
 }
 
-func (r *podaRepository) Guardar(ctx context.Context, in dto.GuardarPodaDTO) (*entities.Poda, error) {
+func (r *podaRepository) Guardar(ctx context.Context, in entities.GuardarPoda) (*entities.Poda, error) {
 	prioridad := strings.TrimSpace(in.Prioridad)
 	codigo := strings.TrimSpace(in.Codigo)
 	codExt := strings.TrimSpace(in.CodigoExterno)

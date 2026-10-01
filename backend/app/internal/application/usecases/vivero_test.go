@@ -25,7 +25,7 @@ func (m *mockViveroRepo) Listar(_ context.Context, mes string) ([]*entities.Vive
 	return m.registros, nil
 }
 
-func (m *mockViveroRepo) Guardar(_ context.Context, in dto.GuardarViveroDTO) (*entities.Vivero, error) {
+func (m *mockViveroRepo) Guardar(_ context.Context, in entities.GuardarVivero) (*entities.Vivero, error) {
 	if m.err != nil {
 		return nil, m.err
 	}

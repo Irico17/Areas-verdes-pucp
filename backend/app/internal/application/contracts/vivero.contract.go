@@ -11,7 +11,7 @@ import (
 // IViveroRepository defines persistence operations for nursery activity records.
 type IViveroRepository interface {
 	Listar(ctx context.Context, mes string) ([]*entities.Vivero, error)
-	Guardar(ctx context.Context, in dto.GuardarViveroDTO) (*entities.Vivero, error)
+	Guardar(ctx context.Context, in entities.GuardarVivero) (*entities.Vivero, error)
 	Archivar(ctx context.Context, id string) error
 }
 

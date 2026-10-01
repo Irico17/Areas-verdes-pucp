@@ -27,64 +27,6 @@ func CapatazModelToEntity(m models.CapatazModel) entities.Capataz {
 	}
 }
 
-// ActividadModelToEntity converts an ActividadModel to domain entity.
-func ActividadModelToEntity(m models.ActividadModel) entities.Intervencion {
-	return entities.Intervencion{
-		ID:                m.ID,
-		Tipo:              m.Tipo,
-		Estado:            m.Estado,
-		Titulo:            m.Titulo,
-		Detalle:           m.Detalle,
-		AreaFeatureID:     m.AreaFeatureID,
-		ZonaFeatureID:     m.ZonaFeatureID,
-		AssignedCapatazID: m.AssignedCapatazID,
-		ArchivadaEn:       m.ArchivadaEn,
-		CreatedAt:         m.CreatedAt,
-		UpdatedAt:         m.UpdatedAt,
-		Ejecutor:          m.Ejecutor,
-		MotivoArchivo:     m.MotivoArchivo,
-		LugarID:           m.LugarID,
-		ZonaSupervisionID: m.ZonaSupervisionID,
-		FechaSolicitud:    m.FechaSolicitud,
-		FechaAtencion:     m.FechaAtencion,
-		CuadrillaID:       m.CuadrillaID,
-		ClaseCodigo:       m.ClaseCodigo,
-		TipoCodigo:        m.TipoCodigo,
-		Comentario:        m.Comentario,
-		LugarLibre:        m.LugarLibre,
-		OrigenRef:         m.OrigenRef,
-		Origen:            m.Origen,
-	}
-}
-
-// ActividadEventoModelToEntity converts an ActividadEventoModel to domain entity.
-func ActividadEventoModelToEntity(m models.ActividadEventoModel) entities.ActividadEvento {
-	return entities.ActividadEvento{
-		ID:          m.ID,
-		ActividadID: m.ActividadID,
-		Tipo:        m.Tipo,
-		Estado:      m.Estado,
-		CapatazID:   m.CapatazID,
-		ActorRol:    m.ActorRol,
-		Nota:        m.Nota,
-		CreatedAt:   m.CreatedAt,
-		UsuarioID:   m.UsuarioID,
-	}
-}
-
-// ActividadAvanceModelToEntity converts an ActividadAvanceModel to domain entity.
-func ActividadAvanceModelToEntity(m models.ActividadAvanceModel) entities.Avance {
-	return entities.Avance{
-		ID:            m.ID,
-		ActividadID:   m.ActividadID,
-		Fecha:         m.Fecha,
-		Nota:          m.Nota,
-		AreaFeatureID: m.AreaFeatureID,
-		EjemplarRef:   m.EjemplarRef,
-		CreatedAt:     m.CreatedAt,
-	}
-}
-
 // ScanFeature scans an activity row including geometry into an entities.Feature.
 func ScanFeature(rows Scanner) (entities.Feature, error) {
 	var (

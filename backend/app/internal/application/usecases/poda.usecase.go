@@ -7,6 +7,7 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
@@ -79,7 +80,24 @@ func (u *podaUseCase) Crear(ctx context.Context, in dto.GuardarPodaDTO) (*dto.Po
 	if err := validarPoda(in); err != nil {
 		return nil, err
 	}
-	entity, err := u.repo.Guardar(ctx, in)
+	entity, err := u.repo.Guardar(ctx, entities.GuardarPoda{
+		ID:                in.ID,
+		Codigo:            in.Codigo,
+		CodigoExterno:     in.CodigoExterno,
+		Tipo:              in.Tipo,
+		TipoActividad:     in.TipoActividad,
+		FechaReporte:      in.FechaReporte,
+		FechaEjecucion:    in.FechaEjecucion,
+		Personal:          in.Personal,
+		Ubicacion:         in.Ubicacion,
+		Unidad:            in.Unidad,
+		CantidadPedida:    in.CantidadPedida,
+		CantidadEjecutada: in.CantidadEjecutada,
+		Prioridad:         in.Prioridad,
+		Comentario:        in.Comentario,
+		NombreComun:       in.NombreComun,
+		NombreCientifico:  in.NombreCientifico,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +126,24 @@ func (u *podaUseCase) Editar(ctx context.Context, in dto.GuardarPodaDTO) (*dto.P
 	if err := validarPoda(in); err != nil {
 		return nil, err
 	}
-	entity, err := u.repo.Guardar(ctx, in)
+	entity, err := u.repo.Guardar(ctx, entities.GuardarPoda{
+		ID:                in.ID,
+		Codigo:            in.Codigo,
+		CodigoExterno:     in.CodigoExterno,
+		Tipo:              in.Tipo,
+		TipoActividad:     in.TipoActividad,
+		FechaReporte:      in.FechaReporte,
+		FechaEjecucion:    in.FechaEjecucion,
+		Personal:          in.Personal,
+		Ubicacion:         in.Ubicacion,
+		Unidad:            in.Unidad,
+		CantidadPedida:    in.CantidadPedida,
+		CantidadEjecutada: in.CantidadEjecutada,
+		Prioridad:         in.Prioridad,
+		Comentario:        in.Comentario,
+		NombreComun:       in.NombreComun,
+		NombreCientifico:  in.NombreCientifico,
+	})
 	if err != nil {
 		return nil, err
 	}

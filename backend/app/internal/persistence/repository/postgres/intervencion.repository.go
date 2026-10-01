@@ -11,7 +11,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/usecases"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
@@ -58,7 +57,7 @@ func (r *intervencionRepository) Capataces(ctx context.Context) ([]entities.Capa
 	return out, nil
 }
 
-func (r *intervencionRepository) List(ctx context.Context, f dto.FiltroIntervencionesDTO) (entities.FeatureCollection, error) {
+func (r *intervencionRepository) List(ctx context.Context, f entities.FiltroIntervenciones) (entities.FeatureCollection, error) {
 	fc := entities.Collection("actividades")
 	where := []string{"1=1"}
 	args := []any{}
@@ -118,7 +117,7 @@ func (r *intervencionRepository) List(ctx context.Context, f dto.FiltroIntervenc
 	return fc, rows.Err()
 }
 
-func (r *intervencionRepository) Create(ctx context.Context, in dto.CrearIntervencionDTO) (entities.Feature, bool, error) {
+func (r *intervencionRepository) Create(ctx context.Context, in entities.NuevaIntervencion) (entities.Feature, bool, error) {
 	var zero entities.Feature
 	in.Titulo = strings.TrimSpace(in.Titulo)
 	in.Detalle = strings.TrimSpace(in.Detalle)
@@ -204,7 +203,7 @@ func (r *intervencionRepository) Create(ctx context.Context, in dto.CrearInterve
 	return f, created, err
 }
 
-func (r *intervencionRepository) Assign(ctx context.Context, in dto.AsignarIntervencionDTO) (entities.Feature, error) {
+func (r *intervencionRepository) Assign(ctx context.Context, in entities.AsignarIntervencion) (entities.Feature, error) {
 	var zero entities.Feature
 	capatazID := strings.TrimSpace(in.CapatazID)
 
@@ -246,7 +245,7 @@ func (r *intervencionRepository) Assign(ctx context.Context, in dto.AsignarInter
 	return r.One(ctx, in.ID)
 }
 
-func (r *intervencionRepository) SetEstado(ctx context.Context, in dto.CambiarEstadoDTO) (entities.Feature, error) {
+func (r *intervencionRepository) SetEstado(ctx context.Context, in entities.CambiarEstadoIntervencion) (entities.Feature, error) {
 	var zero entities.Feature
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -298,7 +297,7 @@ func (r *intervencionRepository) SetEstado(ctx context.Context, in dto.CambiarEs
 	return r.One(ctx, in.ID)
 }
 
-func (r *intervencionRepository) Archive(ctx context.Context, in dto.ArchivarIntervencionDTO) error {
+func (r *intervencionRepository) Archive(ctx context.Context, in entities.ArchivarIntervencion) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		row, err := lockActividadDB(tx, in.ID)
 		if err != nil {
@@ -320,14 +319,13 @@ func (r *intervencionRepository) Archive(ctx context.Context, in dto.ArchivarInt
 	})
 }
 
-func (r *intervencionRepository) Timeline(ctx context.Context, id string) (dto.TimelineResponseDTO, error) {
-	out := dto.TimelineResponseDTO{ActividadID: id, Eventos: []dto.EventoTimelineDTO{}}
+func (r *intervencionRepository) Timeline(ctx context.Context, id string) ([]entities.ActividadEvento, error) {
 	var n int
 	if err := r.db.WithContext(ctx).Raw(`SELECT count(*) FROM actividades WHERE id = $1`, id).Scan(&n).Error; err != nil {
-		return out, err
+		return nil, err
 	}
 	if n == 0 {
-		return out, domainErrors.ErrLaborNoEncontrada
+		return nil, domainErrors.ErrLaborNoEncontrada
 	}
 	rows, err := r.db.WithContext(ctx).Raw(`
 		SELECT e.id, e.tipo, e.estado, e.capataz_id, c.equipo, e.actor_rol, e.nota, e.created_at,
@@ -338,13 +336,14 @@ func (r *intervencionRepository) Timeline(ctx context.Context, id string) (dto.T
 		WHERE e.actividad_id = $1
 		ORDER BY e.id`, id).Rows()
 	if err != nil {
-		return out, err
+		return nil, err
 	}
 	defer rows.Close()
 
+	out := []entities.ActividadEvento{}
 	for rows.Next() {
 		var (
-			ev      dto.EventoTimelineDTO
+			ev      entities.ActividadEvento
 			estado  sql.NullString
 			capataz sql.NullString
 			equipo  sql.NullString
@@ -355,8 +354,9 @@ func (r *intervencionRepository) Timeline(ctx context.Context, id string) (dto.T
 			nombre  sql.NullString
 		)
 		if err := rows.Scan(&ev.ID, &ev.Tipo, &estado, &capataz, &equipo, &ev.ActorRol, &nota, &when, &usuario, &login, &nombre); err != nil {
-			return out, err
+			return nil, err
 		}
+		ev.ActividadID = id
 		ev.Estado = mapper.NullString(estado)
 		ev.CapatazID = mapper.NullString(capataz)
 		ev.Equipo = mapper.NullString(equipo)
@@ -371,13 +371,13 @@ func (r *intervencionRepository) Timeline(ctx context.Context, id string) (dto.T
 		if nombre.Valid {
 			ev.Nombre = nombre.String
 		}
-		ev.CreatedAt = when.UTC().Format(time.RFC3339)
-		out.Eventos = append(out.Eventos, ev)
+		ev.CreatedAt = when
+		out = append(out, ev)
 	}
 	return out, rows.Err()
 }
 
-func (r *intervencionRepository) GuardarFicha(ctx context.Context, in dto.FichaIntervencionDTO) error {
+func (r *intervencionRepository) GuardarFicha(ctx context.Context, in entities.FichaIntervencion) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		row, err := lockActividadDB(tx, in.ID)
 		if err != nil {
@@ -424,7 +424,7 @@ func (r *intervencionRepository) GuardarFicha(ctx context.Context, in dto.FichaI
 	})
 }
 
-func (r *intervencionRepository) CrearAvance(ctx context.Context, in dto.CrearAvanceDTO) error {
+func (r *intervencionRepository) CrearAvance(ctx context.Context, in entities.NuevoAvance) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		row, err := lockActividadDB(tx, in.ActividadID)
 		if err != nil {

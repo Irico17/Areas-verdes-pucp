@@ -3,11 +3,13 @@ package controller_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
@@ -46,7 +48,7 @@ func TestUsuarioController_Listar(t *testing.T) {
 		},
 	}
 
-	ctrl := controller.NewUsuarioController(mockUC)
+	ctrl := controller.NewUsuarioController(mockUC, zerolog.Nop())
 
 	// 1. Sin sesión -> 403
 	rNoAuth := gin.New()
@@ -111,5 +113,33 @@ func TestUsuarioController_Listar(t *testing.T) {
 	}
 	if len(res.Permisos) != 1 || res.Permisos[0].Accion != "consultar" {
 		t.Fatalf("permisos devueltos inesperados: %+v", res.Permisos)
+	}
+
+	// 4. Error interno del use case -> 500
+	mockErrUC := &mockUsuarioControllerUseCase{
+		listarFn: func(ctx context.Context) (*dto.UsuariosResponseDTO, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	ctrlErr := controller.NewUsuarioController(mockErrUC, zerolog.Nop())
+	rErr := gin.New()
+	rErr.Use(func(c *gin.Context) {
+		c.Set("usuario", dto.UsuarioSesionDTO{
+			ID:      1,
+			Usuario: "admin",
+			Rol:     enums.RolAdmin.String(),
+		})
+		c.Next()
+	})
+	rErr.GET("/api/v1/accesos/usuarios", ctrlErr.Listar)
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/accesos/usuarios", nil)
+	rErr.ServeHTTP(w, req)
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("esperado 500, obtuve %d", w.Code)
+	}
+	if w.Body.String() != `{"error":"no se pudieron leer las cuentas"}` {
+		t.Fatalf("cuerpo 500 inesperado: %s", w.Body.String())
 	}
 }

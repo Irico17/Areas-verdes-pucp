@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 )
 
@@ -14,7 +14,7 @@ func TestAtencion_SolicitudRepository(t *testing.T) {
 	ctx := context.Background()
 
 	solID := "11111111-2222-4333-8444-555555555555"
-	crearDTO := dto.CrearSolicitudDTO{
+	crearDTO := entities.NuevaSolicitud{
 		ID:            solID,
 		CodigoExterno: "EXT-001",
 		Fuente:        "centuria",
@@ -44,7 +44,7 @@ func TestAtencion_SolicitudRepository(t *testing.T) {
 	}
 
 	// 3. Editar
-	editarDTO := dto.EditarSolicitudDTO{
+	editarDTO := entities.EditarSolicitud{
 		ID:            solID,
 		CodigoExterno: "EXT-001-MOD",
 		Titulo:        "Poda urgente modificada",
@@ -86,7 +86,7 @@ func TestAtencion_ServicioTercerizadoRepository(t *testing.T) {
 	}
 
 	ordenID := "bbbbbbbb-2222-4bbb-8bbb-bbbbbbbbbbb2"
-	crearDTO := dto.CrearOrdenDTO{
+	crearDTO := entities.NuevaOrdenServicio{
 		ID:          ordenID,
 		ActividadID: actividadID,
 		Empresa:     "Arboristas SAC",
@@ -113,7 +113,7 @@ func TestAtencion_ServicioTercerizadoRepository(t *testing.T) {
 	}
 
 	// 3. Editar como capataz asignado
-	editarDTO := dto.EditarOrdenDTO{
+	editarDTO := entities.EditarOrdenServicio{
 		ID:          ordenID,
 		Estado:      "ejecutada",
 		Conformidad: "Trabajo concluido según especificaciones",
@@ -157,7 +157,7 @@ func TestAtencion_RiegoRepository(t *testing.T) {
 	}
 
 	riegoID := "cccccccc-3333-4ccc-8ccc-cccccccccccc"
-	crearDTO := dto.CrearRiegoDTO{
+	crearDTO := entities.NuevoTurnoRiego{
 		ID:        riegoID,
 		ZonaID:    "Z1",
 		Sector:    "Sector Jardines Centrales",

@@ -2,12 +2,14 @@ package controller_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/archivos"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/controller"
@@ -21,7 +23,7 @@ func TestMetaController_Index(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1", nil)
 
-	ctrl := controller.NewMetaController(nil)
+	ctrl := controller.NewMetaController(nil, zerolog.Nop())
 	ctrl.Index(c)
 
 	if w.Code != http.StatusOK {
@@ -58,7 +60,7 @@ func TestMetaController_OpenAPI_Exitoso(t *testing.T) {
 		},
 	}
 	adapter := archivos.NewContratoOpenAPIAdapter(cfg)
-	ctrl := controller.NewMetaController(adapter)
+	ctrl := controller.NewMetaController(adapter, zerolog.Nop())
 	ctrl.OpenAPI(c)
 
 	if w.Code != http.StatusOK {
@@ -86,7 +88,7 @@ func TestMetaController_OpenAPI_NoDisponible(t *testing.T) {
 		},
 	}
 	adapter := archivos.NewContratoOpenAPIAdapter(cfg)
-	ctrl := controller.NewMetaController(adapter)
+	ctrl := controller.NewMetaController(adapter, zerolog.Nop())
 	ctrl.OpenAPI(c)
 
 	if w.Code != http.StatusNotFound {
@@ -98,6 +100,34 @@ func TestMetaController_OpenAPI_NoDisponible(t *testing.T) {
 		t.Fatal(err)
 	}
 	if res["error"] != "openapi.yaml no disponible" {
+		t.Fatalf("error inesperado: %s", res["error"])
+	}
+}
+
+type mockContratoError struct{}
+
+func (mockContratoError) ObtenerContrato() ([]byte, error) {
+	return nil, errors.New("io error simulado")
+}
+
+func TestMetaController_OpenAPI_ErrorInterno(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/openapi.yaml", nil)
+
+	ctrl := controller.NewMetaController(mockContratoError{}, zerolog.Nop())
+	ctrl.OpenAPI(c)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("se esperaba 500, se obtuvo %d", w.Code)
+	}
+
+	var res map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
+		t.Fatal(err)
+	}
+	if res["error"] != "no se pudo armar el contrato" {
 		t.Fatalf("error inesperado: %s", res["error"])
 	}
 }

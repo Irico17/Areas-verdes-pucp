@@ -8,6 +8,7 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
@@ -55,7 +56,13 @@ func (u *servicioTercerizadoUseCase) Crear(ctx context.Context, in dto.CrearOrde
 		return nil, domainErrors.InputError{Reason: "id y actividad_id deben ser UUID"}
 	}
 
-	entity, err := u.repo.Crear(ctx, in, actorRol, capatazID)
+	entity, err := u.repo.Crear(ctx, entities.NuevaOrdenServicio{
+		ID:          in.ID,
+		ActividadID: in.ActividadID,
+		Empresa:     in.Empresa,
+		Referencia:  in.Referencia,
+		Frecuencia:  in.Frecuencia,
+	}, actorRol, capatazID)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +94,14 @@ func (u *servicioTercerizadoUseCase) Editar(ctx context.Context, in dto.EditarOr
 	}
 	in.Estado = estado
 
-	entity, err := u.repo.Editar(ctx, in, actorRol, capatazID)
+	entity, err := u.repo.Editar(ctx, entities.EditarOrdenServicio{
+		ID:               in.ID,
+		Conformidad:      in.Conformidad,
+		PeriodoInicio:    in.PeriodoInicio,
+		PeriodoFin:       in.PeriodoFin,
+		ReporteProveedor: in.ReporteProveedor,
+		Estado:           in.Estado,
+	}, actorRol, capatazID)
 	if err != nil {
 		return nil, err
 	}

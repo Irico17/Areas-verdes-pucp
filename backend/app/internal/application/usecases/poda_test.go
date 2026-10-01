@@ -23,7 +23,7 @@ func (m *mockPodaRepo) Listar(_ context.Context) ([]*entities.Poda, error) {
 	return m.podas, nil
 }
 
-func (m *mockPodaRepo) Guardar(_ context.Context, in dto.GuardarPodaDTO) (*entities.Poda, error) {
+func (m *mockPodaRepo) Guardar(_ context.Context, in entities.GuardarPoda) (*entities.Poda, error) {
 	if m.err != nil {
 		return nil, m.err
 	}

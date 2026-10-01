@@ -12,8 +12,8 @@ import (
 type IServicioTercerizadoRepository interface {
 	Listar(ctx context.Context) ([]*entities.ServicioTercerizado, error)
 	ObtenerPorID(ctx context.Context, id string) (*entities.ServicioTercerizado, error)
-	Crear(ctx context.Context, in dto.CrearOrdenDTO, actorRol, capatazID string) (*entities.ServicioTercerizado, error)
-	Editar(ctx context.Context, in dto.EditarOrdenDTO, actorRol, capatazID string) (*entities.ServicioTercerizado, error)
+	Crear(ctx context.Context, in entities.NuevaOrdenServicio, actorRol, capatazID string) (*entities.ServicioTercerizado, error)
+	Editar(ctx context.Context, in entities.EditarOrdenServicio, actorRol, capatazID string) (*entities.ServicioTercerizado, error)
 }
 
 // IServicioTercerizadoUseCase defines application operations for work orders.

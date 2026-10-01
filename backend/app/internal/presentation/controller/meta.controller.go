@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 )
@@ -85,11 +86,12 @@ type IMetaController interface {
 
 type metaController struct {
 	contrato contracts.IContratoOpenAPI
+	logger   zerolog.Logger
 }
 
 // NewMetaController creates a meta controller.
-func NewMetaController(contrato contracts.IContratoOpenAPI) IMetaController {
-	return &metaController{contrato: contrato}
+func NewMetaController(contrato contracts.IContratoOpenAPI, logger zerolog.Logger) IMetaController {
+	return &metaController{contrato: contrato, logger: logger}
 }
 
 // Index serves the API index with routes and service details.
@@ -114,6 +116,7 @@ func (c *metaController) OpenAPI(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "openapi.yaml no disponible"})
 			return
 		}
+		c.logger.Error().Err(err).Msg("meta: no se pudo armar el contrato openapi")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo armar el contrato"})
 		return
 	}

@@ -72,7 +72,7 @@ type SavedPayload struct {
 }
 
 // SamePayload compares an incoming creation payload with the existing saved row for idempotency.
-func SamePayload(saved SavedPayload, in dto.CrearIntervencionDTO) bool {
+func SamePayload(saved SavedPayload, in entities.NuevaIntervencion) bool {
 	return saved.Tipo == in.Tipo &&
 		saved.Titulo == strings.TrimSpace(in.Titulo) &&
 		saved.Detalle == strings.TrimSpace(in.Detalle) &&
@@ -137,7 +137,17 @@ func (u *intervencionUseCase) ListarActividades(ctx context.Context, f dto.Filtr
 		return entities.Collection("actividades"), domainErrors.InputError{Reason: "filtro no reconocido"}
 	}
 
-	return u.repo.List(ctx, f)
+	filter := entities.FiltroIntervenciones{
+		Rol:               f.Rol,
+		CapatazID:         f.CapatazID,
+		Estado:            f.Estado,
+		Tipo:              f.Tipo,
+		ZonaSupervisionID: f.ZonaSupervisionID,
+		CuadrillaID:       f.CuadrillaID,
+		Origen:            f.Origen,
+		SoloAbiertas:      f.SoloAbiertas,
+	}
+	return u.repo.List(ctx, filter)
 }
 
 func (u *intervencionUseCase) CrearActividad(ctx context.Context, in dto.CrearIntervencionDTO) (dto.CrearIntervencionResponseDTO, error) {
@@ -166,7 +176,23 @@ func (u *intervencionUseCase) CrearActividad(ctx context.Context, in dto.CrearIn
 		return zero, domainErrors.InputError{Reason: "el punto queda fuera del campus"}
 	}
 
-	feat, created, err := u.repo.Create(ctx, in)
+	cmd := entities.NuevaIntervencion{
+		ID:                in.ID,
+		Tipo:              in.Tipo,
+		Titulo:            in.Titulo,
+		Detalle:           in.Detalle,
+		Lon:               in.Lon,
+		Lat:               in.Lat,
+		AreaFeatureID:     in.AreaFeatureID,
+		ZonaFeatureID:     in.ZonaFeatureID,
+		AssignedCapatazID: in.AssignedCapatazID,
+		ActorRol:          in.ActorRol,
+		Ejecutor:          in.Ejecutor,
+		UsuarioID:         in.UsuarioID,
+		LugarID:           in.LugarID,
+		ZonaSupervisionID: in.ZonaSupervisionID,
+	}
+	feat, created, err := u.repo.Create(ctx, cmd)
 	if err != nil {
 		return zero, err
 	}
@@ -187,7 +213,13 @@ func (u *intervencionUseCase) AsignarActividad(ctx context.Context, in dto.Asign
 	if strings.TrimSpace(in.CapatazID) == "" {
 		return zero, domainErrors.InputError{Reason: "capataz_id es obligatorio"}
 	}
-	return u.repo.Assign(ctx, in)
+	cmd := entities.AsignarIntervencion{
+		ID:        in.ID,
+		CapatazID: in.CapatazID,
+		ActorRol:  in.ActorRol,
+		UsuarioID: in.UsuarioID,
+	}
+	return u.repo.Assign(ctx, cmd)
 }
 
 func (u *intervencionUseCase) CambiarEstado(ctx context.Context, in dto.CambiarEstadoDTO) (entities.Feature, error) {
@@ -206,7 +238,14 @@ func (u *intervencionUseCase) CambiarEstado(ctx context.Context, in dto.CambiarE
 			return zero, domainErrors.ForbiddenError{Reason: "el capataz no puede cerrar ni cancelar una labor"}
 		}
 	}
-	return u.repo.SetEstado(ctx, in)
+	cmd := entities.CambiarEstadoIntervencion{
+		ID:        in.ID,
+		Estado:    in.Estado,
+		ActorRol:  in.ActorRol,
+		CapatazID: in.CapatazID,
+		UsuarioID: in.UsuarioID,
+	}
+	return u.repo.SetEstado(ctx, cmd)
 }
 
 func (u *intervencionUseCase) ArchivarActividad(ctx context.Context, in dto.ArchivarIntervencionDTO) (dto.ArchivarIntervencionResponseDTO, error) {
@@ -217,7 +256,13 @@ func (u *intervencionUseCase) ArchivarActividad(ctx context.Context, in dto.Arch
 		}
 		return zero, domainErrors.InputError{Reason: "actor_rol debe ser jefatura, coordinacion o admin"}
 	}
-	if err := u.repo.Archive(ctx, in); err != nil {
+	cmd := entities.ArchivarIntervencion{
+		ID:        in.ID,
+		ActorRol:  in.ActorRol,
+		Motivo:    in.Motivo,
+		UsuarioID: in.UsuarioID,
+	}
+	if err := u.repo.Archive(ctx, cmd); err != nil {
 		return zero, err
 	}
 	return dto.ArchivarIntervencionResponseDTO{
@@ -231,7 +276,27 @@ func (u *intervencionUseCase) Timeline(ctx context.Context, id string) (dto.Time
 	if !uuidRe.MatchString(id) {
 		return out, domainErrors.InputError{Reason: "id debe ser un UUID"}
 	}
-	return u.repo.Timeline(ctx, id)
+	events, err := u.repo.Timeline(ctx, id)
+	if err != nil {
+		return out, err
+	}
+	out.Eventos = make([]dto.EventoTimelineDTO, len(events))
+	for i, ev := range events {
+		out.Eventos[i] = dto.EventoTimelineDTO{
+			ID:        ev.ID,
+			Tipo:      ev.Tipo,
+			Estado:    ev.Estado,
+			CapatazID: ev.CapatazID,
+			Equipo:    ev.Equipo,
+			ActorRol:  ev.ActorRol,
+			UsuarioID: ev.UsuarioID,
+			Usuario:   ev.Usuario,
+			Nombre:    ev.Nombre,
+			Nota:      ev.Nota,
+			CreatedAt: ev.CreatedAt.UTC().Format(time.RFC3339),
+		}
+	}
+	return out, nil
 }
 
 func (u *intervencionUseCase) GuardarFicha(ctx context.Context, in dto.FichaIntervencionDTO) error {
@@ -241,7 +306,17 @@ func (u *intervencionUseCase) GuardarFicha(ctx context.Context, in dto.FichaInte
 	if in.FechaSolicitud != "" && in.FechaAtencion != "" && in.FechaAtencion < in.FechaSolicitud {
 		return domainErrors.InputError{Reason: "la atención no puede ser anterior a la solicitud"}
 	}
-	return u.repo.GuardarFicha(ctx, in)
+	cmd := entities.FichaIntervencion{
+		ID:             in.ID,
+		Clase:          in.Clase,
+		FechaSolicitud: in.FechaSolicitud,
+		FechaAtencion:  in.FechaAtencion,
+		Lugar:          in.Lugar,
+		Comentario:     in.Comentario,
+		ActorRol:       in.ActorRol,
+		CapatazID:      in.CapatazID,
+	}
+	return u.repo.GuardarFicha(ctx, cmd)
 }
 
 func (u *intervencionUseCase) CrearAvance(ctx context.Context, in dto.CrearAvanceDTO) error {
@@ -254,5 +329,15 @@ func (u *intervencionUseCase) CrearAvance(ctx context.Context, in dto.CrearAvanc
 	if strings.TrimSpace(in.AreaFeatureID) == "" && strings.TrimSpace(in.EjemplarRef) == "" {
 		return domainErrors.InputError{Reason: "el avance se liga a un área o a un ejemplar"}
 	}
-	return u.repo.CrearAvance(ctx, in)
+	cmd := entities.NuevoAvance{
+		ActividadID:   in.ActividadID,
+		ID:            in.ID,
+		Fecha:         in.Fecha,
+		Nota:          in.Nota,
+		AreaFeatureID: in.AreaFeatureID,
+		EjemplarRef:   in.EjemplarRef,
+		ActorRol:      in.ActorRol,
+		CapatazID:     in.CapatazID,
+	}
+	return u.repo.CrearAvance(ctx, cmd)
 }

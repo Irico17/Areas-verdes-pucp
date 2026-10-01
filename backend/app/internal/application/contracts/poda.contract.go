@@ -11,7 +11,7 @@ import (
 // IPodaRepository defines persistence operations for poda records.
 type IPodaRepository interface {
 	Listar(ctx context.Context) ([]*entities.Poda, error)
-	Guardar(ctx context.Context, in dto.GuardarPodaDTO) (*entities.Poda, error)
+	Guardar(ctx context.Context, in entities.GuardarPoda) (*entities.Poda, error)
 	Archivar(ctx context.Context, id string) error
 }
 

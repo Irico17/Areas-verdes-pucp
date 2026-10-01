@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
@@ -13,14 +14,14 @@ import (
 
 type mockIntervencionRepo struct {
 	capatacesFunc    func(ctx context.Context) ([]entities.Capataz, error)
-	listFunc         func(ctx context.Context, f dto.FiltroIntervencionesDTO) (entities.FeatureCollection, error)
-	createFunc       func(ctx context.Context, in dto.CrearIntervencionDTO) (entities.Feature, bool, error)
-	assignFunc       func(ctx context.Context, in dto.AsignarIntervencionDTO) (entities.Feature, error)
-	setEstadoFunc    func(ctx context.Context, in dto.CambiarEstadoDTO) (entities.Feature, error)
-	archiveFunc      func(ctx context.Context, in dto.ArchivarIntervencionDTO) error
-	timelineFunc     func(ctx context.Context, id string) (dto.TimelineResponseDTO, error)
-	guardarFichaFunc func(ctx context.Context, in dto.FichaIntervencionDTO) error
-	crearAvanceFunc  func(ctx context.Context, in dto.CrearAvanceDTO) error
+	listFunc         func(ctx context.Context, f entities.FiltroIntervenciones) (entities.FeatureCollection, error)
+	createFunc       func(ctx context.Context, in entities.NuevaIntervencion) (entities.Feature, bool, error)
+	assignFunc       func(ctx context.Context, in entities.AsignarIntervencion) (entities.Feature, error)
+	setEstadoFunc    func(ctx context.Context, in entities.CambiarEstadoIntervencion) (entities.Feature, error)
+	archiveFunc      func(ctx context.Context, in entities.ArchivarIntervencion) error
+	timelineFunc     func(ctx context.Context, id string) ([]entities.ActividadEvento, error)
+	guardarFichaFunc func(ctx context.Context, in entities.FichaIntervencion) error
+	crearAvanceFunc  func(ctx context.Context, in entities.NuevoAvance) error
 	oneFunc          func(ctx context.Context, id string) (entities.Feature, error)
 }
 
@@ -31,56 +32,56 @@ func (m *mockIntervencionRepo) Capataces(ctx context.Context) ([]entities.Capata
 	return nil, nil
 }
 
-func (m *mockIntervencionRepo) List(ctx context.Context, f dto.FiltroIntervencionesDTO) (entities.FeatureCollection, error) {
+func (m *mockIntervencionRepo) List(ctx context.Context, f entities.FiltroIntervenciones) (entities.FeatureCollection, error) {
 	if m.listFunc != nil {
 		return m.listFunc(ctx, f)
 	}
 	return entities.Collection("actividades"), nil
 }
 
-func (m *mockIntervencionRepo) Create(ctx context.Context, in dto.CrearIntervencionDTO) (entities.Feature, bool, error) {
+func (m *mockIntervencionRepo) Create(ctx context.Context, in entities.NuevaIntervencion) (entities.Feature, bool, error) {
 	if m.createFunc != nil {
 		return m.createFunc(ctx, in)
 	}
 	return entities.Feature{ID: in.ID}, true, nil
 }
 
-func (m *mockIntervencionRepo) Assign(ctx context.Context, in dto.AsignarIntervencionDTO) (entities.Feature, error) {
+func (m *mockIntervencionRepo) Assign(ctx context.Context, in entities.AsignarIntervencion) (entities.Feature, error) {
 	if m.assignFunc != nil {
 		return m.assignFunc(ctx, in)
 	}
 	return entities.Feature{ID: in.ID}, nil
 }
 
-func (m *mockIntervencionRepo) SetEstado(ctx context.Context, in dto.CambiarEstadoDTO) (entities.Feature, error) {
+func (m *mockIntervencionRepo) SetEstado(ctx context.Context, in entities.CambiarEstadoIntervencion) (entities.Feature, error) {
 	if m.setEstadoFunc != nil {
 		return m.setEstadoFunc(ctx, in)
 	}
 	return entities.Feature{ID: in.ID}, nil
 }
 
-func (m *mockIntervencionRepo) Archive(ctx context.Context, in dto.ArchivarIntervencionDTO) error {
+func (m *mockIntervencionRepo) Archive(ctx context.Context, in entities.ArchivarIntervencion) error {
 	if m.archiveFunc != nil {
 		return m.archiveFunc(ctx, in)
 	}
 	return nil
 }
 
-func (m *mockIntervencionRepo) Timeline(ctx context.Context, id string) (dto.TimelineResponseDTO, error) {
+func (m *mockIntervencionRepo) Timeline(ctx context.Context, id string) ([]entities.ActividadEvento, error) {
 	if m.timelineFunc != nil {
 		return m.timelineFunc(ctx, id)
 	}
-	return dto.TimelineResponseDTO{ActividadID: id}, nil
+	return []entities.ActividadEvento{}, nil
 }
 
-func (m *mockIntervencionRepo) GuardarFicha(ctx context.Context, in dto.FichaIntervencionDTO) error {
+func (m *mockIntervencionRepo) GuardarFicha(ctx context.Context, in entities.FichaIntervencion) error {
 	if m.guardarFichaFunc != nil {
 		return m.guardarFichaFunc(ctx, in)
 	}
 	return nil
 }
 
-func (m *mockIntervencionRepo) CrearAvance(ctx context.Context, in dto.CrearAvanceDTO) error {
+func (m *mockIntervencionRepo) CrearAvance(ctx context.Context, in entities.NuevoAvance) error {
 	if m.crearAvanceFunc != nil {
 		return m.crearAvanceFunc(ctx, in)
 	}
@@ -121,7 +122,7 @@ func TestValidateQueryCapatazSinEquipo(t *testing.T) {
 }
 
 func TestSamePayload(t *testing.T) {
-	in := dto.CrearIntervencionDTO{
+	in := entities.NuevaIntervencion{
 		Tipo:              "poda",
 		Titulo:            " Poda ",
 		Detalle:           "borde",
@@ -347,5 +348,51 @@ func TestCrearAvanceValidacion(t *testing.T) {
 	})
 	if !errors.As(err, &input) {
 		t.Fatalf("esperado input error, obtuve %v", err)
+	}
+}
+
+func TestTimelineMapeo(t *testing.T) {
+	tm := time.Date(2026, 9, 30, 15, 30, 0, 0, time.UTC)
+	st := "en_proceso"
+	cap := "cap-01"
+	eq := "Equipo 1"
+	uID := int64(42)
+	repo := &mockIntervencionRepo{
+		timelineFunc: func(_ context.Context, id string) ([]entities.ActividadEvento, error) {
+			return []entities.ActividadEvento{
+				{
+					ID:          1,
+					ActividadID: id,
+					Tipo:        "asignacion",
+					Estado:      &st,
+					CapatazID:   &cap,
+					Equipo:      &eq,
+					ActorRol:    "coordinacion",
+					UsuarioID:   &uID,
+					Usuario:     "coord1",
+					Nombre:      "Coord Uno",
+					Nota:        "Asignado a capataz",
+					CreatedAt:   tm,
+				},
+			}, nil
+		},
+	}
+	uc := NewIntervencionUseCase(repo)
+	res, err := uc.Timeline(context.Background(), "11111111-1111-4111-8111-111111111111")
+	if err != nil {
+		t.Fatalf("error inesperado en Timeline: %v", err)
+	}
+	if res.ActividadID != "11111111-1111-4111-8111-111111111111" {
+		t.Fatalf("actividad_id inesperado: %s", res.ActividadID)
+	}
+	if len(res.Eventos) != 1 {
+		t.Fatalf("esperado 1 evento, obtuve %d", len(res.Eventos))
+	}
+	ev := res.Eventos[0]
+	if ev.CreatedAt != "2026-09-30T15:30:00Z" {
+		t.Fatalf("formato de fecha inesperado: %s", ev.CreatedAt)
+	}
+	if ev.Nombre != "Coord Uno" || ev.Usuario != "coord1" {
+		t.Fatalf("datos de usuario inesperados: %+v", ev)
 	}
 }

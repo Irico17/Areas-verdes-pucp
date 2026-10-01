@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/usecases"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
@@ -53,7 +52,7 @@ func (r *riegoRepository) Listar(ctx context.Context, capatazID string) ([]*enti
 	return out, rows.Err()
 }
 
-func (r *riegoRepository) Crear(ctx context.Context, in dto.CrearRiegoDTO) error {
+func (r *riegoRepository) Crear(ctx context.Context, in entities.NuevoTurnoRiego) error {
 	var zonaNum int64
 	if err := r.db.WithContext(ctx).Raw(`SELECT COALESCE((SELECT id FROM zonas_supervision WHERE codigo = $1), 0)`, in.ZonaID).Scan(&zonaNum).Error; err != nil {
 		return err

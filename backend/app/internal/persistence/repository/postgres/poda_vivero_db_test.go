@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 )
@@ -16,7 +16,7 @@ func TestPodaRepository_Database(t *testing.T) {
 	ctx := context.Background()
 
 	podaID := "aaaaaaaa-1111-2222-3333-444444444444"
-	in := dto.GuardarPodaDTO{
+	in := entities.GuardarPoda{
 		ID:                podaID,
 		Codigo:            "PO-100",
 		CodigoExterno:     "OSG-001",
@@ -102,7 +102,7 @@ func TestViveroRepository_Database(t *testing.T) {
 	ctx := context.Background()
 
 	viveroID := "bbbbbbbb-1111-2222-3333-444444444444"
-	in := dto.GuardarViveroDTO{
+	in := entities.GuardarVivero{
 		ID:            viveroID,
 		Fecha:         "2026-05-15",
 		Area:          "Flora",

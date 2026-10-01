@@ -10,6 +10,7 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
@@ -75,7 +76,17 @@ func (u *solicitudUseCase) Crear(ctx context.Context, in dto.CrearSolicitudDTO) 
 		return nil, domainErrors.InputError{Reason: "id debe ser un UUID"}
 	}
 
-	entity, err := u.repo.Crear(ctx, in)
+	entity, err := u.repo.Crear(ctx, entities.NuevaSolicitud{
+		ID:            in.ID,
+		CodigoExterno: in.CodigoExterno,
+		Fuente:        in.Fuente,
+		Titulo:        in.Titulo,
+		Detalle:       in.Detalle,
+		Prioridad:     in.Prioridad,
+		Lugar:         in.Lugar,
+		Cantidad:      in.Cantidad,
+		ActividadID:   in.ActividadID,
+	})
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
 			return nil, domainErrors.InputError{Reason: "ese código externo ya está registrado"}
@@ -108,7 +119,14 @@ func (u *solicitudUseCase) Editar(ctx context.Context, in dto.EditarSolicitudDTO
 	}
 	in.CodigoExterno = ConservarCodigoSolicitud(in.CodigoExterno)
 
-	entity, err := u.repo.Editar(ctx, in)
+	entity, err := u.repo.Editar(ctx, entities.EditarSolicitud{
+		ID:            in.ID,
+		CodigoExterno: in.CodigoExterno,
+		Titulo:        in.Titulo,
+		Detalle:       in.Detalle,
+		Prioridad:     in.Prioridad,
+		Lugar:         in.Lugar,
+	})
 	if err != nil {
 		return nil, err
 	}
