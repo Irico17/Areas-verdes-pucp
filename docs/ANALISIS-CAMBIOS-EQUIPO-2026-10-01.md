@@ -1,5 +1,8 @@
 # Análisis de los cambios del equipo (org `GRUPO-12-DP2/-areas-verdes-pucp`) — 2026-10-01
 
+> **SUPERADO (2026-10-01 11:12).** Por decisión del responsable, nuestra BD (migraciones `001`–`046`) es la única fuente de verdad y el esquema v1.1 del equipo **no se adopta**. Las secciones de este documento sobre el mapeo a v1.1, el esquema `v11`, las migraciones `050`–`053`, `id_v11`, la prueba de conformidad y las decisiones D1–D5 quedan **superadas** («no aplica»); se conservan solo como registro histórico. Vigente: la sección «Corrección 2026-10-01» de `docs/PLAN-MIGRACION-BACKEND.md` (solo se toma arquitectura de backend).
+
+
 > **Alcance.** Solo análisis y plan. No toca código del port, no aplica migraciones, no toca datos ni producción. Compara el `main` actual del repo del equipo (`0807825`, solo lectura, copiado por *bundle* a `/workspace/grupo-main-nuevo`) con el clon de referencia que usamos hasta ahora (`init/backend` @ `1e876dd`), con nuestro `backend/` (lotes 1–12) y con nuestras migraciones `001`–`046`. Los ajustes acordados al plan están aplicados en `docs/PLAN-MIGRACION-BACKEND.md` (sección «Actualización 2026-10-01»).
 > Primera pasada de análisis y revisión con Gemini (`agy`, `gemini-3.8-flash-high`); sus afirmaciones se verificaron contra el código y se corrigieron donde no coincidían (ver §6). Los nombres y correos del esquema/README del equipo **no** se copian aquí: los ejemplos usan nombres ficticios.
 
