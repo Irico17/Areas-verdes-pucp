@@ -146,7 +146,7 @@ func (r *areaVerdeRepository) Baja(ctx context.Context, featureID string, usuari
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var id int64
 		var activo bool
-		err := tx.Raw(`SELECT id, activo FROM areas_verdes WHERE feature_id = $1`, featureID).Row().Scan(&id, &activo)
+		err := tx.Raw(`SELECT id, activo FROM areas_verdes WHERE feature_id = $1 FOR UPDATE`, featureID).Row().Scan(&id, &activo)
 		if errors.Is(err, sql.ErrNoRows) {
 			return domainErrors.ErrFichaNoEncontrada
 		}

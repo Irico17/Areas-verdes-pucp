@@ -297,8 +297,12 @@ def leer(path):
     return out
 
 antes, despues = leer(sys.argv[1]), leer(sys.argv[2])
+# sesiones crece con el smoke; schema_migrations crece al aplicar 047/048.
+omitidas = {"sesiones", "schema_migrations"}
 mal = []
 for tabla, filas in sorted(antes.items()):
+    if tabla in omitidas:
+        continue
     if despues.get(tabla) != filas:
         mal.append(f"{tabla}: antes {filas}, después {despues.get(tabla)}")
 if mal:

@@ -149,7 +149,7 @@ func (r *zonaSupervisionRepository) Baja(ctx context.Context, codigo string, usu
 			nombre string
 			activo bool
 		)
-		err := tx.Raw(`SELECT id, nombre, activo FROM zonas_supervision WHERE codigo = $1`, codigo).Row().Scan(&id, &nombre, &activo)
+		err := tx.Raw(`SELECT id, nombre, activo FROM zonas_supervision WHERE codigo = $1 FOR UPDATE`, codigo).Row().Scan(&id, &nombre, &activo)
 		if errors.Is(err, sql.ErrNoRows) {
 			return domainErrors.ErrNoEncontrado
 		}
