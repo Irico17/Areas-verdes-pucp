@@ -401,6 +401,8 @@ definitions:
     type: object
   dto.FichaDTO:
     properties:
+      activo:
+        type: boolean
       area_m2:
         type: number
       con_geometria:

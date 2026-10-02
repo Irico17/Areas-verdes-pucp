@@ -4306,6 +4306,9 @@ const docTemplate = `{
         "dto.FichaDTO": {
             "type": "object",
             "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
                 "area_m2": {
                     "type": "number"
                 },

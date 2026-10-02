@@ -16,6 +16,7 @@ type AreaVerdeModel struct {
 	Referencia  *string   `gorm:"column:referencia"`
 	PerimetroM  *float64  `gorm:"column:perimetro_m"`
 	AreaM2      *float64  `gorm:"column:area_m2"`
+	Activo      bool      `gorm:"column:activo"`
 	CreatedAt   time.Time `gorm:"column:created_at"`
 	UpdatedAt   time.Time `gorm:"column:updated_at"`
 }

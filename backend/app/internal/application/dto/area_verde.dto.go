@@ -9,6 +9,7 @@ type FichaDTO struct {
 	Referencia string   `json:"referencia"`
 	AreaM2     *float64 `json:"area_m2,omitempty"`
 	ConGeom    bool     `json:"con_geometria"`
+	Activo     bool     `json:"activo"`
 }
 
 // ActualizarFichaDTO contains editable fields for a ficha.

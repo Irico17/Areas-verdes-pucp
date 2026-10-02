@@ -100,5 +100,6 @@ func fichaEntityToDTO(e *entities.AreaVerdeFicha) *dto.FichaDTO {
 		Referencia: e.Referencia,
 		AreaM2:     e.AreaM2,
 		ConGeom:    e.ConGeom,
+		Activo:     e.Activo,
 	}
 }

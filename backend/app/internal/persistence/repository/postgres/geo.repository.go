@@ -25,10 +25,12 @@ func NewGeoRepository(db *gorm.DB) contracts.IGeoRepository {
 }
 
 func (r *geoRepository) Areas(ctx context.Context, f entities.FiltroGeo) (entities.FeatureCollection, error) {
+	// Filtra activo=false (alineado con listados de zonas). Divergencia intencional
+	// frente a apps/api, que incluye áreas dadas de baja en GET /geo/areas.
 	q, args := spatialSelect(`
 		SELECT id, feature_id, source_index, codigo, nombre, uso, proy_riego, riego_act,
 		       referencia, perimetro_m, area_m2, ST_AsGeoJSON(geom, 9)
-		FROM areas_verdes`, "", nil, f)
+		FROM areas_verdes`, "activo", nil, f)
 	return r.scanCatastro(ctx, "areas_verdes", q, args)
 }
 
@@ -63,10 +65,10 @@ func (r *geoRepository) Resumen(ctx context.Context) (entities.ResumenCatastro, 
 	var out entities.ResumenCatastro
 	out.CRS = "EPSG:4326"
 	db := r.db.WithContext(ctx)
-	if err := db.Model(&models.AreaVerdeModel{}).Count(&out.Areas).Error; err != nil {
+	if err := db.Model(&models.AreaVerdeModel{}).Where("activo").Count(&out.Areas).Error; err != nil {
 		return out, err
 	}
-	if err := db.Model(&models.AreaVerdeModel{}).Where("geom IS NOT NULL").Count(&out.AreasConGeometria).Error; err != nil {
+	if err := db.Model(&models.AreaVerdeModel{}).Where("activo AND geom IS NOT NULL").Count(&out.AreasConGeometria).Error; err != nil {
 		return out, err
 	}
 	if err := db.Model(&models.PoligonoCuadrillaModel{}).Count(&out.Zonas).Error; err != nil {

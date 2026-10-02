@@ -67,6 +67,7 @@ func TestAreaVerdeController_Listar(t *testing.T) {
 			Referencia: "",
 			AreaM2:     &area,
 			ConGeom:    true,
+			Activo:     true,
 		},
 	}
 	ctrl := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{fichas: fichas}, zerolog.Nop())
@@ -101,6 +102,7 @@ func TestAreaVerdeController_Actualizar(t *testing.T) {
 		Referencia: "cerca a EEGGCC",
 		AreaM2:     &area,
 		ConGeom:    true,
+		Activo:     true,
 	}
 
 	ctrl := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{actualizarRes: res}, zerolog.Nop())
@@ -153,6 +155,7 @@ func TestAreaVerdeController_Crear(t *testing.T) {
 		Referencia: "",
 		AreaM2:     nil,
 		ConGeom:    false,
+		Activo:     true,
 	}
 
 	ctrl := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{crearRes: res}, zerolog.Nop())

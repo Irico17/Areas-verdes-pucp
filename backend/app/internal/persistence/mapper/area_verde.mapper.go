@@ -31,5 +31,6 @@ func AreaVerdeModelToFicha(m *models.AreaVerdeModel, conGeom bool) entities.Area
 		Referencia: ref,
 		AreaM2:     m.AreaM2,
 		ConGeom:    conGeom,
+		Activo:     m.Activo,
 	}
 }

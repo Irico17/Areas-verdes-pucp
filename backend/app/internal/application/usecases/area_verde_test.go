@@ -28,6 +28,7 @@ func newMockAreaVerdeRepo() *mockAreaVerdeRepo {
 				RiegoAct:   "Riego por aspersión",
 				Referencia: "",
 				ConGeom:    true,
+				Activo:     true,
 			},
 		},
 	}
@@ -75,6 +76,7 @@ func (m *mockAreaVerdeRepo) CrearSinGeom(_ context.Context, featureID, nombre, u
 		Nombre:    nombre,
 		Uso:       uso,
 		ConGeom:   false,
+		Activo:    true,
 	}
 	m.fichas[featureID] = f
 	return &f, nil

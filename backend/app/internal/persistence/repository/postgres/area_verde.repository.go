@@ -26,11 +26,14 @@ func NewAreaVerdeRepository(db *gorm.DB) contracts.IAreaVerdeRepository {
 
 func (r *areaVerdeRepository) Fichas(ctx context.Context, q string) ([]entities.AreaVerdeFicha, error) {
 	q = strings.TrimSpace(q)
+	// Solo áreas activas en listados (como zonas_supervision). Divergencia intencional
+	// frente a apps/api, que no filtra activo en GET /catastro/areas ni /geo/areas.
 	rows, err := r.db.WithContext(ctx).Raw(`
 		SELECT feature_id, COALESCE(nombre, ''), COALESCE(uso, ''), COALESCE(riego_act, ''),
-		       COALESCE(referencia, ''), area_m2, geom IS NOT NULL
+		       COALESCE(referencia, ''), area_m2, geom IS NOT NULL, activo
 		FROM areas_verdes
-		WHERE ($1 = '' OR feature_id ILIKE '%' || $1 || '%'
+		WHERE activo
+		  AND ($1 = '' OR feature_id ILIKE '%' || $1 || '%'
 		   OR COALESCE(nombre, '') ILIKE '%' || $1 || '%'
 		   OR COALESCE(codigo, '') ILIKE '%' || $1 || '%'
 		   OR COALESCE(uso, '') ILIKE '%' || $1 || '%')
@@ -47,8 +50,9 @@ func (r *areaVerdeRepository) Fichas(ctx context.Context, q string) ([]entities.
 			fid, nombre, uso, riego, ref string
 			area                         sql.NullFloat64
 			conGeom                      bool
+			activo                       bool
 		)
-		if err := rows.Scan(&fid, &nombre, &uso, &riego, &ref, &area, &conGeom); err != nil {
+		if err := rows.Scan(&fid, &nombre, &uso, &riego, &ref, &area, &conGeom, &activo); err != nil {
 			return nil, err
 		}
 		m := models.AreaVerdeModel{
@@ -58,6 +62,7 @@ func (r *areaVerdeRepository) Fichas(ctx context.Context, q string) ([]entities.
 			RiegoAct:   &riego,
 			Referencia: &ref,
 			AreaM2:     mapper.NullFloat(area),
+			Activo:     activo,
 		}
 		out = append(out, mapper.AreaVerdeModelToFicha(&m, conGeom))
 	}
@@ -70,14 +75,15 @@ func (r *areaVerdeRepository) ObtenerFichaPorFeatureID(ctx context.Context, feat
 		fid, nombre, uso, riego, ref string
 		area                         sql.NullFloat64
 		conGeom                      bool
+		activo                       bool
 	)
 	row := r.db.WithContext(ctx).Raw(`
 		SELECT feature_id, COALESCE(nombre, ''), COALESCE(uso, ''), COALESCE(riego_act, ''),
-		       COALESCE(referencia, ''), area_m2, geom IS NOT NULL
+		       COALESCE(referencia, ''), area_m2, geom IS NOT NULL, activo
 		FROM areas_verdes
 		WHERE feature_id = $1`, featureID).Row()
 
-	err := row.Scan(&fid, &nombre, &uso, &riego, &ref, &area, &conGeom)
+	err := row.Scan(&fid, &nombre, &uso, &riego, &ref, &area, &conGeom, &activo)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, domainErrors.ErrFichaNoEncontrada
 	}
@@ -91,6 +97,7 @@ func (r *areaVerdeRepository) ObtenerFichaPorFeatureID(ctx context.Context, feat
 		RiegoAct:   &riego,
 		Referencia: &ref,
 		AreaM2:     mapper.NullFloat(area),
+		Activo:     activo,
 	}
 	ficha := mapper.AreaVerdeModelToFicha(&m, conGeom)
 	return &ficha, nil

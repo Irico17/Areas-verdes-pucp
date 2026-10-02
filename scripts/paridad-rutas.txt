@@ -16,7 +16,13 @@
 # PATCH /catastro/zonas-supervision/:codigo y
 # POST /catastro/zonas-supervision/:codigo/baja (activo=false, historial en cambios).
 # No se comparan contra apps/api: ese binario no las registra.
-# Cobertura: tests de controller, caso de uso y repositorio en backend/app.
+# Cobertura: tests de controller, caso de uso y repositorio en backend/app;
+# arnés de humo solo-nuevo: scripts/paridad-escrituras-bajas.txt + scripts/smoke-bajas.sh.
+#
+# Divergencia intencional de lecturas (F2): el backend nuevo oculta áreas con
+# activo=false en GET /catastro/areas y GET /geo/areas (y el resumen de áreas),
+# y la ficha expone el campo "activo". apps/api no filtra ni expone ese campo.
+# Las zonas ya filtraban activo. No se borran filas.
 
 # ==========================================
 # Lotes posteriores (comentadas hasta su lote)

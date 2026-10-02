@@ -28,4 +28,5 @@ type AreaVerdeFicha struct {
 	Referencia string
 	AreaM2     *float64
 	ConGeom    bool
+	Activo     bool
 }
