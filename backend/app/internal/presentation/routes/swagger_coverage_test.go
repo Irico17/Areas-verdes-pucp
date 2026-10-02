@@ -58,6 +58,17 @@ func TestSwaggerRouteCoverage(t *testing.T) {
 		t.Fatalf("expected >= 62 business operations in swagger.json, got %d", businessOpsCount)
 	}
 
+	ginRoutes := make(map[string]bool)
+	for _, r := range engine.Routes() {
+		ginRoutes[fmt.Sprintf("%s %s", r.Method, r.Path)] = true
+	}
+	// Reverse direction: every documented operation must exist as a real route.
+	for key := range swaggerRoutes {
+		if !ginRoutes[key] {
+			t.Errorf("swagger.json documents a route that does not exist in Gin: %s", key)
+		}
+	}
+
 	var matchedRoutes int
 	for _, r := range engine.Routes() {
 		if !strings.HasPrefix(r.Path, "/areas-verdes/v1") {

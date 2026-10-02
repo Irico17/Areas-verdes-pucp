@@ -349,6 +349,9 @@ func bajaLogica(tx *gorm.DB, entidad, entidadID string) error {
 			SET activo = false, referencia = COALESCE(referencia, 'baja lógica'), updated_at = now()
 			WHERE feature_id = $1`, entidadID).Error
 	case "medidas_palmera":
+		// Same as the old API (auditoria/store.go): reverting an import removes the
+		// measurement rows that the import itself created. This is not loaded
+		// catastro data; every other entity reverts by logical deactivation.
 		return tx.Exec(`DELETE FROM medidas_palmera WHERE ejemplar_id::text = $1`, entidadID).Error
 	default:
 		if spec, ok := bajaPorActivo[entidad]; ok {

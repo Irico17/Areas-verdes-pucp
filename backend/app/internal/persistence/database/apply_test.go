@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"math/rand"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -568,7 +569,7 @@ func TestComprobarNecesitaETL(t *testing.T) {
 		t.Fatalf("sin postgres de prueba: %v", err)
 	}
 
-	name := "vp_c_test_necesita_etl"
+	name := fmt.Sprintf("vp_c_test_necesita_etl_%08x", rand.Uint32())
 	recrear(t, admin, name)
 	defer func() {
 		_, _ = admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name)

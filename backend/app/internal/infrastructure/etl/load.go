@@ -89,6 +89,7 @@ var TablasGuardLoad = []string{
 func NegarSiHayDependientes(tx *gorm.DB) error {
 	for _, tabla := range TablasGuardLoad {
 		var n int
+		// tabla comes from the constant TablasGuardLoad allowlist, never from input.
 		if err := tx.Raw(fmt.Sprintf(`SELECT count(*) FROM %s`, tabla)).Scan(&n).Error; err != nil {
 			return err
 		}
