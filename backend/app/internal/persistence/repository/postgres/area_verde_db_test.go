@@ -91,7 +91,13 @@ func TestAreaVerdeRepository_Baja(t *testing.T) {
 	if _, err := repo.CrearSinGeom(ctx, "AV-BAJA-01", "Área a dar de baja", "jardín"); err != nil {
 		t.Fatalf("crear: %v", err)
 	}
-	uid := int64(1)
+	var uid int64
+	if err := gdb.Raw(`
+		INSERT INTO usuarios (usuario, nombre, rol, password_hash)
+		VALUES ('baja.area', 'Usuario baja área', 'coordinacion', 'no-es-clave')
+		RETURNING id`).Row().Scan(&uid); err != nil {
+		t.Fatalf("insertar usuario: %v", err)
+	}
 	if err := repo.Baja(ctx, "AV-BAJA-01", &uid); err != nil {
 		t.Fatalf("baja: %v", err)
 	}
@@ -124,5 +130,20 @@ func TestAreaVerdeRepository_Baja(t *testing.T) {
 
 	if err := repo.Baja(ctx, "AV-NO-EXISTE", nil); err != domainErrors.ErrFichaNoEncontrada {
 		t.Fatalf("esperado ErrFichaNoEncontrada, obtenido %v", err)
+	}
+
+	lista, err := repo.Fichas(ctx, "AV-BAJA-01")
+	if err != nil {
+		t.Fatalf("fichas tras baja: %v", err)
+	}
+	if len(lista) != 0 {
+		t.Fatalf("listado debe ocultar áreas inactivas, obtenido %+v", lista)
+	}
+	ficha, err := repo.ObtenerFichaPorFeatureID(ctx, "AV-BAJA-01")
+	if err != nil {
+		t.Fatalf("ficha tras baja: %v", err)
+	}
+	if ficha.Activo {
+		t.Fatal("la ficha debe exponer activo=false tras la baja")
 	}
 }

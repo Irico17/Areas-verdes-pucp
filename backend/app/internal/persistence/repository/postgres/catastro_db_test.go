@@ -136,7 +136,13 @@ func TestZonaSupervisionRepository_ActualizarYBaja(t *testing.T) {
 	}
 
 	nuevaArea := 6100.0
-	uid := int64(1)
+	var uid int64
+	if err := gdb.Raw(`
+		INSERT INTO usuarios (usuario, nombre, rol, password_hash)
+		VALUES ('baja.zona', 'Usuario baja zona', 'coordinacion', 'no-es-clave')
+		RETURNING id`).Row().Scan(&uid); err != nil {
+		t.Fatalf("insertar usuario: %v", err)
+	}
 	editada, err := zonaRepo.Actualizar(ctx, "Z2", "Zona editada", "", &nuevaArea, &uid)
 	if err != nil {
 		t.Fatalf("actualizar: %v", err)
