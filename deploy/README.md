@@ -28,6 +28,10 @@ POSTGRES_PORT=5442 API_PORT=8093 WEB_PORT=8089 make down ENV=develop
 
 La semilla de develop y qa está en [`seed/README.md`](seed/README.md).
 
+### Claves y seguridad en producción
+
+En producción (`APP_ENV=produccion`), se rechazan claves de laboratorio (`pando-local`, `campus-lab`) y claves con menos de 16 caracteres. El rechazo ocurre de forma temprana en `backend/docker-entrypoint.sh` (antes de migrar) y en la carga de configuración de la API y de `migrate`. Para pruebas locales de producción, `deploy/env/produccion.env.example` provee la clave de demostración `produccion-local-demo-2026`. En AWS/Terraform se inyectan mediante `TF_VAR_db_password` y `TF_VAR_dev_password`.
+
 ## Conteos y verificación de negocio
 
 En producción, el despliegue compara los conteos de filas antes y después de aplicar la imagen nueva (`deploy/comparar_conteos.py`). La verificación cubre **únicamente tablas de datos de negocio** (catastro, labores, cuadrillas, catálogos) y cualquier discrepancia aborta el despliegue.

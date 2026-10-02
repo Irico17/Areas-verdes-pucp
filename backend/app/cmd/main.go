@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -25,6 +26,10 @@ import (
 // @BasePath        /areas-verdes
 func main() {
 	cfg := config.GetConfig()
+	if err := cfg.Validar(); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR de configuración: %v\n", err)
+		os.Exit(1)
+	}
 	logger.InitLogger(cfg.Server.LogLevel, cfg.Server.LogFormat)
 	log.Info().
 		Str("app_env", cfg.AppEnv).

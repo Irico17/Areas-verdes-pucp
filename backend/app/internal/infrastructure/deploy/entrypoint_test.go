@@ -197,3 +197,152 @@ exit 0
 		}
 	})
 }
+
+func TestDockerEntrypoint_RechazoClavesProduccion(t *testing.T) {
+	entrypointPath, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "docker-entrypoint.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(entrypointPath); err != nil {
+		t.Skipf("no se encontró docker-entrypoint.sh: %v", err)
+	}
+
+	casos := []struct {
+		nombre        string
+		appEnv        string
+		devPassword   string
+		dbURL         string
+		esperaError   bool
+		textoEsperado string
+	}{
+		{
+			nombre:        "produccion + pando-local -> error",
+			appEnv:        "produccion",
+			devPassword:   "pando-local",
+			esperaError:   true,
+			textoEsperado: "no puede ser una clave de laboratorio",
+		},
+		{
+			nombre:        "produccion + campus-lab -> error",
+			appEnv:        "produccion",
+			devPassword:   "campus-lab",
+			esperaError:   true,
+			textoEsperado: "no puede ser una clave de laboratorio",
+		},
+		{
+			nombre:        "produccion + clave corta -> error",
+			appEnv:        "produccion",
+			devPassword:   "corta12345",
+			esperaError:   true,
+			textoEsperado: "al menos 16 caracteres",
+		},
+		{
+			nombre:      "produccion + clave válida -> ok",
+			appEnv:      "produccion",
+			devPassword: "produccion-local-demo-2026",
+			esperaError: false,
+		},
+		{
+			nombre:      "develop + pando-local -> ok",
+			appEnv:      "develop",
+			devPassword: "pando-local",
+			esperaError: false,
+		},
+		{
+			nombre:      "sin APP_ENV + pando-local -> ok",
+			appEnv:      "",
+			devPassword: "pando-local",
+			esperaError: false,
+		},
+		{
+			nombre:        "produccion + clave válida + DATABASE_URL pando-local -> error",
+			appEnv:        "produccion",
+			devPassword:   "produccion-local-demo-2026",
+			dbURL:         "postgres://campus:pando-local@db:5432/campus_verde_produccion",
+			esperaError:   true,
+			textoEsperado: "no puede ser una clave de laboratorio",
+		},
+		{
+			nombre:        "produccion + clave válida + DATABASE_URL campus-lab -> error",
+			appEnv:        "produccion",
+			devPassword:   "produccion-local-demo-2026",
+			dbURL:         "postgres://campus:campus-lab@db:5432/campus_verde_produccion",
+			esperaError:   true,
+			textoEsperado: "no puede ser una clave de laboratorio",
+		},
+		{
+			nombre:        "produccion + clave válida + DATABASE_URL corta -> error",
+			appEnv:        "produccion",
+			devPassword:   "produccion-local-demo-2026",
+			dbURL:         "postgres://campus:corta123@db:5432/campus_verde_produccion",
+			esperaError:   true,
+			textoEsperado: "al menos 16 caracteres",
+		},
+		{
+			nombre:      "produccion + clave válida + DATABASE_URL válida -> ok",
+			appEnv:      "produccion",
+			devPassword: "produccion-local-demo-2026",
+			dbURL:       "postgres://campus:campus-produccion-local@db:5432/campus_verde_produccion",
+			esperaError: false,
+		},
+	}
+
+	for _, tc := range casos {
+		t.Run(tc.nombre, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			binDir := filepath.Join(tmpDir, "bin")
+			if err := os.MkdirAll(binDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			dataDir := filepath.Join(tmpDir, "data")
+			etlDone := filepath.Join(dataDir, ".etl-done")
+			migrationsDir := filepath.Join(tmpDir, "migrations")
+			if err := os.MkdirAll(migrationsDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+
+			migrateBin := createFakeBinary(t, binDir, "migrate", `
+if [ "$1" = "-necesita-etl" ]; then
+  exit 10
+fi
+exit 0
+`)
+			etlBin := createFakeBinary(t, binDir, "etl", `exit 0`)
+			apiBin := createFakeBinary(t, binDir, "api", `echo "API_OK" >> "`+tmpDir+`/log"; exit 0`)
+
+			cmd := exec.Command("/bin/sh", entrypointPath)
+			var stdout, stderr bytes.Buffer
+			cmd.Stdout = &stdout
+			cmd.Stderr = &stderr
+			cmd.Env = append(os.Environ(),
+				"APP_ENV="+tc.appEnv,
+				"CAMPUS_DEV_PASSWORD="+tc.devPassword,
+				"DATABASE_URL="+tc.dbURL,
+				"MIGRATIONS_DIR="+migrationsDir,
+				"MIGRATE_BIN="+migrateBin,
+				"ETL_BIN="+etlBin,
+				"API_BIN="+apiBin,
+				"ETL_DONE_FILE="+etlDone,
+				"DATA_DIR="+dataDir,
+			)
+
+			runErr := cmd.Run()
+			if tc.esperaError {
+				if runErr == nil {
+					t.Fatalf("se esperaba que entrypoint fallara (env=%q, pass=%q)", tc.appEnv, tc.devPassword)
+				}
+				if tc.textoEsperado != "" && !strings.Contains(stderr.String(), tc.textoEsperado) {
+					t.Fatalf("se esperaba mensaje conteniendo %q, se obtuvo stderr: %s", tc.textoEsperado, stderr.String())
+				}
+			} else {
+				if runErr != nil {
+					t.Fatalf("entrypoint falló inesperadamente: %v\nStderr: %s\nStdout: %s", runErr, stderr.String(), stdout.String())
+				}
+				logBytes, _ := os.ReadFile(filepath.Join(tmpDir, "log"))
+				if !strings.Contains(string(logBytes), "API_OK") {
+					t.Fatalf("la API debió haberse ejecutado")
+				}
+			}
+		})
+	}
+}

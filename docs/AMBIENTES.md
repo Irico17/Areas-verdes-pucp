@@ -42,7 +42,7 @@ make smoke ENV=develop
 make down ENV=qa
 ```
 
-La primera vez se copia `deploy/env/<ambiente>.env.example` a `deploy/env/<ambiente>.env` (no se versiona). Las claves de esos examples son de demostración (`pando-local`, `campus-develop`, `campus-qa`, `campus-produccion-local`). No sirven para la EC2.
+La primera vez se copia `deploy/env/<ambiente>.env.example` a `deploy/env/<ambiente>.env` (no se versiona). Las claves de esos examples son de demostración (`pando-local` en develop y qa, `produccion-local-demo-2026` en produccion, `campus-develop`, `campus-qa`). No sirven para la EC2.
 
 ### Sobrescritura de puertos desde el entorno
 
@@ -88,7 +88,7 @@ El rollback local revierte tanto la imagen de la API como la de la web (`state/<
 
 No copiar la base de producción a develop ni a qa. Si hiciera falta un ensayo, se restaura en una base desechable, se enmascaran nombres, cuentas y evidencias, y recién entonces se usa. No hay un script en este repo que haga esa copia.
 
-Las cuentas `norte`, `sur`, `riego`, `coordinacion`, `jefatura` y `admin` son ficticias. La clave local documentada es `pando-local`. En la EC2 la clave es `TF_VAR_dev_password`, distinta en cada ambiente, de 16 caracteres o más, y no puede ser `pando-local` ni `campus-lab`.
+Las cuentas `norte`, `sur`, `riego`, `coordinacion`, `jefatura` y `admin` son ficticias. En develop, qa y en local sin `APP_ENV` la clave documentada es `pando-local`. En producción (`APP_ENV=produccion`), tanto local como en la EC2, se rechazan claves de laboratorio (`pando-local`, `campus-lab`) o de menos de 16 caracteres en el arranque (en `docker-entrypoint.sh`, en la API y en las migraciones); el example local usa `produccion-local-demo-2026`. En la EC2 la clave es `TF_VAR_dev_password`, distinta en cada ambiente, de 16 caracteres o más, y no puede ser `pando-local` ni `campus-lab`.
 
 ## Imágenes
 

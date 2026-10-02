@@ -18,6 +18,11 @@ import (
 )
 
 func main() {
+	cfg := config.GetConfig()
+	if err := cfg.Validar(); err != nil {
+		log.Fatalf("configuración: %v", err)
+	}
+
 	necesitaETL := flag.Bool("necesita-etl", false, "comprueba si la base necesita carga inicial de ETL (exit 0: vacía, exit 10: con datos)")
 	semillaFicticia := flag.Bool("semilla-ficticia", false, "aplica deploy/seed/ficticio.sql solo si el catastro está vacío")
 	flag.Parse()

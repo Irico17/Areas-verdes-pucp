@@ -53,6 +53,17 @@ fi
 export POSTGRES_PORT API_PORT WEB_PORT
 
 : "${CAMPUS_DEV_PASSWORD:?falta CAMPUS_DEV_PASSWORD}"
+if [ "$AMBIENTE" = "produccion" ]; then
+  trimmed_dev_pass="$(printf "%s" "$CAMPUS_DEV_PASSWORD" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+  if [ "$trimmed_dev_pass" = "pando-local" ] || [ "$trimmed_dev_pass" = "campus-lab" ]; then
+    echo "ERROR: en producción, CAMPUS_DEV_PASSWORD no puede ser una clave de laboratorio ($trimmed_dev_pass)" >&2
+    exit 1
+  fi
+  if [ "${#trimmed_dev_pass}" -lt 16 ]; then
+    echo "ERROR: en producción, CAMPUS_DEV_PASSWORD debe tener al menos 16 caracteres (longitud actual: ${#trimmed_dev_pass})" >&2
+    exit 1
+  fi
+fi
 BASE="${SMOKE_BASE_URL:-http://127.0.0.1:${WEB_PORT:?falta WEB_PORT}}"
 USER_NAME="${SMOKE_USER:-coordinacion}"
 body="$(mktemp)"
@@ -120,6 +131,24 @@ case "$AMBIENTE" in
       exit 1
     fi
     echo "swagger apagado en produccion"
+    ;;
+esac
+
+code_yaml="$(pedir GET "$BASE/api/v1/openapi.yaml" || true)"
+case "$AMBIENTE" in
+  develop|qa)
+    if [ "$code_yaml" = "404" ]; then
+      echo "ALERTA: openapi.yaml debería estar en $AMBIENTE y respondió 404" >&2
+      exit 1
+    fi
+    echo "openapi.yaml visible ($code_yaml)"
+    ;;
+  produccion)
+    if [ "$code_yaml" != "404" ]; then
+      echo "ALERTA: openapi.yaml en producción respondió $code_yaml" >&2
+      exit 1
+    fi
+    echo "openapi.yaml apagado en produccion"
     ;;
 esac
 

@@ -19,7 +19,13 @@ func BuildContainer() (*dig.Container, error) {
 	container := dig.New()
 
 	// Config
-	if err := container.Provide(config.GetConfig); err != nil {
+	if err := container.Provide(func() (*config.Config, error) {
+		cfg := config.GetConfig()
+		if err := cfg.Validar(); err != nil {
+			return nil, err
+		}
+		return cfg, nil
+	}); err != nil {
 		return nil, err
 	}
 
