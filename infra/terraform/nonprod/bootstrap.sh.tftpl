@@ -1,0 +1,97 @@
+#!/bin/bash
+set -euxo pipefail
+
+# 1. Paquetes requeridos para AL2023
+dnf install -y docker git jq unzip libicu tar gzip xfsprogs
+dnf install -y postgresql15 || dnf install -y postgresql || true
+
+# 2. Habilitar y arrancar Docker
+systemctl enable --now docker
+
+# 3. Instalar plugin oficial de Docker Compose v2.29.7 verificando sha256
+DOCKER_PLUGIN_DIR="/usr/local/lib/docker/cli-plugins"
+mkdir -p "$DOCKER_PLUGIN_DIR"
+if [ ! -f "$DOCKER_PLUGIN_DIR/docker-compose" ]; then
+  curl -fsSL -o "$DOCKER_PLUGIN_DIR/docker-compose" \
+    https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64
+  echo "383ce6698cd5d5bbf958d2c8489ed75094e34a77d340404d9f32c4ae9e12baf0  $DOCKER_PLUGIN_DIR/docker-compose" | sha256sum -c -
+  chmod +x "$DOCKER_PLUGIN_DIR/docker-compose"
+fi
+mkdir -p /usr/libexec/docker/cli-plugins
+ln -sf "$DOCKER_PLUGIN_DIR/docker-compose" /usr/libexec/docker/cli-plugins/docker-compose
+docker compose version
+
+# 4. Crear usuario de sistema runner en el grupo docker
+id -u runner >/dev/null 2>&1 || useradd -r -m -d /home/runner -s /bin/bash -G docker runner
+usermod -aG docker runner || true
+usermod -aG docker ec2-user || true
+
+# 5. Configurar 2 GB de memoria swap
+if [ ! -f /swapfile ] && [ "$(swapon --show --noheadings | wc -l)" -eq 0 ]; then
+  dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  if ! grep -q '/swapfile' /etc/fstab; then
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  fi
+fi
+
+# 6. Esperar volumen EBS de datos (/dev/nvme1n1 o por tamaño), formatear xfs solo si esta en blanco y montar en /opt/campus
+TARGET_DEV=""
+for _try in $(seq 1 30); do
+  if [ -b "/dev/nvme1n1" ]; then
+    TARGET_DEV="/dev/nvme1n1"
+    break
+  fi
+  ROOT_DEV="$(lsblk -no PKNAME "$(findmnt -n -o SOURCE /)" 2>/dev/null || echo "nvme0n1")"
+  CANDIDATE="$(lsblk -dn -o NAME,TYPE | awk -v root="$ROOT_DEV" '$2=="disk" && $1!=root {print "/dev/"$1; exit}')"
+  if [ -n "$CANDIDATE" ] && [ -b "$CANDIDATE" ]; then
+    TARGET_DEV="$CANDIDATE"
+    break
+  fi
+  sleep 2
+done
+
+if [ -z "$TARGET_DEV" ]; then
+  echo "ERROR: no se detecto el volumen de datos EBS" >&2
+  exit 1
+fi
+
+# Formatear XFS SOLO si esta en blanco
+blkid "$TARGET_DEV" || mkfs.xfs "$TARGET_DEV"
+
+UUID="$(blkid -s UUID -o value "$TARGET_DEV")"
+if [ -z "$UUID" ]; then
+  echo "ERROR: no se pudo obtener el UUID del dispositivo $TARGET_DEV" >&2
+  exit 1
+fi
+
+mkdir -p /opt/campus
+if ! grep -q "$UUID" /etc/fstab; then
+  echo "UUID=$UUID /opt/campus xfs defaults,nofail 0 2" >> /etc/fstab
+fi
+
+if ! mountpoint -q /opt/campus; then
+  mount /opt/campus || mount "$TARGET_DEV" /opt/campus
+fi
+
+chmod 755 /opt/campus
+
+# 7. Crear directorios para develop y qa con data/pg y data/app
+mkdir -p /opt/campus/develop/data/pg /opt/campus/develop/data/app
+mkdir -p /opt/campus/qa/data/pg /opt/campus/qa/data/app
+
+# chown runner:runner los directorios de compose
+chown runner:runner /opt/campus/develop /opt/campus/qa
+
+# data/app con UID/GID 10001:10001 (usado por el contenedor de la API)
+chown -R 10001:10001 /opt/campus/develop/data/app /opt/campus/qa/data/app
+
+# data/pg sin tocar (PostgreSQL gestiona sus permisos internos)
+
+# 8. Activar amazon-ssm-agent
+systemctl enable --now amazon-ssm-agent
+
+# 9. Escribir marcador de finalizacion
+date -u +"%Y-%m-%dT%H:%M:%SZ" > /opt/campus/BOOTSTRAP_OK

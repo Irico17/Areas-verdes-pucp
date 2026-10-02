@@ -71,6 +71,8 @@ deploy/state/
 
 # Terraform local (el lock sí se versiona)
 infra/terraform/.terraform/
+infra/terraform/nonprod/.terraform/
+infra/terraform/nonprod/.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfvars
