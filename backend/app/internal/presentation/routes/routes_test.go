@@ -553,11 +553,16 @@ func (mockImportacionRoutesUC) Confirmar(_ context.Context, loteID, usuarioID in
 }
 
 func setupTestRouter(swaggerEnabled bool) *gin.Engine {
+	return setupTestRouterWithEnv(swaggerEnabled, "")
+}
+
+func setupTestRouterWithEnv(swaggerEnabled bool, appEnv string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
 	_ = engine.SetTrustedProxies([]string{})
 
 	cfg := &config.Config{
+		AppEnv: appEnv,
 		Server: config.ServerConfig{
 			Port:    "8080",
 			GinMode: "release",
@@ -708,32 +713,38 @@ func TestSwaggerCondicionadoPorConfiguracion(t *testing.T) {
 }
 
 func TestOpenAPICondicionadoPorConfiguracion(t *testing.T) {
-	// 1. Con SWAGGER_ENABLED = false (producción), openapi.yaml responde 404 en ambos prefijos
-	engineSinSwagger := setupTestRouter(false)
-	for _, ruta := range []string{"/api/v1/openapi.yaml", "/areas-verdes/v1/openapi.yaml"} {
-		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, ruta, nil)
-		engineSinSwagger.ServeHTTP(w, req)
+	rutas := []string{"/api/v1/openapi.yaml", "/areas-verdes/v1/openapi.yaml"}
 
-		if w.Code != http.StatusNotFound {
-			t.Fatalf("se esperaba 404 en %s con swagger deshabilitado, se obtuvo %d", ruta, w.Code)
-		}
-		var body map[string]string
-		_ = json.Unmarshal(w.Body.Bytes(), &body)
-		if body["error"] != "ruta no encontrada" {
-			t.Fatalf("se esperaba error 'ruta no encontrada' en %s, obtenido %q", ruta, body["error"])
+	// 1. Con AppEnv = "produccion", openapi.yaml responde 404 en ambos prefijos aunque Swagger.Enabled sea true o false
+	for _, swaggerEnabled := range []bool{true, false} {
+		engineProd := setupTestRouterWithEnv(swaggerEnabled, "produccion")
+		for _, ruta := range rutas {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, ruta, nil)
+			engineProd.ServeHTTP(w, req)
+
+			if w.Code != http.StatusNotFound {
+				t.Fatalf("se esperaba 404 en %s con AppEnv=produccion y swaggerEnabled=%v, se obtuvo %d", ruta, swaggerEnabled, w.Code)
+			}
+			var body map[string]string
+			_ = json.Unmarshal(w.Body.Bytes(), &body)
+			if body["error"] != "ruta no encontrada" {
+				t.Fatalf("se esperaba error 'ruta no encontrada' en %s, obtenido %q", ruta, body["error"])
+			}
 		}
 	}
 
-	// 2. Con SWAGGER_ENABLED = true (develop, qa, local sin APP_ENV), openapi.yaml responde 200 en ambos prefijos
-	engineConSwagger := setupTestRouter(true)
-	for _, ruta := range []string{"/api/v1/openapi.yaml", "/areas-verdes/v1/openapi.yaml"} {
-		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, ruta, nil)
-		engineConSwagger.ServeHTTP(w, req)
+	// 2. Con AppEnv develop, qa o vacío (""), openapi.yaml responde 200 en ambos prefijos aunque Swagger.Enabled sea false
+	for _, env := range []string{"develop", "qa", ""} {
+		engine := setupTestRouterWithEnv(false, env)
+		for _, ruta := range rutas {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, ruta, nil)
+			engine.ServeHTTP(w, req)
 
-		if w.Code != http.StatusOK {
-			t.Fatalf("se esperaba 200 en %s con swagger habilitado, se obtuvo %d", ruta, w.Code)
+			if w.Code != http.StatusOK {
+				t.Fatalf("se esperaba 200 en %s con AppEnv=%q y swagger deshabilitado, se obtuvo %d", ruta, env, w.Code)
+			}
 		}
 	}
 }

@@ -135,8 +135,9 @@ func (r *Router) Setup() {
 	// Health group is mounted only on /areas-verdes/v1 per decision 17
 	r.healthGroup.Register(servicePath)
 
+	openapiEnabled := r.cfg == nil || r.cfg.AppEnv != "produccion"
 	for _, prefix := range []gin.IRouter{servicePath, legacyPath} {
-		r.metaGroup.Register(prefix, r.cfg.Swagger.Enabled)
+		r.metaGroup.Register(prefix, openapiEnabled)
 		r.sesionGroup.Register(prefix)
 		r.accesosGroup.Register(prefix)
 		r.catalogoGroup.Register(prefix)

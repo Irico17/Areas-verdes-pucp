@@ -28,7 +28,7 @@ El corte de la EC2 que ya tiene datos sigue en [`RUNBOOK-CORTE-PRODUCCION.md`](R
 
 En una misma máquina los tres stacks conviven: puertos, nombres, volúmenes, redes y bases no se pisan. `make down ENV=qa` no borra volúmenes (`down` no usa `-v`).
 
-`SWAGGER_ENABLED`, `CAMPUS_CORS_ORIGINS`, `LOG_LEVEL`, `LOG_FORMAT`, `SERVER_GIN_MODE`, `DATABASE_MAX_OPEN_CONNS`, `DATABASE_MAX_IDLE_CONNS` y `DATABASE_CONN_MAX_LIFETIME` pisan el default del ambiente. Un asterisco en CORS se descarta. Sin `APP_ENV` el proceso se queda en el comportamiento histórico (pool 10/4/30 min, Swagger y openapi.yaml según el modo de Gin).
+`SWAGGER_ENABLED`, `CAMPUS_CORS_ORIGINS`, `LOG_LEVEL`, `LOG_FORMAT`, `SERVER_GIN_MODE`, `DATABASE_MAX_OPEN_CONNS`, `DATABASE_MAX_IDLE_CONNS` y `DATABASE_CONN_MAX_LIFETIME` pisan el default del ambiente. Un asterisco en CORS se descarta. Sin `APP_ENV` el proceso se queda en el comportamiento histórico (pool 10/4/30 min, Swagger según el modo de Gin). El YAML de OpenAPI (`/api/v1/openapi.yaml` y `/areas-verdes/v1/openapi.yaml`) se apaga con 404 únicamente cuando `APP_ENV=produccion`; en develop, qa y local sin variables responde 200 con independencia de `SWAGGER_ENABLED`.
 
 La cookie `Secure` la sigue mandando `CAMPUS_COOKIE_SECURE`. En HTTP (el lab y el compose local) es `false`. Con TLS es `true`. `APP_ENV=produccion` no la enciende sola.
 
