@@ -20,6 +20,7 @@ import {
   expresionColor,
   filtroCategorias,
   OPACIDAD_RELLENO,
+  OPACIDAD_SECTOR,
   SECTORES,
   USOS,
 } from "./categorias"
@@ -204,7 +205,7 @@ export function CampusMap({
           source: layer.id,
           paint: {
             "fill-color": esCatastro ? expresionColor(campo, cats, "fill") : layer.fill,
-            "fill-opacity": esCatastro ? OPACIDAD_RELLENO : layer.fillOpacity,
+            "fill-opacity": layer.id === "zonas" ? OPACIDAD_SECTOR : esCatastro ? OPACIDAD_RELLENO : layer.fillOpacity,
           },
         })
         map.addLayer({
@@ -213,7 +214,7 @@ export function CampusMap({
           source: layer.id,
           paint: {
             "line-color": esCatastro ? expresionColor(campo, cats, "line") : layer.line,
-            "line-width": esCatastro ? 0.8 : 1.25,
+            "line-width": layer.id === "zonas" ? 1.6 : esCatastro ? 0.8 : 1.25,
           },
         })
       }
