@@ -1955,6 +1955,18 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "Request UUID",
+                        "name": "solicitud_id",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Timeline event id",
+                        "name": "evento_id",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
                         "description": "Note",
                         "name": "nota",
                         "in": "formData"
@@ -1995,13 +2007,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.SubirEvidenciaResponseDTO"
+                            "$ref": "#/definitions/mapper.RespuestaSubida"
                         }
                     },
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dto.SubirEvidenciaResponseDTO"
+                            "$ref": "#/definitions/mapper.RespuestaSubida"
                         }
                     }
                 }
@@ -3433,6 +3445,28 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/operacion/actividades/{id}/hitos": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "Record a book milestone on the activity chain",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.RegistrarHitoResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/operacion/actividades/{id}/personal": {
             "get": {
                 "produces": [
@@ -3579,34 +3613,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/ordenes/{id}/evidencias": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "atencion"
-                ],
-                "summary": "Evidence already linked to a work order",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Work order UUID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.EvidenciasOrdenDTO"
-                        }
-                    }
-                }
-            }
-        },
         "/v1/ordenes/{id}": {
             "patch": {
                 "consumes": [
@@ -3642,6 +3648,34 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.EditarOrdenResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordenes/{id}/evidencias": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "atencion"
+                ],
+                "summary": "Evidence already linked to a work order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Work order UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.EvidenciasOrdenDTO"
                         }
                     }
                 }
@@ -5262,10 +5296,16 @@ const docTemplate = `{
                 "actor_rol": {
                     "type": "string"
                 },
+                "capataz_anterior": {
+                    "type": "string"
+                },
                 "capataz_id": {
                     "type": "string"
                 },
                 "created_at": {
+                    "type": "string"
+                },
+                "cuadrilla_anterior": {
                     "type": "string"
                 },
                 "equipo": {
@@ -5273,6 +5313,12 @@ const docTemplate = `{
                 },
                 "estado": {
                     "type": "string"
+                },
+                "evidencias": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.EvidenciaEventoDTO"
+                    }
                 },
                 "id": {
                     "type": "integer"
@@ -5322,6 +5368,57 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "nota": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.EvidenciaEventoDTO": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "mime": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.EvidenciaOrdenDTO": {
+            "type": "object",
+            "properties": {
+                "bytes": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mime": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "nota": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.EvidenciasOrdenDTO": {
+            "type": "object",
+            "properties": {
+                "evidencias": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.EvidenciaOrdenDTO"
+                    }
+                },
+                "orden_id": {
                     "type": "string"
                 }
             }
@@ -5699,11 +5796,35 @@ const docTemplate = `{
                 "empresa": {
                     "type": "string"
                 },
+                "empresa_catalogo": {
+                    "type": "string"
+                },
+                "empresa_codigo": {
+                    "type": "string"
+                },
+                "empresa_id": {
+                    "type": "integer"
+                },
                 "estado": {
                     "type": "string"
                 },
+                "evidencias": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.EvidenciaOrdenDTO"
+                    }
+                },
                 "frecuencia": {
                     "type": "string"
+                },
+                "frecuencia_catalogo": {
+                    "type": "string"
+                },
+                "frecuencia_codigo": {
+                    "type": "string"
+                },
+                "frecuencia_id": {
+                    "type": "integer"
                 },
                 "id": {
                     "type": "string"
@@ -5924,6 +6045,17 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.RegistrarHitoResponseDTO": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "tipo": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.ReporteResponseDTO": {
             "type": "object",
             "properties": {
@@ -6124,6 +6256,12 @@ const docTemplate = `{
                 "aviso": {
                     "type": "string"
                 },
+                "cobertura": {
+                    "type": "integer"
+                },
+                "provisional": {
+                    "type": "boolean"
+                },
                 "registros": {
                     "type": "array",
                     "items": {
@@ -6186,6 +6324,12 @@ const docTemplate = `{
                 "cantidad": {
                     "type": "integer"
                 },
+                "cantidad_ejecutada": {
+                    "type": "integer"
+                },
+                "cantidad_solicitada": {
+                    "type": "integer"
+                },
                 "codigo_externo": {
                     "type": "string"
                 },
@@ -6204,7 +6348,19 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                },
                 "lugar": {
+                    "type": "string"
+                },
+                "lugar_id": {
+                    "type": "integer"
+                },
+                "lugar_nombre": {
                     "type": "string"
                 },
                 "prioridad": {
@@ -6223,17 +6379,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/dto.SolicitudDTO"
                     }
-                }
-            }
-        },
-        "dto.SubirEvidenciaResponseDTO": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string"
-                },
-                "idempotente": {
-                    "type": "boolean"
                 }
             }
         },
@@ -6552,6 +6697,20 @@ const docTemplate = `{
                 }
             }
         },
+        "mapper.RespuestaSubida": {
+            "type": "object",
+            "properties": {
+                "almacen": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "idempotente": {
+                    "type": "boolean"
+                }
+            }
+        },
         "requests.ActualizarEjemplarRequest": {
             "type": "object",
             "properties": {
@@ -6796,11 +6955,20 @@ const docTemplate = `{
                 "actividad_id": {
                     "type": "string"
                 },
+                "conformidad": {
+                    "type": "string"
+                },
                 "empresa": {
                     "type": "string"
                 },
+                "empresa_id": {
+                    "type": "integer"
+                },
                 "frecuencia": {
                     "type": "string"
+                },
+                "frecuencia_id": {
+                    "type": "integer"
                 },
                 "id": {
                     "type": "string"
@@ -6841,6 +7009,9 @@ const docTemplate = `{
                 },
                 "sector": {
                     "type": "string"
+                },
+                "sector_id": {
+                    "type": "integer"
                 },
                 "superficie_m2": {
                     "type": "number"
@@ -6887,10 +7058,19 @@ const docTemplate = `{
                 "cantidad": {
                     "type": "integer"
                 },
+                "cantidad_ejecutada": {
+                    "type": "integer"
+                },
+                "cantidad_solicitada": {
+                    "type": "integer"
+                },
                 "codigo_externo": {
                     "type": "string"
                 },
                 "detalle": {
+                    "type": "string"
+                },
+                "estado": {
                     "type": "string"
                 },
                 "fuente": {
@@ -6899,8 +7079,17 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                },
                 "lugar": {
                     "type": "string"
+                },
+                "lugar_id": {
+                    "type": "integer"
                 },
                 "prioridad": {
                     "type": "string"
@@ -6985,14 +7174,32 @@ const docTemplate = `{
         "requests.EditarSolicitudRequest": {
             "type": "object",
             "properties": {
+                "cantidad_ejecutada": {
+                    "type": "integer"
+                },
+                "cantidad_solicitada": {
+                    "type": "integer"
+                },
                 "codigo_externo": {
                     "type": "string"
                 },
                 "detalle": {
                     "type": "string"
                 },
+                "estado": {
+                    "type": "string"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                },
                 "lugar": {
                     "type": "string"
+                },
+                "lugar_id": {
+                    "type": "integer"
                 },
                 "prioridad": {
                     "type": "string"

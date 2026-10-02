@@ -363,14 +363,22 @@ definitions:
     properties:
       actor_rol:
         type: string
+      capataz_anterior:
+        type: string
       capataz_id:
         type: string
       created_at:
+        type: string
+      cuadrilla_anterior:
         type: string
       equipo:
         type: string
       estado:
         type: string
+      evidencias:
+        items:
+          $ref: '#/definitions/dto.EvidenciaEventoDTO'
+        type: array
       id:
         type: integer
       nota:
@@ -403,6 +411,39 @@ definitions:
       nombre:
         type: string
       nota:
+        type: string
+    type: object
+  dto.EvidenciaEventoDTO:
+    properties:
+      id:
+        type: string
+      mime:
+        type: string
+      nombre:
+        type: string
+    type: object
+  dto.EvidenciaOrdenDTO:
+    properties:
+      bytes:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: string
+      mime:
+        type: string
+      nombre:
+        type: string
+      nota:
+        type: string
+    type: object
+  dto.EvidenciasOrdenDTO:
+    properties:
+      evidencias:
+        items:
+          $ref: '#/definitions/dto.EvidenciaOrdenDTO'
+        type: array
+      orden_id:
         type: string
     type: object
   dto.ExcluidaDTO:
@@ -647,10 +688,26 @@ definitions:
         type: string
       empresa:
         type: string
+      empresa_catalogo:
+        type: string
+      empresa_codigo:
+        type: string
+      empresa_id:
+        type: integer
       estado:
         type: string
+      evidencias:
+        items:
+          $ref: '#/definitions/dto.EvidenciaOrdenDTO'
+        type: array
       frecuencia:
         type: string
+      frecuencia_catalogo:
+        type: string
+      frecuencia_codigo:
+        type: string
+      frecuencia_id:
+        type: integer
       id:
         type: string
       referencia:
@@ -793,6 +850,13 @@ definitions:
       lugar_id:
         type: integer
     type: object
+  dto.RegistrarHitoResponseDTO:
+    properties:
+      id:
+        type: integer
+      tipo:
+        type: string
+    type: object
   dto.ReporteResponseDTO:
     properties:
       aviso:
@@ -924,6 +988,10 @@ definitions:
     properties:
       aviso:
         type: string
+      cobertura:
+        type: integer
+      provisional:
+        type: boolean
       registros:
         items:
           $ref: '#/definitions/dto.RiegoDTO'
@@ -964,6 +1032,10 @@ definitions:
         type: string
       cantidad:
         type: integer
+      cantidad_ejecutada:
+        type: integer
+      cantidad_solicitada:
+        type: integer
       codigo_externo:
         type: string
       created_at:
@@ -976,7 +1048,15 @@ definitions:
         type: string
       id:
         type: string
+      lat:
+        type: number
+      lon:
+        type: number
       lugar:
+        type: string
+      lugar_id:
+        type: integer
+      lugar_nombre:
         type: string
       prioridad:
         type: string
@@ -989,13 +1069,6 @@ definitions:
         items:
           $ref: '#/definitions/dto.SolicitudDTO'
         type: array
-    type: object
-  dto.SubirEvidenciaResponseDTO:
-    properties:
-      id:
-        type: string
-      idempotente:
-        type: boolean
     type: object
   dto.SugerenciaIADTO:
     properties:
@@ -1204,6 +1277,15 @@ definitions:
       type:
         type: string
     type: object
+  mapper.RespuestaSubida:
+    properties:
+      almacen:
+        type: string
+      id:
+        type: string
+      idempotente:
+        type: boolean
+    type: object
   requests.ActualizarEjemplarRequest:
     properties:
       codigo:
@@ -1362,10 +1444,16 @@ definitions:
     properties:
       actividad_id:
         type: string
+      conformidad:
+        type: string
       empresa:
         type: string
+      empresa_id:
+        type: integer
       frecuencia:
         type: string
+      frecuencia_id:
+        type: integer
       id:
         type: string
       referencia:
@@ -1392,6 +1480,8 @@ definitions:
         type: string
       sector:
         type: string
+      sector_id:
+        type: integer
       superficie_m2:
         type: number
       turno:
@@ -1421,16 +1511,28 @@ definitions:
         type: string
       cantidad:
         type: integer
+      cantidad_ejecutada:
+        type: integer
+      cantidad_solicitada:
+        type: integer
       codigo_externo:
         type: string
       detalle:
+        type: string
+      estado:
         type: string
       fuente:
         type: string
       id:
         type: string
+      lat:
+        type: number
+      lon:
+        type: number
       lugar:
         type: string
+      lugar_id:
+        type: integer
       prioridad:
         type: string
       titulo:
@@ -1485,12 +1587,24 @@ definitions:
     type: object
   requests.EditarSolicitudRequest:
     properties:
+      cantidad_ejecutada:
+        type: integer
+      cantidad_solicitada:
+        type: integer
       codigo_externo:
         type: string
       detalle:
         type: string
+      estado:
+        type: string
+      lat:
+        type: number
+      lon:
+        type: number
       lugar:
         type: string
+      lugar_id:
+        type: integer
       prioridad:
         type: string
       titulo:
@@ -2895,6 +3009,14 @@ paths:
         in: formData
         name: orden_id
         type: string
+      - description: Request UUID
+        in: formData
+        name: solicitud_id
+        type: string
+      - description: Timeline event id
+        in: formData
+        name: evento_id
+        type: integer
       - description: Note
         in: formData
         name: nota
@@ -2926,11 +3048,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.SubirEvidenciaResponseDTO'
+            $ref: '#/definitions/mapper.RespuestaSubida'
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dto.SubirEvidenciaResponseDTO'
+            $ref: '#/definitions/mapper.RespuestaSubida'
       summary: Upload an evidence attachment
       tags:
       - evidencias
@@ -3817,27 +3939,6 @@ paths:
       summary: Assign an activity to a capataz team
       tags:
       - operacion
-  /v1/operacion/actividades/{id}/hitos:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Activity UUID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Record a book milestone on the activity chain
-      tags:
-      - operacion
   /v1/operacion/actividades/{id}/avances:
     post:
       consumes:
@@ -3881,6 +3982,20 @@ paths:
             additionalProperties: true
             type: object
       summary: Update activity metadata from desktop form
+      tags:
+      - operacion
+  /v1/operacion/actividades/{id}/hitos:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.RegistrarHitoResponseDTO'
+      summary: Record a book milestone on the activity chain
       tags:
       - operacion
   /v1/operacion/actividades/{id}/personal:
@@ -4000,6 +4115,24 @@ paths:
           schema:
             $ref: '#/definitions/dto.EditarOrdenResponseDTO'
       summary: Edit a work order
+      tags:
+      - atencion
+  /v1/ordenes/{id}/evidencias:
+    get:
+      parameters:
+      - description: Work order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.EvidenciasOrdenDTO'
+      summary: Evidence already linked to a work order
       tags:
       - atencion
   /v1/podas:
