@@ -50,6 +50,8 @@ services:
       AWS_REGION: ${region}
       AWS_DEFAULT_REGION: ${region}
       CAMPUS_ENV: production
+      SERVER_GIN_MODE: release
+      SWAGGER_ENABLED: "false"
     volumes:
       - /opt/campus/data/app:/data
     depends_on:
@@ -77,6 +79,8 @@ if [ ! -f /opt/campus/secrets.env ]; then
   exit 1
 fi
 chmod 600 /opt/campus/secrets.env
+# La API de backend/dockerfile corre como UID 10001. Sin este chown no escribe evidencias.
+chown -R 10001:10001 /opt/campus/data/app
 aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${registry} || true
 docker compose pull
 docker compose up -d

@@ -31,10 +31,13 @@ fi
 aws ecr get-login-password --region "$AWS_DEFAULT_REGION" \
   | docker login --username AWS --password-stdin "${API_REPO%%/*}"
 
-docker build -f "$ROOT/apps/api/Dockerfile" -t "$API_REPO:latest" "$ROOT"
+SHA="$(git -C "$ROOT" rev-parse HEAD)"
+docker build -f "$ROOT/backend/dockerfile" -t "$API_REPO:latest" -t "$API_REPO:$SHA" "$ROOT"
 docker build -f "$ROOT/apps/web/Dockerfile" -t "$WEB_REPO:latest" "$ROOT"
 docker push "$API_REPO:latest"
+docker push "$API_REPO:$SHA"
 docker push "$WEB_REPO:latest"
+echo "Imagen API (rollback): $API_REPO:$SHA"
 
 bash "$ROOT/scripts/poner-secretos.sh" "$INSTANCE"
 

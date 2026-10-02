@@ -22,11 +22,15 @@ services:
     restart: unless-stopped
 
   api:
+    # UID 10001. Un volumen nuevo copia el /data de la imagen (ya de ese usuario).
+    # Si el volumen ya era de root: chown -R 10001:10001 <directorio montado en /data>.
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: backend/dockerfile
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-campus}:${POSTGRES_PASSWORD:-campus}@db:5432/${POSTGRES_DB:-campus_verde}?sslmode=disable
+      SERVER_GIN_MODE: release
+      SWAGGER_ENABLED: "false"
       CAMPUS_DEV_PASSWORD: ${CAMPUS_DEV_PASSWORD:-pando-local}
       EVIDENCIAS_BUCKET: ${EVIDENCIAS_BUCKET:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}

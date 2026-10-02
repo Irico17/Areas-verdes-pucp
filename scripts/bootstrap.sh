@@ -13,6 +13,6 @@ set +a
 
 docker compose up -d
 ./scripts/wait-db.sh
-( cd apps/api && go run ./cmd/migrate )
-( cd apps/api && go run ./cmd/etl )
+( cd backend/app && go run ./cmd/migrate )
+( cd backend/app && go run ./cmd/etl )
 echo "Bootstrap listo. Arranca la API con: make api"

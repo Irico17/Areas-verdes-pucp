@@ -1,16 +1,50 @@
+# Contexto de build: raíz del repositorio (hace falta apps/api/migrations y data/).
 FROM golang:1.25.3-alpine AS build
 
 WORKDIR /src
-COPY app/go.mod app/go.sum ./
+COPY backend/app/go.mod backend/app/go.sum ./backend/app/
+WORKDIR /src/backend/app
 RUN go mod download && go mod verify
-COPY app/ .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /api ./cmd
 
-FROM alpine:3.22 AS runtime
-RUN apk add --no-cache ca-certificates tzdata && \
-    addgroup -S app && adduser -S -G app app
-COPY --from=build --chown=app:app /api /app/api
-WORKDIR /app
-USER app
-EXPOSE 8080
-ENTRYPOINT ["/app/api"]
+WORKDIR /src
+COPY backend/app ./backend/app
+WORKDIR /src/backend/app
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /out/api ./cmd \
+ && CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /out/migrate ./cmd/migrate \
+ && CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /out/etl ./cmd/etl \
+ && CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /out/etl-lote ./cmd/etl-lote \
+ && CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /out/sectores ./cmd/sectores
+
+FROM alpine:3.22
+RUN apk add --no-cache ca-certificates tzdata \
+ && addgroup -g 10001 -S app \
+ && adduser -S -D -H -u 10001 -G app app
+
+COPY --from=build /out/api /out/migrate /out/etl /out/etl-lote /out/sectores /usr/local/bin/
+# Las migraciones siguen en apps/api hasta el lote 23. No se mudan aquí.
+COPY apps/api/migrations /opt/campus/migrations
+COPY apps/api/openapi.yaml /opt/campus/openapi.yaml
+COPY apps/api/openapi /opt/campus/openapi
+COPY data/raw /opt/campus/raw
+COPY data/osm /opt/campus/osm
+COPY data/mocks /opt/campus/mocks
+COPY backend/docker-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh /usr/local/bin/api /usr/local/bin/migrate /usr/local/bin/etl /usr/local/bin/etl-lote /usr/local/bin/sectores \
+ && mkdir -p /data/evidencias /data/v1 \
+ && chown -R 10001:10001 /data
+
+ENV SERVER_PORT=8091 \
+    API_ADDR=:8091 \
+    SERVER_GIN_MODE=release \
+    SWAGGER_ENABLED=false \
+    MIGRATIONS_DIR=/opt/campus/migrations \
+    OPENAPI_PATH=/opt/campus/openapi.yaml \
+    DATA_RAW_DIR=/opt/campus/raw \
+    DATA_V1_DIR=/data/v1 \
+    EDIFICIOS_PATH=/opt/campus/osm/edificios_pando.geojson \
+    RESERVAS_MOCK_PATH=/opt/campus/mocks/reservas_agenda.mock.json \
+    EVIDENCIAS_DIR=/data/evidencias
+
+USER 10001:10001
+EXPOSE 8091
+ENTRYPOINT ["/entrypoint.sh"]

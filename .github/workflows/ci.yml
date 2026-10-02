@@ -34,11 +34,96 @@ jobs:
       - name: Imágenes
         run: |
           docker build -f apps/api/Dockerfile -t campus-verde-api:ci .
+          docker build -f backend/dockerfile -t campus-verde-backend:ci .
           docker build -f apps/web/Dockerfile -t campus-verde-web:ci .
+
+  backend:
+    runs-on: ubuntu-24.04
+    services:
+      postgis:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: campus
+          POSTGRES_PASSWORD: campus
+          POSTGRES_DB: campus
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U campus -d campus"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/app/go.mod
+          cache-dependency-path: backend/app/go.sum
+      - name: gofmt, vet y tests
+        working-directory: backend/app
+        env:
+          MIGRATE_TEST_URL: postgres://campus:campus@localhost:5432/campus?sslmode=disable
+        run: |
+          test -z "$(gofmt -l .)"
+          go vet ./...
+          go test ./...
+      - name: Prohibir AutoMigrate, borrados en migraciones nuevas e initdb
+        run: |
+          if grep -RIn --include='*.go' -E 'AutoMigrate[[:space:]]*\(' backend apps/api; then
+            echo "AutoMigrate está prohibido"
+            exit 1
+          fi
+          set -- apps/api/migrations/04[5-9]_*.sql apps/api/migrations/0[5-9][0-9]_*.sql db/migrations/04[5-9]_*.sql db/migrations/0[5-9][0-9]_*.sql
+          found=0
+          for f in "$@"; do
+            [ -f "$f" ] || continue
+            found=1
+            if grep -nE 'DROP TABLE|DROP COLUMN|TRUNCATE' "$f"; then
+              echo "migración nueva no puede borrar datos: $f"
+              exit 1
+            fi
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "no se encontraron migraciones >= 045 para revisar"
+            exit 1
+          fi
+          python3 - << 'PY'
+          from pathlib import Path
+          text = Path("docker-compose.yml").read_text()
+          if "docker-entrypoint-initdb" in text:
+              raise SystemExit("el compose principal no monta docker-entrypoint-initdb.d")
+          lines = text.splitlines()
+          in_db = False
+          in_volumes = False
+          for line in lines:
+              if line.startswith("  db:"):
+                  in_db = True
+                  in_volumes = False
+                  continue
+              if in_db and line.startswith("  ") and not line.startswith("   "):
+                  in_db = False
+                  in_volumes = False
+              if not in_db:
+                  continue
+              if line.strip() == "volumes:":
+                  in_volumes = True
+                  continue
+              if in_volumes and line.startswith("    ") and not line.startswith("      "):
+                  in_volumes = False
+              if in_volumes and ".sql" in line:
+                  raise SystemExit("el compose principal monta un .sql en db: " + line.strip())
+          print("compose principal sin initdb")
+          PY
+      - name: Swagger sin deriva
+        working-directory: backend/app
+        run: |
+          go install github.com/swaggo/swag/cmd/swag@v1.16.6
+          swag init -g cmd/main.go -o docs/
+          git diff --exit-code -- docs
 
   deploy:
     if: github.event_name == 'workflow_dispatch'
-    needs: test
+    needs: [test, backend]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
