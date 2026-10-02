@@ -1,0 +1,29 @@
+# Flujo o1-catalogos-estados. Paths nuevos. No repite los de catalogos.yaml.
+/api/v1/catalogos/{id}:
+  patch:
+    tags: [sistema]
+    summary: Corrige el nombre visible de un ítem. No borra la fila. Escribe cambios.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [nombre]
+            properties:
+              nombre:
+                type: string
+                maxLength: 80
+    responses:
+      "200":
+        description: Ítem con el nombre nuevo
+      "400":
+        description: Nombre inválido
+      "404":
+        description: No existe ese ítem
