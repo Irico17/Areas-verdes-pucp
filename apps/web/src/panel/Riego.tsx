@@ -4,13 +4,15 @@ import { formatFecha, hoyISO } from "../fecha"
 import { Esqueleto } from "../ui/Esqueleto"
 import { crearRiego, fetchRiego } from "../producto"
 import { RIEGO, etiquetaZonaSupervision } from "../ui/nomenclatura"
+import { listarSectores, type SectorCapataz } from "./zonificacion"
 
 export function RiegoPanel(props: { capatazId: string }) {
-  const [aviso, setAviso] = useState("")
   const [rows, setRows] = useState<Awaited<ReturnType<typeof fetchRiego>>["registros"]>([])
+  const [sectores, setSectores] = useState<SectorCapataz[]>([])
+  const [cobertura, setCobertura] = useState<number | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState("")
-  const [sector, setSector] = useState("")
+  const [sectorId, setSectorId] = useState("")
   const [zona, setZona] = useState("Z1")
   const [turno, setTurno] = useState("manana")
   const [fecha, setFecha] = useState(hoyISO)
@@ -19,11 +21,11 @@ export function RiegoPanel(props: { capatazId: string }) {
   async function load() {
     try {
       const body = await fetchRiego()
-      setAviso(body.aviso)
+      setCobertura(body.cobertura)
       setRows(body.registros)
       setError("")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo leer el riego")
+      setError(err instanceof Error ? err.message : RIEGO.errorLeer)
     }
   }
 
@@ -32,15 +34,22 @@ export function RiegoPanel(props: { capatazId: string }) {
     fetchRiego()
       .then((body) => {
         if (cancelled) return
-        setAviso(body.aviso)
+        setCobertura(body.cobertura)
         setRows(body.registros)
         setError("")
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "No se pudo leer el riego")
+        if (!cancelled) setError(err instanceof Error ? err.message : RIEGO.errorLeer)
       })
       .finally(() => {
         if (!cancelled) setCargando(false)
+      })
+    listarSectores(true)
+      .then((filas) => {
+        if (!cancelled) setSectores(filas)
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : RIEGO.errorSectores)
       })
     return () => {
       cancelled = true
@@ -48,15 +57,18 @@ export function RiegoPanel(props: { capatazId: string }) {
   }, [])
 
   return (
-    <section className="block">
-      <h2>{RIEGO.titulo}</h2>
-      <p className="lede">{aviso || RIEGO.lede}</p>
-      <p className="hint">
-        {rows.length} {rows.length === 1 ? "turno registrado" : "turnos registrados"}. Cobertura: definición pendiente.
-      </p>
+    <section className="block riego" id="riego" aria-labelledby="riego-titulo">
+      <h2 id="riego-titulo">{RIEGO.titulo}</h2>
+      <p className="lede">{RIEGO.lede}</p>
+      {cobertura !== null && (
+        <p className="riego-cobertura" role="status">
+          {RIEGO.cobertura(cobertura)}
+        </p>
+      )}
+      <p className="hint">{RIEGO.turnos(rows.length)}</p>
       {error && <p className="status error">{error}</p>}
       {cargando && <Esqueleto />}
-      {!cargando && rows.length === 0 && !error && <p className="empty">Todavía no hay turnos registrados.</p>}
+      {!cargando && rows.length === 0 && !error && <p className="empty">{RIEGO.vacio}</p>}
       <ul className="labor-list">
         {rows.map((row) => (
           <li key={row.id} className="agenda">
@@ -72,12 +84,17 @@ export function RiegoPanel(props: { capatazId: string }) {
         onSubmit={(event) => {
           event.preventDefault()
           if (event.currentTarget.querySelector('[aria-invalid="true"]')) {
-            setError("Corrija la fecha antes de registrar.")
+            setError(RIEGO.errorFecha)
+            return
+          }
+          const idSector = Number(sectorId)
+          if (!Number.isInteger(idSector) || idSector <= 0) {
+            setError(RIEGO.elegirSector)
             return
           }
           void crearRiego({
             id: crypto.randomUUID(),
-            sector,
+            sector_id: idSector,
             turno,
             capataz_id: props.capatazId,
             fecha,
@@ -88,12 +105,12 @@ export function RiegoPanel(props: { capatazId: string }) {
               setNota("")
               return load()
             })
-            .catch((err: unknown) => setError(err instanceof Error ? err.message : "No se pudo registrar"))
+            .catch((err: unknown) => setError(err instanceof Error ? err.message : RIEGO.errorRegistrar))
         }}
       >
-        <label className="field">
+        <label className="field" htmlFor="riego-zona">
           {RIEGO.zona}
-          <select value={zona} onChange={(event) => setZona(event.target.value)}>
+          <select id="riego-zona" name="zona_supervision_id" value={zona} onChange={(event) => setZona(event.target.value)}>
             {["Z1", "Z2", "Z3", "Z4"].map((codigo) => (
               <option key={codigo} value={codigo}>
                 {etiquetaZonaSupervision(codigo)}
@@ -101,27 +118,42 @@ export function RiegoPanel(props: { capatazId: string }) {
             ))}
           </select>
         </label>
-        <label className="field">
+        <label className="field" htmlFor="riego-sector">
           {RIEGO.sector}
-          <input value={sector} onChange={(event) => setSector(event.target.value)} placeholder={RIEGO.sectorPlaceholder} required />
+          <select
+            id="riego-sector"
+            name="sector_id"
+            value={sectorId}
+            onChange={(event) => setSectorId(event.target.value)}
+            required
+            disabled={sectores.length === 0}
+          >
+            <option value="">{RIEGO.elegirSector}</option>
+            {sectores.map((sector) => (
+              <option key={sector.id} value={sector.id}>
+                {sector.nombre}
+              </option>
+            ))}
+          </select>
         </label>
-        <label className="field">
+        {sectores.length === 0 && !cargando && <p className="empty">{RIEGO.sinSectores}</p>}
+        <label className="field" htmlFor="riego-turno">
           {RIEGO.turno}
-          <select value={turno} onChange={(event) => setTurno(event.target.value)}>
+          <select id="riego-turno" name="turno" value={turno} onChange={(event) => setTurno(event.target.value)}>
             <option value="manana">{RIEGO.manana}</option>
             <option value="tarde">{RIEGO.tarde}</option>
           </select>
         </label>
-        <label className="field">
-          Fecha
-          <FechaCampo value={fecha} onChange={setFecha} required />
+        <label className="field" htmlFor="riego-fecha">
+          {RIEGO.fecha}
+          <FechaCampo id="riego-fecha" value={fecha} onChange={setFecha} required />
         </label>
-        <label className="field">
-          Nota
-          <input value={nota} onChange={(event) => setNota(event.target.value)} />
+        <label className="field" htmlFor="riego-nota">
+          {RIEGO.nota}
+          <input id="riego-nota" name="nota" value={nota} onChange={(event) => setNota(event.target.value)} />
         </label>
-        <button type="submit" className="primary">
-          Registrar turno
+        <button type="submit" className="primary" disabled={sectores.length === 0}>
+          {RIEGO.registrar}
         </button>
       </form>
     </section>

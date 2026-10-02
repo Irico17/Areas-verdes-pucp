@@ -156,11 +156,17 @@ func TestAtencion_RiegoRepository(t *testing.T) {
 		t.Fatalf("error insertando zona de supervisión: %v", err)
 	}
 
+	var sectorID int64
+	var nombreSector string
+	if err := gdb.Raw(`SELECT id, nombre FROM sectores_capataz WHERE activo ORDER BY id LIMIT 1`).Row().Scan(&sectorID, &nombreSector); err != nil {
+		t.Fatalf("sector de capataz de la semilla: %v", err)
+	}
 	riegoID := "cccccccc-3333-4ccc-8ccc-cccccccccccc"
 	crearDTO := entities.NuevoTurnoRiego{
 		ID:        riegoID,
 		ZonaID:    "Z1",
-		Sector:    "Sector Jardines Centrales",
+		Sector:    "texto que no debe guardarse",
+		SectorID:  sectorID,
 		Turno:     "manana",
 		CapatazID: "cap-norte",
 		Fecha:     "2026-10-01",
@@ -199,6 +205,9 @@ func TestAtencion_RiegoRepository(t *testing.T) {
 	for _, it := range listaNorte {
 		if it.ID == riegoID {
 			found = true
+			if it.Sector != nombreSector {
+				t.Fatalf("el nombre guardado es el del catálogo %q, obtuvo %q", nombreSector, it.Sector)
+			}
 			break
 		}
 	}

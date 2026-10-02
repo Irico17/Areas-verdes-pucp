@@ -20,19 +20,7 @@
     responses:
       "201":
         description: Orden creada
-/api/v1/riego:
-  get:
-    tags: [operacion]
-    summary: Riego por sector y turno, sin indicador oficial
-    responses:
-      "200":
-        description: Registros
-  post:
-    tags: [operacion]
-    summary: Alta de riego con zona de supervisión por identificador
-    responses:
-      "201":
-        description: Registro creado
+# /api/v1/riego vive en o3-riego.yaml (cobertura provisional, sector de catálogo).
 /api/v1/evidencias:
   get:
     tags: [atencion]

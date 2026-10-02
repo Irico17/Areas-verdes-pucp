@@ -15,6 +15,7 @@ type RiegoRegistroModel struct {
 	ZonaSupervisionID *int64    `gorm:"column:zona_supervision_id"`
 	Ciclo             string    `gorm:"column:ciclo;not null;default:''"`
 	SuperficieM2      *float64  `gorm:"column:superficie_m2"`
+	SectorID          *int64    `gorm:"column:sector_id"`
 }
 
 // TableName returns the table name in postgres.

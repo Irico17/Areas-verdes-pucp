@@ -236,10 +236,13 @@ export const MAPA = {
 
 export const RIEGO = {
   titulo: "Riego",
-  lede: "Sector de capataz, turno y cuadrilla. Cobertura: definición pendiente.",
+  lede: "Turno por sector de capataz y cuadrilla. El porcentaje no es la fórmula oficial.",
+  cobertura: (n: number) => `Cobertura provisional: ${n} %. Pendiente de validar con la jefatura de sección.`,
+  turnos: (n: number) => (n === 1 ? "1 turno registrado." : `${n} turnos registrados.`),
   zona: "Zona de supervisión",
   sector: "Sector de capataz",
-  sectorPlaceholder: "Nombre del sector de capataz",
+  elegirSector: "Elija un sector de capataz",
+  sinSectores: "No hay sectores de capataz activos.",
   turno: "Turno",
   fecha: "Fecha",
   nota: "Nota",
@@ -248,6 +251,10 @@ export const RIEGO = {
   vacio: "Todavía no hay turnos registrados.",
   manana: "Mañana",
   tarde: "Tarde",
+  errorLeer: "No se pudo leer el riego",
+  errorFecha: "Corrija la fecha antes de registrar.",
+  errorRegistrar: "No se pudo registrar",
+  errorSectores: "No se pudieron leer los sectores de capataz",
 } as const
 
 export const SOLICITUD = {

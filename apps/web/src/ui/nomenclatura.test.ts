@@ -3,7 +3,7 @@ import { readdir, readFile } from "node:fs/promises"
 import path from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
-import { SECTOR_CAPATAZ, USO_FUENTE, etiquetaZonaSupervision } from "./nomenclatura.ts"
+import { RIEGO, SECTOR_CAPATAZ, USO_FUENTE, etiquetaZonaSupervision } from "./nomenclatura.ts"
 
 const SRC = fileURLToPath(new URL("..", import.meta.url))
 
@@ -15,6 +15,15 @@ const TEXTOS_USO = [
   "Áreas deportivas y recreación activa",
   "Áreas de conservación",
 ]
+
+test("la cobertura de riego se dice provisional y no como fórmula oficial", () => {
+  assert.equal(
+    RIEGO.cobertura(50),
+    "Cobertura provisional: 50 %. Pendiente de validar con la jefatura de sección.",
+  )
+  assert.equal(RIEGO.cobertura(0).startsWith("Cobertura provisional: 0 %."), true)
+  assert.equal(RIEGO.lede.includes("definición pendiente"), false)
+})
 
 test("los usos y los sectores de capataz usan el texto oficial", () => {
   for (const texto of TEXTOS_USO) {

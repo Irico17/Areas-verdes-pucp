@@ -12,6 +12,9 @@ import (
 type IRiegoRepository interface {
 	Listar(ctx context.Context, capatazID string) ([]*entities.TurnoRiego, error)
 	Crear(ctx context.Context, in entities.NuevoTurnoRiego) error
+	// CoberturaMes cuenta sectores de capataz activos y cuántos de ellos
+	// tienen al menos un riego en el mes calendario de America/Lima.
+	CoberturaMes(ctx context.Context) (regados, activos int, err error)
 }
 
 // IRiegoUseCase defines application operations for irrigation logs.

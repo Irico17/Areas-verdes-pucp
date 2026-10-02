@@ -23,6 +23,7 @@ type TurnoRiego struct {
 type NuevoTurnoRiego struct {
 	ID         string
 	Sector     string
+	SectorID   int64
 	Turno      string
 	CapatazID  string
 	Fecha      string

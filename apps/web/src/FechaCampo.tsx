@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { formatFecha, parseFechaPE } from "./fecha"
 
-export function FechaCampo(props: { value: string; onChange: (iso: string) => void; required?: boolean }) {
+export function FechaCampo(props: { id?: string; value: string; onChange: (iso: string) => void; required?: boolean }) {
   const [text, setText] = useState(() => (props.value ? formatFecha(props.value) : ""))
   const [bad, setBad] = useState(false)
   const [externo, setExterno] = useState(props.value)
@@ -16,6 +16,7 @@ export function FechaCampo(props: { value: string; onChange: (iso: string) => vo
 
   return (
     <input
+      id={props.id}
       inputMode="numeric"
       autoComplete="off"
       placeholder="dd/mm/aaaa"

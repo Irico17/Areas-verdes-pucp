@@ -334,15 +334,20 @@ export async function crearOrden(body: {
   await send(apiUrl("/ordenes"), "POST", body)
 }
 
-export async function fetchRiego(): Promise<{ aviso: string; registros: Riego[] }> {
+export async function fetchRiego(): Promise<{ aviso: string; registros: Riego[]; provisional: boolean; cobertura: number }> {
   const res = await send(apiUrl("/riego"), "GET")
-  const body = (await res.json()) as { aviso?: string; registros?: Riego[] }
-  return { aviso: body.aviso ?? "", registros: body.registros ?? [] }
+  const body = (await res.json()) as { aviso?: string; registros?: Riego[]; provisional?: boolean; cobertura?: number }
+  return {
+    aviso: body.aviso ?? "",
+    registros: body.registros ?? [],
+    provisional: body.provisional === true,
+    cobertura: typeof body.cobertura === "number" ? body.cobertura : 0,
+  }
 }
 
 export async function crearRiego(body: {
   id: string
-  sector: string
+  sector_id: number
   turno: string
   capataz_id: string
   fecha: string
