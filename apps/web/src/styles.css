@@ -441,6 +441,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .row-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 16px; }
 .row-actions a { color: var(--tinta); text-decoration: none; display: inline-flex; align-items: center; }
 .agenda { padding: 8px 0; border-top: 1px solid var(--linea); }
+.agenda-acciones { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .form button { margin-top: 4px; }
 .block + .block,
 .block > .calendario {

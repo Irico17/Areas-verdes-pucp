@@ -96,12 +96,13 @@ func PuedeCerrar(ejecutor string, tieneOrden, tieneEjecucion bool) error {
 }
 
 type intervencionUseCase struct {
-	repo contracts.IIntervencionRepository
+	repo      contracts.IIntervencionRepository
+	catalogos contracts.ICatalogoRepository
 }
 
 // NewIntervencionUseCase creates a new IIntervencionUseCase.
-func NewIntervencionUseCase(repo contracts.IIntervencionRepository) contracts.IIntervencionUseCase {
-	return &intervencionUseCase{repo: repo}
+func NewIntervencionUseCase(repo contracts.IIntervencionRepository, catalogos contracts.ICatalogoRepository) contracts.IIntervencionUseCase {
+	return &intervencionUseCase{repo: repo, catalogos: catalogos}
 }
 
 func (u *intervencionUseCase) ListarCapataces(ctx context.Context) ([]dto.CapatazDTO, error) {
@@ -234,9 +235,20 @@ func (u *intervencionUseCase) CambiarEstado(ctx context.Context, in dto.CambiarE
 		if strings.TrimSpace(in.CapatazID) == "" {
 			return zero, domainErrors.InputError{Reason: "capataz_id es obligatorio para cambiar el estado"}
 		}
-		if in.Estado == string(enums.EstadoCerrada) || in.Estado == string(enums.EstadoCancelada) {
+		if in.Estado == string(enums.EstadoCerrada) || in.Estado == string(enums.EstadoCancelada) || in.Estado == "archivada" {
 			return zero, domainErrors.ForbiddenError{Reason: "el capataz no puede cerrar ni cancelar una labor"}
 		}
+	}
+	nombre, err := u.etiquetaEstadoActivo(ctx, in.Estado)
+	if err != nil {
+		return zero, err
+	}
+	actual, err := u.repo.EstadoActual(ctx, in.ID)
+	if err != nil {
+		return zero, err
+	}
+	if !enums.TransicionEstadoPermitida(actual, in.Estado) {
+		return zero, domainErrors.InputError{Reason: "esa transición de estado no está permitida"}
 	}
 	cmd := entities.CambiarEstadoIntervencion{
 		ID:        in.ID,
@@ -245,7 +257,39 @@ func (u *intervencionUseCase) CambiarEstado(ctx context.Context, in dto.CambiarE
 		CapatazID: in.CapatazID,
 		UsuarioID: in.UsuarioID,
 	}
-	return u.repo.SetEstado(ctx, cmd)
+	feat, err := u.repo.SetEstado(ctx, cmd)
+	if err != nil {
+		return zero, err
+	}
+	return conEtiquetaEstado(feat, nombre), nil
+}
+
+func (u *intervencionUseCase) etiquetaEstadoActivo(ctx context.Context, codigo string) (string, error) {
+	items, err := u.catalogos.List(ctx, string(enums.ClaseEstado), false)
+	if err != nil {
+		return "", err
+	}
+	for _, item := range items {
+		if item.Codigo == codigo && item.Activo {
+			return item.Nombre, nil
+		}
+	}
+	return "", domainErrors.InputError{Reason: "el estado no está activo en el catálogo"}
+}
+
+func conEtiquetaEstado(feat entities.Feature, nombre string) entities.Feature {
+	switch props := feat.Properties.(type) {
+	case entities.ActividadProperties:
+		props.EstadoEtiqueta = nombre
+		feat.Properties = props
+	case *entities.ActividadProperties:
+		if props != nil {
+			copia := *props
+			copia.EstadoEtiqueta = nombre
+			feat.Properties = copia
+		}
+	}
+	return feat
 }
 
 func (u *intervencionUseCase) ArchivarActividad(ctx context.Context, in dto.ArchivarIntervencionDTO) (dto.ArchivarIntervencionResponseDTO, error) {

@@ -297,6 +297,18 @@ func (r *intervencionRepository) SetEstado(ctx context.Context, in entities.Camb
 	return r.One(ctx, in.ID)
 }
 
+func (r *intervencionRepository) EstadoActual(ctx context.Context, id string) (string, error) {
+	var estado string
+	err := r.db.WithContext(ctx).Raw(`SELECT estado FROM actividades WHERE id = $1`, id).Row().Scan(&estado)
+	if err == sql.ErrNoRows {
+		return "", domainErrors.ErrLaborNoEncontrada
+	}
+	if err != nil {
+		return "", err
+	}
+	return estado, nil
+}
+
 func (r *intervencionRepository) Archive(ctx context.Context, in entities.ArchivarIntervencion) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		row, err := lockActividadDB(tx, in.ID)

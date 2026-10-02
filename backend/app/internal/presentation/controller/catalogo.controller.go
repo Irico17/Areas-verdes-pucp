@@ -11,6 +11,7 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	apperrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/middleware"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/requests"
 )
 
@@ -19,6 +20,7 @@ type ICatalogoController interface {
 	Listar(c *gin.Context)
 	Crear(c *gin.Context)
 	Desactivar(c *gin.Context)
+	Renombrar(c *gin.Context)
 }
 
 type catalogoController struct {
@@ -122,7 +124,7 @@ func (ctrl *catalogoController) Desactivar(c *gin.Context) {
 		return
 	}
 
-	res, err := ctrl.catalogoUC.Desactivar(c.Request.Context(), id)
+	res, err := ctrl.catalogoUC.Desactivar(c.Request.Context(), id, usuarioCatalogo(c))
 	if err != nil {
 		if errors.Is(err, apperrors.ErrItemNoExiste) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "no existe ese ítem"})
@@ -134,4 +136,64 @@ func (ctrl *catalogoController) Desactivar(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, res)
+}
+
+// Renombrar handles PATCH /catalogos/:id.
+// @Summary Corregir el nombre de un ítem
+// @Description Cambia el nombre visible y deja el antes/después en cambios. No borra la fila.
+// @Tags Catálogos
+// @Accept json
+// @Produce json
+// @Param id path int true "ID del ítem"
+// @Param body body requests.RenombrarCatalogoRequest true "Nombre nuevo"
+// @Success 200 {object} dto.CatalogoItemDTO
+// @Failure 400 {object} map[string]string "nombre inválido"
+// @Failure 401 {object} map[string]string "inicie sesión"
+// @Failure 403 {object} map[string]string "su rol no tiene ese permiso"
+// @Failure 404 {object} map[string]string "no existe ese ítem"
+// @Failure 500 {object} map[string]string "no se pudo guardar el ítem"
+// @Router /v1/catalogos/{id} [patch]
+func (ctrl *catalogoController) Renombrar(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id inválido"})
+		return
+	}
+	var req requests.RenombrarCatalogoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido"})
+		return
+	}
+	u, ok := middleware.UsuarioEn(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "inicie sesión"})
+		return
+	}
+	item, err := ctrl.catalogoUC.Renombrar(c.Request.Context(), dto.RenombrarCatalogoDTO{
+		ID:        id,
+		Nombre:    req.Nombre,
+		UsuarioID: u.ID,
+	})
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNombreObligatorio) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, apperrors.ErrItemNoExiste) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "no existe ese ítem"})
+			return
+		}
+		ctrl.logger.Error().Err(err).Msg("catalogo: error al renombrar item")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo guardar el ítem"})
+		return
+	}
+	c.JSON(http.StatusOK, item)
+}
+
+func usuarioCatalogo(c *gin.Context) int64 {
+	u, ok := middleware.UsuarioEn(c)
+	if !ok {
+		return 0
+	}
+	return u.ID
 }

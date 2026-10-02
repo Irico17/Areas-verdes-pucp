@@ -15,6 +15,7 @@ type IIntervencionRepository interface {
 	Create(ctx context.Context, in entities.NuevaIntervencion) (entities.Feature, bool, error)
 	Assign(ctx context.Context, in entities.AsignarIntervencion) (entities.Feature, error)
 	SetEstado(ctx context.Context, in entities.CambiarEstadoIntervencion) (entities.Feature, error)
+	EstadoActual(ctx context.Context, id string) (string, error)
 	Archive(ctx context.Context, in entities.ArchivarIntervencion) error
 	Timeline(ctx context.Context, id string) ([]entities.ActividadEvento, error)
 	GuardarFicha(ctx context.Context, in entities.FichaIntervencion) error

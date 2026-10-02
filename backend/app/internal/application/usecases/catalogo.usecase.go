@@ -9,6 +9,7 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	apperrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
@@ -32,14 +33,7 @@ func (uc *catalogoUseCase) Listar(ctx context.Context, filtro dto.FiltroCatalogo
 
 	dtoItems := make([]dto.CatalogoItemDTO, 0, len(items))
 	for _, it := range items {
-		dtoItems = append(dtoItems, dto.CatalogoItemDTO{
-			ID:     it.ID,
-			Clase:  it.Clase,
-			Codigo: it.Codigo,
-			Nombre: it.Nombre,
-			Activo: it.Activo,
-			Orden:  it.Orden,
-		})
+		dtoItems = append(dtoItems, catalogoItemDTO(it))
 	}
 
 	return &dto.CatalogoListResponseDTO{
@@ -69,23 +63,46 @@ func (uc *catalogoUseCase) Crear(ctx context.Context, in dto.CrearCatalogoDTO) (
 		return nil, err
 	}
 
-	return &dto.CatalogoItemDTO{
-		ID:     item.ID,
-		Clase:  item.Clase,
-		Codigo: item.Codigo,
-		Nombre: item.Nombre,
-		Activo: item.Activo,
-		Orden:  item.Orden,
-	}, nil
+	out := catalogoItemDTO(*item)
+	return &out, nil
 }
 
 // Desactivar performs a logical deactivation of a catalog item.
-func (uc *catalogoUseCase) Desactivar(ctx context.Context, id int64) (*dto.DesactivarCatalogoResponseDTO, error) {
-	if err := uc.repo.Deactivate(ctx, id); err != nil {
+func (uc *catalogoUseCase) Desactivar(ctx context.Context, id int64, usuarioID int64) (*dto.DesactivarCatalogoResponseDTO, error) {
+	if err := uc.repo.Deactivate(ctx, id, usuarioID); err != nil {
 		return nil, err
 	}
 	return &dto.DesactivarCatalogoResponseDTO{
 		Activo: false,
 		ID:     id,
 	}, nil
+}
+
+// Renombrar corrects the visible name and keeps the previous row.
+func (uc *catalogoUseCase) Renombrar(ctx context.Context, in dto.RenombrarCatalogoDTO) (*dto.CatalogoItemDTO, error) {
+	nombre := strings.TrimSpace(in.Nombre)
+	if nombre == "" || utf8.RuneCountInString(nombre) > 80 {
+		return nil, apperrors.ErrNombreObligatorio
+	}
+	if in.ID <= 0 {
+		return nil, apperrors.ErrItemNoExiste
+	}
+	item, err := uc.repo.Renombrar(ctx, in.ID, nombre, in.UsuarioID)
+	if err != nil {
+		return nil, err
+	}
+	out := catalogoItemDTO(*item)
+	return &out, nil
+}
+
+func catalogoItemDTO(it entities.CatalogoItem) dto.CatalogoItemDTO {
+	return dto.CatalogoItemDTO{
+		ID:          it.ID,
+		Clase:       it.Clase,
+		Codigo:      it.Codigo,
+		Nombre:      it.Nombre,
+		Activo:      it.Activo,
+		Orden:       it.Orden,
+		Provisional: it.Provisional,
+	}
 }

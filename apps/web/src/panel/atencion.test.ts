@@ -210,5 +210,9 @@ test("capataz no puede cerrar ni cancelar labores ni encolar esos estados", () =
   assert.equal(htmlCapataz.includes('value="cerrada"'), false)
   assert.equal(htmlCapataz.includes('value="cancelada"'), false)
   assert.equal(htmlCapataz.includes('value="pendiente"'), true)
+  assert.match(htmlCapataz, /Por iniciar/)
+  assert.match(htmlCapataz, /Ejecutado/)
+  assert.equal(htmlCapataz.includes(">ejecutado<"), false)
+  assert.equal(htmlCapataz.includes(">pendiente<"), false)
 })
 
