@@ -4,6 +4,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strings"
 
 	"gorm.io/gorm"
@@ -52,7 +53,44 @@ func (r *riegoRepository) Listar(ctx context.Context, capatazID string) ([]*enti
 	return out, rows.Err()
 }
 
+func (r *riegoRepository) CoberturaMes(ctx context.Context) (int, int, error) {
+	var regados, activos int
+	err := r.db.WithContext(ctx).Raw(`
+		WITH mes AS (
+			SELECT
+				(date_trunc('month', timezone('America/Lima', now())))::date AS inicio,
+				(date_trunc('month', timezone('America/Lima', now())) + interval '1 month')::date AS fin
+		)
+		SELECT
+			(
+				SELECT count(DISTINCT s.id)::int
+				FROM sectores_capataz s
+				JOIN riego_registros rr ON rr.sector_id = s.id
+				CROSS JOIN mes
+				WHERE s.activo
+				  AND rr.fecha >= mes.inicio
+				  AND rr.fecha < mes.fin
+			),
+			(SELECT count(*)::int FROM sectores_capataz WHERE activo)
+	`).Row().Scan(&regados, &activos)
+	return regados, activos, err
+}
+
 func (r *riegoRepository) Crear(ctx context.Context, in entities.NuevoTurnoRiego) error {
+	if in.SectorID <= 0 {
+		return domainErrors.InputError{Reason: "el sector es el del catálogo de capataz"}
+	}
+	var nombre string
+	err := r.db.WithContext(ctx).Raw(
+		`SELECT nombre FROM sectores_capataz WHERE id = $1 AND activo`, in.SectorID,
+	).Row().Scan(&nombre)
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && strings.TrimSpace(nombre) == "") {
+		return domainErrors.InputError{Reason: "el sector de capataz no está activo"}
+	}
+	if err != nil {
+		return err
+	}
+
 	var zonaNum int64
 	if err := r.db.WithContext(ctx).Raw(`SELECT COALESCE((SELECT id FROM zonas_supervision WHERE codigo = $1), 0)`, in.ZonaID).Scan(&zonaNum).Error; err != nil {
 		return err
@@ -61,10 +99,10 @@ func (r *riegoRepository) Crear(ctx context.Context, in entities.NuevoTurnoRiego
 		return domainErrors.InputError{Reason: "la zona de supervisión no existe"}
 	}
 
-	err := r.db.WithContext(ctx).Exec(`
-		INSERT INTO riego_registros (id, sector, turno, capataz_id, fecha, nota, zona_supervision_id, ciclo, superficie_m2)
-		VALUES ($1, $2, $3, NULLIF($4, ''), $5::date, $6, $7, $8, NULLIF($9, 0))`,
-		in.ID, in.Sector, in.Turno, strings.TrimSpace(in.CapatazID), in.Fecha, strings.TrimSpace(in.Nota), zonaNum, strings.TrimSpace(in.Ciclo), in.Superficie,
+	err = r.db.WithContext(ctx).Exec(`
+		INSERT INTO riego_registros (id, sector, turno, capataz_id, fecha, nota, zona_supervision_id, ciclo, superficie_m2, sector_id)
+		VALUES ($1, $2, $3, NULLIF($4, ''), $5::date, $6, $7, $8, NULLIF($9, 0), $10)`,
+		in.ID, nombre, in.Turno, strings.TrimSpace(in.CapatazID), in.Fecha, strings.TrimSpace(in.Nota), zonaNum, strings.TrimSpace(in.Ciclo), in.Superficie, in.SectorID,
 	).Error
 	if err != nil && (strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique")) {
 		return domainErrors.InputError{Reason: "ya hay un riego de esa zona, turno y fecha"}

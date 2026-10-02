@@ -18,6 +18,7 @@ type RiegoDTO struct {
 type CrearRiegoDTO struct {
 	ID         string  `json:"id"`
 	Sector     string  `json:"sector"`
+	SectorID   int64   `json:"sector_id"`
 	Turno      string  `json:"turno"`
 	CapatazID  string  `json:"capataz_id"`
 	Fecha      string  `json:"fecha"`
@@ -28,9 +29,12 @@ type CrearRiegoDTO struct {
 }
 
 // RiegoResponseDTO wraps list of irrigation logs.
+// Provisional is always true: the coverage percentage is not the official formula.
 type RiegoResponseDTO struct {
-	Aviso     string     `json:"aviso"`
-	Registros []RiegoDTO `json:"registros"`
+	Aviso       string     `json:"aviso"`
+	Provisional bool       `json:"provisional"`
+	Cobertura   int        `json:"cobertura"`
+	Registros   []RiegoDTO `json:"registros"`
 }
 
 // CrearRiegoResponseDTO wraps the response after creating an irrigation log.

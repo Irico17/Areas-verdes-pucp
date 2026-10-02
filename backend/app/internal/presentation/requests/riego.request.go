@@ -7,6 +7,7 @@ import "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/
 type CrearRiegoRequest struct {
 	ID         string  `json:"id"`
 	Sector     string  `json:"sector"`
+	SectorID   int64   `json:"sector_id"`
 	Turno      string  `json:"turno"`
 	CapatazID  string  `json:"capataz_id"`
 	Fecha      string  `json:"fecha"`
@@ -21,6 +22,7 @@ func (r CrearRiegoRequest) ToDTO() dto.CrearRiegoDTO {
 	return dto.CrearRiegoDTO{
 		ID:         r.ID,
 		Sector:     r.Sector,
+		SectorID:   r.SectorID,
 		Turno:      r.Turno,
 		CapatazID:  r.CapatazID,
 		Fecha:      r.Fecha,
