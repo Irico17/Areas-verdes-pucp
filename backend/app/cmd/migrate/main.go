@@ -26,7 +26,7 @@ func main() {
 
 	necesitaETL := flag.Bool("necesita-etl", false, "comprueba si la base necesita carga inicial de ETL (exit 0: vacía, exit 10: con datos)")
 	catastroIncompleto := flag.Bool("catastro-incompleto", false, "exit 0 si faltan áreas con geometría o sectores; exit 10 si el catastro publicado ya está")
-	semillaFicticia := flag.Bool("semilla-ficticia", false, "aplica los INSERT de la semilla ficticia; ON CONFLICT no pisa filas")
+	semillaFicticia := flag.Bool("semilla-ficticia", false, "aplica la semilla ficticia; ON CONFLICT solo reescribe esas filas")
 	flag.Parse()
 
 	container, err := ioc.BuildContainer()
