@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,8 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/controller"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/mapper"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
 )
 
 type mockEvidenciaUC struct {
@@ -267,6 +270,55 @@ func TestEvidenciaController_Upload(t *testing.T) {
 			t.Fatalf("cuerpo inesperado: %s", w.Body.String())
 		}
 	})
+}
+
+func TestEvidenciaController_AlmacenSoloSiHayCubo(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockUC := &mockEvidenciaUC{
+		subirFunc: func(_ context.Context, in dto.SubirEvidenciaDTO) (*dto.SubirEvidenciaResponseDTO, error) {
+			return &dto.SubirEvidenciaResponseDTO{ID: in.ID, Idempotente: false}, nil
+		},
+	}
+	casos := []struct {
+		bucket string
+		quiere string
+	}{
+		{bucket: "", quiere: "disco"},
+		{bucket: "cubo-de-prueba", quiere: "s3"},
+	}
+	for _, tc := range casos {
+		ctrl := controller.NewEvidenciaControllerConConfig(mockUC, zerolog.Nop(), &config.Config{
+			Evidencias: config.EvidenciasConfig{Bucket: tc.bucket},
+		})
+		var buf bytes.Buffer
+		mw := multipart.NewWriter(&buf)
+		_ = mw.WriteField("id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+		_ = mw.WriteField("actividad_id", "11111111-1111-4111-8111-111111111111")
+		part, _ := mw.CreateFormFile("archivo", "test.jpg")
+		_, _ = part.Write([]byte{0xFF, 0xD8, 0xFF, 0xD9})
+		_ = mw.Close()
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/evidencias", &buf)
+		c.Request.Header.Set("Content-Type", mw.FormDataContentType())
+		c.Set("usuario", dto.UsuarioSesionDTO{ID: 1, Rol: "capataz"})
+		ctrl.Upload(c)
+
+		if w.Code != http.StatusCreated {
+			t.Fatalf("bucket %q: status %d (%s)", tc.bucket, w.Code, w.Body.String())
+		}
+		var res mapper.RespuestaSubida
+		if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
+			t.Fatal(err)
+		}
+		if res.Almacen != tc.quiere {
+			t.Fatalf("bucket %q: almacen %q", tc.bucket, res.Almacen)
+		}
+		if strings.Contains(w.Body.String(), "://") || strings.Contains(w.Body.String(), "amazonaws") {
+			t.Fatalf("la respuesta no debe traer una URL: %s", w.Body.String())
+		}
+	}
 }
 
 func TestEvidenciaController_File(t *testing.T) {

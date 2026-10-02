@@ -65,7 +65,7 @@ func RegisterContainer(container *dig.Container) error {
 		controller.NewRiegoController,
 		controller.NewPodaController,
 		controller.NewViveroController,
-		controller.NewEvidenciaController,
+		controller.NewEvidenciaControllerConConfig,
 		controller.NewReporteController,
 		controller.NewIAController,
 		controller.NewAuditoriaController,

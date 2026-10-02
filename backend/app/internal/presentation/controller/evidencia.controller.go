@@ -13,8 +13,10 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/mapper"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/middleware"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/requests"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
 )
 
 // IEvidenciaController defines HTTP endpoints for evidencias.
@@ -27,9 +29,10 @@ type IEvidenciaController interface {
 type evidenciaController struct {
 	uc     contracts.IEvidenciaUseCase
 	logger zerolog.Logger
+	bucket string
 }
 
-// NewEvidenciaController creates a new instance of IEvidenciaController.
+// NewEvidenciaController creates a controller that reports disk storage.
 func NewEvidenciaController(
 	uc contracts.IEvidenciaUseCase,
 	logger zerolog.Logger,
@@ -37,6 +40,23 @@ func NewEvidenciaController(
 	return &evidenciaController{
 		uc:     uc,
 		logger: logger,
+	}
+}
+
+// NewEvidenciaControllerConConfig reports s3 only when EVIDENCIAS_BUCKET is set.
+func NewEvidenciaControllerConConfig(
+	uc contracts.IEvidenciaUseCase,
+	logger zerolog.Logger,
+	cfg *config.Config,
+) IEvidenciaController {
+	bucket := ""
+	if cfg != nil {
+		bucket = cfg.Evidencias.Bucket
+	}
+	return &evidenciaController{
+		uc:     uc,
+		logger: logger,
+		bucket: bucket,
 	}
 }
 
@@ -71,8 +91,8 @@ func (ctrl *evidenciaController) List(c *gin.Context) {
 // @Param lon formData string false "Longitude"
 // @Param exif formData string false "EXIF JSON"
 // @Param archivo formData file true "File to upload"
-// @Success 201 {object} dto.SubirEvidenciaResponseDTO
-// @Success 200 {object} dto.SubirEvidenciaResponseDTO
+// @Success 201 {object} mapper.RespuestaSubida
+// @Success 200 {object} mapper.RespuestaSubida
 // @Router /v1/evidencias [post]
 func (ctrl *evidenciaController) Upload(c *gin.Context) {
 	u, ok := middleware.UsuarioEn(c)
@@ -134,7 +154,7 @@ func (ctrl *evidenciaController) Upload(c *gin.Context) {
 	if res.Idempotente {
 		code = http.StatusOK
 	}
-	c.JSON(code, gin.H{"id": res.ID, "idempotente": res.Idempotente})
+	c.JSON(code, mapper.SalidaSubida(res.ID, res.Idempotente, ctrl.bucket))
 }
 
 // File godoc

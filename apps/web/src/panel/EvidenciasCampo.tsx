@@ -13,6 +13,7 @@ import {
 } from "../offline/queue"
 import {
   accionTrasFallo,
+  almacenConfirmado,
   avanzar,
   crearCacheUrls,
   enviarConProgreso,
@@ -46,7 +47,7 @@ function pedirPunto(): Promise<{ lat: number; lon: number } | null> {
 async function publicar(
   item: QueuedEvidencia,
   alProgreso: (cargado: number, total: number | null) => void = () => {},
-): Promise<ResultadoEnvio> {
+): Promise<ResultadoEnvio & { almacen?: "s3" }> {
   const data = new FormData()
   data.set("id", item.id)
   data.set("actividad_id", item.actividadId)
@@ -59,8 +60,10 @@ async function publicar(
   }
   if (item.ordenId) data.set("orden_id", item.ordenId)
   data.set("archivo", new Blob([item.bytes], { type: item.mime }), item.nombre)
-  const status = await enviarConProgreso(apiUrl("/evidencias"), data, alProgreso)
-  return clasificarEstado(status)
+  const respuesta = await enviarConProgreso(apiUrl("/evidencias"), data, alProgreso)
+  const resultado = clasificarEstado(respuesta.status)
+  const almacen = almacenConfirmado(respuesta.cuerpo)
+  return almacen === "s3" && resultado.tipo === "ok" ? { ...resultado, almacen } : resultado
 }
 
 export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
@@ -131,7 +134,7 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
       }
       const resultado = await publicar(item, (cargado, total) => despachar({ tipo: "progreso", cargado, total }))
       if (resultado.tipo === "ok") {
-        despachar({ tipo: "ok", sinPunto })
+        despachar({ tipo: "ok", sinPunto, almacen: resultado.almacen })
       } else if (resultado.tipo === "conflicto") {
         despachar({ tipo: "fallo", texto: "Esa foto ya estaba registrada con otro contenido.", reintentable: false })
       } else {

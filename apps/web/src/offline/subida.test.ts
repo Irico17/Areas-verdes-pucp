@@ -7,6 +7,7 @@ import {
   accionTrasFallo,
   avanzar,
   crearCacheUrls,
+  almacenConfirmado,
   enviarConProgreso,
   esImagen,
   ocupado,
@@ -84,6 +85,9 @@ test("textoEstado para cada fase", () => {
   assert.equal(textoEstado({ fase: "subiendo", pct: 42 }), "Subiendo…")
   assert.equal(textoEstado({ fase: "guardada", sinPunto: false }), "Foto enviada.")
   assert.equal(textoEstado({ fase: "guardada", sinPunto: true }), "Foto enviada, sin ubicación.")
+  assert.equal(textoEstado({ fase: "guardada", sinPunto: false, almacen: "s3" }), "Foto enviada. Quedó en el cubo privado.")
+  assert.equal(textoEstado({ fase: "guardada", sinPunto: false }).includes("S3"), false)
+  assert.equal(textoEstado({ fase: "guardada", sinPunto: false }).includes("cubo"), false)
   assert.equal(textoEstado({ fase: "en-cola", texto: "Guardado en este equipo." }), "Guardado en este equipo.")
   assert.equal(textoEstado({ fase: "error", texto: "No se pudo enviar.", reintentable: true }), "No se pudo enviar.")
 })
@@ -108,6 +112,7 @@ class FakeXHR {
   ontimeout: Handler = null
   onabort: Handler = null
   status = 0
+  responseText = ""
   withCredentials = false
   timeout = 0
   metodo = ""
@@ -134,9 +139,11 @@ test("enviarConProgreso emite progreso y resuelve el status", async () => {
   xhr.upload.onprogress?.({ loaded: 10, lengthComputable: true, total: 100 })
   xhr.upload.onprogress?.({ loaded: 100, lengthComputable: true, total: 100 })
   xhr.status = 201
+  xhr.responseText = JSON.stringify({ id: "e1", idempotente: false, almacen: "s3" })
   xhr.onload?.()
-  const status = await promesa
-  assert.equal(status, 201)
+  const respuesta = await promesa
+  assert.equal(respuesta.status, 201)
+  assert.equal(almacenConfirmado(respuesta.cuerpo), "s3")
   assert.deepEqual(progresos, [
     { cargado: 10, total: 100 },
     { cargado: 100, total: 100 },
@@ -149,19 +156,27 @@ test("enviarConProgreso resuelve 0 en onerror y en ontimeout", async () => {
   const xhrError = new FakeXHR()
   const errorProm = enviarConProgreso("/x", new FormData(), () => {}, () => xhrError as unknown as XMLHttpRequest)
   xhrError.onerror?.()
-  assert.equal(await errorProm, 0)
+  assert.equal((await errorProm).status, 0)
 
   const xhrTimeout = new FakeXHR()
   const timeoutProm = enviarConProgreso("/x", new FormData(), () => {}, () => xhrTimeout as unknown as XMLHttpRequest)
   xhrTimeout.ontimeout?.()
-  assert.equal(await timeoutProm, 0)
+  assert.equal((await timeoutProm).status, 0)
 })
 
 test("enviarConProgreso resuelve 0 en onabort para no dejar la promesa colgada", async () => {
   const xhr = new FakeXHR()
   const promesa = enviarConProgreso("/x", new FormData(), () => {}, () => xhr as unknown as XMLHttpRequest)
   xhr.onabort?.()
-  assert.equal(await promesa, 0)
+  assert.equal((await promesa).status, 0)
+})
+
+test("almacenConfirmado solo acepta s3 explicito", () => {
+  assert.equal(almacenConfirmado(""), undefined)
+  assert.equal(almacenConfirmado("no-json"), undefined)
+  assert.equal(almacenConfirmado(JSON.stringify({ almacen: "disco" })), undefined)
+  assert.equal(almacenConfirmado(JSON.stringify({ id: "e1" })), undefined)
+  assert.equal(almacenConfirmado(JSON.stringify({ almacen: "s3" })), "s3")
 })
 
 test("unirEvidencias descarta la pendiente cuando ya llegó enviada y ordena por fecha descendente", () => {
