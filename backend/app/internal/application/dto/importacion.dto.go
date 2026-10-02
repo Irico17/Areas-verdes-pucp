@@ -22,6 +22,8 @@ type VistaPreviaDTO struct {
 }
 
 // VistaPreviaResponseDTO represents the HTTP response for POST /importaciones.
+// columnas_omitidas, aviso_omitidas and avisos stay present when empty: the previous
+// handler built a gin.H, which always emits those keys (null or "").
 type VistaPreviaResponseDTO struct {
 	ID               int64            `json:"id"`
 	LoteID           int64            `json:"lote_id"`
@@ -30,9 +32,9 @@ type VistaPreviaResponseDTO struct {
 	Validas          int              `json:"validas"`
 	Errores          []ErrorFilaDTO   `json:"errores"`
 	Filas            []map[string]any `json:"filas"`
-	ColumnasOmitidas []string         `json:"columnas_omitidas,omitempty"`
-	AvisoOmitidas    string           `json:"aviso_omitidas,omitempty"`
-	Avisos           []string         `json:"avisos,omitempty"`
+	ColumnasOmitidas []string         `json:"columnas_omitidas"`
+	AvisoOmitidas    string           `json:"aviso_omitidas"`
+	Avisos           []string         `json:"avisos"`
 	Escrito          bool             `json:"escrito"`
 }
 

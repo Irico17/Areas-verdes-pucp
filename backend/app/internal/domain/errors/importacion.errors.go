@@ -15,4 +15,8 @@ var (
 
 	// ErrLoteNoConfirmable is an alias for ErrLote.
 	ErrLoteNoConfirmable = ErrLote
+
+	// ErrGuardarVistaPrevia is returned when the preview batch cannot be stored.
+	// The client message matches the previous API: always 500, never the driver text.
+	ErrGuardarVistaPrevia = errors.New("no se pudo guardar la vista previa")
 )

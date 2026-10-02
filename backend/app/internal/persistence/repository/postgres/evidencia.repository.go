@@ -78,7 +78,7 @@ func (r *evidenciaRepository) Guardar(ctx context.Context, in entities.GuardarEv
 		if err != nil {
 			return err
 		}
-		if in.Rol == "capataz" && strings.TrimSpace(asignado) != strings.TrimSpace(in.CapatazID) {
+		if in.Rol == "capataz" && asignado != strings.TrimSpace(in.CapatazID) {
 			return domainErrors.ErrOperacionProhibido
 		}
 

@@ -3,9 +3,11 @@ package usecases
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	apperrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
 type importacionUseCase struct {
@@ -41,7 +43,7 @@ func (u *importacionUseCase) Previsualizar(ctx context.Context, entidad, nombre 
 
 	id, err := u.write.GuardarVistaPrevia(ctx, entidad, usuarioID, vista.Validas, body, nombre)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", apperrors.ErrGuardarVistaPrevia, err)
 	}
 
 	return &dto.VistaPreviaResponseDTO{

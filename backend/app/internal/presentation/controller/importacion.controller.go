@@ -143,6 +143,9 @@ func (ctrl *importacionController) Confirmar(c *gin.Context) {
 
 func (ctrl *importacionController) writeImportErr(c *gin.Context, err error) {
 	switch {
+	case errors.Is(err, apperrors.ErrGuardarVistaPrevia):
+		ctrl.logger.Error().Err(err).Msg("importaciones")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo guardar la vista previa"})
 	case errors.Is(err, apperrors.ErrEntidad) || strings.Contains(err.Error(), "entidad no importable"):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "entidad no importable"})
 	case errors.Is(err, apperrors.ErrSinValidas) || strings.Contains(err.Error(), "ninguna fila válida"):
