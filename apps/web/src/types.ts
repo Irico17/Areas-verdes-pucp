@@ -20,7 +20,7 @@ export type FeatureCollection = {
 
 export const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] }
 
-export type LayerId = "areas" | "zonas" | "jardines_reserva" | "xerofitica"
+export type LayerId = "areas" | "zonas" | "jardines_reserva" | "xerofitica" | "vias" | "cuarteles"
 
 export type LayerSpec = {
   id: LayerId
@@ -73,6 +73,26 @@ export const LAYERS: LayerSpec[] = [
     fill: "#6e5344",
     line: "#4a3428",
     fillOpacity: 0.4,
+  },
+  {
+    id: "vias",
+    label: CAPA.vias.label,
+    hint: CAPA.vias.hint,
+    path: apiUrl("/zonificacion/vias"),
+    defaultOn: false,
+    fill: "#3e5148",
+    line: "#24332d",
+    fillOpacity: 0,
+  },
+  {
+    id: "cuarteles",
+    label: CAPA.cuarteles.label,
+    hint: CAPA.cuarteles.hint,
+    path: apiUrl("/zonificacion/cuarteles"),
+    defaultOn: false,
+    fill: "#6e5344",
+    line: "#4a3428",
+    fillOpacity: 0.34,
   },
 ]
 

@@ -2,6 +2,9 @@ import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent 
 import { listarVertices, medirGeom, moverVertice, type ModoDibujo, type Position, type VerticeRef } from "../map/draw"
 import { mostrarEnPanel } from "../ui/desplazar"
 import { CATASTRO, etiquetaZonaSupervision } from "../ui/nomenclatura"
+import { SelectorLugar } from "./SelectorLugar"
+import { SectoresCapataz } from "./SectoresCapataz"
+import { listarLugaresCatalogo, type LugarCatalogo } from "./zonificacion"
 import {
   areaNueva,
   areasDeFixture,
@@ -134,10 +137,32 @@ export function CatastroEditor({
   const [verLista, setVerLista] = useState(false)
   const listaRef = useRef<HTMLDivElement>(null)
   const fichaRef = useRef<HTMLDivElement>(null)
+  const [lugares, setLugares] = useState<LugarCatalogo[]>([])
+  const [lugarId, setLugarId] = useState("")
+  const areaClave = area?.feature_id ?? ""
+  const [lugarPara, setLugarPara] = useState(areaClave)
+  if (lugarPara !== areaClave) {
+    setLugarPara(areaClave)
+    setLugarId("")
+  }
 
   useEffect(() => {
     return () => onModoDibujo?.(null)
   }, [onModoDibujo])
+
+  useEffect(() => {
+    let vivo = true
+    listarLugaresCatalogo()
+      .then((rows) => {
+        if (vivo) setLugares(rows)
+      })
+      .catch(() => {
+        if (vivo) setLugares([])
+      })
+    return () => {
+      vivo = false
+    }
+  }, [])
 
   async function load(forzarFixture = false) {
     setLoading(true)
@@ -576,6 +601,7 @@ export function CatastroEditor({
               </select>
             </label>
             <ErroresCampo mensajes={motivosDe(errores, "zona_supervision_id")} />
+            <SelectorLugar id={`${baseId}-lugar`} lugares={lugares} lugarId={lugarId} onChange={setLugarId} />
             <fieldset className="geom-box">
               <legend>{ETIQUETA_AREA.geom}</legend>
               <p className="hint">{area.geom ? "MultiPolygon listo para guardar." : "Sin geometría. Puede dibujarla en el mapa."}</p>
@@ -711,6 +737,7 @@ export function CatastroEditor({
           </form>
         )}
         {vista === "ficha" && aviso && <p className={aviso.toLowerCase().includes("no se") || aviso.toLowerCase().includes("respondió") ? "status error" : "banner"}>{aviso}</p>}
+        <SectoresCapataz />
       </div>
     </section>
   )

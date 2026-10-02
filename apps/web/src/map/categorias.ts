@@ -4,8 +4,9 @@ import { SECTOR_CAPATAZ, USO_FUENTE } from "../ui/nomenclatura"
 
 export type ColorPor = "uso" | "sector"
 export type UsoId = "institucional" | "administrativo" | "recreativo" | "sostenible" | "deportivas" | "conservacion" | "sin-uso"
-export type SectorId = "cua-valeria" | "cua-mateo" | "cua-renato" | "campo-deportivo" | "bosque-humedo" | "sin-sector"
 export type Categoria<T extends string> = { id: T; label: string; fill: string; line: string }
+
+export type SectorCatalogo = { codigo: string; nombre: string; color: string; activo?: boolean }
 
 // Mismo tono que el original (colores-original-*), reinterpretado con tonos
 // apagados de luminosidad media y sin repetir marca ni semántica. Naranja
@@ -21,14 +22,34 @@ export const USOS: Categoria<UsoId>[] = [
   { id: "sin-uso", label: USO_FUENTE["sin-uso"], fill: "#8d968f", line: "#5c6a62" },
 ]
 
-export const SECTORES: Categoria<SectorId>[] = [
-  { id: "cua-valeria", label: SECTOR_CAPATAZ["cua-valeria"], fill: "#6b5596", line: "#463763" },
-  { id: "cua-mateo", label: SECTOR_CAPATAZ["cua-mateo"], fill: "#3f73b0", line: "#284c78" },
-  { id: "cua-renato", label: SECTOR_CAPATAZ["cua-renato"], fill: "#c27c2c", line: "#83521b" },
-  { id: "campo-deportivo", label: SECTOR_CAPATAZ["campo-deportivo"], fill: "#9aab3e", line: "#66722a" },
-  { id: "bosque-humedo", label: SECTOR_CAPATAZ["bosque-humedo"], fill: "#3f9a82", line: "#286656" },
-  { id: "sin-sector", label: SECTOR_CAPATAZ["sin-sector"], fill: "#8d968f", line: "#5c6a62" },
-]
+export const SIN_SECTOR: Categoria<string> = {
+  id: "sin-sector",
+  label: SECTOR_CAPATAZ["sin-sector"],
+  fill: "#8d968f",
+  line: "#5c6a62",
+}
+
+function lineaDe(fill: string): string {
+  const n = Number.parseInt(fill.slice(1), 16)
+  if (!Number.isFinite(n)) return SIN_SECTOR.line
+  const canal = (v: number) => Math.max(0, Math.min(255, Math.round(v * 0.62))).toString(16).padStart(2, "0")
+  return `#${canal((n >> 16) & 255)}${canal((n >> 8) & 255)}${canal(n & 255)}`
+}
+
+// El mapa no trae una lista fija: cada sector activo llega con su color.
+export function sectoresDesdeCatalogo(filas: SectorCatalogo[]): Categoria<string>[] {
+  const vistos = new Set<string>()
+  const cats: Categoria<string>[] = []
+  for (const fila of filas) {
+    if (fila.activo === false) continue
+    const id = fila.codigo.trim()
+    const fill = fila.color.trim().toLowerCase()
+    if (!id || id === SIN_SECTOR.id || vistos.has(id) || !/^#[0-9a-f]{6}$/.test(fill)) continue
+    vistos.add(id)
+    cats.push({ id, label: fila.nombre.trim() || id, fill, line: lineaDe(fill) })
+  }
+  return [...cats, SIN_SECTOR]
+}
 
 export const CAMPO: Record<ColorPor, "cat_uso" | "cat_sector"> = { uso: "cat_uso", sector: "cat_sector" }
 
@@ -54,11 +75,13 @@ export function categoriaUso(uso: unknown): UsoId {
   return "sin-uso"
 }
 
-const SECTOR_IDS = new Set<string>(SECTORES.map((s) => s.id).filter((id) => id !== "sin-sector"))
-
-export function categoriaSector(sector: unknown): SectorId {
+export function categoriaSector(sector: unknown, conocidos?: Iterable<string>): string {
   const s = typeof sector === "string" ? sector : ""
-  return SECTOR_IDS.has(s) ? (s as SectorId) : "sin-sector"
+  if (!s || !conocidos) return SIN_SECTOR.id
+  for (const id of conocidos) {
+    if (id === s) return s
+  }
+  return SIN_SECTOR.id
 }
 
 function clonarFeature(f: GeoFeature, campo: string, valor: string): GeoFeature {
@@ -67,12 +90,22 @@ function clonarFeature(f: GeoFeature, campo: string, valor: string): GeoFeature 
 
 // conCategorias no muta fc: agrega cat_uso o cat_sector a cada feature para
 // que las expresiones data-driven de maplibre lean un campo ya resuelto.
-export function conCategorias(fc: FeatureCollection | undefined, modo: ColorPor): FeatureCollection {
+export function conCategorias(
+  fc: FeatureCollection | undefined,
+  modo: ColorPor,
+  sectores: Categoria<string>[] = [SIN_SECTOR],
+): FeatureCollection {
   if (!fc) return { type: "FeatureCollection", features: [] }
   const campo = CAMPO[modo]
+  const conocidos = sectores.map((item) => item.id).filter((id) => id !== SIN_SECTOR.id)
   const features = fc.features.map((f) => {
-    const valor = modo === "uso" ? categoriaUso(f.properties?.uso) : categoriaSector(f.properties?.sector)
-    return clonarFeature(f, campo, valor)
+    const valor = modo === "uso" ? categoriaUso(f.properties?.uso) : categoriaSector(f.properties?.sector, conocidos)
+    const copia = clonarFeature(f, campo, valor)
+    if (modo === "sector") {
+      const etiqueta = sectores.find((item) => item.id === valor)?.label
+      if (etiqueta) copia.properties = { ...(copia.properties ?? {}), sector_etiqueta: etiqueta }
+    }
+    return copia
   })
   return { ...fc, features }
 }
@@ -142,7 +175,7 @@ export function filtroCategorias(campo: string, activos: string[], todos: string
   return ["in", ["get", campo], ["literal", activos]] as FilterSpecification
 }
 
-export function etiquetaCategoria(modo: ColorPor, id: string): string {
-  const cats = modo === "uso" ? USOS : SECTORES
+export function etiquetaCategoria(modo: ColorPor, id: string, sectores: Categoria<string>[] = [SIN_SECTOR]): string {
+  const cats = modo === "uso" ? USOS : sectores
   return cats.find((c) => c.id === id)?.label ?? id
 }

@@ -4206,6 +4206,413 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/zonificacion/cuarteles": {
+            "get": {
+                "description": "Solo lectura. Sin shape responde el aviso y ninguna geometría.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "zonificacion"
+                ],
+                "summary": "Cuarteles históricos",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/zonificacion/edificios": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "zonificacion"
+                ],
+                "summary": "Ids de edificio para elegir un referente",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/zonificacion/lugares": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "zonificacion"
+                ],
+                "summary": "Lugares del catálogo",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/zonificacion/lugares/resolver": {
+            "post": {
+                "description": "Un nombre que no existe no se inserta. lugar_libre solo se lee.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "zonificacion"
+                ],
+                "summary": "Resolver un lugar del catálogo",
+                "parameters": [
+                    {
+                        "description": "Lugar",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ResolverLugarRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.LugarResueltoDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/zonificacion/referentes": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "zonificacion"
+                ],
+                "summary": "Guardar un edificio como referente, por id",
+                "parameters": [
+                    {
+                        "description": "Par lugar y edificio",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearReferenteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReferenteDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/zonificacion/sectores": {
+            "get": {
+                "description": "El color del mapa sale de este catálogo",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "zonificacion"
+                ],
+                "summary": "Listar sectores de capataz",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "1 para solo activos",
+                        "name": "activos",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.SectorListDTO"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Crea el sector. Un código repetido responde 409 y no duplica la fila.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "zonificacion"
+                ],
+                "summary": "Alta de un sector de capataz",
+                "parameters": [
+                    {
+                        "description": "Sector",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearSectorRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.SectorCapatazDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/zonificacion/sectores/importar": {
+            "post": {
+                "description": "Un código que ya existe se actualiza. No se inserta una segunda fila.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "zonificacion"
+                ],
+                "summary": "Importar sectores de capataz",
+                "parameters": [
+                    {
+                        "description": "Filas",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ImportarSectoresRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ImportacionSectorDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/zonificacion/sectores/{codigo}": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "zonificacion"
+                ],
+                "summary": "Corregir nombre, color o vigencia de un sector de capataz",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Código",
+                        "name": "codigo",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cambios",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ActualizarSectorRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.SectorCapatazDTO"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/zonificacion/sectores/{codigo}/desactivar": {
+            "post": {
+                "description": "Baja lógica. No existe una ruta que borre la fila.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "zonificacion"
+                ],
+                "summary": "Desactivar un sector de capataz",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Código",
+                        "name": "codigo",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/zonificacion/vias": {
+            "get": {
+                "description": "Vacía hasta que se importe un GeoJSON. No inventa filas.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "zonificacion"
+                ],
+                "summary": "Capa de vías",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/zonificacion/vias/importar": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "zonificacion"
+                ],
+                "summary": "Importar vías desde GeoJSON",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ImportacionViaDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -5001,6 +5408,28 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ImportacionSectorDTO": {
+            "type": "object",
+            "properties": {
+                "actualizados": {
+                    "type": "integer"
+                },
+                "creados": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.ImportacionViaDTO": {
+            "type": "object",
+            "properties": {
+                "actualizadas": {
+                    "type": "integer"
+                },
+                "creadas": {
+                    "type": "integer"
+                }
+            }
+        },
         "dto.ImportarLoteResponseDTO": {
             "type": "object",
             "properties": {
@@ -5124,6 +5553,20 @@ const docTemplate = `{
                 },
                 "zona_supervision_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.LugarResueltoDTO": {
+            "type": "object",
+            "properties": {
+                "lugar_id": {
+                    "type": "integer"
+                },
+                "lugar_libre": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
                 }
             }
         },
@@ -5311,6 +5754,23 @@ const docTemplate = `{
                 },
                 "motivo": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.ReferenteDTO": {
+            "type": "object",
+            "properties": {
+                "creado": {
+                    "type": "boolean"
+                },
+                "edificio_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lugar_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -5533,6 +5993,37 @@ const docTemplate = `{
                 },
                 "nombre": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.SectorCapatazDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nombre": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.SectorListDTO": {
+            "type": "object",
+            "properties": {
+                "sectores": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.SectorCapatazDTO"
+                    }
                 }
             }
         },
@@ -5947,6 +6438,20 @@ const docTemplate = `{
                 }
             }
         },
+        "requests.ActualizarSectorRequest": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                }
+            }
+        },
         "requests.ActualizarUsuarioRequest": {
             "type": "object",
             "properties": {
@@ -6126,6 +6631,17 @@ const docTemplate = `{
                 }
             }
         },
+        "requests.CrearReferenteRequest": {
+            "type": "object",
+            "properties": {
+                "edificio_id": {
+                    "type": "string"
+                },
+                "lugar_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "requests.CrearRiegoRequest": {
             "type": "object",
             "properties": {
@@ -6162,6 +6678,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "codigo": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.CrearSectorRequest": {
+            "type": "object",
+            "properties": {
+                "codigo": {
+                    "type": "string"
+                },
+                "color": {
                     "type": "string"
                 },
                 "nombre": {
@@ -6398,6 +6928,17 @@ const docTemplate = `{
                 }
             }
         },
+        "requests.ImportarSectoresRequest": {
+            "type": "object",
+            "properties": {
+                "sectores": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/requests.CrearSectorRequest"
+                    }
+                }
+            }
+        },
         "requests.LoginRequest": {
             "type": "object",
             "properties": {
@@ -6434,6 +6975,20 @@ const docTemplate = `{
         "requests.RenombrarCatalogoRequest": {
             "type": "object",
             "properties": {
+                "nombre": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.ResolverLugarRequest": {
+            "type": "object",
+            "properties": {
+                "lugar_id": {
+                    "type": "integer"
+                },
+                "lugar_libre": {
+                    "type": "string"
+                },
                 "nombre": {
                     "type": "string"
                 }

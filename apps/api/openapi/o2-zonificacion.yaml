@@ -1,0 +1,125 @@
+# Flujo o2-zonificacion. Paths nuevos. No repite los de otros fragmentos.
+/api/v1/zonificacion/sectores:
+  get:
+    tags: [zonificacion]
+    summary: Lista los sectores de capataz. El color del mapa sale de aquí.
+    parameters:
+      - name: activos
+        in: query
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Catálogo de sectores de capataz
+      "401":
+        description: Sin sesión
+  post:
+    tags: [zonificacion]
+    summary: Alta de un sector de capataz. El mismo código responde 409 y no duplica.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [codigo, nombre, color]
+            properties:
+              codigo:
+                type: string
+              nombre:
+                type: string
+              color:
+                type: string
+    responses:
+      "201":
+        description: Sector creado
+      "409":
+        description: El código ya existe
+/api/v1/zonificacion/sectores/importar:
+  post:
+    tags: [zonificacion]
+    summary: Importa sectores. Un código existente se actualiza, no se inserta otra vez.
+    responses:
+      "200":
+        description: Conteo de creados y actualizados
+/api/v1/zonificacion/sectores/{codigo}:
+  patch:
+    tags: [zonificacion]
+    summary: Corrige nombre, color o vigencia. No borra la fila.
+    parameters:
+      - name: codigo
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Sector actualizado
+/api/v1/zonificacion/sectores/{codigo}/desactivar:
+  post:
+    tags: [zonificacion]
+    summary: Baja lógica del sector de capataz. No hay ruta DELETE.
+    parameters:
+      - name: codigo
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Sector inactivo
+/api/v1/zonificacion/lugares:
+  get:
+    tags: [zonificacion]
+    summary: Lugares ya cargados en el catálogo.
+    responses:
+      "200":
+        description: Lista de lugares
+/api/v1/zonificacion/lugares/resolver:
+  post:
+    tags: [zonificacion]
+    summary: Resuelve un lugar del catálogo. Un nombre desconocido no se inserta.
+    responses:
+      "200":
+        description: Lugar del catálogo, con lugar_libre solo de lectura
+      "400":
+        description: El lugar no está en el catálogo
+/api/v1/zonificacion/vias:
+  get:
+    tags: [zonificacion]
+    summary: Capa de vías. Nace vacía.
+    responses:
+      "200":
+        description: FeatureCollection, sin filas inventadas
+/api/v1/zonificacion/vias/importar:
+  post:
+    tags: [zonificacion]
+    summary: Importa vías desde un GeoJSON de líneas.
+    responses:
+      "200":
+        description: Vías escritas
+      "400":
+        description: El archivo no trae líneas del campus
+/api/v1/zonificacion/cuarteles:
+  get:
+    tags: [zonificacion]
+    summary: Cuarteles históricos, solo lectura. Sin shape avisa y no inventa geometría.
+    responses:
+      "200":
+        description: FeatureCollection vacía con el aviso sin archivo de cuarteles
+/api/v1/zonificacion/edificios:
+  get:
+    tags: [zonificacion]
+    summary: Ids de edificio para elegir un referente.
+    responses:
+      "200":
+        description: Ids del extracto
+/api/v1/zonificacion/referentes:
+  post:
+    tags: [zonificacion]
+    summary: Guarda el referente por id de edificio, no por texto suelto.
+    responses:
+      "201":
+        description: Referente creado
+      "400":
+        description: El id no está en el extracto
