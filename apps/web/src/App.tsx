@@ -35,6 +35,7 @@ import { BottomSheet } from "./ui/BottomSheet"
 import { ImportacionesPanel } from "./panel/Importaciones"
 import { AdminPanel } from "./panel/Admin"
 import { CatalogosPanel } from "./panel/Catalogos"
+import { EjemplaresPanel } from "./panel/Ejemplares"
 import { Login } from "./panel/Login"
 import { ReportesPanel } from "./panel/Reportes"
 import { RiegoPanel } from "./panel/Riego"
@@ -816,6 +817,7 @@ export default function App() {
         {moduloActivo === "solicitudes" && <SolicitudesPanel actividadId={selected?.queued ? "" : selected?.id ?? ""} />}
         {moduloActivo === "reportes" && <ReportesPanel />}
         {moduloActivo === "catalogos" && <CatalogosPanel editable={rol === "admin"} />}
+        {moduloActivo === "ejemplares" && <EjemplaresPanel rol={rol} />}
         {moduloActivo === "importaciones" && <ImportacionesPanel />}
         {moduloActivo === "admin" && <AdminPanel />}
       </BottomSheet>

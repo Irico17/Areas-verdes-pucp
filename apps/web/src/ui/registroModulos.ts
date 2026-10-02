@@ -11,6 +11,7 @@ export type Modulo =
   | "catalogos"
   | "importaciones"
   | "admin"
+  | "ejemplares"
 
 export const MODULOS: { id: Modulo; label: string }[] = [
   { id: "mapa", label: MODULO.mapa },
@@ -22,11 +23,12 @@ export const MODULOS: { id: Modulo; label: string }[] = [
   { id: "catalogos", label: MODULO.catalogos },
   { id: "importaciones", label: MODULO.importaciones },
   { id: "admin", label: MODULO.admin },
+  { id: "ejemplares", label: MODULO.ejemplares },
 ]
 
 export function modulosDe(rol: Rol): Modulo[] {
-  if (rol === "capataz") return ["mapa", "labores", "catastro", "inventario"]
-  if (rol === "jefatura") return ["mapa", "labores", "catastro", "inventario", "solicitudes", "reportes", "importaciones", "admin"]
+  if (rol === "capataz") return ["mapa", "labores", "catastro", "inventario", "ejemplares"]
+  if (rol === "jefatura") return ["mapa", "labores", "catastro", "inventario", "solicitudes", "reportes", "importaciones", "admin", "ejemplares"]
   if (rol === "admin") return MODULOS.map((item) => item.id)
-  return ["mapa", "labores", "catastro", "inventario", "solicitudes", "reportes", "catalogos", "importaciones"]
+  return ["mapa", "labores", "catastro", "inventario", "solicitudes", "reportes", "catalogos", "importaciones", "ejemplares"]
 }

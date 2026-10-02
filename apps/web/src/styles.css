@@ -989,4 +989,37 @@ fieldset { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
   border-color: color-mix(in srgb, var(--verde) 40%, var(--linea));
 }
 
+.ejemplar-codigo {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 4.5rem;
+  flex: none;
+}
+.ejemplar-salud[data-salud="bueno"] { color: var(--yucca-deep); }
+.ejemplar-salud[data-salud="regular"] { color: var(--pendiente); }
+.ejemplar-salud[data-salud="deteriorado"] { color: var(--alerta); }
+.ejemplar-par {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.ejemplar-codigos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+.ejemplar-codigos li {
+  padding: 8px 0;
+  border-top: 1px solid var(--linea);
+}
+.ejemplares > button {
+  border: 1px solid var(--linea);
+  background: var(--hoja);
+  color: var(--tinta);
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: var(--r-control);
+}
+
 * { scrollbar-color: var(--linea) transparent; }
