@@ -72,10 +72,26 @@ env_file() {
 load_env() {
   local file
   file="$(env_file)"
+  local env_postgres_port="${POSTGRES_PORT:-}"
+  local env_api_port="${API_PORT:-}"
+  local env_web_port="${WEB_PORT:-}"
+
   set -a
   # shellcheck disable=SC1090
   source "$file"
   set +a
+
+  if [ -n "$env_postgres_port" ]; then
+    POSTGRES_PORT="$env_postgres_port"
+  fi
+  if [ -n "$env_api_port" ]; then
+    API_PORT="$env_api_port"
+  fi
+  if [ -n "$env_web_port" ]; then
+    WEB_PORT="$env_web_port"
+  fi
+  export POSTGRES_PORT API_PORT WEB_PORT
+
   if [ "${APP_ENV:-}" != "$AMBIENTE" ]; then
     echo "APP_ENV=${APP_ENV:-} en el env no coincide con $AMBIENTE" >&2
     exit 1
@@ -83,7 +99,7 @@ load_env() {
 }
 
 compose() {
-  docker compose \
+  POSTGRES_PORT="$POSTGRES_PORT" API_PORT="$API_PORT" WEB_PORT="$WEB_PORT" docker compose \
     -f "$ROOT/deploy/compose.yml" \
     -f "$ROOT/deploy/compose.${AMBIENTE}.yml" \
     --env-file "$ROOT/deploy/env/${AMBIENTE}.env" \

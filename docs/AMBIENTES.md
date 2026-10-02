@@ -44,6 +44,27 @@ make down ENV=qa
 
 La primera vez se copia `deploy/env/<ambiente>.env.example` a `deploy/env/<ambiente>.env` (no se versiona). Las claves de esos examples son de demostración (`pando-local`, `campus-develop`, `campus-qa`, `campus-produccion-local`). No sirven para la EC2.
 
+### Sobrescritura de puertos desde el entorno
+
+En máquinas de desarrollo donde el puerto `5432` ya está ocupado por una instancia local de PostgreSQL (por ejemplo, la base de datos `campus_verde`) o el puerto `8091` está tomado por la API vieja, es posible sobrescribir los puertos de publicación sin modificar los archivos de configuración ni alterar los valores por defecto:
+
+- `POSTGRES_PORT`: puerto de PostgreSQL en el host (por defecto: develop `5432`, qa `5433`, produccion `5434`).
+- `API_PORT`: puerto de la API en el host (por defecto: develop `8091`, qa `8191`, produccion `8291`).
+- `WEB_PORT`: puerto del frontend/nginx en el host (por defecto: develop `8088`, qa `8188`, produccion `8288`).
+
+**Precedencia:** variables exportadas en el entorno del llamador > variables definidas en `deploy/env/<ambiente>.env` > valores por defecto en `deploy/env/<ambiente>.env.example`.
+
+Ejemplo para levantar develop en una máquina con `5432` y `8091` ocupados:
+
+```bash
+POSTGRES_PORT=5442 API_PORT=8093 WEB_PORT=8089 make up ENV=develop
+POSTGRES_PORT=5442 API_PORT=8093 WEB_PORT=8089 make smoke ENV=develop
+POSTGRES_PORT=5442 API_PORT=8093 WEB_PORT=8089 make rollback ENV=develop
+POSTGRES_PORT=5442 API_PORT=8093 WEB_PORT=8089 make down ENV=develop
+```
+
+Esta misma precedencia aplica invocando directamente `deploy/deploy.sh`, `deploy/smoke.sh` y `deploy/conteos.sh`.
+
 `make up` sin `ENV` sigue levantando solo el Postgres del `docker-compose.yml` histórico. `make bootstrap` también. El detalle del compose por ambiente está en [`deploy/README.md`](../deploy/README.md).
 
 Smoke (`deploy/smoke.sh`): `GET /health` con `"status":"ok"`, `POST /api/v1/sesion` con la cuenta ficticia `coordinacion`, `GET /api/v1/geo/resumen` y `GET /api/v1/catalogos`. En develop y qa Swagger responde; en produccion responde 404.

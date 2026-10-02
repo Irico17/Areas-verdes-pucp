@@ -42,10 +42,25 @@ if [ ! -f "$ENV_FILE" ]; then
   cp "$ROOT/deploy/env/${AMBIENTE}.env.example" "$ENV_FILE"
   chmod 600 "$ENV_FILE"
 fi
+preset_postgres_port="${POSTGRES_PORT:-}"
+preset_api_port="${API_PORT:-}"
+preset_web_port="${WEB_PORT:-}"
+
 set -a
 # shellcheck disable=SC1090
 source "$ENV_FILE"
 set +a
+
+if [ -n "$preset_postgres_port" ]; then
+  POSTGRES_PORT="$preset_postgres_port"
+fi
+if [ -n "$preset_api_port" ]; then
+  API_PORT="$preset_api_port"
+fi
+if [ -n "$preset_web_port" ]; then
+  WEB_PORT="$preset_web_port"
+fi
+export POSTGRES_PORT API_PORT WEB_PORT
 
 docker exec -i "campus-${APP_ENV}-db" \
   psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -A -F "$(printf '\t')" -P footer=off -f - <"$SQL" | filtrar_conteos

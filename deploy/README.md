@@ -8,6 +8,22 @@ make smoke ENV=develop
 make down ENV=develop
 ```
 
+### Sobrescritura de puertos desde el entorno
+
+Si en su máquina ya corren PostgreSQL en el puerto `5432` o la API vieja en `8091`, puede cambiar los puertos publicados directamente desde variables de entorno del llamador sin alterar los archivos de configuración:
+- `POSTGRES_PORT` (por defecto: 5432 develop, 5433 qa, 5434 produccion)
+- `API_PORT` (por defecto: 8091 develop, 8191 qa, 8291 produccion)
+- `WEB_PORT` (por defecto: 8088 develop, 8188 qa, 8288 produccion)
+
+**Precedencia:** entorno del llamador > archivo `.env` del ambiente > `.env.example`.
+
+Ejemplo:
+```bash
+POSTGRES_PORT=5442 API_PORT=8093 WEB_PORT=8089 make up ENV=develop
+POSTGRES_PORT=5442 API_PORT=8093 WEB_PORT=8089 make smoke ENV=develop
+POSTGRES_PORT=5442 API_PORT=8093 WEB_PORT=8089 make down ENV=develop
+```
+
 `--aws` habla con el Learner Lab (Terraform, ECR, SSM). Hace falta `DEPLOY_AWS_CONFIRM=1` y las credenciales temporales. `scripts/deploy-learner-lab.sh` lo exporta y despliega `produccion`. No lo corra sin una sesión del lab abierta y sin querer aplicar cambios en AWS.
 
 La semilla de develop y qa está en [`seed/README.md`](seed/README.md).

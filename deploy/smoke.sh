@@ -27,6 +27,10 @@ fi
 
 preset_password="${CAMPUS_DEV_PASSWORD:-}"
 preset_base="${SMOKE_BASE_URL:-}"
+preset_postgres_port="${POSTGRES_PORT:-}"
+preset_api_port="${API_PORT:-}"
+preset_web_port="${WEB_PORT:-}"
+
 set -a
 # shellcheck disable=SC1090
 source "$ENV_FILE"
@@ -37,6 +41,16 @@ fi
 if [ -n "$preset_base" ]; then
   SMOKE_BASE_URL="$preset_base"
 fi
+if [ -n "$preset_postgres_port" ]; then
+  POSTGRES_PORT="$preset_postgres_port"
+fi
+if [ -n "$preset_api_port" ]; then
+  API_PORT="$preset_api_port"
+fi
+if [ -n "$preset_web_port" ]; then
+  WEB_PORT="$preset_web_port"
+fi
+export POSTGRES_PORT API_PORT WEB_PORT
 
 : "${CAMPUS_DEV_PASSWORD:?falta CAMPUS_DEV_PASSWORD}"
 BASE="${SMOKE_BASE_URL:-http://127.0.0.1:${WEB_PORT:?falta WEB_PORT}}"
