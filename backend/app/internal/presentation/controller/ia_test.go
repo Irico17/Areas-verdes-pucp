@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/controller"
@@ -33,7 +34,7 @@ func (m *mockIAUseCase) Sugerir(ctx context.Context, titulo string) dto.Sugerenc
 func TestIAController_Sugerir(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	uc := &mockIAUseCase{}
-	ctrl := controller.NewIAController(uc)
+	ctrl := controller.NewIAController(uc, zerolog.Nop())
 
 	r := gin.New()
 	r.POST("/ia/sugerir-tipo", ctrl.Sugerir)
@@ -54,7 +55,7 @@ func TestIAController_Sugerir(t *testing.T) {
 func TestIAController_JSONInvalido(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	uc := &mockIAUseCase{}
-	ctrl := controller.NewIAController(uc)
+	ctrl := controller.NewIAController(uc, zerolog.Nop())
 
 	r := gin.New()
 	r.POST("/ia/sugerir-tipo", ctrl.Sugerir)

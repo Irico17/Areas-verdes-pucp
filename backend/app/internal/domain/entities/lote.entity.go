@@ -5,6 +5,19 @@ import (
 	"time"
 )
 
+// LoteImportacion represents a record in the lotes_importacion table.
+type LoteImportacion struct {
+	ID            int64
+	Entidad       string
+	Estado        string
+	UsuarioID     int64
+	Filas         int
+	Contenido     []byte
+	NombreArchivo string
+	CreatedAt     time.Time
+	RevertidoEn   *time.Time
+}
+
 // FilaLote represents an input row in an import batch.
 type FilaLote struct {
 	EntidadID string

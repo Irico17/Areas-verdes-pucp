@@ -33,6 +33,11 @@ type ImportarLoteResponseDTO struct {
 	Filas  int   `json:"filas"`
 }
 
+// RevertirLoteDTO holds parameters for reverting an import batch.
+type RevertirLoteDTO struct {
+	Confirmar bool `json:"confirmar"`
+}
+
 // ExcluidaDTO represents an entity excluded from reversion.
 type ExcluidaDTO struct {
 	EntidadID string `json:"entidad_id"`

@@ -31,6 +31,7 @@ type GuardarEvidencia struct {
 	Ext         string
 	Bytes       int
 	Contenido   []byte
+	Ruta        string
 	Nota        string
 	Hash        string
 	Lat         *float64

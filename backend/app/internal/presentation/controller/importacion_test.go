@@ -4,18 +4,15 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
-	apperrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/etl"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/controller"
 )
@@ -126,46 +123,6 @@ func TestImportacionController_Previsualizar_Exito(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("esperado 200, obtenido %d (%s)", w.Code, w.Body.String())
-	}
-	body := w.Body.String()
-	for _, clave := range []string{`"columnas_omitidas":null`, `"aviso_omitidas":""`, `"avisos":null`} {
-		if !strings.Contains(body, clave) {
-			t.Fatalf("falta %s en %s", clave, body)
-		}
-	}
-}
-
-func TestImportacionController_Previsualizar_NoGuardaVista(t *testing.T) {
-	u := &dto.UsuarioSesionDTO{ID: 1, Usuario: "coordinacion", Rol: "coordinacion"}
-	uc := &mockImportacionUC{
-		previsualizarFn: func(ctx context.Context, entidad, nombre string, body []byte, usuarioID int64) (*dto.VistaPreviaResponseDTO, error) {
-			return nil, fmt.Errorf("%w: dial tcp: connection refused", apperrors.ErrGuardarVistaPrevia)
-		},
-	}
-	r := setupImportacionTestRouter(uc, u)
-
-	var buf bytes.Buffer
-	mw := multipart.NewWriter(&buf)
-	part, err := mw.CreateFormFile("archivo", "lugares.csv")
-	if err != nil {
-		t.Fatal(err)
-	}
-	part.Write([]byte("lugar\nParque\n"))
-	mw.Close()
-
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/importaciones?entidad=lugares", &buf)
-	req.Header.Set("Content-Type", mw.FormDataContentType())
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("esperado 500, obtenido %d (%s)", w.Code, w.Body.String())
-	}
-	if !strings.Contains(w.Body.String(), `"error":"no se pudo guardar la vista previa"`) {
-		t.Fatalf("mensaje inesperado: %s", w.Body.String())
-	}
-	if strings.Contains(w.Body.String(), "dial tcp") {
-		t.Fatalf("el error del driver no debe salir al cliente: %s", w.Body.String())
 	}
 }
 

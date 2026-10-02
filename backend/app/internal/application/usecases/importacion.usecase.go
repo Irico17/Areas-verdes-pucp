@@ -3,11 +3,9 @@ package usecases
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
-	apperrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
 type importacionUseCase struct {
@@ -28,7 +26,10 @@ func NewImportacionUseCase(
 
 // Entidades returns the list of importable entity names.
 func (u *importacionUseCase) Entidades(ctx context.Context) []string {
-	return u.lector.EntidadesImportables()
+	if u.lector != nil {
+		return u.lector.EntidadesImportables()
+	}
+	return nil
 }
 
 // Previsualizar parses and validates an uploaded file, saving a batch preview.
@@ -40,7 +41,7 @@ func (u *importacionUseCase) Previsualizar(ctx context.Context, entidad, nombre 
 
 	id, err := u.write.GuardarVistaPrevia(ctx, entidad, usuarioID, vista.Validas, body, nombre)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", apperrors.ErrGuardarVistaPrevia, err)
+		return nil, err
 	}
 
 	return &dto.VistaPreviaResponseDTO{
