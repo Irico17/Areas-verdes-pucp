@@ -28,6 +28,7 @@ COPY apps/api/openapi /opt/campus/openapi
 COPY data/raw /opt/campus/raw
 COPY data/osm /opt/campus/osm
 COPY data/mocks /opt/campus/mocks
+COPY deploy/seed/ficticio.sql /opt/campus/seed/ficticio.sql
 COPY backend/docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh /usr/local/bin/api /usr/local/bin/migrate /usr/local/bin/etl /usr/local/bin/etl-lote /usr/local/bin/sectores \
  && mkdir -p /data/evidencias /data/v1 \
@@ -45,7 +46,8 @@ ENV SERVER_PORT=8091 \
     DATA_V1_DIR=/data/v1 \
     EDIFICIOS_PATH=/opt/campus/osm/edificios_pando.geojson \
     RESERVAS_MOCK_PATH=/opt/campus/mocks/reservas_agenda.mock.json \
-    EVIDENCIAS_DIR=/data/evidencias
+    EVIDENCIAS_DIR=/data/evidencias \
+    SEED_FILE=/opt/campus/seed/ficticio.sql
 
 USER 10001:10001
 EXPOSE 8091

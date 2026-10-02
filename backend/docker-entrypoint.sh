@@ -33,18 +33,41 @@ if ! "$MIGRATE_BIN"; then
   echo "FALLO DE MIGRACION: la API no arranca. El error de arriba nombra el archivo y la sentencia. Reiniciar el contenedor no lo corrige: hay que desplegar el SQL arreglado. No borre filas ni haga TRUNCATE." >&2
   exit 1
 fi
-if [ ! -f "$ETL_DONE_FILE" ]; then
-  status=0
-  "$MIGRATE_BIN" -necesita-etl || status=$?
-  if [ "$status" -eq 0 ]; then
-    "$ETL_BIN"
+
+# etl: carga inicial de data/raw solo si el catastro está vacío (producción).
+# ficticio: develop y qa. Inserta deploy/seed/ficticio.sql solo si está vacío.
+# Ninguno borra filas ya cargadas.
+SEED_PROFILE="${SEED_PROFILE:-etl}"
+SEED_FILE="${SEED_FILE:-/opt/campus/seed/ficticio.sql}"
+export SEED_FILE
+
+case "$SEED_PROFILE" in
+  ficticio)
+    if ! "$MIGRATE_BIN" -semilla-ficticia; then
+      echo "ERROR: no se pudo revisar la semilla ficticia. No se borra nada." >&2
+      exit 1
+    fi
     touch "$ETL_DONE_FILE"
-  elif [ "$status" -eq 10 ]; then
-    echo "BD con datos: no se ejecuta la carga inicial"
-    touch "$ETL_DONE_FILE"
-  else
-    echo "ERROR al verificar si la base necesita ETL (código $status)" >&2
-    exit "$status"
-  fi
-fi
+    ;;
+  etl)
+    if [ ! -f "$ETL_DONE_FILE" ]; then
+      status=0
+      "$MIGRATE_BIN" -necesita-etl || status=$?
+      if [ "$status" -eq 0 ]; then
+        "$ETL_BIN"
+        touch "$ETL_DONE_FILE"
+      elif [ "$status" -eq 10 ]; then
+        echo "BD con datos: no se ejecuta la carga inicial"
+        touch "$ETL_DONE_FILE"
+      else
+        echo "ERROR al verificar si la base necesita ETL (código $status)" >&2
+        exit "$status"
+      fi
+    fi
+    ;;
+  *)
+    echo "ERROR: SEED_PROFILE=$SEED_PROFILE no es etl ni ficticio" >&2
+    exit 1
+    ;;
+esac
 exec "$API_BIN"

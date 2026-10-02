@@ -19,6 +19,7 @@ import (
 
 func main() {
 	necesitaETL := flag.Bool("necesita-etl", false, "comprueba si la base necesita carga inicial de ETL (exit 0: vacía, exit 10: con datos)")
+	semillaFicticia := flag.Bool("semilla-ficticia", false, "aplica deploy/seed/ficticio.sql solo si el catastro está vacío")
 	flag.Parse()
 
 	container, err := ioc.BuildContainer()
@@ -62,6 +63,11 @@ func main() {
 		}
 		if err := semillaUC.Ensure(context.Background(), cfg.Accesos.DevPassword); err != nil {
 			log.Fatalf("cuentas locales: %v", err)
+		}
+		if *semillaFicticia {
+			if err := database.AplicarSemillaFicticia(gdb, cfg.Migraciones.Semilla); err != nil {
+				log.Fatalf("semilla ficticia: %v", err)
+			}
 		}
 		log.Println("migraciones al día")
 		return nil
