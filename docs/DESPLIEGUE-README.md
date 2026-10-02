@@ -122,6 +122,7 @@ Estructura en cada servidor: `/opt/campus/<develop|qa>/{host.env,data/,state/}` 
 - **Nunca** se suben claves al repositorio. Las claves de producción deben tener ≥ 16 caracteres y no ser `pando-local` ni `campus-lab` (la API y el script lo rechazan).
 - Cuentas ficticias de cada ambiente: `admin`, `coordinacion`, `jefatura`, `norte`, `sur`, `riego`. La clave es distinta por ambiente.
 - Los secretos antiguos `AWS_*` y `TF_VAR_*` del repositorio ya no se usan y pueden borrarse.
+- **Evidencias por ambiente.** `EVIDENCIAS_BUCKET` vacío guarda en disco (develop y la simulación local). Qa y producción documentan un cubo privado: el nombre se escribe en el `.env` del host, no en git. La base guarda la clave del objeto, no una URL pública. Las credenciales de ese cubo son del ambiente: el rol de la instancia (`s3:PutObject` y `s3:GetObject`) o, si no hay rol, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN` en el environment de GitHub (`qa` o `produccion`) o en `host.env`. El despliegue de las imágenes sigue sin necesitar esas claves. No se sube ninguna al repositorio.
 
 ## 9. Si algo falla
 
@@ -154,5 +155,5 @@ El despliegue **no se ve afectado** (no usa AWS). Solo dejan de funcionar Terraf
 
 ## 10. Pendientes conocidos
 - HTTPS/DuckDNS (hoy las URL son HTTP con IP elástica).
-- Bucket S3 de evidencias.
+- El nombre del cubo privado de qa y de producción se configura en el host (`EVIDENCIAS_BUCKET`). La plantilla del repositorio lo deja vacío.
 - `etl-lote` no completa un catastro parcial en una base ya cargada (el arranque continúa sin él).
