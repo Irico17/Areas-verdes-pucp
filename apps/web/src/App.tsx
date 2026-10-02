@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { apiUrl, fetchCollection } from "./api"
 import { INVENTARIO } from "./inventario"
 import { CampusMap } from "./map/CampusMap"
+import { seleccionarActividad } from "./map/seleccionActividad"
 import type { ModoDibujo } from "./map/draw"
 import { MapBoundary } from "./map/MapBoundary"
+import { useEngancharCola } from "./offline/enganchar"
 import { enqueue, enqueueEstado, listEstados, listQueue, loadLabores, removeEstado, removeQueued, saveLabores, type QueuedLabor } from "./offline/queue"
 import {
   ApiError,
@@ -289,16 +291,7 @@ export default function App() {
     }
   }, [sesion, rol, equipoId])
 
-  useEffect(() => {
-    if (!sesion) return
-    let cancelled = false
-    void Promise.resolve().then(() => {
-      if (!cancelled) return flush()
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [flush, sesion])
+  useEngancharCola(sesion, flush)
 
   const seleccionEnCola = selectedId != null && queue.some((item) => item.id === selectedId)
   const timelineVisible = selectedId && !seleccionEnCola ? timeline : []
@@ -859,13 +852,14 @@ export default function App() {
             inventoryOn={inventoryOn}
             ocultas={ocultas[colorPor]}
             onSelectCatastro={(hit) => setPicked(hit ? `${hit.layer}: ${String(hit.props.nombre || hit.props.feature_id || "polígono")}` : null)}
-            onSelectActividad={(id) => {
-              if (id) {
-                choose(id)
-                setModulo("labores")
-                setRailOpen(true)
-              } else setSelectedId(null)
-            }}
+            onSelectActividad={(id) =>
+              seleccionarActividad(id, {
+                elegir: choose,
+                irALabores: () => setModulo("labores"),
+                abrirPanel: () => setRailOpen(true),
+                limpiar: () => setSelectedId(null),
+              })
+            }
             onPin={(lon, lat) => {
               setDraft({ lon, lat })
               setNotice("")
