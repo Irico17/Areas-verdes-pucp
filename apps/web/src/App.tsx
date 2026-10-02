@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { apiUrl, fetchCollection } from "./api"
 import { INVENTARIO } from "./inventario"
 import { CampusMap } from "./map/CampusMap"
+import { seleccionarActividad } from "./map/seleccionActividad"
 import type { ModoDibujo } from "./map/draw"
 import { MapBoundary } from "./map/MapBoundary"
+import { useEngancharCola } from "./offline/enganchar"
 import { enqueue, enqueueEstado, listEstados, listQueue, loadLabores, removeEstado, removeQueued, saveLabores, type QueuedLabor } from "./offline/queue"
 import {
   ApiError,
@@ -30,35 +32,20 @@ import { CalendarioReservas } from "./panel/CalendarioReservas"
 import { conCategorias, conteoPorCategoria, normalizar, SECTORES, USOS, type ColorPor } from "./map/categorias"
 import { BottomSheet } from "./ui/BottomSheet"
 import { ImportacionesPanel } from "./panel/Importaciones"
-import { AdminPanel, CatalogosPanel, Login, ReportesPanel, RiegoPanel, SolicitudesPanel } from "./panel/Modulos"
+import { AdminPanel } from "./panel/Admin"
+import { CatalogosPanel } from "./panel/Catalogos"
+import { Login } from "./panel/Login"
+import { ReportesPanel } from "./panel/Reportes"
+import { RiegoPanel } from "./panel/Riego"
+import { SolicitudesPanel } from "./panel/Solicitudes"
 import { etiquetaRol, fetchCatalogo, fetchSesion, salir, sugerirTipo, type CatalogoItem, type Usuario } from "./producto"
 import { readColorPor, readEquipo, writeColorPor, writeEquipo } from "./session"
 import { LAYERS, type FeatureCollection, type GeoFeature, type LayerId, type Rol } from "./types"
 import { MQ_MOVIL, useMedia } from "./ui/media"
 import { repartirModulos } from "./ui/navegacion"
+import { MODULOS, modulosDe, type Modulo } from "./ui/registroModulos"
 
 type LoadState = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ready" }
-
-type Modulo = "mapa" | "labores" | "catastro" | "inventario" | "solicitudes" | "reportes" | "catalogos" | "importaciones" | "admin"
-
-const MODULOS: { id: Modulo; label: string }[] = [
-  { id: "mapa", label: "Mapa" },
-  { id: "labores", label: "Labores" },
-  { id: "catastro", label: "Catastro" },
-  { id: "inventario", label: "Inventario" },
-  { id: "solicitudes", label: "Solicitudes" },
-  { id: "reportes", label: "Reportes" },
-  { id: "catalogos", label: "Catálogos" },
-  { id: "importaciones", label: "Importar" },
-  { id: "admin", label: "Admin" },
-]
-
-function modulosDe(rol: Rol): Modulo[] {
-  if (rol === "capataz") return ["mapa", "labores", "catastro", "inventario"]
-  if (rol === "jefatura") return ["mapa", "labores", "catastro", "inventario", "solicitudes", "reportes", "importaciones"]
-  if (rol === "admin") return MODULOS.map((item) => item.id)
-  return ["mapa", "labores", "catastro", "inventario", "solicitudes", "reportes", "catalogos", "importaciones"]
-}
 
 function prop(feature: GeoFeature, key: string): string {
   const value = feature.properties?.[key]
@@ -304,16 +291,7 @@ export default function App() {
     }
   }, [sesion, rol, equipoId])
 
-  useEffect(() => {
-    if (!sesion) return
-    let cancelled = false
-    void Promise.resolve().then(() => {
-      if (!cancelled) return flush()
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [flush, sesion])
+  useEngancharCola(sesion, flush)
 
   const seleccionEnCola = selectedId != null && queue.some((item) => item.id === selectedId)
   const timelineVisible = selectedId && !seleccionEnCola ? timeline : []
@@ -874,13 +852,14 @@ export default function App() {
             inventoryOn={inventoryOn}
             ocultas={ocultas[colorPor]}
             onSelectCatastro={(hit) => setPicked(hit ? `${hit.layer}: ${String(hit.props.nombre || hit.props.feature_id || "polígono")}` : null)}
-            onSelectActividad={(id) => {
-              if (id) {
-                choose(id)
-                setModulo("labores")
-                setRailOpen(true)
-              } else setSelectedId(null)
-            }}
+            onSelectActividad={(id) =>
+              seleccionarActividad(id, {
+                elegir: choose,
+                irALabores: () => setModulo("labores"),
+                abrirPanel: () => setRailOpen(true),
+                limpiar: () => setSelectedId(null),
+              })
+            }
             onPin={(lon, lat) => {
               setDraft({ lon, lat })
               setNotice("")
