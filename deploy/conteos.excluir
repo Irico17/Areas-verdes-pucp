@@ -1,0 +1,12 @@
+# Tablas excluidas de la comparación de conteos antes/después en producción.
+# Solo se excluyen tablas técnicas que cambian legítimamente durante el despliegue
+# (migraciones pendientes aplicadas por el entrypoint) y el smoke test (login inicial).
+# Ninguna tabla de datos de negocio (catastro, labores, actividades, etc.) debe incluirse aquí.
+#
+# Verificado empíricamente con deploy/smoke.sh contra base migrada y sembrada:
+# - schema_migrations: el entrypoint aplica migraciones nuevas pendientes al arrancar.
+# - sesiones: deploy/smoke.sh realiza autenticación (POST /api/v1/sesion).
+# (Las tablas de auditoría como 'cambios' no se modifican durante el login ni lecturas de smoke).
+
+schema_migrations
+sesiones

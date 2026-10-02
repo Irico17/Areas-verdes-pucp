@@ -105,10 +105,10 @@ En producción el script, antes de cambiar la imagen:
 
 1. Snapshot EBS del volumen `campus-verde-data`.
 2. `pg_dump -Fc` en `/opt/campus/data/backups/` dentro de la instancia.
-3. Conteos de todas las tablas `public` (el SQL de [`deploy/conteos.sql`](../deploy/conteos.sql), el del §4.4).
-4. Deja la imagen nueva (tag = SHA), corre el smoke y vuelve a contar.
+3. Conteos «antes» de las tablas (el SQL de [`deploy/conteos.sql`](../deploy/conteos.sql), el del §4.4).
+4. Deja la imagen nueva (tag = SHA), corre el smoke y vuelve a contar («después»).
 
-Las tablas que ya existían tienen que quedar con las mismas filas. Pueden aparecer tablas nuevas. Si el smoke falla, se vuelve a la imagen anterior. No hay migración «down»: las migraciones solo agregan. Volver el binario atrás no borra columnas. Restaurar el dump es el último recurso y lo decide una persona; se pierde lo cargado después del backup.
+La comparación (`deploy/comparar_conteos.py`) valida que las tablas de datos de negocio mantengan exactamente sus filas. Se excluyen explícitamente las tablas técnicas que cambian de forma legítima durante el despliegue, definidas en [`deploy/conteos.excluir`](../deploy/conteos.excluir) (fuente única de verdad): `schema_migrations` (por migraciones pendientes aplicadas por el entrypoint) y `sesiones` (por el login del smoke test). Tablas nuevas introducidas por migraciones se reportan. Si una tabla de negocio diverge o el smoke falla, se aborta y se revierte a la imagen anterior. No hay migración «down»: las migraciones solo agregan. Volver el binario atrás no borra columnas. Restaurar el dump es el último recurso y lo decide una persona; se pierde lo cargado después del backup.
 
 ## Secretos y variables
 

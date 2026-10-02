@@ -281,37 +281,7 @@ aws_deploy() {
   if [ "$AMBIENTE" = "produccion" ]; then
     despues="$(mktemp)"
     conteos_remotos "$instance" >"$despues"
-    python3 - "$antes" "$despues" <<'PY'
-import sys
-from pathlib import Path
-
-def leer(path):
-    out = {}
-    for line in Path(path).read_text(encoding="utf-8").splitlines():
-        if not line.strip() or line.startswith("table_name"):
-            continue
-        parts = line.split("\t")
-        if len(parts) < 2:
-            continue
-        out[parts[0]] = int(parts[1])
-    return out
-
-antes, despues = leer(sys.argv[1]), leer(sys.argv[2])
-# sesiones crece con el smoke; schema_migrations crece al aplicar 047/048.
-omitidas = {"sesiones", "schema_migrations"}
-mal = []
-for tabla, filas in sorted(antes.items()):
-    if tabla in omitidas:
-        continue
-    if despues.get(tabla) != filas:
-        mal.append(f"{tabla}: antes {filas}, después {despues.get(tabla)}")
-if mal:
-    raise SystemExit("conteos distintos en tablas que ya existían:\n" + "\n".join(mal))
-nuevas = sorted(set(despues) - set(antes))
-print(f"conteos iguales en {len(antes)} tablas existentes")
-if nuevas:
-    print("tablas nuevas: " + ", ".join(nuevas))
-PY
+    python3 "$ROOT/deploy/comparar_conteos.py" "$antes" "$despues" --excluir "$ROOT/deploy/conteos.excluir"
     rm -f "$antes" "$despues"
   fi
 
