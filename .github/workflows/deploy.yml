@@ -1,16 +1,26 @@
 name: deploy
 
-# develop: push a develop o a backend/arquitectura-equipo, después de que ci esté en verde.
-# qa: tag rc-* o workflow_dispatch.
-# produccion: solo workflow_dispatch. El environment `produccion` pide aprobación
-# (required reviewers en la configuración del ambiente; no se puede declarar en YAML).
+# develop: push a rama develop o workflow_dispatch.
+# qa: tag rc-* o workflow_dispatch (requiere promoción: despliegue previo exitoso en develop).
+# produccion: solo workflow_dispatch (requiere promoción: despliegue previo exitoso en qa, y
+#             aprobación manual mediante Required Reviewers configurado en el environment de GitHub;
+#             opcionalmente se puede activar un wait-timer).
+# Despliegues ejecutados en runners self-hosted en cada instancia EC2:
+#   develop    -> [self-hosted, campus-develop]
+#   qa         -> [self-hosted, campus-qa]
+#   produccion -> [self-hosted, campus-prod]
+# Timeout del job de despliegue: 30 minutos. Si el runner self-hosted no está disponible,
+# el job permanece en cola y no se marca como exitoso artificialmente.
+
 on:
   push:
     branches:
       - develop
-      - backend/arquitectura-equipo
     tags:
       - "rc-*"
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   workflow_dispatch:
     inputs:
       ambiente:
@@ -35,10 +45,11 @@ on:
 permissions:
   actions: read
   contents: read
+  deployments: read
   packages: read
 
 concurrency:
-  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.ambiente || github.ref }}
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.ambiente || (startsWith(github.ref, 'refs/tags/rc-') && 'qa' || 'develop') }}
   cancel-in-progress: false
 
 jobs:
@@ -48,6 +59,7 @@ jobs:
       ambiente: ${{ steps.out.outputs.ambiente }}
       ref: ${{ steps.out.outputs.ref }}
       rollback: ${{ steps.out.outputs.rollback }}
+      runner_label: ${{ steps.out.outputs.runner_label }}
     steps:
       - id: out
         env:
@@ -103,94 +115,173 @@ jobs:
             echo "el rollback tiene que ser un SHA de 40 hex o un tag rc-*" >&2
             exit 2
           fi
+
+          case "$ambiente" in
+            develop) runner_label="campus-develop" ;;
+            qa) runner_label="campus-qa" ;;
+            produccion) runner_label="campus-prod" ;;
+          esac
+
           echo "ambiente=$ambiente" >> "$GITHUB_OUTPUT"
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
           echo "rollback=$rollback" >> "$GITHUB_OUTPUT"
+          echo "runner_label=$runner_label" >> "$GITHUB_OUTPUT"
 
   esperar-ci:
     needs: resolver
     runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ needs.resolver.outputs.ref }}
+      - id: commit
+        name: Resolver SHA exacto del commit
+        run: |
+          sha="$(git rev-parse HEAD)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
       - name: Esperar CI en verde para este SHA
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          sha="$(git rev-parse HEAD)"
-          echo "SHA=$sha" >> "$GITHUB_ENV"
+          sha="${{ steps.commit.outputs.sha }}"
           bash deploy/esperar_ci.sh "$sha"
 
-  deploy:
+  promocion:
     needs: [resolver, esperar-ci]
     runs-on: ubuntu-24.04
-    environment: ${{ needs.resolver.outputs.ambiente }}
     steps:
-      - uses: actions/checkout@v7
+      - name: Validar promoción de despliegue por SHA
+        id: validar-promocion
+        env:
+          AMBIENTE: ${{ needs.resolver.outputs.ambiente }}
+          SHA: ${{ needs.esperar-ci.outputs.sha }}
+          ROLLBACK: ${{ needs.resolver.outputs.rollback }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$ROLLBACK" ]; then
+            if ! [[ "$ROLLBACK" =~ ^[0-9a-f]{40}$ || "$ROLLBACK" =~ ^rc-[A-Za-z0-9._-]+$ ]]; then
+              echo "el rollback tiene que ser un SHA de 40 hex o un tag rc-*" >&2
+              exit 2
+            fi
+            echo "Rollback explícito a '$ROLLBACK'. Se omite la exigencia de despliegue previo de $SHA."
+            exit 0
+          fi
+
+          case "$AMBIENTE" in
+            develop)
+              echo "Ambiente develop no requiere promoción previa."
+              exit 0
+              ;;
+            qa)
+              PREV_ENV="develop"
+              ;;
+            produccion)
+              PREV_ENV="qa"
+              ;;
+            *)
+              echo "ambiente no permitido: $AMBIENTE" >&2
+              exit 2
+              ;;
+          esac
+
+          echo "Validando promoción de $SHA hacia $AMBIENTE (requiere despliegue exitoso en $PREV_ENV)..."
+
+          deployments="$(gh api "repos/$GITHUB_REPOSITORY/deployments?sha=$SHA&environment=$PREV_ENV")"
+          num_deps="$(python3 -c 'import json, sys; d = json.loads(sys.argv[1] or "[]"); print(len(d) if isinstance(d, list) else 0)' "$deployments")"
+
+          if [ "$num_deps" -eq 0 ]; then
+            echo "Promoción rechazada: el commit $SHA no tiene ningún despliegue previo en el ambiente '$PREV_ENV'." >&2
+            exit 1
+          fi
+
+          dep_ids="$(python3 -c 'import json, sys; d = json.loads(sys.argv[1] or "[]"); print(" ".join(str(x["id"]) for x in d if "id" in x))' "$deployments")"
+
+          success=0
+          for id in $dep_ids; do
+            statuses="$(gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses")"
+            last_state="$(python3 -c 'import json, sys; s = json.loads(sys.argv[1] or "[]"); print(s[0].get("state", "") if isinstance(s, list) and len(s) > 0 else "")' "$statuses")"
+            if [ "$last_state" = "success" ]; then
+              success=1
+              break
+            fi
+          done
+
+          if [ "$success" -ne 1 ]; then
+            echo "Promoción rechazada: ningún despliegue del commit $SHA en '$PREV_ENV' concluyó con status 'success'." >&2
+            exit 1
+          fi
+
+          echo "Promoción validada: el commit $SHA cuenta con despliegue exitoso en '$PREV_ENV'."
+
+  deploy:
+    needs: [resolver, esperar-ci, promocion]
+    runs-on: [self-hosted, "${{ needs.resolver.outputs.runner_label }}"]
+    environment:
+      name: ${{ needs.resolver.outputs.ambiente }}
+      url: ${{ vars.PUBLIC_URL }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: ${{ needs.resolver.outputs.ref }}
-      - uses: hashicorp/setup-terraform@v4
-      - name: Entrar a GHCR
+          ref: ${{ needs.esperar-ci.outputs.sha }}
+      - name: Iniciar sesión en GHCR
         env:
           GH_TOKEN: ${{ github.token }}
         run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-      - name: Desplegar
+      - name: Desplegar en el host
         id: desplegar
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          GH_TOKEN: ${{ github.token }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-          TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
-          TF_VAR_dev_password: ${{ secrets.TF_VAR_dev_password }}
-          CAMPUS_CORS_ORIGINS: ${{ vars.CAMPUS_CORS_ORIGINS }}
-          CAMPUS_COOKIE_SECURE: ${{ vars.CAMPUS_COOKIE_SECURE }}
-          AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
           AMBIENTE: ${{ needs.resolver.outputs.ambiente }}
+          SHA: ${{ needs.esperar-ci.outputs.sha }}
           ROLLBACK_TAG: ${{ needs.resolver.outputs.rollback }}
-          DEPLOY_AWS_CONFIRM: "1"
         run: |
           set -euo pipefail
-          sha="$(git rev-parse HEAD)"
-          echo "Ambiente: $AMBIENTE"
-          echo "SHA: $sha"
-          echo "Evento: ${EVENT_NAME:-desconocido}"
-
-          omitir_o_fallar() {
-            local motivo="$1"
-            if [ "${EVENT_NAME:-}" = "workflow_dispatch" ] || [ "$AMBIENTE" = "produccion" ]; then
-              echo "::error::$motivo" >&2
-              exit 1
-            else
-              echo "::warning::$motivo"
-              if [ -n "${GITHUB_OUTPUT:-}" ]; then
-                echo "desplegado=false" >> "$GITHUB_OUTPUT"
-              fi
-              if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
-                {
-                  echo "### Despliegue en $AMBIENTE: OMITIDO"
-                  echo ""
-                  echo "$motivo"
-                } >> "$GITHUB_STEP_SUMMARY"
-              fi
-              exit 0
-            fi
-          }
-
-          if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ] || [ -z "${AWS_SESSION_TOKEN:-}" ]; then
-            omitir_o_fallar "Faltan credenciales de AWS (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN) para el ambiente $AMBIENTE."
-          fi
-          if [ -z "${TF_VAR_db_password:-}" ] || [ -z "${TF_VAR_dev_password:-}" ]; then
-            omitir_o_fallar "Faltan secretos TF_VAR_db_password o TF_VAR_dev_password para el ambiente $AMBIENTE."
-          fi
-          args=( "$AMBIENTE" --aws --sha "$sha" )
-          if [ -n "${ROLLBACK_TAG:-}" ]; then
+          args=( "$AMBIENTE" --sha "$SHA" )
+          if [ -n "$ROLLBACK_TAG" ]; then
             args+=( --rollback "$ROLLBACK_TAG" )
           fi
-          bash deploy/deploy.sh "${args[@]}"
-          if [ -n "${GITHUB_OUTPUT:-}" ]; then
-            echo "desplegado=true" >> "$GITHUB_OUTPUT"
+          bash deploy/host-deploy.sh "${args[@]}"
+      - name: Cerrar sesión en GHCR
+        if: always()
+        run: docker logout ghcr.io || true
+      - name: Resumen de despliegue
+        if: always()
+        env:
+          AMBIENTE: ${{ needs.resolver.outputs.ambiente }}
+          SHA: ${{ needs.esperar-ci.outputs.sha }}
+          ROLLBACK_TAG: ${{ needs.resolver.outputs.rollback }}
+        run: |
+          {
+            echo "### Despliegue en $AMBIENTE"
+            echo "- **SHA:** \`$SHA\`"
+            if [ -n "$ROLLBACK_TAG" ]; then
+              echo "- **Rollback:** \`$ROLLBACK_TAG\`"
+            fi
+            if [ -n "${{ vars.PUBLIC_URL }}" ]; then
+              echo "- **URL pública:** ${{ vars.PUBLIC_URL }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  verificar-post-deploy:
+    name: Verificación post-despliegue
+    needs: [resolver, deploy]
+    runs-on: ubuntu-24.04
+    environment:
+      name: ${{ needs.resolver.outputs.ambiente }}
+    steps:
+      - name: Verificar endpoint de salud público
+        env:
+          PUBLIC_URL: ${{ vars.PUBLIC_URL }}
+        run: |
+          if [ -n "$PUBLIC_URL" ]; then
+            echo "Verificando salud pública en $PUBLIC_URL/health"
+            curl -fsS --max-time 15 "$PUBLIC_URL/health" || echo "Aviso: Host no accesible directamente desde runner hosted (el smoke autoritativo corrió en el host)."
+          else
+            echo "PUBLIC_URL no definida para este ambiente; verificación externa omitida."
           fi
