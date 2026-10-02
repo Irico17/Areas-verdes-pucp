@@ -7,17 +7,24 @@ import {
   ABIERTOS,
   ESTADOS,
   estadosPermitidos,
+  fetchTaxonomiaActividad,
   TIPOS,
+  tipoGrueso,
   etiquetaEstado,
   etiquetaEvento,
   etiquetaTipo,
+  type AltaCampos,
   type Capataz,
   type Evento,
+  type TaxonomiaActividad,
 } from "../operacion"
 import { etiquetaRol, type CatalogoItem } from "../producto"
 import type { Rol } from "../types"
 import { ACTIVIDAD, marcaEjecutor } from "../ui/nomenclatura"
 import { EvidenciasCampo } from "./EvidenciasCampo"
+import { SelectorLugar } from "./SelectorLugar"
+import { listarZonas } from "./catastro"
+import { listarLugaresCatalogo, type LugarCatalogo } from "./zonificacion"
 import { apiUrl } from "../api"
 
 export type LaborItem = {
@@ -51,7 +58,10 @@ type Props = {
   formDetalle: string
   formEquipo: string
   onForm: (patch: { tipo?: string; titulo?: string; detalle?: string; equipo?: string; ejecutor?: string }) => void
-  onCreate: () => void
+  onCreate: (alta: AltaCampos) => void
+  taxonomia?: TaxonomiaActividad
+  lugares?: LugarCatalogo[]
+  zonas?: { codigo: string; nombre: string }[]
   creating: boolean
   selected: LaborItem | null
   onSelect: (id: string) => void
@@ -138,67 +148,25 @@ export function Labores(props: Props) {
       )}
       {props.pinMode && !props.draft && <p className="hint">{ACTIVIDAD.ubicar}</p>}
       {props.draft && puedeAsignar && (
-        <form
-          className="form"
-          onSubmit={(event) => {
-            event.preventDefault()
-            props.onCreate()
-          }}
-        >
-          <p className="hint">
-            {props.draft.lat.toFixed(5)}, {props.draft.lon.toFixed(5)}
-          </p>
-          <label className="field">
-            {ACTIVIDAD.tipo}
-            <select value={props.formTipo} onChange={(event) => props.onForm({ tipo: event.target.value })}>
-              {props.tipos.map((tipo) => (
-                <option key={tipo.id} value={tipo.id}>
-                  {tipo.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            {ACTIVIDAD.tituloCampo}
-            <input value={props.formTitulo} maxLength={160} onChange={(event) => props.onForm({ titulo: event.target.value })} required />
-          </label>
-          <p className="hint">{ACTIVIDAD.regla}</p>
-          {props.sugerencia && <p className="hint">{props.sugerencia}</p>}
-          <button type="button" onClick={props.onSugerir}>
-            {ACTIVIDAD.sugerir}
-          </button>
-          {props.pista?.codigo && (
-            <button type="button" onClick={props.onConfirmarPista}>
-              Confirmar {props.pista.etiqueta || props.pista.codigo}
-            </button>
-          )}
-          <label className="field">
-            {ACTIVIDAD.quienEjecuta}
-            <select value={props.formEjecutor} onChange={(event) => props.onForm({ ejecutor: event.target.value })}>
-              <option value="propia">{ACTIVIDAD.personalPropio}</option>
-              <option value="tercerizada">{ACTIVIDAD.servicioTercerizado}</option>
-            </select>
-          </label>
-          <FichaLabor />
-          <label className="field">
-            {ACTIVIDAD.detalle}
-            <textarea value={props.formDetalle} maxLength={2000} rows={3} onChange={(event) => props.onForm({ detalle: event.target.value })} />
-          </label>
-          <label className="field">
-            {ACTIVIDAD.cuadrilla}
-            <select value={props.formEquipo} onChange={(event) => props.onForm({ equipo: event.target.value })}>
-              <option value="">{ACTIVIDAD.sinAsignar}</option>
-              {props.equipos.map((equipo) => (
-                <option key={equipo.id} value={equipo.id}>
-                  {equipo.equipo}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="primary" disabled={props.creating}>
-            {props.creating ? ACTIVIDAD.guardando : ACTIVIDAD.crear}
-          </button>
-        </form>
+        <AltaActividad
+          draft={props.draft}
+          formTipo={props.formTipo}
+          formTitulo={props.formTitulo}
+          formDetalle={props.formDetalle}
+          formEquipo={props.formEquipo}
+          formEjecutor={props.formEjecutor}
+          equipos={props.equipos}
+          onForm={props.onForm}
+          onCreate={props.onCreate}
+          creating={props.creating}
+          onSugerir={props.onSugerir}
+          sugerencia={props.sugerencia}
+          pista={props.pista}
+          onConfirmarPista={props.onConfirmarPista}
+          taxonomia={props.taxonomia}
+          lugares={props.lugares}
+          zonas={props.zonas}
+        />
       )}
       {props.queueCount > 0 && (
         <p className="hint">
@@ -314,6 +282,298 @@ export function Labores(props: Props) {
         </div>
       )}
     </section>
+  )
+}
+
+type AltaProps = {
+  draft: { lon: number; lat: number }
+  formTipo: string
+  formTitulo: string
+  formDetalle: string
+  formEquipo: string
+  formEjecutor: string
+  equipos: Capataz[]
+  onForm: Props["onForm"]
+  onCreate: (alta: AltaCampos) => void
+  creating: boolean
+  onSugerir: () => void
+  sugerencia: string
+  pista?: { codigo: string; etiqueta: string } | null
+  onConfirmarPista?: () => void
+  taxonomia?: TaxonomiaActividad
+  lugares?: LugarCatalogo[]
+  zonas?: { codigo: string; nombre: string }[]
+}
+
+const TAX_VACIA: TaxonomiaActividad = { clases: [], riesgos: [], origenes: [], personal: [] }
+
+function claseDePista(codigo: string): string {
+  if (codigo === "inspeccion") return "inspeccion_monitoreo"
+  if (codigo === "poda" || codigo === "riego") return codigo
+  return ""
+}
+
+function AltaActividad(props: AltaProps) {
+  const [remota, setRemota] = useState<TaxonomiaActividad | null>(null)
+  const [lugaresRemotos, setLugaresRemotos] = useState<LugarCatalogo[] | null>(null)
+  const [zonasRemotas, setZonasRemotas] = useState<{ codigo: string; nombre: string }[] | null>(null)
+  const [clase, setClase] = useState("")
+  const [subtipo, setSubtipo] = useState("")
+  const [origen, setOrigen] = useState("")
+  const [codigoExterno, setCodigoExterno] = useState("")
+  const [unidad, setUnidad] = useState("")
+  const [riesgo, setRiesgo] = useState("")
+  const [fecha, setFecha] = useState("")
+  const [cantidad, setCantidad] = useState("")
+  const [personal, setPersonal] = useState<string[]>([])
+  const [lugarId, setLugarId] = useState("")
+  const [zona, setZona] = useState("")
+  const [aviso, setAviso] = useState("")
+
+  useEffect(() => {
+    if (props.taxonomia) return
+    let vivo = true
+    void fetchTaxonomiaActividad()
+      .then((dato) => {
+        if (vivo) setRemota(dato)
+      })
+      .catch(() => {})
+    return () => {
+      vivo = false
+    }
+  }, [props.taxonomia])
+
+  useEffect(() => {
+    if (props.lugares) return
+    let vivo = true
+    void listarLugaresCatalogo()
+      .then((dato) => {
+        if (vivo) setLugaresRemotos(dato)
+      })
+      .catch(() => {})
+    return () => {
+      vivo = false
+    }
+  }, [props.lugares])
+
+  useEffect(() => {
+    if (props.zonas) return
+    let vivo = true
+    void listarZonas()
+      .then((dato) => {
+        if (vivo) setZonasRemotas(dato.map((item) => ({ codigo: item.codigo, nombre: item.nombre })))
+      })
+      .catch(() => {})
+    return () => {
+      vivo = false
+    }
+  }, [props.zonas])
+
+  const tax = props.taxonomia ?? remota ?? TAX_VACIA
+  const lugares = props.lugares ?? lugaresRemotos ?? []
+  const zonas = props.zonas ?? zonasRemotas ?? []
+  const tipos = tax.clases.find((item) => item.codigo === clase)?.tipos ?? []
+
+  function elegirClase(codigo: string) {
+    setClase(codigo)
+    setSubtipo("")
+    setAviso("")
+  }
+
+  function alternarPersonal(nombre: string) {
+    setPersonal((actual) => (actual.includes(nombre) ? actual.filter((item) => item !== nombre) : [...actual, nombre]))
+  }
+
+  function confirmarPista() {
+    const siguiente = claseDePista(props.pista?.codigo ?? "")
+    if (siguiente) elegirClase(siguiente)
+    props.onConfirmarPista?.()
+  }
+
+  function enviar(event: { preventDefault: () => void }) {
+    event.preventDefault()
+    if (!clase) {
+      setAviso(ACTIVIDAD.faltaClase)
+      return
+    }
+    if (tipos.length > 0 && !subtipo) {
+      setAviso(ACTIVIDAD.faltaTipo)
+      return
+    }
+    setAviso("")
+    props.onCreate({
+      tipo: tipoGrueso(clase, props.formTipo),
+      clase,
+      subtipo,
+      origen,
+      codigo_externo: codigoExterno.trim(),
+      unidad_solicitante: unidad.trim(),
+      nivel_riesgo: riesgo,
+      fecha_programada: fecha,
+      cantidad,
+      personal,
+      lugar_id: lugarId,
+      zona_supervision_id: zona,
+    })
+  }
+
+  return (
+    <form className="form alta-actividad" onSubmit={enviar}>
+      <header className="alta-punto">
+        <span>{ACTIVIDAD.punto}</span>
+        <strong>
+          {props.draft.lat.toFixed(5)}, {props.draft.lon.toFixed(5)}
+        </strong>
+      </header>
+      <fieldset>
+        <legend>{ACTIVIDAD.clasificacion}</legend>
+        <div className="alta-par">
+          <label className="field">
+            {ACTIVIDAD.clase}
+            <select name="clase" value={clase} onChange={(event) => elegirClase(event.target.value)}>
+              <option value="">{ACTIVIDAD.elegirClase}</option>
+              {tax.clases.map((item) => (
+                <option key={item.codigo} value={item.codigo}>
+                  {item.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            {ACTIVIDAD.tipo}
+            <select name="subtipo" value={subtipo} disabled={!clase || tipos.length === 0} onChange={(event) => setSubtipo(event.target.value)}>
+              <option value="">{ACTIVIDAD.elegirTipo}</option>
+              {tipos.map((item) => (
+                <option key={item.codigo} value={item.codigo}>
+                  {item.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {clase && tipos.length === 0 && <p className="hint">{ACTIVIDAD.sinTipos}</p>}
+        <p className="hint">{ACTIVIDAD.regla}</p>
+        {props.sugerencia && <p className="hint">{props.sugerencia}</p>}
+        <div className="row-actions">
+          <button type="button" onClick={props.onSugerir}>
+            {ACTIVIDAD.sugerir}
+          </button>
+          {props.pista?.codigo && (
+            <button type="button" onClick={confirmarPista}>
+              Confirmar {props.pista.etiqueta || props.pista.codigo}
+            </button>
+          )}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>{ACTIVIDAD.pedido}</legend>
+        <div className="alta-par">
+          <label className="field">
+            {ACTIVIDAD.origen}
+            <select name="origen" value={origen} onChange={(event) => setOrigen(event.target.value)}>
+              <option value="">{ACTIVIDAD.elegirOrigen}</option>
+              {tax.origenes.map((item) => (
+                <option key={item.codigo} value={item.codigo}>
+                  {item.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            {ACTIVIDAD.riesgo}
+            <select name="nivel_riesgo" value={riesgo} onChange={(event) => setRiesgo(event.target.value)}>
+              <option value="">{ACTIVIDAD.elegirRiesgo}</option>
+              {tax.riesgos.map((item) => (
+                <option key={item.codigo} value={item.codigo}>
+                  {item.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            {ACTIVIDAD.codigoExterno}
+            <input name="codigo_externo" value={codigoExterno} maxLength={80} onChange={(event) => setCodigoExterno(event.target.value)} />
+            <small className="alta-nota">{ACTIVIDAD.codigoExternoHint}</small>
+          </label>
+          <label className="field">
+            {ACTIVIDAD.unidad}
+            <input name="unidad_solicitante" value={unidad} maxLength={160} onChange={(event) => setUnidad(event.target.value)} />
+          </label>
+          <label className="field">
+            {ACTIVIDAD.fechaProgramada}
+            <FechaCampo value={fecha} onChange={setFecha} />
+          </label>
+          <label className="field">
+            {ACTIVIDAD.cantidad}
+            <input name="cantidad" inputMode="decimal" value={cantidad} onChange={(event) => setCantidad(event.target.value)} />
+          </label>
+        </div>
+      </fieldset>
+      <fieldset className="alta-personal">
+        <legend>{ACTIVIDAD.personal}</legend>
+        <p className="hint">{ACTIVIDAD.personalLede}</p>
+        <ul>
+          {tax.personal.map((item) => (
+            <li key={item.id}>
+              <label>
+                <input
+                  type="checkbox"
+                  name="personal"
+                  value={item.nombre_ficticio}
+                  checked={personal.includes(item.nombre_ficticio)}
+                  onChange={() => alternarPersonal(item.nombre_ficticio)}
+                />
+                {item.nombre_ficticio}
+              </label>
+            </li>
+          ))}
+        </ul>
+      </fieldset>
+      <div className="alta-par">
+        <SelectorLugar id="alta-lugar" lugares={lugares} lugarId={lugarId} onChange={setLugarId} />
+        <label className="field">
+          {ACTIVIDAD.zonaSupervision}
+          <select name="zona_supervision_id" value={zona} onChange={(event) => setZona(event.target.value)}>
+            <option value="">{ACTIVIDAD.sinZona}</option>
+            {zonas.map((item) => (
+              <option key={item.codigo} value={item.codigo}>
+                {item.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          {ACTIVIDAD.tituloCampo}
+          <input value={props.formTitulo} maxLength={160} onChange={(event) => props.onForm({ titulo: event.target.value })} required />
+        </label>
+        <label className="field">
+          {ACTIVIDAD.quienEjecuta}
+          <select value={props.formEjecutor} onChange={(event) => props.onForm({ ejecutor: event.target.value })}>
+            <option value="propia">{ACTIVIDAD.personalPropio}</option>
+            <option value="tercerizada">{ACTIVIDAD.servicioTercerizado}</option>
+          </select>
+        </label>
+      </div>
+      <label className="field">
+        {ACTIVIDAD.detalle}
+        <textarea value={props.formDetalle} maxLength={2000} rows={3} onChange={(event) => props.onForm({ detalle: event.target.value })} />
+      </label>
+      <label className="field">
+        {ACTIVIDAD.cuadrilla}
+        <select value={props.formEquipo} onChange={(event) => props.onForm({ equipo: event.target.value })}>
+          <option value="">{ACTIVIDAD.sinAsignar}</option>
+          {props.equipos.map((equipo) => (
+            <option key={equipo.id} value={equipo.id}>
+              {equipo.equipo}
+            </option>
+          ))}
+        </select>
+      </label>
+      {aviso && <p className="status error">{aviso}</p>}
+      <button type="submit" className="primary" disabled={props.creating}>
+        {props.creating ? ACTIVIDAD.guardando : ACTIVIDAD.crear}
+      </button>
+    </form>
   )
 }
 

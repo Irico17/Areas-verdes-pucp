@@ -99,6 +99,99 @@ test("la ficha de labores conserva el pin y muestra los campos de escritorio", (
   }
 })
 
+test("el alta de actividad pide clase, tipo, riesgo y lugar de catálogo", () => {
+  const html = renderToStaticMarkup(
+    createElement(Labores, {
+      rol: "coordinacion",
+      equipos: [],
+      equipoId: "",
+      onEquipo: () => {},
+      items: [],
+      estados: {},
+      onToggleEstado: () => {},
+      tipo: "",
+      onTipo: () => {},
+      pinMode: true,
+      onPinMode: () => {},
+      draft: { lon: -77.08, lat: -12.07 },
+      formTipo: "riego",
+      formTitulo: "",
+      formDetalle: "",
+      formEquipo: "",
+      onForm: () => {},
+      onCreate: () => {},
+      creating: false,
+      selected: null,
+      onSelect: () => {},
+      timeline: [],
+      timelineError: "",
+      estadoNuevo: "sin_estado",
+      onEstadoNuevo: () => {},
+      onEstado: () => {},
+      reasignarA: "",
+      onReasignarA: () => {},
+      onReasignar: () => {},
+      onArchivar: () => {},
+      confirmarArchivo: false,
+      notice: "",
+      queueCount: 0,
+      onFlush: () => {},
+      tipos: [{ id: "riego", label: "Riego" }],
+      formEjecutor: "propia",
+      motivos: [],
+      motivo: "",
+      onMotivo: () => {},
+      onSugerir: () => {},
+      sugerencia: "",
+      pista: null,
+      taxonomia: {
+        clases: [
+          {
+            codigo: "riego",
+            nombre: "Riego",
+            tipos: [{ codigo: "riego_manual", nombre: "Riego manual" }],
+          },
+        ],
+        riesgos: [
+          { codigo: "bajo", nombre: "Bajo" },
+          { codigo: "alto", nombre: "Alto" },
+        ],
+        origenes: [{ codigo: "interna", nombre: "Interna" }],
+        personal: [{ id: "pf-elsa", nombre_ficticio: "Elsa Mamani" }],
+      },
+      lugares: [{ id: 1, nombre: "Jardín de Letras" }],
+      zonas: [{ codigo: "Z1", nombre: "Zona 1" }],
+    }),
+  )
+  const alta = html.slice(html.indexOf('class="form alta-actividad"'), html.indexOf("</form>") + 7)
+  for (const etiqueta of [
+    "Clase de actividad",
+    "Tipo de actividad",
+    "Origen",
+    "Código externo",
+    "Unidad solicitante",
+    "Nivel de riesgo",
+    "Fecha programada",
+    "Cantidad",
+    "Personal de la actividad",
+    "Zona de supervisión",
+    "Bajo",
+    "Alto",
+    "Elsa Mamani",
+    "Riego",
+  ]) {
+    assert.ok(alta.includes(etiqueta), etiqueta)
+  }
+  assert.equal(alta.includes("Medio"), false)
+  assert.match(alta, /name="lugar_id"/)
+  assert.equal(alta.includes('name="lugar"'), false)
+  assert.equal(alta.includes("lugar_libre"), false)
+  assert.match(alta, /name="clase"/)
+  assert.match(alta, /name="subtipo"/)
+  assert.match(alta, /name="nivel_riesgo"/)
+  assert.match(alta, /name="personal"/)
+})
+
 test("el código OSG no se inventa y la poda valida cantidades", () => {
   assert.equal(codigoExterno("").codigo, "")
   assert.equal(codigoExterno("aun no tiene codigo").codigo, "")

@@ -13,6 +13,7 @@ import {
   asignar,
   cambiarEstado,
   crearActividad,
+  type AltaCampos,
   fetchActividades,
   fetchCapataces,
   fetchTimeline,
@@ -427,14 +428,14 @@ export default function App() {
     }
   }
 
-  async function onCreate() {
+  async function onCreate(alta?: AltaCampos) {
     if (!draft || !formTitulo.trim()) {
       setNotice("Indique un título y un punto en el mapa.")
       return
     }
     const body: CreateBody = {
       id: crypto.randomUUID(),
-      tipo: formTipo,
+      tipo: alta?.tipo || formTipo,
       titulo: formTitulo.trim(),
       detalle: formDetalle.trim(),
       lon: draft.lon,
@@ -443,6 +444,20 @@ export default function App() {
       actor_rol: rol,
       ejecutor: formEjecutor,
     }
+    if (alta?.clase) body.clase = alta.clase
+    if (alta?.subtipo) body.subtipo = alta.subtipo
+    if (alta?.origen) body.origen = alta.origen
+    if (alta?.codigo_externo) body.codigo_externo = alta.codigo_externo
+    if (alta?.unidad_solicitante) body.unidad_solicitante = alta.unidad_solicitante
+    if (alta?.nivel_riesgo) body.nivel_riesgo = alta.nivel_riesgo
+    if (alta?.fecha_programada) body.fecha_programada = alta.fecha_programada
+    if (alta?.cantidad) {
+      const n = Number(alta.cantidad)
+      if (Number.isFinite(n)) body.cantidad = n
+    }
+    if (alta?.personal.length) body.personal = alta.personal
+    if (alta?.lugar_id) body.lugar_id = alta.lugar_id
+    if (alta?.zona_supervision_id) body.zona_supervision_id = alta.zona_supervision_id
     setCreating(true)
     setNotice("")
     try {
@@ -784,7 +799,7 @@ export default function App() {
                 if (patch.equipo != null) setFormEquipo(patch.equipo)
                 if (patch.ejecutor) setFormEjecutor(patch.ejecutor)
               }}
-              onCreate={() => void onCreate()}
+              onCreate={(alta) => void onCreate(alta)}
               creating={creating}
               selected={selected}
               onSelect={choose}

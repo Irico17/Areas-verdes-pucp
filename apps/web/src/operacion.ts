@@ -137,6 +137,66 @@ export type CreateBody = {
   assigned_capataz_id: string
   actor_rol: Rol
   ejecutor?: string
+  clase?: string
+  subtipo?: string
+  origen?: string
+  codigo_externo?: string
+  unidad_solicitante?: string
+  nivel_riesgo?: string
+  fecha_programada?: string
+  cantidad?: number
+  personal?: string[]
+  lugar_id?: string
+  zona_supervision_id?: string
+}
+
+const TIPO_DE_CLASE: Record<string, string> = {
+  poda: "poda",
+  riego: "riego",
+  inspeccion_monitoreo: "inspeccion",
+  fitosanitario: "inspeccion",
+}
+
+/** El mapa y el filtro siguen usando el tipo grueso. La clase fina va en subtipo. */
+export function tipoGrueso(clase: string, actual: string): string {
+  if (TIPO_DE_CLASE[clase]) return TIPO_DE_CLASE[clase]
+  if (clase) return "limpieza"
+  return actual || "riego"
+}
+
+export type OpcionAlta = { codigo: string; nombre: string }
+
+export type TaxonomiaActividad = {
+  clases: { codigo: string; nombre: string; tipos: OpcionAlta[] }[]
+  riesgos: OpcionAlta[]
+  origenes: OpcionAlta[]
+  personal: { id: string; nombre_ficticio: string }[]
+}
+
+export type AltaCampos = {
+  tipo: string
+  clase: string
+  subtipo: string
+  origen: string
+  codigo_externo: string
+  unidad_solicitante: string
+  nivel_riesgo: string
+  fecha_programada: string
+  cantidad: string
+  personal: string[]
+  lugar_id: string
+  zona_supervision_id: string
+}
+
+export async function fetchTaxonomiaActividad(): Promise<TaxonomiaActividad> {
+  const res = await send(apiUrl("/operacion/taxonomia-actividad"), "GET")
+  const body = (await res.json()) as Partial<TaxonomiaActividad>
+  return {
+    clases: body.clases ?? [],
+    riesgos: body.riesgos ?? [],
+    origenes: body.origenes ?? [],
+    personal: body.personal ?? [],
+  }
 }
 
 const EVENTO_LABEL: Record<string, string> = {
