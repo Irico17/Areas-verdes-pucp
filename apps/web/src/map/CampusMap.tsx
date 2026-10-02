@@ -28,6 +28,7 @@ import { activarDibujo, type ModoDibujo } from "./draw"
 import { INVENTARIO } from "../inventario"
 import { etiquetaEstado, etiquetaTipo } from "../operacion"
 import { EMPTY, LAYERS, type FeatureCollection, type LayerId } from "../types"
+import { apiUrl } from "../api"
 
 const CATASTRO_FILLS = ["areas-fill", "zonas-fill"]
 const USO_IDS = USOS.map((c) => c.id)
@@ -351,7 +352,7 @@ export function CampusMap({
         onCatastro.current({ layer: spec?.label ?? "Inventario", props })
         const foto = typeof props.foto === "string" ? props.foto : ""
         const fotoHtml = foto
-          ? `<img alt="" src="/api/v1/geo/inventario/fotos/${encodeURIComponent(foto)}" />`
+          ? `<img alt="" src="${apiUrl(`/geo/inventario/fotos/${encodeURIComponent(foto)}`)}" />`
           : spec?.id === "bebederos"
             ? `<p class="cv-popup-meta">Sin fotografía recuperada</p>`
             : ""

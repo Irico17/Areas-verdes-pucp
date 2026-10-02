@@ -1,3 +1,5 @@
+import { apiUrl } from "../api"
+
 export type VistaCalendario = "mes" | "semana" | "dia"
 
 export type ReservaCalendario = {
@@ -80,5 +82,5 @@ export function tituloVista(vista: VistaCalendario, cursor: Date): string {
 
 export function queryReservas(desde: string, hasta: string): string {
   const params = new URLSearchParams({ desde, hasta })
-  return `/api/v1/inventario/reservas?${params.toString()}`
+  return apiUrl(`/inventario/reservas?${params.toString()}`)
 }

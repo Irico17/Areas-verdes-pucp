@@ -4,6 +4,7 @@ import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { CalendarioReservas } from "./CalendarioReservas.tsx"
 import { mover, queryReservas, rangoDe, reservasDelDia, type ReservaCalendario } from "./calendario.ts"
+import { apiUrl } from "../api"
 
 const filas: ReservaCalendario[] = [
   { id: 1, fecha: "2026-09-22", hora_inicio: "11:00", hora_fin: "12:00", estado: "reservado", evento: "Tarde", unidad: "EEGGLL" },
@@ -18,7 +19,7 @@ test("el mes, la semana y el día acotan el filtro de la API", () => {
   assert.equal(semana.desde <= "2026-09-22" && semana.hasta >= "2026-09-22", true)
   assert.equal(rangoDe("mes", cursor).desde, "2026-08-31")
   assert.equal(rangoDe("mes", cursor).hasta, "2026-10-11")
-  assert.equal(queryReservas("2026-08-31", "2026-10-11"), "/api/v1/inventario/reservas?desde=2026-08-31&hasta=2026-10-11")
+  assert.equal(queryReservas("2026-08-31", "2026-10-11"), apiUrl("/inventario/reservas?desde=2026-08-31&hasta=2026-10-11"))
   assert.equal(mover("mes", cursor, 1).getMonth(), 9)
 })
 

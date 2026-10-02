@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { FechaCampo } from "../FechaCampo"
 import { Esqueleto } from "../ui/Esqueleto"
 import { PODA_VACIA, codigoExterno, validarPoda, type PodaItem } from "./poda"
+import { apiUrl } from "../api"
 
 type Props = {
   iniciales?: PodaItem[]
@@ -17,7 +18,7 @@ export function PodaPanel(props: Props) {
   useEffect(() => {
     if (props.iniciales) return
     let cancelado = false
-    void fetch("/api/v1/podas", { credentials: "include" })
+    void fetch(apiUrl("/podas"), { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { podas?: PodaItem[] } | null) => {
         if (!cancelado && body?.podas) setItems(body.podas)
@@ -70,7 +71,7 @@ export function PodaPanel(props: Props) {
           const externo = codigoExterno(form.codigo_externo).codigo
           const nueva = !form.id || form.id === "nueva"
           const guardada = { ...form, codigo_externo: externo, id: nueva ? crypto.randomUUID() : form.id }
-          const ruta = nueva ? "/api/v1/podas" : `/api/v1/podas/${guardada.id}`
+          const ruta = nueva ? apiUrl("/podas") : apiUrl(`/podas/${guardada.id}`)
           void fetch(ruta, {
             method: nueva ? "POST" : "PATCH",
             credentials: "include",

@@ -1,4 +1,5 @@
 import { erroresGeometria, medirGeom, type MultiPolygon, type Position } from "../map/draw.ts"
+import { apiUrl } from "../api"
 
 /** Valores presentes en areas_verdes.geojson. No se acepta texto libre nuevo. */
 export const USOS_AREA = [
@@ -269,7 +270,7 @@ function lista(body: unknown, clave: string): unknown[] {
 }
 
 export async function listarAreas(): Promise<AreaVerde[]> {
-  const body = await leer("/api/v1/catastro/areas")
+  const body = await leer(apiUrl("/catastro/areas"))
   return lista(body, "areas").map((row, index) => {
     if (row && typeof row === "object" && "geometry" in (row as object)) {
       return areaDesdeFeature(row as { geometry?: unknown; properties?: PropsFuente | null }, index + 1)
@@ -282,18 +283,18 @@ export async function listarAreas(): Promise<AreaVerde[]> {
 export async function guardarArea(area: AreaVerde, alta: boolean): Promise<void> {
   const payload = payloadArea(area)
   if (alta) {
-    await enviar("/api/v1/catastro/areas", "POST", payload)
+    await enviar(apiUrl("/catastro/areas"), "POST", payload)
     return
   }
-  await enviar(`/api/v1/catastro/areas/${encodeURIComponent(area.feature_id)}`, "PATCH", payload)
+  await enviar(apiUrl(`/catastro/areas/${encodeURIComponent(area.feature_id)}`), "PATCH", payload)
 }
 
 export async function bajaArea(featureId: string): Promise<void> {
-  await enviar(`/api/v1/catastro/areas/${encodeURIComponent(featureId)}/baja`, "POST", {})
+  await enviar(apiUrl(`/catastro/areas/${encodeURIComponent(featureId)}/baja`), "POST", {})
 }
 
 export async function listarZonas(): Promise<ZonaSupervision[]> {
-  const body = await leer("/api/v1/catastro/zonas-supervision")
+  const body = await leer(apiUrl("/catastro/zonas-supervision"))
   return lista(body, "zonas").map((row) => {
     if (row && typeof row === "object" && "geometry" in (row as object)) {
       return zonaDesdeFeature(row as { geometry?: unknown; properties?: PropsFuente | null })
@@ -306,14 +307,14 @@ export async function listarZonas(): Promise<ZonaSupervision[]> {
 export async function guardarZona(zona: ZonaSupervision, alta: boolean): Promise<void> {
   const payload = payloadZona(zona)
   if (alta) {
-    await enviar("/api/v1/catastro/zonas-supervision", "POST", payload)
+    await enviar(apiUrl("/catastro/zonas-supervision"), "POST", payload)
     return
   }
-  await enviar(`/api/v1/catastro/zonas-supervision/${encodeURIComponent(zona.codigo)}`, "PATCH", payload)
+  await enviar(apiUrl(`/catastro/zonas-supervision/${encodeURIComponent(zona.codigo)}`), "PATCH", payload)
 }
 
 export async function bajaZona(codigo: string): Promise<void> {
-  await enviar(`/api/v1/catastro/zonas-supervision/${encodeURIComponent(codigo)}/baja`, "POST", {})
+  await enviar(apiUrl(`/catastro/zonas-supervision/${encodeURIComponent(codigo)}/baja`), "POST", {})
 }
 
 function csvCelda(value: string | number | null): string {

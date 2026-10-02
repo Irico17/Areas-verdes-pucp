@@ -24,6 +24,7 @@ import {
 } from "../offline/subida"
 import { fetchEvidencias, type Evidencia } from "../producto"
 import { Esqueleto } from "../ui/Esqueleto"
+import { apiUrl } from "../api"
 
 async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const dig = await crypto.subtle.digest("SHA-256", bytes)
@@ -57,7 +58,7 @@ async function publicar(
   }
   if (item.ordenId) data.set("orden_id", item.ordenId)
   data.set("archivo", new Blob([item.bytes], { type: item.mime }), item.nombre)
-  const status = await enviarConProgreso("/api/v1/evidencias", data, alProgreso)
+  const status = await enviarConProgreso(apiUrl("/evidencias"), data, alProgreso)
   return clasificarEstado(status)
 }
 

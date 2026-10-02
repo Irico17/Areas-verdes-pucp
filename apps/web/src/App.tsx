@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { fetchCollection } from "./api"
+import { apiUrl, fetchCollection } from "./api"
 import { INVENTARIO } from "./inventario"
 import { CampusMap } from "./map/CampusMap"
 import type { ModoDibujo } from "./map/draw"
@@ -249,7 +249,7 @@ export default function App() {
     Promise.all(
       INVENTARIO.map(async (layer) => {
         try {
-          return [layer.id, await fetchCollection(`/api/v1/geo/inventario/${layer.id}`)] as const
+          return [layer.id, await fetchCollection(apiUrl(`/geo/inventario/${layer.id}`))] as const
         } catch {
           return [layer.id, { type: "FeatureCollection" as const, features: [] }] as const
         }
@@ -257,7 +257,7 @@ export default function App() {
     ).then((rows) => {
       if (!cancelled) setInventory(Object.fromEntries(rows))
     })
-    fetchCollection("/api/v1/geo/edificios")
+    fetchCollection(apiUrl("/geo/edificios"))
       .then((fc) => {
         if (!cancelled) setEdificios(fc)
       })

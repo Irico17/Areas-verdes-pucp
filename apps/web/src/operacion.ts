@@ -1,4 +1,4 @@
-import { fetchCollection } from "./api"
+import { apiUrl, fetchCollection } from "./api"
 import type { FeatureCollection, GeoFeature, Rol } from "./types"
 
 export class ApiError extends Error {
@@ -127,7 +127,7 @@ async function send(path: string, method: string, body?: unknown): Promise<Respo
 export function actividadesPath(rol: Rol, capatazId: string): string {
   const q = new URLSearchParams({ rol, abiertas: "1" })
   if (rol === "capataz") q.set("capataz_id", capatazId)
-  return `/api/v1/operacion/actividades?${q.toString()}`
+  return apiUrl(`/operacion/actividades?${q.toString()}`)
 }
 
 export function fetchActividades(rol: Rol, capatazId: string): Promise<FeatureCollection> {
@@ -135,34 +135,34 @@ export function fetchActividades(rol: Rol, capatazId: string): Promise<FeatureCo
 }
 
 export async function fetchCapataces(): Promise<Capataz[]> {
-  const res = await send("/api/v1/operacion/capataces", "GET")
+  const res = await send(apiUrl("/operacion/capataces"), "GET")
   return res.json().then((body: { capataces?: Capataz[] }) => body.capataces ?? [])
 }
 
 export async function crearActividad(body: CreateBody): Promise<void> {
   const { actor_rol: _rol, ...resto } = body
-  await send("/api/v1/operacion/actividades", "POST", resto)
+  await send(apiUrl("/operacion/actividades"), "POST", resto)
 }
 
 export async function asignar(id: string, capatazId: string, _rol: Rol): Promise<void> {
-  await send(`/api/v1/operacion/actividades/${id}/asignacion`, "PATCH", {
+  await send(apiUrl(`/operacion/actividades/${id}/asignacion`), "PATCH", {
     capataz_id: capatazId,
   })
 }
 
 export async function cambiarEstado(id: string, estado: string, rol: Rol, capatazId: string): Promise<void> {
-  await send(`/api/v1/operacion/actividades/${id}/estado`, "PATCH", {
+  await send(apiUrl(`/operacion/actividades/${id}/estado`), "PATCH", {
     estado,
     capataz_id: rol === "capataz" ? capatazId : "",
   })
 }
 
 export async function archivar(id: string, _rol: Rol, motivo: string): Promise<void> {
-  await send(`/api/v1/operacion/actividades/${id}/archivar`, "POST", { motivo })
+  await send(apiUrl(`/operacion/actividades/${id}/archivar`), "POST", { motivo })
 }
 
 export async function fetchTimeline(id: string): Promise<Evento[]> {
-  const res = await send(`/api/v1/operacion/actividades/${id}/timeline`, "GET")
+  const res = await send(apiUrl(`/operacion/actividades/${id}/timeline`), "GET")
   const body = (await res.json()) as { eventos?: Evento[] }
   return body.eventos ?? []
 }

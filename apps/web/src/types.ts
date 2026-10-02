@@ -1,3 +1,5 @@
+import { apiUrl } from "./api"
+
 export type Rol = "jefatura" | "coordinacion" | "capataz" | "admin"
 
 export type FeatureProps = Record<string, unknown>
@@ -35,7 +37,7 @@ export const LAYERS: LayerSpec[] = [
     id: "areas",
     label: "Áreas verdes",
     hint: "Catastro principal",
-    path: "/api/v1/geo/areas",
+    path: apiUrl("/geo/areas"),
     defaultOn: true,
     fill: "#308046",
     line: "#083465",
@@ -45,7 +47,7 @@ export const LAYERS: LayerSpec[] = [
     id: "zonas",
     label: "Zonas",
     hint: "Sectores operativos, sin nombres de personas",
-    path: "/api/v1/geo/zonas",
+    path: apiUrl("/geo/zonas"),
     defaultOn: true,
     fill: "#5a6e80",
     line: "#083465",
@@ -55,7 +57,7 @@ export const LAYERS: LayerSpec[] = [
     id: "jardines_reserva",
     label: "Jardines de reserva",
     hint: "Capa auxiliar",
-    path: "/api/v1/geo/capas/jardines_reserva",
+    path: apiUrl("/geo/capas/jardines_reserva"),
     defaultOn: false,
     fill: "#2f4a44",
     line: "#1a3330",
@@ -65,7 +67,7 @@ export const LAYERS: LayerSpec[] = [
     id: "xerofitica",
     label: "Xerofítica",
     hint: "Capa auxiliar",
-    path: "/api/v1/geo/capas/xerofitica",
+    path: apiUrl("/geo/capas/xerofitica"),
     defaultOn: false,
     fill: "#6e5344",
     line: "#4a3428",

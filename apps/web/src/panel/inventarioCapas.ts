@@ -1,3 +1,5 @@
+import { apiUrl } from "../api"
+
 export const CAPAS_EDITABLES = [
   { id: "fauna", label: "Fauna", campos: ["nombre"] },
   { id: "puertas", label: "Puertas", campos: ["codigo"] },
@@ -110,19 +112,19 @@ export function esCapa(entidad: string): entidad is CapaId {
 export type Solicitud = { method: "GET" | "POST" | "PATCH" | "DELETE"; path: string; body?: unknown }
 
 export function rutaListar(entidad: EntidadInventario): string {
-  if (esCapa(entidad)) return `/api/v1/inventario/capas/${entidad}`
-  return `/api/v1/inventario/${entidad}`
+  if (esCapa(entidad)) return apiUrl(`/inventario/capas/${entidad}`)
+  return apiUrl(`/inventario/${entidad}`)
 }
 
 export function solicitudGuardar(entidad: EntidadInventario, id: number | null, body: unknown): Solicitud {
   if (id == null) return { method: "POST", path: rutaListar(entidad), body }
-  if (esCapa(entidad)) return { method: "PATCH", path: `/api/v1/inventario/capas/${entidad}/${id}`, body }
-  return { method: "PATCH", path: `/api/v1/inventario/${entidad}/${id}`, body }
+  if (esCapa(entidad)) return { method: "PATCH", path: apiUrl(`/inventario/capas/${entidad}/${id}`), body }
+  return { method: "PATCH", path: apiUrl(`/inventario/${entidad}/${id}`), body }
 }
 
 export function solicitudBaja(entidad: EntidadInventario, id: number): Solicitud {
-  if (esCapa(entidad)) return { method: "DELETE", path: `/api/v1/inventario/capas/${entidad}/${id}` }
-  return { method: "DELETE", path: `/api/v1/inventario/${entidad}/${id}` }
+  if (esCapa(entidad)) return { method: "DELETE", path: apiUrl(`/inventario/capas/${entidad}/${id}`) }
+  return { method: "DELETE", path: apiUrl(`/inventario/${entidad}/${id}`) }
 }
 
 export type RegistroInventario = Record<string, unknown>

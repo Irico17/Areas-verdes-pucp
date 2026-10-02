@@ -17,6 +17,7 @@ import {
 import { etiquetaRol, type CatalogoItem } from "../producto"
 import type { Rol } from "../types"
 import { EvidenciasCampo } from "./EvidenciasCampo"
+import { apiUrl } from "../api"
 
 export type LaborItem = {
   id: string
@@ -337,7 +338,7 @@ function FichaLabor(props: { actividadId?: string }) {
       return
     }
     try {
-      const res = await fetch(`/api/v1/operacion/actividades/${props.actividadId}/ficha`, {
+      const res = await fetch(apiUrl(`/operacion/actividades/${props.actividadId}/ficha`), {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

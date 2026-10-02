@@ -1,3 +1,5 @@
+import { apiUrl } from "../api"
+
 export const ENTIDADES: { id: string; etiqueta: string }[] = [
   { id: "areas_verdes", etiqueta: "Áreas verdes" },
   { id: "zonas_supervision", etiqueta: "Zonas de supervisión" },
@@ -42,7 +44,7 @@ export type VistaPrevia = {
 export async function previsualizar(entidad: string, archivo: File): Promise<VistaPrevia> {
   const datos = new FormData()
   datos.set("archivo", archivo)
-  const res = await fetch(`/api/v1/importaciones?entidad=${encodeURIComponent(entidad)}`, {
+  const res = await fetch(apiUrl(`/importaciones?entidad=${encodeURIComponent(entidad)}`), {
     method: "POST",
     body: datos,
     credentials: "include",
@@ -52,13 +54,13 @@ export async function previsualizar(entidad: string, archivo: File): Promise<Vis
 }
 
 export async function confirmarImportacion(id: number): Promise<{ lote_id: number; validas: number; escrito: boolean }> {
-  const res = await fetch(`/api/v1/importaciones/${id}/confirmar`, { method: "POST", credentials: "include" })
+  const res = await fetch(apiUrl(`/importaciones/${id}/confirmar`), { method: "POST", credentials: "include" })
   if (!res.ok) throw new Error(await mensaje(res))
   return res.json() as Promise<{ lote_id: number; validas: number; escrito: boolean }>
 }
 
 export async function revertirLote(id: number, confirmar: boolean): Promise<{ lote_id: number; revertidas: string[]; excluidas: { entidad_id: string; motivo: string }[] }> {
-  const res = await fetch(`/api/v1/lotes/${id}/revertir`, {
+  const res = await fetch(apiUrl(`/lotes/${id}/revertir`), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },

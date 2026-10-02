@@ -1,5 +1,6 @@
 import { ApiError } from "./operacion"
 import { ROLES } from "./types"
+import { apiUrl } from "./api"
 
 export type Usuario = {
   id: number
@@ -182,7 +183,7 @@ async function send(path: string, method: string, body?: unknown): Promise<Respo
 }
 
 export async function fetchSesion(): Promise<Usuario | null> {
-  const res = await fetch("/api/v1/sesion", { credentials: "include" })
+  const res = await fetch(apiUrl("/sesion"), { credentials: "include" })
   if (res.status === 401) return null
   if (!res.ok) throw new ApiError(res.status, "No se pudo leer la sesión")
   const body = (await res.json()) as { usuario: Usuario }
@@ -190,40 +191,40 @@ export async function fetchSesion(): Promise<Usuario | null> {
 }
 
 export async function entrar(usuario: string, clave: string): Promise<Usuario> {
-  const res = await send("/api/v1/sesion", "POST", { usuario, clave })
+  const res = await send(apiUrl("/sesion"), "POST", { usuario, clave })
   const body = (await res.json()) as { usuario: Usuario }
   return body.usuario
 }
 
 export async function salir(): Promise<void> {
-  await send("/api/v1/sesion", "DELETE")
+  await send(apiUrl("/sesion"), "DELETE")
 }
 
 export async function fetchCatalogo(clase: string, activos = false): Promise<CatalogoItem[]> {
   const q = new URLSearchParams()
   if (clase) q.set("clase", clase)
   if (activos) q.set("activos", "1")
-  const res = await send(`/api/v1/catalogos?${q.toString()}`, "GET")
+  const res = await send(apiUrl(`/catalogos?${q.toString()}`), "GET")
   const body = (await res.json()) as { items?: CatalogoItem[] }
   return body.items ?? []
 }
 
 export async function crearCatalogo(clase: string, codigo: string, nombre: string): Promise<void> {
-  await send("/api/v1/catalogos", "POST", { clase, codigo, nombre })
+  await send(apiUrl("/catalogos"), "POST", { clase, codigo, nombre })
 }
 
 export async function desactivarCatalogo(id: number): Promise<void> {
-  await send(`/api/v1/catalogos/${id}/desactivar`, "POST")
+  await send(apiUrl(`/catalogos/${id}/desactivar`), "POST")
 }
 
 export async function fetchFichas(q: string): Promise<Ficha[]> {
-  const res = await send(`/api/v1/catastro/areas?q=${encodeURIComponent(q)}`, "GET")
+  const res = await send(apiUrl(`/catastro/areas?q=${encodeURIComponent(q)}`), "GET")
   const body = (await res.json()) as { areas?: Ficha[] }
   return body.areas ?? []
 }
 
 export async function guardarFicha(ficha: Ficha): Promise<void> {
-  await send(`/api/v1/catastro/areas/${encodeURIComponent(ficha.feature_id)}`, "PATCH", {
+  await send(apiUrl(`/catastro/areas/${encodeURIComponent(ficha.feature_id)}`), "PATCH", {
     nombre: ficha.nombre,
     uso: ficha.uso,
     riego_act: ficha.riego_act,
@@ -232,11 +233,11 @@ export async function guardarFicha(ficha: Ficha): Promise<void> {
 }
 
 export async function crearAreaSinGeom(nombre: string, uso: string): Promise<void> {
-  await send("/api/v1/catastro/areas", "POST", { nombre, uso })
+  await send(apiUrl("/catastro/areas"), "POST", { nombre, uso })
 }
 
 export async function fetchSolicitudes(): Promise<Solicitud[]> {
-  const res = await send("/api/v1/solicitudes", "GET")
+  const res = await send(apiUrl("/solicitudes"), "GET")
   const body = (await res.json()) as { solicitudes?: Solicitud[] }
   return body.solicitudes ?? []
 }
@@ -250,11 +251,11 @@ export async function crearSolicitud(body: {
   lugar: string
   detalle: string
 }): Promise<void> {
-  await send("/api/v1/solicitudes", "POST", body)
+  await send(apiUrl("/solicitudes"), "POST", body)
 }
 
 export async function fetchOrdenes(): Promise<Orden[]> {
-  const res = await send("/api/v1/ordenes", "GET")
+  const res = await send(apiUrl("/ordenes"), "GET")
   const body = (await res.json()) as { ordenes?: Orden[] }
   return body.ordenes ?? []
 }
@@ -266,11 +267,11 @@ export async function crearOrden(body: {
   referencia: string
   frecuencia: string
 }): Promise<void> {
-  await send("/api/v1/ordenes", "POST", body)
+  await send(apiUrl("/ordenes"), "POST", body)
 }
 
 export async function fetchRiego(): Promise<{ aviso: string; registros: Riego[] }> {
-  const res = await send("/api/v1/riego", "GET")
+  const res = await send(apiUrl("/riego"), "GET")
   const body = (await res.json()) as { aviso?: string; registros?: Riego[] }
   return { aviso: body.aviso ?? "", registros: body.registros ?? [] }
 }
@@ -286,22 +287,22 @@ export async function crearRiego(body: {
   ciclo?: string
   superficie_m2?: number
 }): Promise<void> {
-  await send("/api/v1/riego", "POST", body)
+  await send(apiUrl("/riego"), "POST", body)
 }
 
 export async function fetchEvidencias(actividadId: string): Promise<Evidencia[]> {
-  const res = await send(`/api/v1/evidencias?actividad_id=${encodeURIComponent(actividadId)}`, "GET")
+  const res = await send(apiUrl(`/evidencias?actividad_id=${encodeURIComponent(actividadId)}`), "GET")
   const body = (await res.json()) as { evidencias?: Evidencia[] }
   return body.evidencias ?? []
 }
 
 export async function fetchReporte(filtro: FiltroReporte): Promise<Reporte> {
-  const res = await send(`/api/v1/reportes/labores?${reporteQuery(filtro)}`, "GET")
+  const res = await send(apiUrl(`/reportes/labores?${reporteQuery(filtro)}`), "GET")
   return res.json() as Promise<Reporte>
 }
 
 export function reporteHref(formato: "csv" | "xls", filtro: FiltroReporte): string {
-  return `/api/v1/reportes/labores?${reporteQuery(filtro, formato)}`
+  return apiUrl(`/reportes/labores?${reporteQuery(filtro, formato)}`)
 }
 
 export type SugerenciaTipo = {
@@ -312,7 +313,7 @@ export type SugerenciaTipo = {
 }
 
 export async function sugerirTipo(titulo: string): Promise<SugerenciaTipo> {
-  const res = await send("/api/v1/ia/sugerir-tipo", "POST", { titulo })
+  const res = await send(apiUrl("/ia/sugerir-tipo"), "POST", { titulo })
   return res.json() as Promise<SugerenciaTipo>
 }
 
@@ -321,7 +322,7 @@ export async function fetchCuentas(): Promise<{
   usuarios: Usuario[]
   permisos: { rol: string; accion: string }[]
 }> {
-  const res = await send("/api/v1/accesos/usuarios", "GET")
+  const res = await send(apiUrl("/accesos/usuarios"), "GET")
   const body = (await res.json()) as {
     aviso?: string
     usuarios?: Usuario[]

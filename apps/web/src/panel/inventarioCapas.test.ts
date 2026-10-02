@@ -3,6 +3,7 @@ import test from "node:test"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { InventarioCapas } from "./InventarioCapas.tsx"
+import { apiUrl } from "../api"
 import {
   CAPAS_EDITABLES,
   SUMAS_PUBLICADAS,
@@ -62,7 +63,7 @@ test("el CSV de fichas no lleva contacto", () => {
 test("alta, edición y baja pegan a la API", () => {
   const alta = solicitudGuardar("tachos", null, { codigo: "PT1", lat: -12.07, lon: -77.08 })
   assert.equal(alta.method, "POST")
-  assert.equal(alta.path, "/api/v1/inventario/tachos")
+  assert.equal(alta.path, apiUrl("/inventario/tachos"))
   const edicion = solicitudGuardar("jardines_reserva", 9, {
     feature_id: "JR-0001",
     codigo: "J1",
@@ -74,10 +75,10 @@ test("alta, edición y baja pegan a la API", () => {
     geojson: '{"type":"MultiPolygon","coordinates":[]}',
   })
   assert.equal(edicion.method, "PATCH")
-  assert.equal(edicion.path, "/api/v1/inventario/capas/jardines_reserva/9")
+  assert.equal(edicion.path, apiUrl("/inventario/capas/jardines_reserva/9"))
   const baja = solicitudBaja("puntos", 3)
   assert.equal(baja.method, "DELETE")
-  assert.equal(baja.path, "/api/v1/inventario/puntos/3")
+  assert.equal(baja.path, apiUrl("/inventario/puntos/3"))
 })
 
 test("enviarInventario usa la cookie y no manda contacto", async () => {
@@ -87,7 +88,7 @@ test("enviarInventario usa la cookie y no manda contacto", async () => {
     return new Response(JSON.stringify({ id: 4 }), { status: 201, headers: { "content-type": "application/json" } })
   }) as typeof fetch
   await enviarInventario(cliente, solicitudGuardar("reservas", null, { origen: "ficticio", evento: "Taller" }))
-  assert.equal(visto?.path, "/api/v1/inventario/reservas")
+  assert.equal(visto?.path, apiUrl("/inventario/reservas"))
   assert.equal(visto?.init.method, "POST")
   assert.equal(visto?.init.credentials, "include")
   assert.match(String(visto?.init.body), /ficticio/)

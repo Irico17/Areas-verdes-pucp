@@ -1,5 +1,6 @@
 import type { Evidencia } from "../producto"
 import { conBackoff, mensajeReintento, type QueuedEvidencia, type ResultadoEnvio } from "./queue"
+import { apiUrl } from "../api"
 
 export type EstadoSubida =
   | { fase: "inactivo" }
@@ -128,7 +129,7 @@ export function esImagen(mime: string): boolean {
 }
 
 export function urlArchivo(id: string): string {
-  return `/api/v1/evidencias/${encodeURIComponent(id)}/archivo`
+  return apiUrl(`/evidencias/${encodeURIComponent(id)}/archivo`)
 }
 
 export function crearCacheUrls(

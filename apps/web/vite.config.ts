@@ -65,8 +65,9 @@ export default defineConfig({
     port: 4317,
     strictPort: true,
     proxy: {
-      "/api": { target: "http://127.0.0.1:8091", changeOrigin: true },
-      "/health": { target: "http://127.0.0.1:8091", changeOrigin: true },
+      "/areas-verdes": { target: process.env.VITE_DEV_API ?? "http://127.0.0.1:8091", changeOrigin: true },
+      "/api": { target: process.env.VITE_DEV_API ?? "http://127.0.0.1:8091", changeOrigin: true },
+      "/health": { target: process.env.VITE_DEV_API ?? "http://127.0.0.1:8091", changeOrigin: true },
     },
   },
   preview: {

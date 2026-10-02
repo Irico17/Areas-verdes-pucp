@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import type { Evidencia } from "../producto.ts"
 import type { QueuedEvidencia } from "./queue.ts"
+import { apiUrl } from "../api"
 import {
   accionTrasFallo,
   avanzar,
@@ -125,7 +126,7 @@ test("enviarConProgreso emite progreso y resuelve el status", async () => {
   const xhr = new FakeXHR()
   const progresos: { cargado: number; total: number | null }[] = []
   const promesa = enviarConProgreso(
-    "/api/v1/evidencias",
+    apiUrl("/evidencias"),
     new FormData(),
     (cargado, total) => progresos.push({ cargado, total }),
     () => xhr as unknown as XMLHttpRequest,
@@ -188,7 +189,7 @@ test("unirEvidencias conserva conPunto de la pendiente", () => {
 test("esImagen y urlArchivo", () => {
   assert.equal(esImagen("image/jpeg"), true)
   assert.equal(esImagen("application/pdf"), false)
-  assert.equal(urlArchivo("a b/c"), "/api/v1/evidencias/a%20b%2Fc/archivo")
+  assert.equal(urlArchivo("a b/c"), apiUrl("/evidencias/a%20b%2Fc/archivo"))
 })
 
 test("crearCacheUrls crea una sola vez por id, revoca los que desaparecen y libera todo", () => {

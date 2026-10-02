@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { FechaCampo } from "../FechaCampo"
 import { Esqueleto } from "../ui/Esqueleto"
 import { AREAS, VIVERO_VACIO, validarVivero, type ViveroItem } from "./vivero"
+import { apiUrl } from "../api"
 
 type Props = {
   iniciales?: ViveroItem[]
@@ -20,7 +21,7 @@ export function ViveroPanel(props: Props) {
   useEffect(() => {
     if (props.iniciales) return
     let cancelado = false
-    void fetch("/api/v1/vivero", { credentials: "include" })
+    void fetch(apiUrl("/vivero"), { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { registros?: (ViveroItem & { lugar_libre?: string })[] } | null) => {
         if (cancelado || !body?.registros) return
@@ -80,7 +81,7 @@ export function ViveroPanel(props: Props) {
             return
           }
           const guardado = { ...form, id: form.id || crypto.randomUUID() }
-          void fetch("/api/v1/vivero", {
+          void fetch(apiUrl("/vivero"), {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
