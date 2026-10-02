@@ -18,26 +18,96 @@ export const TIPOS = [
   { id: "inspeccion", label: "Inspección", marca: "V" },
 ] as const
 
-export const ESTADOS = [
-  { id: "sin_estado", label: "Sin estado", color: "#8d8478" },
-  { id: "pendiente", label: "Pendiente", color: "#8a6410" },
-  { id: "en_proceso", label: "En proceso", color: "#1a5c44" },
-  { id: "bloqueada", label: "Bloqueada", color: "#8c3832" },
-  { id: "cerrada", label: "Cerrada", color: "#5c6a62" },
-  { id: "cancelada", label: "Cancelada", color: "#5c6a62" },
-] as const
+export type EstadoVista = { id: string; label: string; color: string }
 
-export const ABIERTOS = ["pendiente", "en_proceso", "bloqueada"] as const
+const COLOR_ESTADO: Record<string, string> = {
+  sin_estado: "#8d8478",
+  pendiente: "#8a6410",
+  en_proceso: "#1a5c44",
+  ejecutado: "#2f6f4e",
+  bloqueada: "#8c3832",
+  cerrada: "#5c6a62",
+  cancelada: "#5c6a62",
+  archivada: "#5c6a62",
+}
+
+const ETIQUETA_RESPALDO: Record<string, string> = {
+  sin_estado: "Sin estado",
+  pendiente: "Por iniciar",
+  en_proceso: "En proceso",
+  ejecutado: "Ejecutado",
+  bloqueada: "Bloqueada (provisional)",
+  cerrada: "Cerrado",
+  cancelada: "Cancelado",
+  archivada: "Archivado",
+}
+
+const CIERRE_OFICINA = new Set(["cerrada", "cancelada", "archivada"])
+
+export const ESTADOS: EstadoVista[] = [
+  { id: "sin_estado", label: "Sin estado", color: COLOR_ESTADO.sin_estado },
+  { id: "pendiente", label: "Por iniciar", color: COLOR_ESTADO.pendiente },
+  { id: "en_proceso", label: "En proceso", color: COLOR_ESTADO.en_proceso },
+  { id: "ejecutado", label: "Ejecutado", color: COLOR_ESTADO.ejecutado },
+  { id: "cerrada", label: "Cerrado", color: COLOR_ESTADO.cerrada },
+  { id: "cancelada", label: "Cancelado", color: COLOR_ESTADO.cancelada },
+  { id: "archivada", label: "Archivado", color: COLOR_ESTADO.archivada },
+]
+
+export const ABIERTOS = ["pendiente", "en_proceso", "ejecutado", "bloqueada"] as const
+
+export type EstadoCatalogo = {
+  codigo: string
+  nombre: string
+  activo: boolean
+  orden?: number
+  provisional?: boolean
+}
+
+export function aplicarEstadosCatalogo(items: EstadoCatalogo[]) {
+  const activos = items.filter((item) => item.activo && item.codigo && item.nombre.trim() !== "")
+  if (activos.length === 0) return
+  activos.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0) || a.codigo.localeCompare(b.codigo))
+  const next = activos.map((item) => ({
+    id: item.codigo,
+    label: etiquetaVisible(item.nombre, item.provisional),
+    color: COLOR_ESTADO[item.codigo] ?? "#5c6a62",
+  }))
+  ESTADOS.splice(0, ESTADOS.length, ...next)
+}
+
+function etiquetaVisible(nombre: string, provisional?: boolean) {
+  const limpio = nombre.trim()
+  if (provisional && !/provisional/i.test(limpio)) return `${limpio} (provisional)`
+  return limpio
+}
+
+export async function sincronizarEstados(): Promise<void> {
+  try {
+    const res = await send(apiUrl("/catalogos?clase=estado&activos=1"), "GET")
+    const body = (await res.json()) as { items?: EstadoCatalogo[] }
+    const items = (body.items ?? []).map((item) => ({
+      codigo: item.codigo,
+      nombre: item.nombre,
+      activo: item.activo,
+      orden: item.orden,
+      provisional: item.provisional,
+    }))
+    aplicarEstadosCatalogo(items)
+  } catch {
+    /* se conserva la etiqueta de respaldo; no se muestra el slug */
+  }
+}
 
 export function estadosPermitidos(rol?: string) {
   if (rol === "capataz") {
-    return ESTADOS.filter((estado) => estado.id !== "cerrada" && estado.id !== "cancelada")
+    return ESTADOS.filter((estado) => !CIERRE_OFICINA.has(estado.id))
   }
   return ESTADOS
 }
 
 export function puedeEncolarEstado(rol: string | undefined, estado: string): boolean {
-  if (rol === "capataz" && (estado === "cerrada" || estado === "cancelada")) {
+  if (rol === "capataz" && CIERRE_OFICINA.has(estado)) {
     return false
   }
   return true
@@ -83,7 +153,7 @@ export function etiquetaEvento(tipo: string): string {
 }
 
 export function etiquetaEstado(id: string): string {
-  return ESTADOS.find((item) => item.id === id)?.label ?? id
+  return ESTADOS.find((item) => item.id === id)?.label ?? ETIQUETA_RESPALDO[id] ?? id
 }
 
 export function etiquetaTipo(id: string): string {
@@ -130,7 +200,8 @@ export function actividadesPath(rol: Rol, capatazId: string): string {
   return apiUrl(`/operacion/actividades?${q.toString()}`)
 }
 
-export function fetchActividades(rol: Rol, capatazId: string): Promise<FeatureCollection> {
+export async function fetchActividades(rol: Rol, capatazId: string): Promise<FeatureCollection> {
+  await sincronizarEstados()
   return fetchCollection(actividadesPath(rol, capatazId))
 }
 

@@ -25,6 +25,7 @@ export type CatalogoItem = {
   nombre: string
   activo: boolean
   orden: number
+  provisional?: boolean
 }
 
 export type Ficha = {
@@ -200,13 +201,22 @@ export async function salir(): Promise<void> {
   await send(apiUrl("/sesion"), "DELETE")
 }
 
-export async function fetchCatalogo(clase: string, activos = false): Promise<CatalogoItem[]> {
+export async function fetchCatalogoCompleto(clase: string, activos = false): Promise<{ items: CatalogoItem[]; clases: string[] }> {
   const q = new URLSearchParams()
   if (clase) q.set("clase", clase)
   if (activos) q.set("activos", "1")
   const res = await send(apiUrl(`/catalogos?${q.toString()}`), "GET")
-  const body = (await res.json()) as { items?: CatalogoItem[] }
-  return body.items ?? []
+  const body = (await res.json()) as { items?: CatalogoItem[]; clases?: string[] }
+  return { items: body.items ?? [], clases: body.clases ?? [] }
+}
+
+export async function fetchCatalogo(clase: string, activos = false): Promise<CatalogoItem[]> {
+  const body = await fetchCatalogoCompleto(clase, activos)
+  return body.items
+}
+
+export async function renombrarCatalogo(id: number, nombre: string): Promise<void> {
+  await send(apiUrl(`/catalogos/${id}`), "PATCH", { nombre })
 }
 
 export async function crearCatalogo(clase: string, codigo: string, nombre: string): Promise<void> {
