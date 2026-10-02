@@ -22,6 +22,8 @@ export const CAPA = {
   jardinesReserva: { label: "Jardines de reserva", hint: "Capa auxiliar" },
   xerofitica: { label: "Xerofítica", hint: "Capa auxiliar" },
   edificios: { label: "Edificios", hint: "Solo en relieve" },
+  vias: { label: "Vías", hint: "Referente lineal. Apagada hasta importar un GeoJSON." },
+  cuarteles: { label: "Cuarteles (histórico)", hint: "Solo lectura, cuando exista el archivo." },
   puertas: { label: "Puertas y entradas", hint: "Entradas del campus" },
   playas: { label: "Playas de estacionamiento", hint: "Polígonos" },
   puntos: { label: "Puntos del campus", hint: "Título y pin, sin teléfono ni placeId" },
@@ -218,6 +220,8 @@ export const IMPORTACION: Record<string, string> = {
   jardines_reserva: "Jardines de reserva",
   reservas: "Reservas de jardín",
   puntos_pucp: "Puntos del campus",
+  sectores_capataz: "Sectores de capataz",
+  vias: "Vías",
 }
 
 export const CONTEO_TACHO: Record<string, string> = {
@@ -251,6 +255,34 @@ export const INVENTARIO_PESTANAS = {
   bebederos: "Bebederos",
   puntos: "Puntos del campus",
   reservas: "Reservas de jardín",
+} as const
+
+export const ZONIFICACION = {
+  titulo: "Sectores de capataz",
+  lede: "El color del mapa sale de este catálogo. Un sector se desactiva y la fila se conserva.",
+  codigo: "Código",
+  nombre: "Nombre",
+  color: "Color en el mapa",
+  alta: "Dar de alta",
+  desactivar: "Desactivar",
+  vacio: "Todavía no hay sectores de capataz activos.",
+  importarSectores: "Importar sectores",
+  importarVias: "Importar vías",
+  vias: "Vías",
+  viasLede: "La capa nace apagada y vacía. Solo entra un GeoJSON de líneas.",
+  cuarteles: "Cuarteles (histórico)",
+  sinCuarteles: "sin archivo de cuarteles",
+  lugar: "Lugar",
+  lugarCargado: "Lugar (dato ya cargado)",
+  elegirLugar: "Elegir un lugar del catálogo",
+  sinLugar: "Sin lugar",
+  edificio: "Edificio referente",
+  elegirEdificio: "Elegir el edificio por su id",
+  sinEdificio: "Sin edificio",
+  guardarReferente: "Guardar referente",
+  duplicado: "Ese código ya está en el catálogo.",
+  guardado: "Sector de capataz guardado.",
+  inactivo: "Inactivo",
 } as const
 
 export const CATASTRO = {

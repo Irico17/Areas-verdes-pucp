@@ -24,6 +24,8 @@ export const ENTIDADES: { id: string; etiqueta: string }[] = [
   { id: "jardines_reserva", etiqueta: IMPORTACION.jardines_reserva },
   { id: "reservas", etiqueta: IMPORTACION.reservas },
   { id: "puntos_pucp", etiqueta: IMPORTACION.puntos_pucp },
+  { id: "sectores_capataz", etiqueta: IMPORTACION.sectores_capataz },
+  { id: "vias", etiqueta: IMPORTACION.vias },
 ]
 
 export type ErrorFila = { fila: number; campo: string; motivo: string }

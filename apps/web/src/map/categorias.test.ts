@@ -7,7 +7,7 @@ import {
   conteoPorCategoria,
   expresionColor,
   filtroCategorias,
-  SECTORES,
+  sectoresDesdeCatalogo,
   USOS,
 } from "./categorias.ts"
 import type { FeatureCollection, GeoFeature } from "../types.ts"
@@ -32,12 +32,22 @@ test("categoriaUso tolera nulos, vacíos, mayúsculas y tildes", () => {
   assert.equal(categoriaUso("sosténible"), "sostenible")
 })
 
-test("categoriaSector acepta los 5 slugs y cae a sin-sector", () => {
-  for (const cat of SECTORES.filter((c) => c.id !== "sin-sector")) {
-    assert.equal(categoriaSector(cat.id), cat.id)
-  }
-  assert.equal(categoriaSector("cua-desconocido"), "sin-sector")
-  assert.equal(categoriaSector(null), "sin-sector")
+const CATALOGO = sectoresDesdeCatalogo([
+  { codigo: "cua-valeria", nombre: "Sector de capataz — Valeria Quispe (ficticio)", color: "#6b5596" },
+  { codigo: "cua-mateo", nombre: "Sector de capataz — Mateo Salazar (ficticio)", color: "#3f73b0" },
+  { codigo: "cua-renato", nombre: "Sector de capataz — Renato Cárdenas (ficticio)", color: "#c27c2c" },
+  { codigo: "campo-deportivo", nombre: "Campo deportivo", color: "#9aab3e" },
+  { codigo: "bosque-humedo", nombre: "Bosque húmedo", color: "#3f9a82" },
+  { codigo: "sector-lago", nombre: "Sector lago (ficticio)", color: "#c44b6a" },
+])
+
+test("categoriaSector solo reconoce el catálogo y cae a sin-sector", () => {
+  const conocidos = CATALOGO.map((cat) => cat.id)
+  assert.equal(categoriaSector("cua-valeria"), "sin-sector")
+  assert.equal(categoriaSector("cua-mateo", conocidos), "cua-mateo")
+  assert.equal(categoriaSector("sector-lago", conocidos), "sector-lago")
+  assert.equal(categoriaSector("cua-desconocido", conocidos), "sin-sector")
+  assert.equal(categoriaSector(null, conocidos), "sin-sector")
   assert.equal(categoriaSector(undefined), "sin-sector")
 })
 
@@ -56,8 +66,10 @@ test("conCategorias no muta la entrada y agrega el campo correcto", () => {
   assert.equal(porUso.features[0].properties?.cat_uso, "administrativo")
   assert.equal(porUso.features[0].properties?.cat_sector, undefined)
 
-  const porSector = conCategorias(fc, "sector")
+  const porSector = conCategorias(fc, "sector", CATALOGO)
   assert.equal(porSector.features[1].properties?.cat_sector, "cua-mateo")
+  const sinCatalogo = conCategorias(fc, "sector")
+  assert.equal(sinCatalogo.features[1].properties?.cat_sector, "sin-sector")
 })
 
 test("conCategorias sin datos devuelve una colección vacía", () => {
@@ -129,12 +141,13 @@ test("la paleta de uso tiene colores separados entre sí y de la marca/selecció
   }
 })
 
-test("la paleta de sector tiene colores separados entre sí y de la marca/selección", () => {
-  for (let i = 0; i < SECTORES.length; i++) {
-    for (let j = i + 1; j < SECTORES.length; j++) {
-      assert.ok(deltaE(SECTORES[i].fill, SECTORES[j].fill) >= 20, `${SECTORES[i].id} vs ${SECTORES[j].id}`)
+test("la paleta que trae el catálogo separa los colores entre sí y de la marca", () => {
+  for (let i = 0; i < CATALOGO.length; i++) {
+    for (let j = i + 1; j < CATALOGO.length; j++) {
+      assert.ok(deltaE(CATALOGO[i].fill, CATALOGO[j].fill) >= 20, `${CATALOGO[i].id} vs ${CATALOGO[j].id}`)
     }
-    assert.ok(deltaE(SECTORES[i].fill, "#083465") >= 15, `${SECTORES[i].id} vs selección`)
-    assert.ok(deltaE(SECTORES[i].fill, "#308046") >= 15, `${SECTORES[i].id} vs marca`)
+    assert.ok(deltaE(CATALOGO[i].fill, "#083465") >= 15, `${CATALOGO[i].id} vs selección`)
+    assert.ok(deltaE(CATALOGO[i].fill, "#308046") >= 15, `${CATALOGO[i].id} vs marca`)
   }
+  assert.equal(sectoresDesdeCatalogo([{ codigo: "apagado", nombre: "Apagado", color: "#112233", activo: false }]).length, 1)
 })

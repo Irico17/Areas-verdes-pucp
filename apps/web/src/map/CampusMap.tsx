@@ -21,8 +21,9 @@ import {
   filtroCategorias,
   OPACIDAD_RELLENO,
   OPACIDAD_SECTOR,
-  SECTORES,
+  SIN_SECTOR,
   USOS,
+  type Categoria,
 } from "./categorias"
 import { catastroVisible, conteoCapas } from "./coverage"
 import { activarDibujo, type ModoDibujo } from "./draw"
@@ -34,7 +35,6 @@ import { apiUrl } from "../api"
 
 const CATASTRO_FILLS = ["areas-fill", "zonas-fill"]
 const USO_IDS = USOS.map((c) => c.id)
-const SECTOR_IDS = SECTORES.map((c) => c.id)
 
 type Props = {
   data: Partial<Record<LayerId, FeatureCollection>>
@@ -49,6 +49,7 @@ type Props = {
   inventory: Partial<Record<string, FeatureCollection>>
   inventoryOn: Record<string, boolean>
   ocultas: string[]
+  sectores?: Categoria<string>[]
   onSelectCatastro: (hit: { layer: string; props: Record<string, unknown> } | null) => void
   onSelectActividad: (id: string | null) => void
   onPin: (lon: number, lat: number) => void
@@ -131,6 +132,7 @@ export function CampusMap({
   inventory,
   inventoryOn,
   ocultas,
+  sectores = [SIN_SECTOR],
   modoDibujo = null,
 }: Props) {
   const host = useRef<HTMLDivElement | null>(null)
@@ -146,6 +148,7 @@ export function CampusMap({
   const inventoryRef = useRef(inventory)
   const inventoryOnRef = useRef(inventoryOn)
   const dibujoRef = useRef(modoDibujo)
+  const sectoresRef = useRef(sectores)
   const hoverRef = useRef<{ source: string; id: string | number } | null>(null)
   const selRef = useRef<{ source: string; id: string | number } | null>(null)
 
@@ -157,7 +160,8 @@ export function CampusMap({
     onCatastro.current = onSelectCatastro
     onActividad.current = onSelectActividad
     onPinRef.current = onPin
-  }, [pinMode, modoDibujo, inventory, inventoryOn, onSelectCatastro, onSelectActividad, onPin])
+    sectoresRef.current = sectores
+  }, [pinMode, modoDibujo, inventory, inventoryOn, onSelectCatastro, onSelectActividad, onPin, sectores])
 
   useEffect(() => {
     if (!host.current || mapRef.current) return
@@ -198,17 +202,20 @@ export function CampusMap({
       for (const layer of LAYERS) {
         map.addSource(layer.id, { type: "geojson", data: { type: "FeatureCollection", features: [] }, promoteId: "id" })
         const esCatastro = layer.id === "areas" || layer.id === "zonas"
+        const esLinea = layer.id === "vias"
         const campo = layer.id === "zonas" ? "cat_sector" : "cat_uso"
-        const cats = layer.id === "zonas" ? SECTORES : USOS
-        map.addLayer({
-          id: `${layer.id}-fill`,
-          type: "fill",
-          source: layer.id,
-          paint: {
-            "fill-color": esCatastro ? expresionColor(campo, cats, "fill") : layer.fill,
-            "fill-opacity": layer.id === "zonas" ? OPACIDAD_SECTOR : esCatastro ? OPACIDAD_RELLENO : layer.fillOpacity,
-          },
-        })
+        const cats = layer.id === "zonas" ? sectoresRef.current : USOS
+        if (!esLinea) {
+          map.addLayer({
+            id: `${layer.id}-fill`,
+            type: "fill",
+            source: layer.id,
+            paint: {
+              "fill-color": esCatastro ? expresionColor(campo, cats, "fill") : layer.fill,
+              "fill-opacity": layer.id === "zonas" ? OPACIDAD_SECTOR : esCatastro ? OPACIDAD_RELLENO : layer.fillOpacity,
+            },
+          })
+        }
         map.addLayer({
           id: `${layer.id}-line`,
           type: "line",
@@ -248,7 +255,7 @@ export function CampusMap({
         source: "zonas",
         layout: { visibility: "none" },
         paint: {
-          "fill-extrusion-color": ["case", ["boolean", ["feature-state", "sel"], false], "#083465", expresionColor("cat_sector", SECTORES, "fill")],
+          "fill-extrusion-color": ["case", ["boolean", ["feature-state", "sel"], false], "#083465", expresionColor("cat_sector", sectoresRef.current, "fill")],
           "fill-extrusion-opacity": 0.8,
           "fill-extrusion-height": alturaExtrusion,
         },
@@ -459,7 +466,7 @@ export function CampusMap({
         const codigo = props.codigo ? String(props.codigo) : "sin código"
         const uso = props.uso ? String(props.uso) : ""
         const categoria = esZona
-          ? `Sector: ${escapeHtml(props.sector_etiqueta ?? etiquetaCategoria("sector", String(props.cat_sector ?? "")))}`
+          ? `Sector de capataz: ${props.sector_etiqueta ?? etiquetaCategoria("sector", String(props.cat_sector ?? ""), sectoresRef.current)}`
           : `Categoría: ${escapeHtml(etiquetaCategoria("uso", String(props.cat_uso ?? "")))}`
         const popup = new Popup({ closeButton: true, maxWidth: "280px", className: "cv-popup" })
           .setLngLat(event.lngLat)
@@ -501,6 +508,8 @@ export function CampusMap({
       const vis = showFill ? "visible" : "none"
       if (map.getLayer(`${layer.id}-fill`)) {
         map.setLayoutProperty(`${layer.id}-fill`, "visibility", vis)
+      }
+      if (map.getLayer(`${layer.id}-line`)) {
         map.setLayoutProperty(`${layer.id}-line`, "visibility", visible[layer.id] ? "visible" : "none")
       }
       if (esCatastro && map.getLayer(`${layer.id}-realce`)) {
@@ -508,7 +517,7 @@ export function CampusMap({
       }
       if (esCatastro) {
         const campo = layer.id === "zonas" ? "cat_sector" : "cat_uso"
-        const todos = layer.id === "zonas" ? SECTOR_IDS : USO_IDS
+        const todos = layer.id === "zonas" ? sectores.map((cat) => cat.id) : USO_IDS
         const filtro = filtroCategorias(campo, todos.filter((id) => !ocultas.includes(id)), todos)
         for (const capa of [`${layer.id}-fill`, `${layer.id}-line`, `${layer.id}-realce`, `${layer.id}-extrusion`]) {
           if (map.getLayer(capa)) map.setFilter(capa, filtro)
@@ -520,6 +529,16 @@ export function CampusMap({
     }
     if (map.getLayer("zonas-extrusion")) {
       map.setLayoutProperty("zonas-extrusion", "visibility", relieve && visible.zonas ? "visible" : "none")
+    }
+    if (map.getLayer("zonas-fill")) {
+      map.setPaintProperty("zonas-fill", "fill-color", expresionColor("cat_sector", sectores, "fill"))
+      map.setPaintProperty("zonas-line", "line-color", expresionColor("cat_sector", sectores, "line"))
+      map.setPaintProperty("zonas-extrusion", "fill-extrusion-color", [
+        "case",
+        ["boolean", ["feature-state", "sel"], false],
+        "#083465",
+        expresionColor("cat_sector", sectores, "fill"),
+      ])
     }
     const conteo = conteoCapas(data)
     if (!encuadrado.current && catastroVisible(conteo)) {
@@ -543,7 +562,7 @@ export function CampusMap({
         }
       }
     }
-  }, [data, visible, activities, ready, relieve, edificios, showEdificios, inventory, inventoryOn, ocultas])
+  }, [data, visible, activities, ready, relieve, edificios, showEdificios, inventory, inventoryOn, ocultas, sectores])
 
   useEffect(() => {
     const map = mapRef.current
