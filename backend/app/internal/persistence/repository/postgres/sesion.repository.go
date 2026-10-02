@@ -40,17 +40,18 @@ func (r *sesionRepository) Crear(ctx context.Context, sesion *entities.Sesion) e
 func (r *sesionRepository) ObtenerPorTokenHash(ctx context.Context, tokenHash string) (*entities.Usuario, error) {
 	var m models.UsuarioModel
 	err := r.dbWithCtx(ctx).Raw(`
-		SELECT u.id, u.usuario, u.nombre, u.rol, r.nombre AS rol_nombre, u.capataz_id
+		SELECT u.id, u.usuario, u.nombre, u.rol, r.nombre AS rol_nombre, u.capataz_id, u.debe_cambiar_password
 		FROM sesiones s
 		JOIN usuarios u ON u.id = s.usuario_id
 		LEFT JOIN roles r ON r.codigo = u.rol
-		WHERE s.token_hash = $1 AND s.expires_at > now() AND u.activo`,
+		WHERE s.token_hash = $1 AND s.expires_at > now() AND u.activo AND COALESCE(r.activo, false)`,
 		tokenHash,
-	).Row().Scan(&m.ID, &m.Usuario, &m.Nombre, &m.Rol, &m.RolNombre, &m.CapatazID)
+	).Row().Scan(&m.ID, &m.Usuario, &m.Nombre, &m.Rol, &m.RolNombre, &m.CapatazID, &m.DebeCambiarPassword)
 	if err != nil {
 		return nil, err
 	}
 	m.Activo = true
+	m.RolActivo = true
 	return mapper.UsuarioToEntity(&m), nil
 }
 

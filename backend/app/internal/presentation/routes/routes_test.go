@@ -61,12 +61,36 @@ type mockUsuarioRoutesUC struct{}
 
 func (mockUsuarioRoutesUC) ListarUsuarios(_ context.Context) (*dto.UsuariosResponseDTO, error) {
 	return &dto.UsuariosResponseDTO{
-		Usuarios: []dto.UsuarioSesionDTO{
-			{ID: 1, Usuario: "admin", Rol: enums.RolAdmin.String()},
+		Usuarios: []dto.CuentaDTO{
+			{ID: 1, Usuario: "admin", Rol: enums.RolAdmin.String(), Activo: true},
 		},
 		Permisos: []dto.PermisoDTO{},
-		Aviso:    "aviso",
+		Aviso:    "La jefatura de sección administra las cuentas.",
 	}, nil
+}
+
+func (mockUsuarioRoutesUC) Crear(_ context.Context, _ int64, in dto.CrearCuentaDTO) (*dto.CuentaDTO, error) {
+	return &dto.CuentaDTO{ID: 9, Usuario: in.Usuario, Nombre: in.Nombre, Rol: in.Rol, Activo: true, DebeCambiarPassword: true}, nil
+}
+
+func (mockUsuarioRoutesUC) Actualizar(_ context.Context, _ int64, _, usuario string, _ dto.ActualizarCuentaDTO) (*dto.CuentaDTO, error) {
+	return &dto.CuentaDTO{ID: 9, Usuario: usuario, Activo: true}, nil
+}
+
+func (mockUsuarioRoutesUC) CambiarClavePropia(_ context.Context, usuario, _, _ string) (*dto.UsuarioSesionDTO, error) {
+	return &dto.UsuarioSesionDTO{Usuario: usuario}, nil
+}
+
+func (mockUsuarioRoutesUC) ActualizarPermiso(_ context.Context, _ int64, _, _ string, _ bool) error {
+	return nil
+}
+
+func (mockUsuarioRoutesUC) CrearRol(_ context.Context, _ int64, codigo, nombre string) (*dto.RolDTO, error) {
+	return &dto.RolDTO{Codigo: codigo, Nombre: nombre, Activo: true}, nil
+}
+
+func (mockUsuarioRoutesUC) ActualizarRol(_ context.Context, _ int64, _ string, _ bool) error {
+	return nil
 }
 
 type mockContratoOpenAPI struct{}
@@ -580,7 +604,7 @@ func setupTestRouterWithEnv(swaggerEnabled bool, appEnv string) *gin.Engine {
 	healthCtrl := controller.NewHealthController(mockSaludUC{})
 	metaCtrl := controller.NewMetaController(mockContratoOpenAPI{}, zerolog.Nop())
 	sesionCtrl := controller.NewSesionController(mockSesionRoutesUC{})
-	usuarioCtrl := controller.NewUsuarioController(mockUsuarioRoutesUC{}, zerolog.Nop())
+	usuarioCtrl := controller.NewUsuarioController(mockUsuarioRoutesUC{}, services.NewPermisosMemoria(), zerolog.Nop())
 	catalogoCtrl := controller.NewCatalogoController(mockCatalogoRoutesUC{}, zerolog.Nop())
 	geoCtrl := controller.NewGeoController(mockGeoRoutesUC{}, zerolog.Nop())
 	areaVerdeCtrl := controller.NewAreaVerdeController(mockAreaVerdeRoutesUC{}, zerolog.Nop())
@@ -608,7 +632,7 @@ func setupTestRouterWithEnv(swaggerEnabled bool, appEnv string) *gin.Engine {
 	auditoriaCtrl := controller.NewAuditoriaController(mockLoteRoutesUC{}, zerolog.Nop())
 	importacionCtrl := controller.NewImportacionController(mockImportacionRoutesUC{}, zerolog.Nop())
 
-	permisosSvc := services.NewPermisosService()
+	permisosSvc := services.NewPermisosMemoria()
 	limitador := ratelimit.NewMemoriaLimitador(100, time.Minute)
 
 	healthGrp := groups.NewHealthGroup(healthCtrl)
@@ -1362,7 +1386,7 @@ func TestRutasCatastroMaestro_PermisosPorRol(t *testing.T) {
 		{http.MethodGet, "/api/v1/catastro/lugares", "token-norte", "", 200, ""},
 		{http.MethodPost, "/api/v1/catastro/lugares", "token-norte", `{"nombre":"L1","lat":-12.07,"lon":-77.08}`, 201, ""},
 		{http.MethodGet, "/api/v1/catastro/especies", "token-norte", "", 200, ""},
-		{http.MethodPost, "/api/v1/catastro/especies", "token-norte", `{"nombre_cientifico":"S1","nombre_comun":"C1"}`, 201, ""},
+		{http.MethodPost, "/api/v1/catastro/especies", "token-norte", `{"nombre_cientifico":"S1","nombre_comun":"C1"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodGet, "/api/v1/catastro/ejemplares", "token-norte", "", 200, ""},
 		{http.MethodPost, "/api/v1/catastro/ejemplares", "token-norte", `{"codigo":"EJ-1","tipo_vegetacion":"Árbol","cantidad":1}`, 201, ""},
 		{http.MethodGet, "/api/v1/catastro/ejemplares/1/codigos", "token-norte", "", 200, ""},

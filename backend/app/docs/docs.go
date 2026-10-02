@@ -43,9 +43,188 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/accesos/permisos": {
+            "patch": {
+                "description": "Concede o retira una acción. Permite lo lee sin reiniciar.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Accesos"
+                ],
+                "summary": "Actualizar un permiso",
+                "parameters": [
+                    {
+                        "description": "Celda de la matriz",
+                        "name": "cuerpo",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ActualizarPermisoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "acción inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/accesos/roles": {
+            "post": {
+                "description": "Crea un rol sin renombrar los códigos existentes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Accesos"
+                ],
+                "summary": "Alta de rol",
+                "parameters": [
+                    {
+                        "description": "Código y nombre",
+                        "name": "cuerpo",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearRolRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "rol creado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "código inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "el rol ya existe",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/accesos/roles/{codigo}": {
+            "patch": {
+                "description": "Un rol inactivo no inicia sesión. No renombra el código.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Accesos"
+                ],
+                "summary": "Activar o desactivar un rol",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Código del rol",
+                        "name": "codigo",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Activo",
+                        "name": "cuerpo",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ActualizarRolRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "JSON inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/accesos/usuarios": {
             "get": {
-                "description": "Devuelve la lista de cuentas locales y permisos (solo admin)",
+                "description": "Devuelve cuentas, roles y la matriz. Jefatura de sección y administrador del sistema.",
                 "produces": [
                     "application/json"
                 ],
@@ -61,7 +240,7 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "solo administración ve las cuentas",
+                        "description": "su rol no tiene ese permiso",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -77,9 +256,129 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    }
+                }
+            },
+            "post": {
+                "description": "Crea una cuenta con clave propia y debe_cambiar_password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Accesos"
+                ],
+                "summary": "Alta de cuenta",
+                "parameters": [
+                    {
+                        "description": "Cuenta nueva",
+                        "name": "cuerpo",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearUsuarioRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "cuenta creada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     },
-                    "503": {
-                        "description": "base de datos no disponible",
+                    "400": {
+                        "description": "datos inválidos",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "usuario ya existe",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/accesos/usuarios/{usuario}": {
+            "patch": {
+                "description": "Cambia nombre, rol, activo o clave. La baja es lógica.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Accesos"
+                ],
+                "summary": "Actualizar cuenta",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Usuario",
+                        "name": "usuario",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Campos a cambiar",
+                        "name": "cuerpo",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ActualizarUsuarioRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "cuenta actualizada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "datos inválidos",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "no existe esa cuenta",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3467,6 +3766,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/sesion/clave": {
+            "post": {
+                "description": "La persona reemplaza su clave y limpia debe_cambiar_password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Accesos"
+                ],
+                "summary": "Cambiar la clave propia",
+                "parameters": [
+                    {
+                        "description": "Clave actual y nueva",
+                        "name": "cuerpo",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CambiarClaveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "clave actualizada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "clave inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "sin sesión o clave incorrecta",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/solicitudes": {
             "get": {
                 "produces": [
@@ -4000,6 +4352,35 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "turno": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CuentaDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "capataz_id": {
+                    "type": "string"
+                },
+                "debe_cambiar_password": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "rol": {
+                    "type": "string"
+                },
+                "rol_nombre": {
+                    "type": "string"
+                },
+                "usuario": {
                     "type": "string"
                 }
             }
@@ -4954,6 +5335,20 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.RolDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.SolicitudDTO": {
             "type": "object",
             "properties": {
@@ -5122,29 +5517,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.UsuarioSesionDTO": {
-            "type": "object",
-            "properties": {
-                "capataz_id": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "nombre": {
-                    "type": "string"
-                },
-                "rol": {
-                    "type": "string"
-                },
-                "rol_nombre": {
-                    "type": "string"
-                },
-                "usuario": {
-                    "type": "string"
-                }
-            }
-        },
         "dto.UsuariosResponseDTO": {
             "type": "object",
             "properties": {
@@ -5157,10 +5529,16 @@ const docTemplate = `{
                         "$ref": "#/definitions/dto.PermisoDTO"
                     }
                 },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.RolDTO"
+                    }
+                },
                 "usuarios": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dto.UsuarioSesionDTO"
+                        "$ref": "#/definitions/dto.CuentaDTO"
                     }
                 }
             }
@@ -5334,6 +5712,48 @@ const docTemplate = `{
                 }
             }
         },
+        "requests.ActualizarPermisoRequest": {
+            "type": "object",
+            "properties": {
+                "accion": {
+                    "type": "string"
+                },
+                "concedido": {
+                    "type": "boolean"
+                },
+                "rol": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.ActualizarRolRequest": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "requests.ActualizarUsuarioRequest": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "capataz_id": {
+                    "type": "string"
+                },
+                "clave": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "rol": {
+                    "type": "string"
+                }
+            }
+        },
         "requests.ActualizarZonaSupervisionRequest": {
             "type": "object",
             "properties": {
@@ -5350,6 +5770,17 @@ const docTemplate = `{
                     "type": "object"
                 },
                 "nombre": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.CambiarClaveRequest": {
+            "type": "object",
+            "properties": {
+                "clave_actual": {
+                    "type": "string"
+                },
+                "clave_nueva": {
                     "type": "string"
                 }
             }
@@ -5514,6 +5945,17 @@ const docTemplate = `{
                 }
             }
         },
+        "requests.CrearRolRequest": {
+            "type": "object",
+            "properties": {
+                "codigo": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                }
+            }
+        },
         "requests.CrearSolicitudRequest": {
             "type": "object",
             "properties": {
@@ -5542,6 +5984,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "titulo": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.CrearUsuarioRequest": {
+            "type": "object",
+            "properties": {
+                "capataz_id": {
+                    "type": "string"
+                },
+                "clave": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "rol": {
+                    "type": "string"
+                },
+                "usuario": {
                     "type": "string"
                 }
             }

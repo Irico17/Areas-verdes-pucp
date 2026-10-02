@@ -16,7 +16,7 @@ import (
 func TestRequierePermisoMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	permSvc := services.NewPermisosService()
+	permSvc := services.NewPermisosMemoria()
 
 	setupApp := func() *gin.Engine {
 		r := gin.New()
