@@ -772,6 +772,92 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/catalogos/{id}": {
+            "patch": {
+                "description": "Cambia el nombre visible y deja el antes/después en cambios. No borra la fila.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catálogos"
+                ],
+                "summary": "Corregir el nombre de un ítem",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID del ítem",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Nombre nuevo",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.RenombrarCatalogoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CatalogoItemDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "nombre inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "inicie sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "no existe ese ítem",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "no se pudo guardar el ítem",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/catalogos/{id}/desactivar": {
             "post": {
                 "description": "Realiza una baja lógica cambiando activo=false sin borrar la fila",
@@ -4258,6 +4344,9 @@ const docTemplate = `{
                 },
                 "orden": {
                     "type": "integer"
+                },
+                "provisional": {
+                    "type": "boolean"
                 }
             }
         },
@@ -6214,6 +6303,14 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "codigo_nuevo": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.RenombrarCatalogoRequest": {
+            "type": "object",
+            "properties": {
+                "nombre": {
                     "type": "string"
                 }
             }

@@ -792,12 +792,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "nombre": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/requests.RenombrarCatalogoRequest"
                         }
                     }
                 ],
@@ -6301,6 +6296,14 @@
             "type": "object",
             "properties": {
                 "codigo_nuevo": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.RenombrarCatalogoRequest": {
+            "type": "object",
+            "properties": {
+                "nombre": {
                     "type": "string"
                 }
             }
