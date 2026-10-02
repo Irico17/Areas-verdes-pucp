@@ -2,9 +2,11 @@ package postgres_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
+	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/repository/postgres"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 
@@ -186,5 +188,100 @@ func TestInventarioCampoRepository_Database(t *testing.T) {
 	// Segunda baja al mismo id debe dar error (no encontrado / ya inactivo)
 	if err := repo.Baja(ctx, "tachos", savedTacho.ID); err == nil {
 		t.Fatalf("segunda baja debia fallar con registro no encontrado")
+	}
+}
+
+func reservaPorID(t *testing.T, repo interface {
+	ListarReservas(ctx context.Context, desde, hasta string) ([]entities.ReservaJardin, error)
+}, ctx context.Context, id int64) entities.ReservaJardin {
+	t.Helper()
+	reservas, err := repo.ListarReservas(ctx, "2026-10-01", "2026-10-31")
+	if err != nil {
+		t.Fatalf("ListarReservas fallo: %v", err)
+	}
+	for _, item := range reservas {
+		if item.ID == id {
+			return item
+		}
+	}
+	t.Fatalf("no está la reserva %d: %+v", id, reservas)
+	return entities.ReservaJardin{}
+}
+
+func TestActualizarReserva_SoloUnaHora(t *testing.T) {
+	rawDB, gdb := testutil.MigrarDBTemporal(t, "inv_reserva")
+	defer rawDB.Close()
+
+	ctx := context.Background()
+	repo := postgres.NewInventarioCampoRepository(gdb)
+
+	var antes int64
+	if err := gdb.Raw("SELECT count(*) FROM reservas_jardin").Scan(&antes).Error; err != nil {
+		t.Fatalf("conteo inicial: %v", err)
+	}
+
+	guardada, err := repo.GuardarReserva(ctx, entities.ReservaJardin{
+		Fecha:      "2026-10-15",
+		HoraInicio: "09:00",
+		HoraFin:    "11:00",
+		Estado:     "reservado",
+		Evento:     "Taller de compost",
+		Unidad:     "DAES",
+	})
+	if err != nil {
+		t.Fatalf("GuardarReserva fallo: %v", err)
+	}
+
+	_, err = repo.ActualizarReserva(ctx, guardada.ID, entities.ReservaJardin{HoraFin: "08:00"}, []byte(`{"hora_fin":"08:00"}`))
+	if !errors.Is(err, domainErrors.ErrReservaInvalida) {
+		t.Fatalf("fin anterior al inicio guardado: %v", err)
+	}
+	fila := reservaPorID(t, repo, ctx, guardada.ID)
+	if fila.HoraInicio != "09:00" || fila.HoraFin != "11:00" {
+		t.Fatalf("la fila cambió tras el 400: %s–%s", fila.HoraInicio, fila.HoraFin)
+	}
+
+	if _, err := repo.ActualizarReserva(ctx, guardada.ID, entities.ReservaJardin{HoraInicio: "10:00"}, []byte(`{"hora_inicio":"10:00"}`)); err != nil {
+		t.Fatalf("solo hora_inicio: %v", err)
+	}
+	fila = reservaPorID(t, repo, ctx, guardada.ID)
+	if fila.HoraInicio != "10:00" || fila.HoraFin != "11:00" {
+		t.Fatalf("tras solo hora_inicio: %s–%s", fila.HoraInicio, fila.HoraFin)
+	}
+
+	if _, err := repo.ActualizarReserva(ctx, guardada.ID, entities.ReservaJardin{HoraFin: "12:00"}, []byte(`{"hora_fin":"12:00"}`)); err != nil {
+		t.Fatalf("solo hora_fin: %v", err)
+	}
+	fila = reservaPorID(t, repo, ctx, guardada.ID)
+	if fila.HoraInicio != "10:00" || fila.HoraFin != "12:00" {
+		t.Fatalf("tras solo hora_fin: %s–%s", fila.HoraInicio, fila.HoraFin)
+	}
+
+	_, err = repo.ActualizarReserva(ctx, guardada.ID, entities.ReservaJardin{HoraInicio: "13:00"}, []byte(`{"hora_inicio":"13:00"}`))
+	if !errors.Is(err, domainErrors.ErrReservaInvalida) {
+		t.Fatalf("inicio posterior al fin guardado: %v", err)
+	}
+	fila = reservaPorID(t, repo, ctx, guardada.ID)
+	if fila.HoraInicio != "10:00" || fila.HoraFin != "12:00" {
+		t.Fatalf("la fila cambió tras invertir el inicio: %s–%s", fila.HoraInicio, fila.HoraFin)
+	}
+
+	if _, err := repo.ActualizarReserva(ctx, guardada.ID, entities.ReservaJardin{
+		HoraInicio: "08:00",
+		HoraFin:    "09:00",
+	}, []byte(`{"hora_inicio":"08:00","hora_fin":"09:00"}`)); err != nil {
+		t.Fatalf("las dos horas: %v", err)
+	}
+	fila = reservaPorID(t, repo, ctx, guardada.ID)
+	if fila.HoraInicio != "08:00" || fila.HoraFin != "09:00" || fila.Evento != "Taller de compost" {
+		t.Fatalf("tras las dos horas: %+v", fila)
+	}
+
+	var despues int64
+	if err := gdb.Raw("SELECT count(*) FROM reservas_jardin").Scan(&despues).Error; err != nil {
+		t.Fatalf("conteo final: %v", err)
+	}
+	if despues != antes+1 {
+		t.Fatalf("el PATCH no debe borrar reservas: antes %d, despues %d", antes, despues)
 	}
 }
