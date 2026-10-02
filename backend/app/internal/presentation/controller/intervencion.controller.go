@@ -29,6 +29,7 @@ type IIntervencionController interface {
 	Timeline(*gin.Context)
 	Ficha(*gin.Context)
 	CrearAvance(*gin.Context)
+	RegistrarHito(*gin.Context)
 	Taxonomia(*gin.Context)
 	ListarPersonal(*gin.Context)
 	RegistrarPersonal(*gin.Context)
@@ -396,6 +397,7 @@ func (ctrl *intervencionController) CrearAvance(c *gin.Context) {
 		EjemplarRef:   body.EjemplarRef,
 		ActorRol:      u.Rol,
 		CapatazID:     u.CapatazID,
+		UsuarioID:     u.ID,
 	}
 
 	if err := ctrl.uc.CrearAvance(c.Request.Context(), in); err != nil {
@@ -403,6 +405,38 @@ func (ctrl *intervencionController) CrearAvance(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"id": body.ID})
+}
+
+// RegistrarHito godoc
+// @Summary Record a book milestone on the activity chain
+// @Tags operacion
+// @Accept json
+// @Produce json
+// @Success 201 {object} dto.RegistrarHitoResponseDTO
+// @Router /v1/operacion/actividades/{id}/hitos [post]
+func (ctrl *intervencionController) RegistrarHito(c *gin.Context) {
+	u, capatazID, ok := actorDeSesion(c, "")
+	if !ok {
+		return
+	}
+	var body requests.RegistrarHitoRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido"})
+		return
+	}
+	res, err := ctrl.uc.RegistrarHito(c.Request.Context(), dto.RegistrarHitoDTO{
+		ActividadID: c.Param("id"),
+		Tipo:        body.Tipo,
+		Texto:       body.Texto,
+		ActorRol:    u.Rol,
+		CapatazID:   capatazID,
+		UsuarioID:   u.ID,
+	})
+	if err != nil {
+		writeOperacionErr(c, &ctrl.logger, err)
+		return
+	}
+	c.JSON(http.StatusCreated, res)
 }
 
 // Taxonomia godoc

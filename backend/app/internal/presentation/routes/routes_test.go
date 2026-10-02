@@ -420,6 +420,10 @@ func (mockOperacionRoutesUC) CrearAvance(_ context.Context, _ dto.CrearAvanceDTO
 	return nil
 }
 
+func (mockOperacionRoutesUC) RegistrarHito(_ context.Context, in dto.RegistrarHitoDTO) (dto.RegistrarHitoResponseDTO, error) {
+	return dto.RegistrarHitoResponseDTO{ID: 1, Tipo: in.Tipo}, nil
+}
+
 func (mockOperacionRoutesUC) Taxonomia(context.Context) (dto.TaxonomiaActividadDTO, error) {
 	return dto.TaxonomiaActividadDTO{}, nil
 }
@@ -1834,6 +1838,8 @@ func TestRutasOperacion_SinAutenticacionRetorna401(t *testing.T) {
 		{http.MethodPatch, "/areas-verdes/v1/operacion/actividades/1/ficha"},
 		{http.MethodPost, "/api/v1/operacion/actividades/1/avances"},
 		{http.MethodPost, "/areas-verdes/v1/operacion/actividades/1/avances"},
+		{http.MethodPost, "/api/v1/operacion/actividades/1/hitos"},
+		{http.MethodPost, "/areas-verdes/v1/operacion/actividades/1/hitos"},
 		{http.MethodGet, "/api/v1/operacion/taxonomia-actividad"},
 		{http.MethodGet, "/areas-verdes/v1/operacion/taxonomia-actividad"},
 		{http.MethodGet, "/api/v1/operacion/actividades/1/personal"},
@@ -1879,6 +1885,7 @@ func TestRutasOperacion_PermisosPorRol(t *testing.T) {
 		{http.MethodPatch, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/estado", "token-norte", `{"estado":"en_proceso"}`, 200, ""},
 		{http.MethodPatch, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/ficha", "token-norte", `{"comentario":"test"}`, 200, ""},
 		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/avances", "token-norte", `{"id":"22222222-2222-4222-8222-222222222222","fecha":"2026-09-28","area_feature_id":"AV-0001"}`, 201, ""},
+		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/hitos", "token-norte", `{"tipo":"inicio","texto":"Se abre el riego"}`, 201, ""},
 
 		// Capataz no puede crear, asignar ni archivar (requieren validar)
 		{http.MethodPost, "/api/v1/operacion/actividades", "token-norte", `{"id":"11111111-1111-4111-8111-111111111111","tipo":"riego","titulo":"Riego"}`, 403, "su rol no tiene ese permiso"},
@@ -1896,6 +1903,7 @@ func TestRutasOperacion_PermisosPorRol(t *testing.T) {
 		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/archivar", "token-coordinacion", `{"motivo":"duplicada"}`, 200, ""},
 		{http.MethodPatch, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/ficha", "token-coordinacion", `{"comentario":"test"}`, 200, ""},
 		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/avances", "token-coordinacion", `{"id":"22222222-2222-4222-8222-222222222222","fecha":"2026-09-28","area_feature_id":"AV-0001"}`, 201, ""},
+		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/hitos", "token-coordinacion", `{"tipo":"supervision","texto":"Recorrido del eje"}`, 201, ""},
 		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/personal", "token-coordinacion", `{"nombre_ficticio":"Elsa Mamani"}`, 201, ""},
 		{http.MethodGet, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/personal", "token-coordinacion", "", 200, ""},
 
@@ -1914,6 +1922,7 @@ func TestRutasOperacion_PermisosPorRol(t *testing.T) {
 		// Jefatura no tiene registrar:
 		{http.MethodPatch, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/ficha", "token-jefatura", `{"comentario":"test"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/avances", "token-jefatura", `{"id":"22222222-2222-4222-8222-222222222222","fecha":"2026-09-28","area_feature_id":"AV-0001"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/hitos", "token-jefatura", `{"tipo":"conformidad","texto":"Queda conforme"}`, 201, ""},
 	}
 
 	for _, c := range casos {

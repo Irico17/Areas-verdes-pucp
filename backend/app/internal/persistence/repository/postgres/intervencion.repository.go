@@ -202,11 +202,11 @@ func (r *intervencionRepository) Create(ctx context.Context, in entities.NuevaIn
 		if err := insertarPersonal(tx, in.ID, in.Personal); err != nil {
 			return err
 		}
-		if err := insertEventoDB(tx, in.ID, "creada", "pendiente", in.AssignedCapatazID, in.ActorRol, "Alta desde el mapa", in.UsuarioID); err != nil {
+		if err := insertEventoDB(tx, in.ID, "creada", "pendiente", in.AssignedCapatazID, in.ActorRol, "Alta desde el mapa", in.UsuarioID, ""); err != nil {
 			return err
 		}
 		if in.AssignedCapatazID != "" {
-			if err := insertEventoDB(tx, in.ID, "asignada", "pendiente", in.AssignedCapatazID, in.ActorRol, "Asignación en el alta", in.UsuarioID); err != nil {
+			if err := insertEventoDB(tx, in.ID, "asignada", "pendiente", in.AssignedCapatazID, in.ActorRol, "Asignación en el alta", in.UsuarioID, ""); err != nil {
 				return err
 			}
 		}
@@ -257,9 +257,11 @@ func (r *intervencionRepository) Assign(ctx context.Context, in entities.Asignar
 		}
 		tipo := "asignada"
 		nota := "Asignación"
+		anterior := ""
 		if row.Capataz != "" {
 			tipo = "reasignada"
 			nota = "Reasignación"
+			anterior = row.Capataz
 		}
 		if err := tx.Exec(`
 			UPDATE actividades
@@ -267,7 +269,7 @@ func (r *intervencionRepository) Assign(ctx context.Context, in entities.Asignar
 			WHERE id = $1`, in.ID, capatazID).Error; err != nil {
 			return err
 		}
-		return insertEventoDB(tx, in.ID, tipo, row.Estado, capatazID, in.ActorRol, nota, in.UsuarioID)
+		return insertEventoDB(tx, in.ID, tipo, row.Estado, capatazID, in.ActorRol, nota, in.UsuarioID, anterior)
 	})
 	if err != nil {
 		return zero, err
@@ -319,7 +321,7 @@ func (r *intervencionRepository) SetEstado(ctx context.Context, in entities.Camb
 		if in.Estado == "cancelada" {
 			evTipo = "cancelada"
 		}
-		return insertEventoDB(tx, in.ID, evTipo, in.Estado, row.Capataz, in.ActorRol, "Cambio de estado", in.UsuarioID)
+		return insertEventoDB(tx, in.ID, evTipo, in.Estado, row.Capataz, in.ActorRol, "Cambio de estado", in.UsuarioID, "")
 	})
 	if err != nil {
 		return zero, err
@@ -357,7 +359,7 @@ func (r *intervencionRepository) Archive(ctx context.Context, in entities.Archiv
 			UPDATE actividades SET archivada_en = now(), motivo_archivo = NULLIF($2, ''), updated_at = now() WHERE id = $1`, in.ID, motivo).Error; err != nil {
 			return err
 		}
-		return insertEventoDB(tx, in.ID, "archivada", row.Estado, row.Capataz, in.ActorRol, nota, in.UsuarioID)
+		return insertEventoDB(tx, in.ID, "archivada", row.Estado, row.Capataz, in.ActorRol, nota, in.UsuarioID, "")
 	})
 }
 
@@ -371,9 +373,11 @@ func (r *intervencionRepository) Timeline(ctx context.Context, id string) ([]ent
 	}
 	rows, err := r.db.WithContext(ctx).Raw(`
 		SELECT e.id, e.tipo, e.estado, e.capataz_id, c.equipo, e.actor_rol, e.nota, e.created_at,
-		       e.usuario_id, u.usuario, u.nombre, e.uuid_cliente
+		       e.usuario_id, u.usuario, u.nombre, e.uuid_cliente,
+		       e.capataz_anterior, ant.equipo
 		FROM actividad_eventos e
 		LEFT JOIN capataces c ON c.id = e.capataz_id
+		LEFT JOIN capataces ant ON ant.id = e.capataz_anterior
 		LEFT JOIN usuarios u ON u.id = e.usuario_id
 		WHERE e.actividad_id = $1
 		ORDER BY e.id`, id).Rows()
@@ -395,8 +399,10 @@ func (r *intervencionRepository) Timeline(ctx context.Context, id string) ([]ent
 			login   sql.NullString
 			nombre  sql.NullString
 			uuidCli sql.NullString
+			antID   sql.NullString
+			antNom  sql.NullString
 		)
-		if err := rows.Scan(&ev.ID, &ev.Tipo, &estado, &capataz, &equipo, &ev.ActorRol, &nota, &when, &usuario, &login, &nombre, &uuidCli); err != nil {
+		if err := rows.Scan(&ev.ID, &ev.Tipo, &estado, &capataz, &equipo, &ev.ActorRol, &nota, &when, &usuario, &login, &nombre, &uuidCli, &antID, &antNom); err != nil {
 			return nil, err
 		}
 		ev.ActividadID = id
@@ -418,10 +424,21 @@ func (r *intervencionRepository) Timeline(ctx context.Context, id string) ([]ent
 			idCli := uuidCli.String
 			ev.UUIDCliente = &idCli
 		}
+		if antID.Valid {
+			idAnt := antID.String
+			ev.CapatazAnterior = &idAnt
+		}
+		if antNom.Valid {
+			nomAnt := antNom.String
+			ev.CuadrillaAnterior = &nomAnt
+		}
 		ev.CreatedAt = when
 		out = append(out, ev)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return colgarEvidencias(r.db.WithContext(ctx), id, out)
 }
 
 func (r *intervencionRepository) GuardarFicha(ctx context.Context, in entities.FichaIntervencion) error {
@@ -483,12 +500,42 @@ func (r *intervencionRepository) CrearAvance(ctx context.Context, in entities.Nu
 		if in.ActorRol == usecases.RolCapataz && row.Capataz != strings.TrimSpace(in.CapatazID) {
 			return domainErrors.ForbiddenError{Reason: "el capataz solo puede registrar avances en sus propias labores"}
 		}
-		return tx.Exec(`
+		nota := strings.TrimSpace(in.Nota)
+		if nota == "" {
+			nota = "Avance registrado"
+		}
+		if err := tx.Exec(`
 			INSERT INTO actividad_avances (id, actividad_id, fecha, nota, area_feature_id, ejemplar_ref)
 			VALUES ($1, $2, $3::date, $4, NULLIF($5, ''), NULLIF($6, ''))`,
-			in.ID, in.ActividadID, in.Fecha, strings.TrimSpace(in.Nota), strings.TrimSpace(in.AreaFeatureID), strings.TrimSpace(in.EjemplarRef),
-		).Error
+			in.ID, in.ActividadID, in.Fecha, nota, strings.TrimSpace(in.AreaFeatureID), strings.TrimSpace(in.EjemplarRef),
+		).Error; err != nil {
+			return err
+		}
+		return insertEventoDB(tx, in.ActividadID, "avance", row.Estado, row.Capataz, in.ActorRol, nota, in.UsuarioID, "")
 	})
+}
+
+func (r *intervencionRepository) RegistrarHito(ctx context.Context, in entities.NuevoHito) (int64, error) {
+	var nuevo int64
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		row, err := lockActividadDB(tx, in.ActividadID)
+		if err != nil {
+			return err
+		}
+		if row.Archivada {
+			return domainErrors.InputError{Reason: "la labor está archivada"}
+		}
+		if in.ActorRol == usecases.RolCapataz && row.Capataz != strings.TrimSpace(in.CapatazID) {
+			return domainErrors.ForbiddenError{Reason: "el capataz solo puede anotar hitos en sus propias labores"}
+		}
+		return tx.Raw(`
+			INSERT INTO actividad_eventos (actividad_id, tipo, estado, capataz_id, actor_rol, nota, usuario_id)
+			VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), $5, $6, NULLIF($7, 0))
+			RETURNING id`,
+			in.ActividadID, in.Tipo, row.Estado, row.Capataz, in.ActorRol, strings.TrimSpace(in.Texto), in.UsuarioID,
+		).Row().Scan(&nuevo)
+	})
+	return nuevo, err
 }
 
 func (r *intervencionRepository) One(ctx context.Context, id string) (entities.Feature, error) {
@@ -588,10 +635,44 @@ func capatazExiste(tx *gorm.DB, id string) (bool, error) {
 	return n == 1, err
 }
 
-func insertEventoDB(tx *gorm.DB, id, tipo, estado, capataz, actor, nota string, usuarioID int64) error {
+func insertEventoDB(tx *gorm.DB, id, tipo, estado, capataz, actor, nota string, usuarioID int64, capatazAnterior string) error {
 	return tx.Exec(`
-		INSERT INTO actividad_eventos (actividad_id, tipo, estado, capataz_id, actor_rol, nota, usuario_id)
-		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), $5, $6, NULLIF($7, 0))`,
-		id, tipo, estado, capataz, actor, nota, usuarioID,
+		INSERT INTO actividad_eventos (actividad_id, tipo, estado, capataz_id, actor_rol, nota, usuario_id, capataz_anterior)
+		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), $5, $6, NULLIF($7, 0), NULLIF($8, ''))`,
+		id, tipo, estado, capataz, actor, nota, usuarioID, capatazAnterior,
 	).Error
+}
+
+func colgarEvidencias(db *gorm.DB, actividadID string, eventos []entities.ActividadEvento) ([]entities.ActividadEvento, error) {
+	if len(eventos) == 0 {
+		return eventos, nil
+	}
+	rows, err := db.Raw(`
+		SELECT id::text, nombre, mime, evento_id
+		FROM evidencias
+		WHERE actividad_id = $1 AND evento_id IS NOT NULL
+		ORDER BY created_at`, actividadID).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	porEvento := map[int64][]entities.EvidenciaDeEvento{}
+	for rows.Next() {
+		var item entities.EvidenciaDeEvento
+		var eventoID int64
+		if err := rows.Scan(&item.ID, &item.Nombre, &item.Mime, &eventoID); err != nil {
+			return nil, err
+		}
+		porEvento[eventoID] = append(porEvento[eventoID], item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for i := range eventos {
+		if lista := porEvento[eventos[i].ID]; len(lista) > 0 {
+			eventos[i].Evidencias = lista
+		}
+	}
+	return eventos, nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -65,6 +66,8 @@ func (ctrl *evidenciaController) List(c *gin.Context) {
 // @Param id formData string true "Evidence UUID"
 // @Param actividad_id formData string true "Activity UUID"
 // @Param orden_id formData string false "Order UUID"
+// @Param solicitud_id formData string false "Request UUID"
+// @Param evento_id formData integer false "Timeline event id"
 // @Param nota formData string false "Note"
 // @Param sha256 formData string false "Expected SHA256"
 // @Param lat formData string false "Latitude"
@@ -110,6 +113,16 @@ func (ctrl *evidenciaController) Upload(c *gin.Context) {
 		exif = []byte(raw)
 	}
 
+	var eventoID int64
+	if raw := strings.TrimSpace(c.PostForm("evento_id")); raw != "" {
+		n, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil || n <= 0 {
+			writeOperacionErr(c, &ctrl.logger, domainErrors.InputError{Reason: "evento_id no es válido"})
+			return
+		}
+		eventoID = n
+	}
+
 	res, err := ctrl.uc.Subir(c.Request.Context(), dto.SubirEvidenciaDTO{
 		ID:          c.PostForm("id"),
 		ActividadID: c.PostForm("actividad_id"),
@@ -123,6 +136,8 @@ func (ctrl *evidenciaController) Upload(c *gin.Context) {
 		CapatazID:   u.CapatazID,
 		UsuarioID:   u.ID,
 		OrdenID:     c.PostForm("orden_id"),
+		SolicitudID: c.PostForm("solicitud_id"),
+		EventoID:    eventoID,
 		Contenido:   body,
 	})
 	if err != nil {

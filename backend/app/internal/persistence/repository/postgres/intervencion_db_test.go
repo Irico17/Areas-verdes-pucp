@@ -172,6 +172,7 @@ func TestIntervencionRepository_MutacionesYEventos(t *testing.T) {
 		Nota:          "Avance 1",
 		AreaFeatureID: "AV-0001",
 		ActorRol:      "coordinacion",
+		UsuarioID:     4,
 	})
 	if err != nil {
 		t.Fatalf("error al crear avance: %v", err)

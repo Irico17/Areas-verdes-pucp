@@ -41,4 +41,5 @@ func (g *OperacionGroup) Register(router gin.IRouter) {
 	op.GET("/actividades/:id/timeline", middleware.RequierePermiso(g.permisos, "consultar"), g.controller.Timeline)
 	op.PATCH("/actividades/:id/ficha", middleware.RequierePermiso(g.permisos, "registrar"), g.controller.Ficha)
 	op.POST("/actividades/:id/avances", middleware.RequierePermiso(g.permisos, "registrar"), g.controller.CrearAvance)
+	op.POST("/actividades/:id/hitos", middleware.RequiereAlgunPermiso(g.permisos, "registrar", "validar"), g.controller.RegistrarHito)
 }

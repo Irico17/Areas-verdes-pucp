@@ -109,6 +109,13 @@ func (u *evidenciaUseCase) Subir(ctx context.Context, in dto.SubirEvidenciaDTO) 
 	if ordenID != "" && !uuidOK(ordenID) {
 		return nil, domainErrors.InputError{Reason: "orden_id debe ser un UUID"}
 	}
+	solicitudID := strings.TrimSpace(in.SolicitudID)
+	if solicitudID != "" && !uuidOK(solicitudID) {
+		return nil, domainErrors.InputError{Reason: "solicitud_id debe ser un UUID"}
+	}
+	if in.EventoID < 0 {
+		return nil, domainErrors.InputError{Reason: "evento_id no es válido"}
+	}
 
 	res, err := u.repo.Guardar(ctx, entities.GuardarEvidencia{
 		ID:          in.ID,
@@ -127,6 +134,8 @@ func (u *evidenciaUseCase) Subir(ctx context.Context, in dto.SubirEvidenciaDTO) 
 		Rol:         in.Rol,
 		CapatazID:   in.CapatazID,
 		UsuarioID:   in.UsuarioID,
+		EventoID:    in.EventoID,
+		SolicitudID: solicitudID,
 	}, u.storage)
 	if err != nil {
 		return nil, err
