@@ -130,6 +130,9 @@ func TestValidarClaves(t *testing.T) {
 				if tc.textoEsperado != "" && !strings.Contains(err.Error(), tc.textoEsperado) {
 					t.Fatalf("se esperaba mensaje conteniendo %q, pero se obtuvo %q", tc.textoEsperado, err.Error())
 				}
+				if strings.Contains(err.Error(), "pando-local") || strings.Contains(err.Error(), "campus-lab") {
+					t.Fatalf("el error de validación no debe imprimir la contraseña sensible: %v", err)
+				}
 			} else {
 				if err != nil {
 					t.Fatalf("no se esperaba error, se obtuvo: %v (env=%q, pass=%q)", err, tc.appEnv, tc.devPassword)

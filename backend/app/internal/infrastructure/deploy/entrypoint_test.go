@@ -334,6 +334,9 @@ exit 0
 				if tc.textoEsperado != "" && !strings.Contains(stderr.String(), tc.textoEsperado) {
 					t.Fatalf("se esperaba mensaje conteniendo %q, se obtuvo stderr: %s", tc.textoEsperado, stderr.String())
 				}
+				if strings.Contains(stderr.String(), "pando-local") || strings.Contains(stderr.String(), "campus-lab") {
+					t.Fatalf("el entrypoint no debe imprimir la contraseña sensible en stderr: %s", stderr.String())
+				}
 			} else {
 				if runErr != nil {
 					t.Fatalf("entrypoint falló inesperadamente: %v\nStderr: %s\nStdout: %s", runErr, stderr.String(), stdout.String())

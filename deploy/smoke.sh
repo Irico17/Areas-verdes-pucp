@@ -56,7 +56,7 @@ export POSTGRES_PORT API_PORT WEB_PORT
 if [ "$AMBIENTE" = "produccion" ]; then
   trimmed_dev_pass="$(printf "%s" "$CAMPUS_DEV_PASSWORD" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
   if [ "$trimmed_dev_pass" = "pando-local" ] || [ "$trimmed_dev_pass" = "campus-lab" ]; then
-    echo "ERROR: en producción, CAMPUS_DEV_PASSWORD no puede ser una clave de laboratorio ($trimmed_dev_pass)" >&2
+    echo "ERROR: en producción, CAMPUS_DEV_PASSWORD no puede ser una clave de laboratorio" >&2
     exit 1
   fi
   if [ "${#trimmed_dev_pass}" -lt 16 ]; then

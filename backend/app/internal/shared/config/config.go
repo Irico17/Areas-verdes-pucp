@@ -194,7 +194,7 @@ func (c *Config) Validar() error {
 
 	devPwd := strings.TrimSpace(c.Accesos.DevPassword)
 	if devPwd == "pando-local" || devPwd == "campus-lab" {
-		return fmt.Errorf("en producción, CAMPUS_DEV_PASSWORD no puede ser una clave de laboratorio (%s)", devPwd)
+		return fmt.Errorf("en producción, CAMPUS_DEV_PASSWORD no puede ser una clave de laboratorio")
 	}
 	if len(devPwd) < 16 {
 		return fmt.Errorf("en producción, CAMPUS_DEV_PASSWORD debe tener al menos 16 caracteres (longitud actual: %d)", len(devPwd))
@@ -205,7 +205,7 @@ func (c *Config) Validar() error {
 			if pwd, ok := parsed.User.Password(); ok {
 				pgPwd := strings.TrimSpace(pwd)
 				if pgPwd == "pando-local" || pgPwd == "campus-lab" {
-					return fmt.Errorf("en producción, la clave de Postgres no puede ser una clave de laboratorio (%s)", pgPwd)
+					return fmt.Errorf("en producción, la clave de Postgres no puede ser una clave de laboratorio")
 				}
 				if len(pgPwd) < 16 {
 					return fmt.Errorf("en producción, la clave de Postgres debe tener al menos 16 caracteres (longitud actual: %d)", len(pgPwd))
@@ -215,7 +215,7 @@ func (c *Config) Validar() error {
 	} else if os.Getenv("DATABASE_PASSWORD") != "" {
 		pgPwd := strings.TrimSpace(c.Database.Password)
 		if pgPwd == "pando-local" || pgPwd == "campus-lab" {
-			return fmt.Errorf("en producción, la clave de Postgres no puede ser una clave de laboratorio (%s)", pgPwd)
+			return fmt.Errorf("en producción, la clave de Postgres no puede ser una clave de laboratorio")
 		}
 		if len(pgPwd) < 16 {
 			return fmt.Errorf("en producción, la clave de Postgres debe tener al menos 16 caracteres (longitud actual: %d)", len(pgPwd))

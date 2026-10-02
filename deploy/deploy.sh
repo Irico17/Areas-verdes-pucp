@@ -180,7 +180,7 @@ up_local() {
   compose up -d --build --remove-orphans
   if ! SMOKE_ENV_FILE="$ROOT/deploy/env/${AMBIENTE}.env" bash "$ROOT/deploy/smoke.sh" "$AMBIENTE"; then
     echo "smoke falló. Se intenta rollback a la imagen anterior." >&2
-    if [ -f "$ROOT/deploy/state/${AMBIENTE}.prev-image" ] || [ -f "$ROOT/deploy/state/${AMBIENTE}.prev-image-web" ]; then
+    if [ -f "$ROOT/deploy/state/${AMBIENTE}.prev-image" ] && [ -f "$ROOT/deploy/state/${AMBIENTE}.prev-image-web" ]; then
       rollback=""
       rollback_local
       exit 1
@@ -205,6 +205,15 @@ aws_deploy() {
   : "${AWS_SESSION_TOKEN:?falta AWS_SESSION_TOKEN}"
   : "${TF_VAR_db_password:?falta TF_VAR_db_password}"
   : "${TF_VAR_dev_password:?falta TF_VAR_dev_password}"
+
+  if [ -n "${DEPLOY_PRIMERA_VEZ:-}" ] && [ "${DEPLOY_PRIMERA_VEZ}" != "1" ]; then
+    echo "DEPLOY_PRIMERA_VEZ solo se acepta con valor exacto 1 (valor actual: ${DEPLOY_PRIMERA_VEZ})" >&2
+    exit 1
+  fi
+  if [ "$action" = "rollback" ] && [ "${DEPLOY_PRIMERA_VEZ:-}" = "1" ]; then
+    echo "Un rollback en AWS no puede ser primer despliegue (DEPLOY_PRIMERA_VEZ=1)" >&2
+    exit 1
+  fi
 
   export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-${AWS_REGION:-us-east-1}}"
   export AWS_REGION="$AWS_DEFAULT_REGION"
@@ -322,11 +331,12 @@ aws_deploy() {
   docker push "${web_repo}:${target_tag}"
   echo "Imagen API (tag inmutable): ${api_repo}:${target_tag}"
 
-  if command -v poner-secretos >/dev/null 2>&1; then
-    poner-secretos "$instance"
-  else
-    bash "$ROOT/scripts/poner-secretos.sh" "$instance"
+  local poner_secretos_sh="${PONER_SECRETOS_SH:-"$ROOT/scripts/poner-secretos.sh"}"
+  if [ ! -f "$poner_secretos_sh" ]; then
+    echo "No existe el script de poner secretos: $poner_secretos_sh" >&2
+    exit 1
   fi
+  bash "$poner_secretos_sh" "$instance"
 
   local previous
   previous="$(publicar_imagenes_en_instancia "$instance" "${api_repo}:${target_tag}" "${web_repo}:${target_tag}")"
@@ -369,29 +379,41 @@ backup_produccion() {
   vol="$(aws ec2 describe-volumes --region "$AWS_DEFAULT_REGION" \
     --filters "Name=tag:Name,Values=${prefix}-data" "Name=attachment.instance-id,Values=${instance}" \
     --query 'Volumes[0].VolumeId' --output text)"
-  if [ -z "$vol" ] || [ "$vol" = "None" ]; then
+  if [ -z "$vol" ] || [ "$vol" = "None" ] || [ "$vol" = "null" ]; then
     echo "No hay volumen ${prefix}-data en la instancia. Producción no se despliega sin snapshot." >&2
     exit 1
   fi
+  local desc="pre-deploy ${AMBIENTE} ${tag}"
+  local name_tag="pre-deploy-${AMBIENTE}"
+  local backup_tipo="pre-deploy"
+  if [ "$action" = "rollback" ]; then
+    desc="pre-rollback ${AMBIENTE} ${tag}"
+    name_tag="pre-rollback-${AMBIENTE}"
+    backup_tipo="pre-rollback"
+  fi
   snap="$(aws ec2 create-snapshot --region "$AWS_DEFAULT_REGION" --volume-id "$vol" \
-    --description "pre-deploy ${AMBIENTE} ${tag}" \
-    --tag-specifications "ResourceType=snapshot,Tags=[{Key=Name,Value=pre-deploy-${AMBIENTE}},{Key=Ambiente,Value=${AMBIENTE}},{Key=GitSha,Value=${tag}}]" \
+    --description "$desc" \
+    --tag-specifications "ResourceType=snapshot,Tags=[{Key=Name,Value=${name_tag}},{Key=Ambiente,Value=${AMBIENTE}},{Key=GitSha,Value=${tag}}]" \
     --query 'SnapshotId' --output text)"
+  if [ -z "$snap" ] || [ "$snap" = "None" ] || [ "$snap" = "null" ]; then
+    echo "Fallo al crear snapshot EBS del volumen $vol." >&2
+    exit 1
+  fi
   echo "snapshot EBS: $snap (volumen $vol)"
 
   local remoto
-  remoto=$(cat <<'SH'
+  remoto=$(cat <<SH
 set -euo pipefail
 mkdir -p /opt/campus/data/backups
-ts=$(date -u +%Y%m%dT%H%M%SZ)
-out="/opt/campus/data/backups/pre-deploy-${ts}.dump"
+ts=\$(date -u +%Y%m%dT%H%M%SZ)
+out="/opt/campus/data/backups/${backup_tipo}-\${ts}.dump"
 docker compose -f /opt/campus/docker-compose.yml exec -T db \
-  pg_dump -U campus -Fc --no-owner --no-acl campus_verde > "$out"
-ls -l "$out"
+  pg_dump -U campus -Fc --no-owner --no-acl campus_verde > "\$out"
+ls -l "\$out"
 SH
 )
   ssm_ok "$instance" "backup postgis" "$remoto"
-  echo "backup pg_dump pedido en la instancia (pre-deploy)"
+  echo "backup pg_dump pedido en la instancia (${backup_tipo})"
 }
 
 conteos_remotos() {

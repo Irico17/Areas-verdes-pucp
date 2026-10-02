@@ -17,7 +17,7 @@ case "$norm_env" in
   produccion|producción|production|prod)
     trimmed_dev_pass="$(printf "%s" "$CAMPUS_DEV_PASSWORD" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
     if [ "$trimmed_dev_pass" = "pando-local" ] || [ "$trimmed_dev_pass" = "campus-lab" ]; then
-      echo "ERROR: en producción, CAMPUS_DEV_PASSWORD no puede ser una clave de laboratorio ($trimmed_dev_pass)." >&2
+      echo "ERROR: en producción, CAMPUS_DEV_PASSWORD no puede ser una clave de laboratorio." >&2
       exit 1
     fi
     if [ "${#trimmed_dev_pass}" -lt 16 ]; then
@@ -30,7 +30,7 @@ case "$norm_env" in
       if [ -n "$pg_pass" ]; then
         trimmed_pg_pass="$(printf "%s" "$pg_pass" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
         if [ "$trimmed_pg_pass" = "pando-local" ] || [ "$trimmed_pg_pass" = "campus-lab" ]; then
-          echo "ERROR: en producción, la clave de Postgres en DATABASE_URL no puede ser una clave de laboratorio ($trimmed_pg_pass)." >&2
+          echo "ERROR: en producción, la clave de Postgres en DATABASE_URL no puede ser una clave de laboratorio." >&2
           exit 1
         fi
         if [ "${#trimmed_pg_pass}" -lt 16 ]; then

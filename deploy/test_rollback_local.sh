@@ -75,6 +75,14 @@ cat > "$BIN_DIR/curl" << 'EOF'
 set -euo pipefail
 
 done_file="${FAIL_DONE_FILE:-/tmp/fail_done_fallback}"
+if [ "${FAIL_SMOKE_ALWAYS:-0}" = "1" ]; then
+  for arg in "$@"; do
+    if [[ "$arg" == *"/sesion"* ]]; then
+      printf '500'
+      exit 0
+    fi
+  done
+fi
 if [ "${FAIL_LOGIN_ONCE:-0}" = "1" ] && [ ! -f "$done_file" ]; then
   for arg in "$@"; do
     if [[ "$arg" == *"/sesion"* ]]; then
@@ -212,5 +220,37 @@ if ! grep -q "TAG sha256:web_old_222222222222 campus-verde-web:develop" "$LOG_FI
   exit 1
 fi
 echo "Prueba 5 OK: rollback automático retagueó api y web tras fallo de smoke."
+
+echo "=== Prueba 6: rollback local directo con fallo de smoke debe terminar con exit code != 0 ==="
+echo "sha256:api_old_111111111111" > "$ROOT/deploy/state/develop.prev-image"
+echo "sha256:web_old_222222222222" > "$ROOT/deploy/state/develop.prev-image-web"
+: > "$LOG_FILE"
+
+set +e
+FAIL_SMOKE_ALWAYS=1 bash "$ROOT/deploy/deploy.sh" develop --local --rollback
+rc_rb=$?
+set -e
+
+if [ "$rc_rb" -eq 0 ]; then
+  echo "ERROR: rollback local directo debió terminar con error al fallar smoke" >&2
+  exit 1
+fi
+echo "Prueba 6 OK: rollback directo con fallo de smoke terminó con código de error ($rc_rb != 0)."
+
+echo "=== Prueba 7: up_local con fallo en smoke y fallo en smoke de rollback debe terminar con exit code != 0 ==="
+echo "sha256:api_old_111111111111" > "$ROOT/deploy/state/develop.prev-image"
+echo "sha256:web_old_222222222222" > "$ROOT/deploy/state/develop.prev-image-web"
+: > "$LOG_FILE"
+
+set +e
+FAIL_SMOKE_ALWAYS=1 bash "$ROOT/deploy/deploy.sh" develop --local
+rc_double_fail=$?
+set -e
+
+if [ "$rc_double_fail" -eq 0 ]; then
+  echo "ERROR: up_local debió terminar con error cuando fallan ambos smokes" >&2
+  exit 1
+fi
+echo "Prueba 7 OK: up_local con doble fallo de smoke terminó con código de error ($rc_double_fail != 0)."
 
 echo "test_rollback_local ok"

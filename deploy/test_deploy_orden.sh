@@ -85,6 +85,10 @@ case "$1" in
         exit 0
         ;;
       create-snapshot)
+        if [ "${FAIL_SNAPSHOT:-0}" = "1" ]; then
+          echo "ERROR: fallo simulado de snapshot EBS" >&2
+          exit 1
+        fi
         echo "ACTION_SNAPSHOT_EBS" >> "$LOG_FILE"
         echo "snap-mock123456"
         exit 0
@@ -162,7 +166,11 @@ cat > "$BIN_DIR/docker" << 'EOF'
 set -euo pipefail
 echo "DOCKER $*" >> "$LOG_FILE"
 case "$1" in
-  login|pull|tag|build) exit 0 ;;
+  login)
+    cat >/dev/null || true
+    exit 0
+    ;;
+  pull|tag|build) exit 0 ;;
   push)
     echo "ACTION_DOCKER_PUSH" >> "$LOG_FILE"
     exit 0
@@ -172,16 +180,17 @@ exit 0
 EOF
 chmod +x "$BIN_DIR/docker"
 
-# Stub poner-secretos
-cat > "$BIN_DIR/poner-secretos" << 'EOF'
+# Stub poner-secretos.sh via PONER_SECRETOS_SH
+cat > "$TMPDIR/poner-secretos.sh" << 'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 echo "ACTION_PONER_SECRETOS" >> "$LOG_FILE"
 exit 0
 EOF
-chmod +x "$BIN_DIR/poner-secretos"
+chmod +x "$TMPDIR/poner-secretos.sh"
+export PONER_SECRETOS_SH="$TMPDIR/poner-secretos.sh"
 
-# Stub curl (simula health, sesion y swagger apagado en produccion)
+# Stub curl (simula health, sesion y swagger/openapi apagados en produccion)
 cat > "$BIN_DIR/curl" << 'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -198,7 +207,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-if [[ "$url" == *"/swagger"* ]]; then
+if [[ "$url" == *"/swagger"* || "$url" == *"/openapi.yaml"* ]]; then
   curr_amb="$(cat "${CURRENT_ENV_FILE:-}" 2>/dev/null || echo "produccion")"
   if [ "$curr_amb" = "produccion" ]; then
     echo "404"
@@ -402,5 +411,104 @@ if grep -q "ACTION_SNAPSHOT_EBS" "$LOG_FILE"; then
 fi
 
 echo "Prueba 4 OK: develop no exige snapshot."
+
+echo "=== Prueba 5: DEPLOY_PRIMERA_VEZ distinto de 1 debe fallar ==="
+echo "produccion" > "$TMPDIR/current_env"
+rm -f "$STATE_INSTANCE_FILE"
+: > "$LOG_FILE"
+out_err5="$TMPDIR/err5.log"
+
+set +e
+DEPLOY_PRIMERA_VEZ=true bash "$ROOT/deploy/deploy.sh" produccion --aws --sha "$sha" >"$out_err5" 2>&1
+rc5=$?
+set -e
+
+if [ "$rc5" -eq 0 ]; then
+  echo "ERROR: DEPLOY_PRIMERA_VEZ=true debió ser rechazado" >&2
+  exit 1
+fi
+if ! grep -q "DEPLOY_PRIMERA_VEZ solo se acepta con valor exacto 1" "$out_err5"; then
+  echo "ERROR: Mensaje de error no indica que solo se acepta valor exacto 1" >&2
+  cat "$out_err5" >&2
+  exit 1
+fi
+if grep -q "ACTION_APPLY" "$LOG_FILE"; then
+  echo "ERROR: Terraform apply no debió ejecutarse cuando DEPLOY_PRIMERA_VEZ es inválido" >&2
+  exit 1
+fi
+echo "Prueba 5 OK: DEPLOY_PRIMERA_VEZ=true fue rechazado con error exacto."
+
+echo "=== Prueba 6: Fallo en snapshot EBS detiene el despliegue antes de apply ==="
+echo "i-mockinstance01" > "$STATE_INSTANCE_FILE"
+: > "$LOG_FILE"
+out_err6="$TMPDIR/err6.log"
+
+set +e
+FAIL_SNAPSHOT=1 bash "$ROOT/deploy/deploy.sh" produccion --aws --sha "$sha" >"$out_err6" 2>&1
+rc6=$?
+set -e
+
+if [ "$rc6" -eq 0 ]; then
+  echo "ERROR: Despliegue debió fallar si el snapshot EBS falla" >&2
+  exit 1
+fi
+if grep -q "ACTION_APPLY" "$LOG_FILE"; then
+  echo "ERROR: set -e se saltó el fallo del snapshot y ejecutó apply" >&2
+  cat "$LOG_FILE" >&2
+  exit 1
+fi
+echo "Prueba 6 OK: fallo de snapshot EBS detuvo el despliegue sin ejecutar apply."
+
+echo "=== Prueba 7: Rollback AWS en producción toma snapshot, backup y conteos antes ==="
+echo "i-mockinstance01" > "$STATE_INSTANCE_FILE"
+: > "$LOG_FILE"
+
+rb_tag="0123456789012345678901234567890123456789"
+bash "$ROOT/deploy/deploy.sh" produccion --aws --rollback "$rb_tag"
+
+rb_snap_line="$(grep -n "ACTION_SNAPSHOT_EBS" "$LOG_FILE" | cut -d: -f1 | head -n1)"
+rb_backup_line="$(grep -n "ACTION_BACKUP_PGDUMP" "$LOG_FILE" | cut -d: -f1 | head -n1)"
+rb_conteos_line="$(grep -n "ACTION_CONTEOS" "$LOG_FILE" | cut -d: -f1 | head -n1)"
+rb_apply_line="$(grep -n "ACTION_APPLY" "$LOG_FILE" | cut -d: -f1 | head -n1)"
+
+if [ -z "$rb_snap_line" ] || [ -z "$rb_backup_line" ] || [ -z "$rb_conteos_line" ] || [ -z "$rb_apply_line" ]; then
+  echo "ERROR: faltan llamadas requeridas en el rollback AWS" >&2
+  cat "$LOG_FILE" >&2
+  exit 1
+fi
+
+if [ "$rb_snap_line" -ge "$rb_apply_line" ]; then
+  echo "ERROR: Snapshot EBS en rollback ocurrió después o durante apply" >&2
+  exit 1
+fi
+if [ "$rb_backup_line" -ge "$rb_apply_line" ]; then
+  echo "ERROR: Backup pg_dump en rollback ocurrió después o durante apply" >&2
+  exit 1
+fi
+if [ "$rb_conteos_line" -ge "$rb_apply_line" ]; then
+  echo "ERROR: Conteos antes en rollback ocurrió después o durante apply" >&2
+  exit 1
+fi
+echo "Prueba 7 OK: rollback AWS en producción ejecutó snapshot, pg_dump y conteos antes de apply."
+
+echo "=== Prueba 8: Rollback AWS con DEPLOY_PRIMERA_VEZ=1 es rechazado ==="
+: > "$LOG_FILE"
+out_err8="$TMPDIR/err8.log"
+
+set +e
+DEPLOY_PRIMERA_VEZ=1 bash "$ROOT/deploy/deploy.sh" produccion --aws --rollback "$rb_tag" >"$out_err8" 2>&1
+rc8=$?
+set -e
+
+if [ "$rc8" -eq 0 ]; then
+  echo "ERROR: Rollback con DEPLOY_PRIMERA_VEZ=1 debió ser rechazado" >&2
+  exit 1
+fi
+if ! grep -q "Un rollback en AWS no puede ser primer despliegue" "$out_err8"; then
+  echo "ERROR: Mensaje de error no menciona que rollback no puede ser primer despliegue" >&2
+  cat "$out_err8" >&2
+  exit 1
+fi
+echo "Prueba 8 OK: rollback con DEPLOY_PRIMERA_VEZ=1 fue rechazado."
 
 echo "test_deploy_orden ok"
