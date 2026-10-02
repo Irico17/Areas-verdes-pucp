@@ -1,10 +1,10 @@
-# qa: Swagger encendido, logs info en JSON, semilla ficticia si la base está vacía.
+# qa: Swagger encendido, logs info en JSON, misma carga inicial (ETL de data/raw) que producción si la base está vacía.
 
 services:
   api:
     environment:
       APP_ENV: qa
-      SEED_PROFILE: ficticio
+      SEED_PROFILE: etl
       SERVER_GIN_MODE: release
       SWAGGER_ENABLED: "true"
       LOG_LEVEL: info

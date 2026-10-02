@@ -1,10 +1,10 @@
-# develop: Swagger encendido, logs de depuración, semilla ficticia si la base está vacía.
+# develop: Swagger encendido, logs de depuración, misma carga inicial (ETL de data/raw) que producción si la base está vacía.
 
 services:
   api:
     environment:
       APP_ENV: develop
-      SEED_PROFILE: ficticio
+      SEED_PROFILE: etl
       SERVER_GIN_MODE: debug
       SWAGGER_ENABLED: "true"
       LOG_LEVEL: debug

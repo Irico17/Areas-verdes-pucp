@@ -83,7 +83,7 @@ El rollback local revierte tanto la imagen de la API como la de la web (`state/<
 
 ## Qué datos entran
 
-- **develop y qa.** `SEED_PROFILE=ficticio`. Si el catastro está vacío, se insertan el Jardín Ficticio Norte y el Sector Ficticio Norte (`deploy/seed/ficticio.sql`). Si ya hay filas, no se ejecuta. No es un volcado de producción.
+- **develop y qa.** `SEED_PROFILE=etl`, igual que producción: si el catastro está vacío se carga `data/raw` (521 áreas, 534 zonas, capas e inventario) para que el mapa tenga datos reales de forma. Si ya hay filas, no se ejecuta. La semilla mínima `SEED_PROFILE=ficticio` (`deploy/seed/ficticio.sql`) sigue disponible para pruebas rápidas. Los datos de usuarios/cuentas siguen siendo ficticios y las claves son distintas por ambiente.
 - **produccion.** `SEED_PROFILE=etl`. La carga de `data/raw` corre solo si el catastro está vacío y no existe `/data/.etl-done`. Si `areas_verdes` ya tiene filas, no corre.
 
 No copiar la base de producción a develop ni a qa. Si hiciera falta un ensayo, se restaura en una base desechable, se enmascaran nombres, cuentas y evidencias, y recién entonces se usa. No hay un script en este repo que haga esa copia.

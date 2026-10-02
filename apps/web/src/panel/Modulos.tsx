@@ -71,7 +71,7 @@ export function Login(props: { onIn: (usuario: Usuario) => void }) {
             </button>
           </form>
           <p className="hint">
-            Cuentas de esta instalación: norte, sur, riego, coordinacion, jefatura, admin. Clave local: pando-local.
+            Cuentas de esta instalación: norte, sur, riego, coordinacion, jefatura, admin. La clave es la de cada ambiente; pídasela al administrador.
           </p>
         </div>
       </section>
