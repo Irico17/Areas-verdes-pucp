@@ -18,10 +18,10 @@ type EjemplarModel struct {
 	ObservacionFen2026  *string   `gorm:"column:observacion_fen_2026"`
 	Salud               *string   `gorm:"column:salud"`
 	SectorCuartelID     *int64    `gorm:"column:sector_cuartel_id"`
-	SectorCuartelNombre *string   `gorm:"column:sector_cuartel_nombre"`
-	SectorCuartelClase  *string   `gorm:"column:sector_cuartel_clase"`
-	EspecieCientifico   *string   `gorm:"column:especie_cientifico"`
-	LugarNombre         *string   `gorm:"column:lugar_nombre"`
+	SectorCuartelNombre *string   `gorm:"->;column:sector_cuartel_nombre"`
+	SectorCuartelClase  *string   `gorm:"->;column:sector_cuartel_clase"`
+	EspecieCientifico   *string   `gorm:"->;column:especie_cientifico"`
+	LugarNombre         *string   `gorm:"->;column:lugar_nombre"`
 	Activo              bool      `gorm:"column:activo"`
 	CreatedAt           time.Time `gorm:"column:created_at"`
 	UpdatedAt           time.Time `gorm:"column:updated_at"`
