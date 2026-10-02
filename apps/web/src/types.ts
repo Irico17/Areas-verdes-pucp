@@ -78,12 +78,12 @@ export const LAYERS: LayerSpec[] = [
 export const ROLES: { id: Rol; label: string; note: string }[] = [
   {
     id: "jefatura",
-    label: "Jefatura / Jefe de sección",
+    label: "Jefatura de sección",
     note: "Ve todas las labores abiertas. Puede crear, reasignar y archivar.",
   },
   {
     id: "coordinacion",
-    label: "Ingeniería/Coordinación",
+    label: "Ingeniería / Coordinación",
     note: "Crea labores con un pin, asigna el equipo y sigue la bitácora.",
   },
   {

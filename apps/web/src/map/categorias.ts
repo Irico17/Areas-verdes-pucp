@@ -104,6 +104,19 @@ export const OPACIDAD_RELLENO: ExpressionSpecification = [
   0.5,
 ] as ExpressionSpecification
 
+// El sector usa las mismas siluetas del catastro. A 0.5, una cuadrilla entera
+// (Renato en beige, Mateo en azul) se funde en una placa sobre los edificios.
+// El velo deja ver el plano; el borde conserva el color de la cuadrilla.
+// Los polígonos siguen en la base: no se ocultan ni se borran.
+export const OPACIDAD_SECTOR: ExpressionSpecification = [
+  "case",
+  ["boolean", ["feature-state", "sel"], false],
+  0.42,
+  ["boolean", ["feature-state", "hover"], false],
+  0.3,
+  0.18,
+] as ExpressionSpecification
+
 export const ANCHO_REALCE: ExpressionSpecification = [
   "case",
   ["boolean", ["feature-state", "sel"], false],

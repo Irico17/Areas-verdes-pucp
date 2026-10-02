@@ -7,7 +7,7 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 )
 
-const avisoSSO = "Cuentas locales de desarrollo. El SSO de la PUCP sigue pendiente de validación."
+const avisoCuentas = "Cuentas de VerdePUCP. Las administra la jefatura de sección."
 
 type usuarioUseCase struct {
 	usuarioRepo contracts.IUsuarioRepository
@@ -59,6 +59,6 @@ func (uc *usuarioUseCase) ListarUsuarios(ctx context.Context) (*dto.UsuariosResp
 	return &dto.UsuariosResponseDTO{
 		Usuarios: usuariosDTO,
 		Permisos: permisosDTO,
-		Aviso:    avisoSSO,
+		Aviso:    avisoCuentas,
 	}, nil
 }

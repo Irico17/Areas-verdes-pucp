@@ -136,8 +136,8 @@ test("el vivero filtra por mes y no acepta un área libre", () => {
 
 test("etiquetaRol y roles v2 muestran los nombres visibles correctos", () => {
   assert.equal(etiquetaRol("capataz"), "Capataz")
-  assert.equal(etiquetaRol("coordinacion"), "Ingeniería/Coordinación")
-  assert.equal(etiquetaRol("jefatura"), "Jefatura / Jefe de sección")
+  assert.equal(etiquetaRol("coordinacion"), "Ingeniería / Coordinación")
+  assert.equal(etiquetaRol("jefatura"), "Jefatura de sección")
   assert.equal(etiquetaRol("admin"), "Administrador del sistema")
   assert.equal(etiquetaRol("otro", "Rol Personalizado"), "Rol Personalizado")
   assert.equal(etiquetaRol("desconocido"), "desconocido")

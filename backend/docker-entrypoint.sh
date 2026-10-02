@@ -69,7 +69,8 @@ fi
 # solo polígono ficticio) → etl-lote, upsert, sin TRUNCATE. Catastro publicado
 # (521 áreas y 534 sectores) → no recarga.
 # develop y qa, o SEED_PROFILE=ficticio: además inserta polígonos de demostración
-# (ON CONFLICT DO NOTHING). Producción no recibe esa semilla.
+# en el parque oeste. ON CONFLICT solo reescribe esas filas ficticias.
+# Producción no recibe esa semilla.
 # Ninguno borra filas ya cargadas. .etl-done no impide completar un catastro a medias.
 SEED_PROFILE="${SEED_PROFILE:-etl}"
 SEED_FILE="${SEED_FILE:-/opt/campus/seed/ficticio.sql}"

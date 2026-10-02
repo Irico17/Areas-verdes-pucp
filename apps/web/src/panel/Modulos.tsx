@@ -51,7 +51,7 @@ export function Login(props: { onIn: (usuario: Usuario) => void }) {
     <main className="gate">
       <section className="gate-brand">
         <img className="gate-logo" src="/logo-verdepucp.png" alt="VerdePUCP. Gestión de Áreas Verdes" />
-        <p>La sesión de esta instalación es local: el SSO de la universidad no está conectado.</p>
+        <p>Inicia sesión con tu cuenta de VerdePUCP.</p>
       </section>
       <section className="gate-form">
         <div className="gate-card">
@@ -672,7 +672,7 @@ export function AdminPanel() {
   return (
     <section className="block">
       <h2>Admin</h2>
-      <p className="lede">{data?.aviso || "Cuentas locales. El SSO institucional no forma parte de este piloto."}</p>
+      <p className="lede">Cuentas de VerdePUCP. Las administra la jefatura de sección.</p>
       {error && <p className="status error">{error}</p>}
       {!data && !error && (
         <div className="skel-wrap" aria-hidden="true">

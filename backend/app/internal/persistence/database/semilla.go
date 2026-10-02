@@ -10,9 +10,8 @@ import (
 
 var reSemillaDestructiva = regexp.MustCompile(`(?i)\b(?:DROP\s+TABLE|DROP\s+COLUMN|TRUNCATE|DELETE\s+FROM)\b`)
 
-// AplicarSemillaFicticia inserts fictional campus polygons. Each statement is
-// INSERT ... ON CONFLICT DO NOTHING, so rows already loaded (ETL or a previous
-// seed) stay as they are. It never deletes or updates.
+// AplicarSemillaFicticia inserts fictional campus polygons. ON CONFLICT refreshes
+// only those fictional rows (geometry and name). It never deletes ETL data.
 func AplicarSemillaFicticia(gdb *gorm.DB, path string) error {
 	sqlDB, err := gdb.DB()
 	if err != nil {
