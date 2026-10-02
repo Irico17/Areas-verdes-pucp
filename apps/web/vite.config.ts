@@ -1,22 +1,46 @@
-import { cpSync } from "node:fs"
+import { cpSync, createReadStream, mkdirSync } from "node:fs"
+import path from "node:path"
 import react from "@vitejs/plugin-react"
 import { defineConfig, type Plugin } from "vite"
 import { VitePWA } from "vite-plugin-pwa"
 
 function maplibreWorker(): Plugin {
   const files = ["maplibre-gl-worker.mjs", "maplibre-gl-shared.mjs"]
-  const copy = (dir: string) => {
+  let root = ""
+  const copyInto = (dir: string) => {
+    mkdirSync(dir, { recursive: true })
     for (const name of files) {
-      cpSync(`node_modules/maplibre-gl/dist/${name}`, `${dir}/${name}`)
+      cpSync(path.join(root, "node_modules/maplibre-gl/dist", name), path.join(dir, name))
     }
   }
   return {
     name: "maplibre-worker",
+    // Vite fotografía public/ al crear el servidor, antes de buildStart.
+    // Si el worker no está en esa lista, /maplibre-gl-worker.mjs responde
+    // index.html, el worker no arranca y MapLibre no dibuja ninguna geometría.
+    configResolved(config) {
+      root = config.root
+      if (config.command === "serve") copyInto(path.join(root, "public"))
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = (req.url ?? "").split("?")[0]
+        const name = files.find((file) => url === `/${file}`)
+        if (!name) {
+          next()
+          return
+        }
+        res.setHeader("Content-Type", "application/javascript; charset=utf-8")
+        const stream = createReadStream(path.join(server.config.root, "public", name))
+        stream.on("error", () => next())
+        stream.pipe(res)
+      })
+    },
     buildStart() {
-      copy("public")
+      copyInto(path.join(root, "public"))
     },
     closeBundle() {
-      copy("dist")
+      copyInto(path.join(root, "dist"))
     },
   }
 }
