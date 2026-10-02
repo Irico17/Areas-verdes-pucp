@@ -221,3 +221,16 @@ El stack que ya está desplegado vive en el workspace `default`. Trátelo como p
 4. Para volver atrás: el mismo workflow con `rollback` = el SHA que estaba sirviendo. No se revierten columnas.
 
 El checklist largo del corte (ensayo en copia, evidencias, tag anotado) sigue siendo el de [`RUNBOOK-CORTE-PRODUCCION.md`](RUNBOOK-CORTE-PRODUCCION.md). El workflow automatiza el backup, el snapshot, los conteos y el smoke; no sustituye la decisión de la persona que aprueba.
+
+## Despliegue en el propio host (Runners self-hosted)
+
+Para desacoplar el despliegue de credenciales temporales de AWS desde GitHub, los ambientes cuentan con runners self-hosted en cada EC2 (labels `campus-develop`, `campus-qa`, `campus-prod`) que ejecutan [`deploy/host-deploy.sh`](../deploy/host-deploy.sh):
+
+- **EC2 Compartida:** aloja develop (puerto web 8088, API 8091, Postgres 5432, base `campus_verde_develop`, directorio `/opt/campus/develop`) y qa (puerto web 8188, API 8191, Postgres 5433, base `campus_verde_qa`, directorio `/opt/campus/qa`) con stacks aislados.
+- **EC2 Producción:** aloja producción (puerto web 80, API 8091 en localhost, Postgres 5432 en localhost, base `campus_verde`, directorio `/opt/campus`).
+- **Secretos locales:** se leen exclusivamente de `$CAMPUS_HOME/host.env` (permisos 600, no versionado). No se inyectan contraseñas desde GitHub Actions.
+- **Seguridad en producción:** snapshot EBS del volumen `campus-verde-data` vía IMDSv2, backup lógico `pg_dump` y conteos antes/después con [`deploy/comparar_conteos.py`](../deploy/comparar_conteos.py).
+- **Rollback:** automático ante fallos de smoke test o manual indicando el tag previo.
+
+Consulte la arquitectura completa, procedimientos de migración y rotación de claves en [`DEPLOY-RUNNER.md`](DEPLOY-RUNNER.md).
+

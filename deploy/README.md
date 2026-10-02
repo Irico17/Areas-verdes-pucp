@@ -50,3 +50,20 @@ Durante `deploy.sh <amb> --local` (o `make up ENV=<amb>`), si el smoke test post
 
 **Las migraciones son solo hacia adelante:** el rollback local no revierte la base de datos ni ejecuta operaciones destructivas (no hay migraciones «down»). La versión restaurada corre sobre el esquema migrado, compatible gracias a que las migraciones son aditivas.
 
+## Despliegue en el propio host (Runner self-hosted)
+
+Para desplegar directamente dentro de las instancias EC2 sin credenciales de AWS desde GitHub, se utiliza [`deploy/host-deploy.sh`](host-deploy.sh):
+
+```bash
+deploy/host-deploy.sh <develop|qa|produccion> --sha <40hex> [--rollback <sha40|rc-*>] [--dry-run]
+```
+
+- **Layout:** develop en `/opt/campus/develop`, qa en `/opt/campus/qa`, producción en `/opt/campus`.
+- **Configuración:** `$CAMPUS_HOME/host.env` (permisos 600, no versionado). Ejemplos en [`deploy/env/host.env.example.<ambiente>`](env/).
+- **Override de Compose:** [`deploy/compose.host.yml`](compose.host.yml) utiliza imágenes inmutables de GHCR, elimina `build`, aísla `db` y `api` en `127.0.0.1` y utiliza bind mounts de datos en disco.
+- **Producción:** ejecuta conteos «antes», snapshot EBS del volumen `campus-verde-data` vía IMDSv2, backup lógico `pg_dump`, smoke test y comparación de conteos de tablas de negocio «después».
+- **Rollback:** automático ante fallos de smoke test o manual con `--rollback <tag>`.
+
+La guía completa de arquitectura, layout y operación con runners self-hosted se encuentra en [`docs/DEPLOY-RUNNER.md`](../docs/DEPLOY-RUNNER.md).
+
+
