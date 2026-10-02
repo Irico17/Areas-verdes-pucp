@@ -71,22 +71,26 @@ export function ListaCatalogo(props: {
               </button>
             </form>
           )}
-          {props.editable && editando !== item.id && (
-            <button
-              type="button"
-              className="link"
-              onClick={() => {
-                setEditando(item.id)
-                setNombre(item.nombre)
-              }}
-            >
-              Corregir nombre
-            </button>
-          )}
-          {props.editable && item.activo && (
-            <button type="button" className="link" onClick={() => void props.onDesactivar(item.id)}>
-              Desactivar
-            </button>
+          {props.editable && (editando !== item.id || item.activo) && (
+            <div className="agenda-acciones">
+              {editando !== item.id && (
+                <button
+                  type="button"
+                  className="link"
+                  onClick={() => {
+                    setEditando(item.id)
+                    setNombre(item.nombre)
+                  }}
+                >
+                  Corregir nombre
+                </button>
+              )}
+              {item.activo && (
+                <button type="button" className="link" onClick={() => void props.onDesactivar(item.id)}>
+                  Desactivar
+                </button>
+              )}
+            </div>
           )}
         </li>
       ))}
