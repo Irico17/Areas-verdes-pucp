@@ -6,6 +6,7 @@
 | `bootstrap.sh` | `docker compose up -d`, espera, migra y corre el ETL |
 | `wait-db.sh` | Espera a que `pg_isready` responda en el servicio `db` |
 | `counts.sh` | Conteos de áreas, zonas y capas, con SRID 4326 |
+| `runner-instalar.sh` | Instala y registra el runner self-hosted de GitHub Actions en la EC2 (`develop`, `qa` o `produccion`). Lee token de `RUNNER_TOKEN` o SSM, verifica SHA-256 e instala servicio systemd. |
 | `paridad-api.sh` | Arnés de verificación de paridad entre la API vieja (`apps/api`) y la nueva (`backend/app`). Normaliza rutas, cabeceras y respuestas JSON. Ignora la clave `activo` en fichas de áreas verdes (expuesta por el backend nuevo en F2 pero ausente en la API vieja) sin ocultar otras diferencias. Soporta la directiva `solo-nueva` para pasos exclusivos del backend nuevo. |
 
 El ETL en sí está en `apps/api/cmd/etl` (Go). Desde la raíz, `make bootstrap`, `make etl` y `make counts` llaman a estos scripts o al módulo.
