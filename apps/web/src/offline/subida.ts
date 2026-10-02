@@ -6,14 +6,14 @@ export type EstadoSubida =
   | { fase: "inactivo" }
   | { fase: "preparando" }
   | { fase: "subiendo"; pct: number | null }
-  | { fase: "guardada"; sinPunto: boolean }
+  | { fase: "guardada"; sinPunto: boolean; almacen?: "s3" }
   | { fase: "en-cola"; texto: string }
   | { fase: "error"; texto: string; reintentable: boolean }
 
 export type EventoSubida =
   | { tipo: "preparar" }
   | { tipo: "progreso"; cargado: number; total: number | null }
-  | { tipo: "ok"; sinPunto: boolean }
+  | { tipo: "ok"; sinPunto: boolean; almacen?: "s3" }
   | { tipo: "cola"; texto: string }
   | { tipo: "fallo"; texto: string; reintentable: boolean }
   | { tipo: "limpiar" }
@@ -28,7 +28,9 @@ export function avanzar(_e: EstadoSubida, ev: EventoSubida): EstadoSubida {
       return { fase: "subiendo", pct }
     }
     case "ok":
-      return { fase: "guardada", sinPunto: ev.sinPunto }
+      return ev.almacen === "s3"
+        ? { fase: "guardada", sinPunto: ev.sinPunto, almacen: "s3" }
+        : { fase: "guardada", sinPunto: ev.sinPunto }
     case "cola":
       return { fase: "en-cola", texto: ev.texto }
     case "fallo":
@@ -46,8 +48,10 @@ export function textoEstado(e: EstadoSubida): string {
       return "Preparando foto…"
     case "subiendo":
       return "Subiendo…"
-    case "guardada":
-      return e.sinPunto ? "Foto enviada, sin ubicación." : "Foto enviada."
+    case "guardada": {
+      const base = e.sinPunto ? "Foto enviada, sin ubicación." : "Foto enviada."
+      return e.almacen === "s3" ? `${base} Quedó en el cubo privado.` : base
+    }
     case "en-cola":
       return e.texto
     case "error":
@@ -71,12 +75,14 @@ export function accionTrasFallo(
   return { encolar: conBackoff(item), evento }
 }
 
+export type RespuestaSubida = { status: number; cuerpo: string }
+
 export function enviarConProgreso(
   url: string,
   data: FormData,
   alProgreso: (cargado: number, total: number | null) => void,
   xhrFactory: () => XMLHttpRequest = () => new XMLHttpRequest(),
-): Promise<number> {
+): Promise<RespuestaSubida> {
   return new Promise((resolve) => {
     const xhr = xhrFactory()
     xhr.open("POST", url)
@@ -85,12 +91,23 @@ export function enviarConProgreso(
     xhr.upload.onprogress = (event) => {
       alProgreso(event.loaded, event.lengthComputable ? event.total : null)
     }
-    xhr.onload = () => resolve(xhr.status)
-    xhr.onerror = () => resolve(0)
-    xhr.ontimeout = () => resolve(0)
-    xhr.onabort = () => resolve(0)
+    xhr.onload = () => resolve({ status: xhr.status, cuerpo: xhr.responseText ?? "" })
+    xhr.onerror = () => resolve({ status: 0, cuerpo: "" })
+    xhr.ontimeout = () => resolve({ status: 0, cuerpo: "" })
+    xhr.onabort = () => resolve({ status: 0, cuerpo: "" })
     xhr.send(data)
   })
+}
+
+/** Solo "s3" confirma el cubo. Disco, vacío o texto inválido no lo prometen. */
+export function almacenConfirmado(cuerpo: string): "s3" | undefined {
+  if (!cuerpo) return undefined
+  try {
+    const data = JSON.parse(cuerpo) as { almacen?: unknown }
+    return data.almacen === "s3" ? "s3" : undefined
+  } catch {
+    return undefined
+  }
 }
 
 export type ItemEvidencia = {

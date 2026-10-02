@@ -60,3 +60,17 @@ Después de copiar o quitar el certificado hay que volver a correr `poner-secret
 La imagen de la API copia `db/migrations` a `/opt/campus/migrations` y el compose fija `MIGRATIONS_DIR=/opt/campus/migrations`. Postgres no monta ningún `.sql` en `docker-entrypoint-initdb.d`. `db/referencia/` no se aplica.
 
 El corte de la base que ya está en la EC2 (backup, snapshot, conteos, tag de rollback) está en `docs/RUNBOOK-CORTE-PRODUCCION.md`. No es un paso de este flujo de sesión.
+
+## Evidencias
+
+`EVIDENCIAS_BUCKET` decide el almacén. Vacía: disco, como en develop, y la API lo dice una vez en el log. Con valor: los bytes van a un cubo S3 privado y Postgres guarda la clave del objeto, no una URL pública. La plantilla `deploy/env/*.env.example` deja la variable vacía. El nombre real no se commitea.
+
+Las credenciales no van en el repositorio y son por ambiente:
+
+| Ambiente | Cubo | Credenciales |
+| --- | --- | --- |
+| develop | vacío (disco) | no hacen falta |
+| qa | cubo privado de qa, en el host | rol de la instancia, o las tres claves temporales en el environment `qa` o en `host.env` |
+| produccion | cubo privado de producción, en el host | rol de la instancia, o las tres claves temporales en el environment `produccion` o en `host.env` |
+
+Las tres claves, si no hay rol, son `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN`. El cubo debe bloquear el acceso público. El rol, si se usa, necesita `s3:PutObject` y `s3:GetObject` sobre ese cubo. Este flujo de sesión no crea el cubo ni escribe su nombre.

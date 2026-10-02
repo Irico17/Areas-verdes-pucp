@@ -81,9 +81,17 @@ type SeguridadConfig struct {
 }
 
 // EvidenciasConfig contains file storage settings.
+// Bucket is EVIDENCIAS_BUCKET, trimmed. Empty keeps files on Dir.
+// AWS credentials are not loaded here. With a bucket, the SDK default chain
+// applies: the instance role, or keys injected outside this repository.
 type EvidenciasConfig struct {
 	Dir    string
 	Bucket string
+}
+
+// EnCubo reports whether evidencias go to the private bucket.
+func (e EvidenciasConfig) EnCubo() bool {
+	return strings.TrimSpace(e.Bucket) != ""
 }
 
 // DatosConfig contains static and reference data file paths.
@@ -159,7 +167,7 @@ func New() *Config {
 		},
 		Evidencias: EvidenciasConfig{
 			Dir:    valueOrDefault("EVIDENCIAS_DIR", filepath.Join(root, "data", "evidencias")),
-			Bucket: os.Getenv("EVIDENCIAS_BUCKET"),
+			Bucket: strings.TrimSpace(os.Getenv("EVIDENCIAS_BUCKET")),
 		},
 		Datos: DatosConfig{
 			RawDir:        rawDir,
