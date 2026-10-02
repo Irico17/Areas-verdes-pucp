@@ -1,6 +1,8 @@
 # Despliegue por sesión (Learner Lab)
 
-Cada sesión del laboratorio dura unas cuatro horas y las credenciales cambian. El lab no deja crear roles IAM ni un proveedor OIDC. El job `deploy` de `.github/workflows/ci.yml` lee los secrets `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN`, y solo corre con `workflow_dispatch`.
+Hay tres ambientes (`develop`, `qa`, `produccion`): puertos, bases y el flujo develop → qa → producción están en [`AMBIENTES.md`](AMBIENTES.md). Este archivo es la sesión del Learner Lab, que corresponde a **produccion**.
+
+Cada sesión del laboratorio dura unas cuatro horas y las credenciales cambian. El lab no deja crear roles IAM ni un proveedor OIDC. El workflow `.github/workflows/deploy.yml` lee, del environment de GitHub (`develop`, `qa` o `produccion`), los secrets `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN`. Producción solo corre con `workflow_dispatch` y con la aprobación de ese environment. `ci.yml` prueba y publica las imágenes con el SHA; ya no despliega.
 
 Hace falta `gh` autenticado en el repo (`gh auth login`) una sola vez.
 
@@ -18,15 +20,15 @@ powershell -File scripts/set-aws-secrets.ps1
 bash scripts/set-aws-secrets.sh
 ```
 
-El script usa el bloque del portapapeles si trae las tres claves. Si no, lee el perfil `[default]` de `~/.aws/credentials`. Actualiza los tres secrets con `gh secret set` y pregunta si lanza:
+El script usa el bloque del portapapeles si trae las tres claves. Si no, lee el perfil `[default]` de `~/.aws/credentials`. Actualiza los tres secrets del repositorio con `gh secret set` y pregunta si lanza el workflow en la rama actual (no en `main`):
 
 ```bash
-gh workflow run ci --ref main
+gh workflow run deploy --ref <rama> -f ambiente=produccion
 ```
 
-No imprime los valores y no los escribe en el repositorio.
+Para dejar las claves solo en un ambiente: `gh secret set NOMBRE --env produccion`. La lista completa está en [`AMBIENTES.md`](AMBIENTES.md). No imprime los valores y no los escribe en el repositorio.
 
-4. El job `test` corre primero. Si pasa, `deploy` aplica Terraform, sube las imágenes y reinicia `campus.service` por SSM. Al terminar imprime `Listo: http://<ip>`.
+4. `ci.yml` tiene que estar en verde para ese SHA. `deploy.yml` aplica Terraform, publica el tag del SHA, en producción toma snapshot y backup, reinicia el compose por SSM y corre el smoke. Al terminar imprime `Listo: http://<ip>`. Si el environment `produccion` tiene revisores, el job espera esa aprobación.
 
 `TF_VAR_db_password` y `TF_VAR_dev_password` se cargan una vez como secrets del repo (16 caracteres o más). No cambian con la sesión del lab. El job `deploy` los lee junto con las tres claves de AWS. El detalle del stack está en `docs/DEPLOY-AWS.md`.
 

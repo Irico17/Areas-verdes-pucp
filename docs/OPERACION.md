@@ -2,6 +2,8 @@
 
 Runbook del piloto en AWS Academy y de una cuenta propia. No despliega nada por sí solo. El Learner Lab no es producción: las credenciales duran unas cuatro horas y la EC2 se detiene al cerrar la sesión.
 
+Los tres ambientes (`develop`, `qa`, `produccion`), sus variables y el rollback por tag están en [`AMBIENTES.md`](AMBIENTES.md). El job que toca la EC2 es `.github/workflows/deploy.yml`, no `ci.yml`.
+
 ## Esquema
 
 El SQL versionado está en `db/migrations`. La imagen lo copia a `/opt/campus/migrations` (`MIGRATIONS_DIR`). No se monta un `.sql` al crear el volumen de Postgres. `db/referencia/` (y el `schema_nucleo_v0.2.sql` del equipo, que no está en este repo) no se ejecuta.

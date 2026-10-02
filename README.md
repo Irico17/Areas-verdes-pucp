@@ -32,6 +32,18 @@ Las cuentas semilla (`norte`, `sur`, `riego`, `coordinacion`, `jefatura`, `admin
 
 Las zonas **no** guardan el campo `jefes` (nombres de personas). El identificador de zona es `Z-NNNN`. Las áreas usan `AV-NNNN`. Geometría: MultiPolygon **EPSG:4326** (lon/lat), la que consume MapLibre. `geom` puede ser NULL en registros futuros sin GPS (catastro progresivo).
 
+## Ambientes
+
+`develop`, `qa` y `produccion` pueden correr a la vez. La matriz, los secretos de GitHub y el rollback están en [`docs/AMBIENTES.md`](docs/AMBIENTES.md).
+
+```bash
+make up ENV=develop
+make smoke ENV=develop
+make down ENV=develop
+```
+
+`make up` sin `ENV` sigue levantando solo el Postgres del compose histórico.
+
 ## Cómo correrlo en local
 
 Requisitos: Docker (Compose v2), Go 1.22+, Node 22+ para el visor.
@@ -140,6 +152,7 @@ El esquema no se carga con `initdb`. `make migrate` aplica `db/migrations`. La i
 | [`docs/PLAN-MIGRACION.md`](docs/PLAN-MIGRACION.md) | Migración legacy → DP2 |
 | [`docs/DECISIONES.md`](docs/DECISIONES.md) | ADRs, incluido CRS, PII de zonas y `db/migrations` |
 | [`docs/RUNBOOK-CORTE-PRODUCCION.md`](docs/RUNBOOK-CORTE-PRODUCCION.md) | Checklist del corte en la EC2 (no ejecutado desde el repo) |
+| [`docs/AMBIENTES.md`](docs/AMBIENTES.md) | develop, qa y produccion: puertos, secretos, flujo y rollback |
 | [`docs/legacy-recovery/`](docs/legacy-recovery/) | Análisis del monolito Leaflet |
 
 El visor crea labores con un pin (Jefatura y Coordinación), las asigna a un equipo y muestra la bitácora. El rol Capataz solo recibe las de su equipo. Si la API no responde, el alta queda en IndexedDB y se reintenta con el mismo UUID.

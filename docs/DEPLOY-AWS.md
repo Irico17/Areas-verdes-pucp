@@ -138,7 +138,7 @@ Un apply que solo cambia la imagen no reemplaza la EC2 (`user_data_replace_on_ch
 
 ## CI
 
-`.github/workflows/ci.yml` corre en cada push: `gofmt`, `go test`, lint y build del web, y las dos imágenes. El job de AWS es solo `workflow_dispatch`. Si faltan `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` o `AWS_SESSION_TOKEN`, no despliega y termina en verde.
+`.github/workflows/ci.yml` corre en cada push: `gofmt`, `go test`, lint y build del web, las imágenes, y las publica en GHCR con el SHA del commit. El despliegue está en `.github/workflows/deploy.yml` (develop automático, qa con tag `rc-*` o a mano, producción solo a mano y con aprobación). Los secretos por ambiente y el rollback están en [`AMBIENTES.md`](AMBIENTES.md). Si faltan `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` o `AWS_SESSION_TOKEN`, develop y qa no despliegan y terminan en verde. Producción falla si faltan, para no dar por hecho un despliegue que no ocurrió.
 
 ## Permisos mínimos
 
