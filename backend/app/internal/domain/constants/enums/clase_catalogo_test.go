@@ -16,6 +16,13 @@ func TestClaseCatalogo_ValoresYValidez(t *testing.T) {
 		"motivo_archivo",
 		"turno",
 		"fuente",
+		"clase_actividad",
+		"plaga",
+		"producto_fitosanitario",
+		"frecuencia",
+		"sede",
+		"cuartel",
+		"sector_capataz",
 	}
 
 	clases := enums.ClasesCatalogoValidas()

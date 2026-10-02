@@ -20,6 +20,20 @@ const (
 	ClaseTurno ClaseCatalogo = "turno"
 	// ClaseFuente represents the 'fuente' catalog class.
 	ClaseFuente ClaseCatalogo = "fuente"
+	// ClaseClaseActividad represents the 'clase_actividad' catalog class.
+	ClaseClaseActividad ClaseCatalogo = "clase_actividad"
+	// ClasePlaga represents the 'plaga' catalog class.
+	ClasePlaga ClaseCatalogo = "plaga"
+	// ClaseProductoFitosanitario represents the 'producto_fitosanitario' catalog class.
+	ClaseProductoFitosanitario ClaseCatalogo = "producto_fitosanitario"
+	// ClaseFrecuencia represents the 'frecuencia' catalog class.
+	ClaseFrecuencia ClaseCatalogo = "frecuencia"
+	// ClaseSede represents the 'sede' catalog class.
+	ClaseSede ClaseCatalogo = "sede"
+	// ClaseCuartel represents the 'cuartel' catalog class.
+	ClaseCuartel ClaseCatalogo = "cuartel"
+	// ClaseSectorCapataz represents the 'sector_capataz' catalog class.
+	ClaseSectorCapataz ClaseCatalogo = "sector_capataz"
 )
 
 // String returns the string representation of the catalog class.
@@ -38,6 +52,13 @@ func ClasesCatalogoValidas() []string {
 		string(ClaseMotivoArchivo),
 		string(ClaseTurno),
 		string(ClaseFuente),
+		string(ClaseClaseActividad),
+		string(ClasePlaga),
+		string(ClaseProductoFitosanitario),
+		string(ClaseFrecuencia),
+		string(ClaseSede),
+		string(ClaseCuartel),
+		string(ClaseSectorCapataz),
 	}
 }
 
