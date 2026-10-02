@@ -101,12 +101,20 @@ El job de deploy usa `environment:` con el nombre del ambiente (`develop`, `qa`,
 
 Si faltan las credenciales de AWS, develop y qa terminan en verde sin desplegar (el lab suele estar cerrado). Producción falla si faltan, para no marcar como hecho un despliegue que no ocurrió.
 
-En producción el script, antes de cambiar la imagen:
+En producción el script (`deploy/deploy.sh produccion --aws`) ejecuta el siguiente orden estricto:
 
-1. Snapshot EBS del volumen `campus-verde-data`.
-2. `pg_dump -Fc` en `/opt/campus/data/backups/` dentro de la instancia.
-3. Conteos «antes» de las tablas (el SQL de [`deploy/conteos.sql`](../deploy/conteos.sql), el del §4.4).
-4. Deja la imagen nueva (tag = SHA), corre el smoke y vuelve a contar («después»).
+1. `terraform init` y selección de workspace `produccion`.
+2. **Antes de `terraform apply`** (sobre la instancia existente en el estado de Terraform, obtenida con `terraform output -raw instance_id`):
+   - Snapshot EBS del volumen `campus-verde-data` (filtrado por dicha instancia).
+   - Backup lógico `pg_dump -Fc` en `/opt/campus/data/backups/` dentro de la instancia vía SSM.
+   - Conteos «antes» de las tablas (el SQL de [`deploy/conteos.sql`](../deploy/conteos.sql), el del §4.4).
+   *Nota de seguridad:* Si en producción no existe instancia previa en el estado de Terraform (primera creación de la infraestructura), el despliegue falla de forma segura salvo que se declare la variable de entorno `DEPLOY_PRIMERA_VEZ=1`. En develop y qa no se exige snapshot previo.
+3. `terraform apply -auto-approve`: aplica cambios de infraestructura.
+4. Construcción y subida de imágenes inmutables (tag = SHA) a ECR.
+5. Inyección de secretos en la instancia (`scripts/poner-secretos.sh`).
+6. Actualización del compose en la instancia (`patch_compose.py`) y arranque de contenedores (`docker compose pull` y `up -d`).
+7. Smoke test (`deploy/smoke.sh`): verifica `/health`, login, lecturas y Swagger apagado. Si falla, revierte automáticamente a las imágenes previas (`PREVIOUS_API` / `PREVIOUS_WEB`).
+8. Conteos «después» de tablas y comparación (`deploy/comparar_conteos.py`): valida que las tablas de negocio mantengan exactamente sus filas.
 
 La comparación (`deploy/comparar_conteos.py`) valida que las tablas de datos de negocio mantengan exactamente sus filas. Se excluyen explícitamente las tablas técnicas que cambian de forma legítima durante el despliegue, definidas en [`deploy/conteos.excluir`](../deploy/conteos.excluir) (fuente única de verdad): `schema_migrations` (por migraciones pendientes aplicadas por el entrypoint) y `sesiones` (por el login del smoke test). Tablas nuevas introducidas por migraciones se reportan. Si una tabla de negocio diverge o el smoke falla, se aborta y se revierte a la imagen anterior. No hay migración «down»: las migraciones solo agregan. Volver el binario atrás no borra columnas. Restaurar el dump es el último recurso y lo decide una persona; se pierde lo cargado después del backup.
 

@@ -65,7 +65,7 @@ Confirmar que `/opt/campus/data/app/.etl-done` existe. El entrypoint nuevo no ej
 
 ## 6. Desplegar
 
-Subir la imagen nueva con tag inmutable (el SHA del commit) y reiniciar el servicio como ya se hace en `docs/DEPLOY-AWS.md`. El entrypoint aplica solo lo pendiente, cada archivo en su transacción.
+Subir la imagen nueva con tag inmutable (el SHA del commit) y reiniciar el servicio como ya se hace en `docs/DEPLOY-AWS.md`. En el script automatizado (`deploy/deploy.sh produccion --aws`), el snapshot EBS del volumen de datos, el backup `pg_dump` y los conteos «antes» se toman sobre la instancia existente en el estado antes de ejecutar `terraform apply` (requiere `DEPLOY_PRIMERA_VEZ=1` si es la creación inicial). El entrypoint aplica solo lo pendiente, cada archivo en su transacción.
 
 - [ ] Tag desplegado anotado
 - [ ] Tag de rollback (paso inicial) sigue disponible en el registro de imágenes
@@ -75,7 +75,7 @@ Subir la imagen nueva con tag inmutable (el SHA del commit) y reiniciar el servi
 - [ ] `GET /health` responde `"status":"ok"` (lo que mira `campus-healthcheck`)
 - [ ] `GET /areas-verdes/v1/health` responde
 - [ ] Login con una cuenta semilla
-- [ ] Conteos después = conteos antes en todas las tablas que ya existían
+- [ ] Conteos después = conteos antes en todas las tablas de negocio existentes (validado por `deploy/comparar_conteos.py` con `deploy/conteos.excluir`)
 - [ ] `schema_migrations` = lista de antes + `047` y `048`
 - [ ] Mapa, una labor y una evidencia se abren
 - [ ] `cambios` reciente no muestra borrados de filas cargadas

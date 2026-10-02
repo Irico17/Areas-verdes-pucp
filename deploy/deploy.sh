@@ -203,6 +203,42 @@ aws_deploy() {
     exit 1
   fi
 
+  local antes="" despues=""
+
+  # Orden seguro en producción (F-B):
+  # 1. terraform init / workspace select
+  # 2. ANTES de terraform apply (sobre la instancia existente en el estado):
+  #    - Snapshot EBS del volumen de datos (campus-verde-data)
+  #    - Backup lógico pg_dump en la instancia (/opt/campus/data/backups/)
+  #    - Conteos «antes» de tablas
+  #    (si no hay instancia previa en producción, falla salvo DEPLOY_PRIMERA_VEZ=1)
+  # 3. terraform apply
+  # 4. Construcción / subida de imágenes a ECR
+  # 5. Inyección de secretos en la instancia (poner-secretos.sh)
+  # 6. Publicación de imágenes en la instancia (patch_compose + compose pull/up)
+  # 7. Smoke test (con rollback automático al tag anterior si falla)
+  # 8. Conteos «después» y comparación de tablas de negocio (comparar_conteos.py)
+
+  if [ "$AMBIENTE" = "produccion" ]; then
+    local pre_instance
+    pre_instance="$(terraform -chdir="$tf" output -raw instance_id 2>/dev/null || true)"
+    pre_instance="$(printf '%s' "$pre_instance" | tr -d '[:space:]')"
+    if [ -z "$pre_instance" ] || [ "$pre_instance" = "None" ] || [ "$pre_instance" = "null" ]; then
+      if [ "${DEPLOY_PRIMERA_VEZ:-}" = "1" ]; then
+        echo "Producción sin instancia previa en el estado de Terraform (DEPLOY_PRIMERA_VEZ=1). Se omite snapshot, backup y conteos antes."
+      else
+        echo "No hay instancia en el estado de Terraform para producción. No se puede tomar snapshot EBS ni backup antes de apply. Si es la primera creación de la infraestructura, exporte DEPLOY_PRIMERA_VEZ=1." >&2
+        exit 1
+      fi
+    else
+      echo "Tomando snapshot EBS, pg_dump y conteos antes sobre la instancia existente: $pre_instance"
+      backup_produccion "$pre_instance" "$target_tag"
+      antes="$(mktemp)"
+      conteos_remotos "$pre_instance" >"$antes"
+      echo "conteos antes: $antes"
+    fi
+  fi
+
   terraform -chdir="$tf" apply -input=false -auto-approve -var "ambiente=${AMBIENTE}"
 
   local api_repo web_repo instance url
@@ -248,17 +284,10 @@ aws_deploy() {
   docker push "${web_repo}:${target_tag}"
   echo "Imagen API (tag inmutable): ${api_repo}:${target_tag}"
 
-  bash "$ROOT/scripts/poner-secretos.sh" "$instance"
-
-  if [ "$AMBIENTE" = "produccion" ]; then
-    backup_produccion "$instance" "$target_tag"
-  fi
-
-  local antes="" despues=""
-  if [ "$AMBIENTE" = "produccion" ]; then
-    antes="$(mktemp)"
-    conteos_remotos "$instance" >"$antes"
-    echo "conteos antes: $antes"
+  if command -v poner-secretos >/dev/null 2>&1; then
+    poner-secretos "$instance"
+  else
+    bash "$ROOT/scripts/poner-secretos.sh" "$instance"
   fi
 
   local previous
@@ -279,10 +308,14 @@ aws_deploy() {
   fi
 
   if [ "$AMBIENTE" = "produccion" ]; then
-    despues="$(mktemp)"
-    conteos_remotos "$instance" >"$despues"
-    python3 "$ROOT/deploy/comparar_conteos.py" "$antes" "$despues" --excluir "$ROOT/deploy/conteos.excluir"
-    rm -f "$antes" "$despues"
+    if [ -n "$antes" ] && [ -f "$antes" ]; then
+      despues="$(mktemp)"
+      conteos_remotos "$instance" >"$despues"
+      python3 "$ROOT/deploy/comparar_conteos.py" "$antes" "$despues" --excluir "$ROOT/deploy/conteos.excluir"
+      rm -f "$antes" "$despues"
+    else
+      echo "Primer despliegue (DEPLOY_PRIMERA_VEZ=1): se omiten conteos de comparación antes/después."
+    fi
   fi
 
   echo "Listo: $url"

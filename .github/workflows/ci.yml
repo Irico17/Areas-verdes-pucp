@@ -153,6 +153,7 @@ jobs:
         run: |
           python3 deploy/patch_compose.py --selftest
           python3 deploy/comparar_conteos.py --selftest
+          bash deploy/test_deploy_orden.sh
       - name: Swagger sin deriva
         working-directory: backend/app
         run: |
