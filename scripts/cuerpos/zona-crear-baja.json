@@ -1,0 +1,6 @@
+{
+  "codigo": "Z4",
+  "nombre": "Zona Cuatro Ficticia",
+  "area_m2": 8500.0,
+  "geojson": "{\"type\":\"MultiPolygon\",\"coordinates\":[[[[-77.085,-12.072],[-77.080,-12.072],[-77.080,-12.068],[-77.085,-12.068],[-77.085,-12.072]]]]}"
+}

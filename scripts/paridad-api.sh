@@ -344,7 +344,17 @@ while IFS= read -r line || [ -n "$line" ]; do
     continue
   fi
 
-  read -r rol metodo ruta extra1 extra2 <<< "$line"
+  solo_nueva=false
+  expected_fragment=""
+
+  # Detectar directiva solo-nueva al inicio de línea
+  first_token=$(echo "$line" | awk '{print $1}')
+  if [ "$first_token" = "solo-nueva" ]; then
+    solo_nueva=true
+    line=$(echo "$line" | sed 's/^[[:space:]]*solo-nueva[[:space:]]*//')
+  fi
+
+  read -r rol metodo ruta extra <<< "$line"
   TOTAL_COUNT=$((TOTAL_COUNT + 1))
 
   # Cookie jar para rol
@@ -360,14 +370,12 @@ while IFS= read -r line || [ -n "$line" ]; do
     fi
   fi
 
-  # Parsear argumentos opcionales: status esperado y cuerpo @body
+  # Parsear argumentos opcionales: status esperado, cuerpo @body y fragmento esperado
   expected_status=""
   BODY_ARGS=()
-  for extra in "${extra1:-}" "${extra2:-}"; do
-    if [[ "$extra" =~ ^[0-9]{3}$ ]]; then
-      expected_status="$extra"
-    elif [[ "$extra" =~ ^@ ]]; then
-      BODY_PATH="${extra#@}"
+  for token in $extra; do
+    if [[ "$token" =~ ^@ ]]; then
+      BODY_PATH="${token#@}"
       if [ -f "$BODY_PATH" ]; then
         if [[ "$BODY_PATH" =~ \.form$ ]]; then
           while IFS= read -r fline || [ -n "$fline" ]; do
@@ -382,8 +390,73 @@ while IFS= read -r line || [ -n "$line" ]; do
       else
         echo "  [WARN] archivo de cuerpo no encontrado: $BODY_PATH"
       fi
+    elif [[ -z "$expected_status" && "$token" =~ ^[0-9]{3}$ ]]; then
+      expected_status="$token"
+    else
+      if [ -z "$expected_fragment" ]; then
+        expected_fragment="$token"
+      else
+        expected_fragment="$expected_fragment $token"
+      fi
     fi
   done
+
+  # Modo solo-nueva: ejecutar únicamente contra la API nueva (rutas nuevas como bajas lógicas)
+  if [ "$solo_nueva" = true ]; then
+    RUTAS_NUEVA=()
+    if [ "$metodo" != "GET" ]; then
+      if [[ "$ruta" =~ ^/api/v1 ]]; then
+        RUTAS_NUEVA+=("${ruta/\/api\/v1/$PARIDAD_PREFIJO_ESCRITURA}")
+      else
+        RUTAS_NUEVA+=("$ruta")
+      fi
+    else
+      if [[ "$ruta" =~ ^/api/v1 ]]; then
+        RUTAS_NUEVA+=("$ruta")
+        RUTAS_NUEVA+=("${ruta/\/api\/v1/\/areas-verdes\/v1}")
+      else
+        RUTAS_NUEVA+=("$ruta")
+      fi
+    fi
+
+    ROUTE_OK=true
+    for r_nueva in "${RUTAS_NUEVA[@]}"; do
+      BODY_NUEVA="$TMPDIR/body_nueva.raw"
+      HEAD_NUEVA="$TMPDIR/head_nueva.txt"
+      STATUS_NUEVA=$(curl -s -X "$metodo" "${JAR_NUEVA_ARG[@]}" "${BODY_ARGS[@]}" -D "$HEAD_NUEVA" -o "$BODY_NUEVA" -w "%{http_code}" "$NUEVA$r_nueva")
+
+      if [ -n "$expected_status" ] && [ "$STATUS_NUEVA" != "$expected_status" ]; then
+        echo "  [FAIL] $metodo $ruta -> $r_nueva: API nueva retornó $STATUS_NUEVA, se esperaba $expected_status ($(cat "$BODY_NUEVA"))"
+        ROUTE_OK=false
+        continue
+      fi
+
+      if [ -n "$expected_fragment" ]; then
+        if [[ "$expected_fragment" =~ ^! ]]; then
+          neg="${expected_fragment#!}"
+          if grep -qF "$neg" "$BODY_NUEVA"; then
+            echo "  [FAIL] $metodo $ruta -> $r_nueva: el cuerpo no debía contener '$neg'"
+            ROUTE_OK=false
+            continue
+          fi
+        else
+          if ! grep -qF "$expected_fragment" "$BODY_NUEVA"; then
+            echo "  [FAIL] $metodo $ruta -> $r_nueva: el cuerpo no contiene '$expected_fragment' ($(cat "$BODY_NUEVA"))"
+            ROUTE_OK=false
+            continue
+          fi
+        fi
+      fi
+    done
+
+    if [ "$ROUTE_OK" = true ]; then
+      echo "  [OK] $metodo $ruta (solo-nueva status: $expected_status, prefijos verificados: ${#RUTAS_NUEVA[@]})"
+      PASS_COUNT=$((PASS_COUNT + 1))
+    else
+      FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+    continue
+  fi
 
   # 1. Petición a la API vieja
   BODY_VIEJA="$TMPDIR/body_vieja.raw"
