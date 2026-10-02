@@ -3,13 +3,16 @@ import { FechaCampo } from "../FechaCampo"
 import { Esqueleto } from "../ui/Esqueleto"
 import { PODA_VACIA, codigoExterno, validarPoda, type PodaItem } from "./poda"
 import { apiUrl } from "../api"
+import { ApiError } from "../operacion"
+import { send } from "../producto"
 import { encolarRegistro } from "../offline/queue"
 import { COLA_VACIADA, pendientesDe, rutaPoda, vaciarRegistros, type DetalleCola } from "../offline/registros"
-import { COLA, PODA } from "../ui/nomenclatura"
+import { COLA, FALLO, PODA, REGISTRO_CAMPO } from "../ui/nomenclatura"
 
 type Props = {
   iniciales?: PodaItem[]
   onGuardar?: (item: PodaItem) => void
+  mostrarFormulario?: boolean
 }
 
 export function PodaPanel(props: Props) {
@@ -75,7 +78,7 @@ export function PodaPanel(props: Props) {
       )}
       {cargando && <Esqueleto />}
       <ul className="labor-list">
-        {!cargando && items.length === 0 && <li className="empty">No hay podas en esta vista.</li>}
+        {!cargando && items.length === 0 && <li className="empty">{REGISTRO_CAMPO.vacioPoda}</li>}
         {items.map((item) => (
           <li key={item.codigo}>
             <button type="button" className="labor" onClick={() => setForm(item)}>
@@ -91,7 +94,7 @@ export function PodaPanel(props: Props) {
           </li>
         ))}
       </ul>
-      <form
+      {props.mostrarFormulario !== false && <form
         className="form"
         onSubmit={(event) => {
           event.preventDefault()
@@ -113,21 +116,9 @@ export function PodaPanel(props: Props) {
             cantidad_ejecutada: Number(guardada.cantidad_ejecutada),
           }
           const ruta = rutaPoda(guardada.id, nueva)
-          void fetch(ruta, {
-            method: nueva ? "POST" : "PATCH",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(cuerpo),
-          })
-            .then((res) => {
-              if (res.status === 409) {
-                setAviso(COLA.conflicto)
-                return
-              }
-              if (!res.ok) {
-                setAviso(PODA.error)
-                return
-              }
+          const metodo = nueva ? "POST" : "PATCH"
+          void send(ruta, metodo, cuerpo)
+            .then(() => {
               setItems((current) => {
                 const sin = current.filter((item) => item.codigo !== guardada.codigo)
                 return [...sin, guardada]
@@ -136,22 +127,38 @@ export function PodaPanel(props: Props) {
               props.onGuardar?.(guardada)
               setAviso(PODA.guardada)
             })
-            .catch(() => {
-              void encolarRegistro({
-                id: guardada.id,
-                tipo: "poda",
-                path: ruta,
-                method: nueva ? "POST" : "PATCH",
-                body: cuerpo,
-                createdAt: new Date().toISOString(),
-              }).then(() => {
-                setItems((current) => {
-                  const sin = current.filter((item) => item.codigo !== guardada.codigo && item.id !== guardada.id)
-                  return [...sin, guardada]
+            .catch((error: unknown) => {
+              if (error instanceof ApiError && error.status === 409) {
+                setAviso(COLA.conflicto)
+                return
+              }
+              if (error instanceof ApiError && error.status === 403) {
+                setAviso(FALLO.poda)
+                return
+              }
+              if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+                setAviso(error.message)
+                return
+              }
+              if (error instanceof ApiError && error.status === 0) {
+                void encolarRegistro({
+                  id: guardada.id,
+                  tipo: "poda",
+                  path: ruta,
+                  method: metodo,
+                  body: cuerpo,
+                  createdAt: new Date().toISOString(),
+                }).then(() => {
+                  setItems((current) => {
+                    const sin = current.filter((item) => item.codigo !== guardada.codigo && item.id !== guardada.id)
+                    return [...sin, guardada]
+                  })
+                  setEnCola((actual) => [...actual.filter((id) => id !== guardada.id), guardada.id])
+                  setAviso(PODA.enCola)
                 })
-                setEnCola((actual) => [...actual.filter((id) => id !== guardada.id), guardada.id])
-                setAviso(PODA.enCola)
-              })
+                return
+              }
+              setAviso(PODA.error)
             })
         }}
       >
@@ -224,7 +231,7 @@ export function PodaPanel(props: Props) {
         </button>
         {aviso && <p className="hint">{aviso}</p>}
         {fallos.length > 0 && form.codigo !== "" && <p className="status error">{fallos[0].motivo}</p>}
-      </form>
+      </form>}
     </section>
   )
 }

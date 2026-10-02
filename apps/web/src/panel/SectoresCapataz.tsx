@@ -16,7 +16,8 @@ import {
   type SectorCapataz,
 } from "./zonificacion"
 
-export function SectoresCapataz() {
+export function SectoresCapataz(props: { editable?: boolean }) {
+  const editable = props.editable !== false
   const baseId = useId()
   const [sectores, setSectores] = useState<SectorCapataz[]>([])
   const [lugares, setLugares] = useState<LugarCatalogo[]>([])
@@ -115,7 +116,7 @@ export function SectoresCapataz() {
                 {sector.activo ? "" : ` · ${ZONIFICACION.inactivo}`}
               </small>
             </span>
-            {sector.activo && (
+            {editable && sector.activo && (
               <button
                 type="button"
                 className="link"
@@ -132,7 +133,7 @@ export function SectoresCapataz() {
         ))}
       </ul>
       {sectores.filter((sector) => sector.activo).length === 0 && !error && <p className="empty">{ZONIFICACION.vacio}</p>}
-      <form className="form sector-alta" onSubmit={(event) => void onAlta(event)}>
+      {editable && <form className="form sector-alta" onSubmit={(event) => void onAlta(event)}>
         <label className="field" htmlFor={`${baseId}-codigo`}>
           {ZONIFICACION.codigo}
           <input id={`${baseId}-codigo`} name="codigo" value={codigo} required onChange={(event) => setCodigo(event.target.value)} />
@@ -148,8 +149,8 @@ export function SectoresCapataz() {
         <button type="submit" className="primary">
           {ZONIFICACION.alta}
         </button>
-      </form>
-      <div className="sector-archivos">
+      </form>}
+      {editable && <div className="sector-archivos">
         <label className="field">
           {ZONIFICACION.importarSectores}
           <input
@@ -175,12 +176,12 @@ export function SectoresCapataz() {
           />
           <small>{ZONIFICACION.viasLede}</small>
         </label>
-      </div>
+      </div>}
       <aside className="cuarteles-vacio">
         <h3>{ZONIFICACION.cuarteles}</h3>
         {sinCuarteles && <p>{ZONIFICACION.sinCuarteles}</p>}
       </aside>
-      <form
+      {editable && <form
         className="form referente"
         onSubmit={(event) => {
           event.preventDefault()
@@ -205,7 +206,7 @@ export function SectoresCapataz() {
         <button type="submit" disabled={!lugarId || !edificioId}>
           {ZONIFICACION.guardarReferente}
         </button>
-      </form>
+      </form>}
       {error && (
         <p className="status error" role="alert">
           {error}

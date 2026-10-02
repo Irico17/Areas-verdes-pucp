@@ -1,5 +1,5 @@
 import { apiUrl } from "../api"
-import { IMPORTACION } from "../ui/nomenclatura"
+import { IMPORTACION, IMPORTAR_UI } from "../ui/nomenclatura"
 
 export const ENTIDADES: { id: string; etiqueta: string }[] = [
   { id: "areas_verdes", etiqueta: IMPORTACION.areas_verdes },
@@ -26,6 +26,13 @@ export const ENTIDADES: { id: string; etiqueta: string }[] = [
   { id: "puntos_pucp", etiqueta: IMPORTACION.puntos_pucp },
   { id: "sectores_capataz", etiqueta: IMPORTACION.sectores_capataz },
   { id: "vias", etiqueta: IMPORTACION.vias },
+]
+
+export const GRUPOS_IMPORTACION: { id: string; etiqueta: string; ids: string[] }[] = [
+  { id: "territorio", etiqueta: IMPORTAR_UI.territorio, ids: ["areas_verdes", "zonas_supervision", "poligonos_cuadrilla", "cuadrillas", "lugares", "sectores_capataz", "vias"] },
+  { id: "operacion", etiqueta: IMPORTAR_UI.operacion, ids: ["catalogo_actividades", "labores", "poda", "vivero", "reservas"] },
+  { id: "arbolado", etiqueta: IMPORTAR_UI.arbolado, ids: ["ejemplares", "palmeras", "cafetos"] },
+  { id: "mobiliario", etiqueta: IMPORTAR_UI.mobiliario, ids: ["tachos", "bebederos", "fauna", "puertas", "playas", "vereda", "xerofitica", "jardines_reserva", "puntos_pucp"] },
 ]
 
 export type ErrorFila = { fila: number; campo: string; motivo: string }

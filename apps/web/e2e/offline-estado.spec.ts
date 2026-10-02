@@ -17,8 +17,8 @@ test("al volver la red el cambio de estado sale de la cola sin pulsar el botón"
   await estado.selectOption(siguiente)
 
   await context.setOffline(true)
-  await detalle.getByRole("button", { name: "Guardar estado" }).click()
-  const enCola = page.locator(".marca-cola", { hasText: "en cola" }).first()
+  await detalle.getByRole("button", { name: "Cambiar estado" }).click()
+  const enCola = page.locator(".marca-cola", { hasText: "por enviar" }).first()
   await expect(enCola).toBeVisible()
   await enCola.scrollIntoViewIfNeeded()
   await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/offline-estado-en-cola.png" })
@@ -28,6 +28,6 @@ test("al volver la red el cambio de estado sale de la cola sin pulsar el botón"
   const pedido = await envio
   expect(pedido.postData() ?? "").toContain(siguiente)
   await expect(page.getByRole("button", { name: "Reintentar envío" })).toHaveCount(0)
-  await expect(page.getByText("en cola")).toHaveCount(0)
+  await expect(page.getByText("por enviar")).toHaveCount(0)
   await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/offline-estado-enviado.png", fullPage: true })
 })

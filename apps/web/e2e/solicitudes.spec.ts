@@ -6,7 +6,7 @@ test("la solicitud no es solo un texto de lugar y la orden elige empresa", async
   await page.getByLabel("Clave").fill("pando-local")
   await page.getByRole("button", { name: "Entrar" }).click()
 
-  await page.getByRole("button", { name: "Solicitudes", exact: true }).click()
+  await page.getByRole("button", { name: "Solicitudes y servicios", exact: true }).click()
 
   const solicitud = page.locator("form.solicitud-alta")
   await expect(solicitud).toBeVisible()

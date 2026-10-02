@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react"
-import { ENTIDADES, confirmarImportacion, previsualizar, revertirLote, type VistaPrevia } from "./importaciones"
+import { ENTIDADES, GRUPOS_IMPORTACION, confirmarImportacion, previsualizar, revertirLote, type VistaPrevia } from "./importaciones"
+import { IMPORTAR_UI } from "../ui/nomenclatura"
 
 export function ImportacionesPanel() {
   const [entidad, setEntidad] = useState(ENTIDADES[0].id)
@@ -21,7 +22,7 @@ export function ImportacionesPanel() {
     try {
       const previa = await previsualizar(entidad, archivo)
       setVista(previa)
-      setAviso(previa.validas === 0 ? "Ninguna fila válida. No se escribió nada." : "Vista previa lista. Confirme para escribir.")
+      setAviso(previa.validas === 0 ? "Ninguna fila válida. No se escribió nada." : "Archivo revisado. Confirme para escribir.")
     } catch (err) {
       setVista(null)
       setError(err instanceof Error ? err.message : "No se pudo leer el archivo")
@@ -82,29 +83,40 @@ export function ImportacionesPanel() {
 
   return (
     <section className="form">
-      <h2>Importar</h2>
-      <p className="lede">Suba CSV, XLSX o GeoJSON. Primero se revisa; solo la confirmación escribe. El lote se puede revertir.</p>
+      <h2>{IMPORTAR_UI.titulo}</h2>
+      <p className="lede">{IMPORTAR_UI.lede}</p>
       <form onSubmit={(event) => void vistaPrevia(event)}>
         <label className="field">
-          Entidad
+          {IMPORTAR_UI.paso1}
           <select value={entidad} onChange={(event) => setEntidad(event.target.value)}>
-            {ENTIDADES.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.etiqueta}
-              </option>
+            {GRUPOS_IMPORTACION.map((grupo) => (
+              <optgroup key={grupo.id} label={grupo.etiqueta}>
+                {grupo.ids.map((id) => {
+                  const item = ENTIDADES.find((fila) => fila.id === id)
+                  if (!item) return null
+                  return (
+                    <option key={item.id} value={item.id}>
+                      {item.etiqueta}
+                    </option>
+                  )
+                })}
+              </optgroup>
             ))}
           </select>
         </label>
         <label className="field">
-          Archivo
+          {IMPORTAR_UI.paso2}
           <input
             type="file"
             accept=".csv,.xlsx,.geojson,.json,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/geo+json"
             onChange={(event) => setArchivo(event.target.files?.[0] ?? null)}
           />
         </label>
-        <button type="submit" className="primary" disabled={pending}>
-          {pending ? "Revisando…" : "Vista previa"}
+        <p className="hint" id="importar-motivo">
+          {!archivo ? IMPORTAR_UI.faltaArchivo : IMPORTAR_UI.paso3}
+        </p>
+        <button type="submit" className="primary" disabled={pending || !archivo} aria-describedby="importar-motivo">
+          {pending ? "Revisando…" : IMPORTAR_UI.revisar}
         </button>
       </form>
       {error && <p className="status error">{error}</p>}
@@ -126,7 +138,7 @@ export function ImportacionesPanel() {
           {vista.filas.length > 0 && (
             <>
               <h3>Primeras {vista.filas.length} filas</h3>
-              <div className="tabla-scroll" role="region" aria-label="Vista previa del archivo" tabIndex={0}>
+              <div className="tabla-scroll" role="region" aria-label={IMPORTAR_UI.region} tabIndex={0}>
                 <table className="tabla">
                   <thead>
                     <tr>{columnas.map((col) => <th key={col} scope="col">{col}</th>)}</tr>
@@ -161,11 +173,14 @@ export function ImportacionesPanel() {
         </div>
       )}
       <div className="row-actions">
-        <button type="button" className="primary" disabled={pending || !vista || vista.validas === 0 || vista.escrito} onClick={() => void confirmar()}>
-          Confirmar escritura
+        <p className="hint" id="importar-confirmar">
+          {IMPORTAR_UI.paso4}. {!vista ? IMPORTAR_UI.faltaRevision : IMPORTAR_UI.confirmar}
+        </p>
+        <button type="button" className="primary" disabled={pending || !vista || vista.validas === 0 || vista.escrito} aria-describedby="importar-confirmar" onClick={() => void confirmar()}>
+          {IMPORTAR_UI.confirmar}
         </button>
         <button type="button" disabled={pending || !vista?.escrito} onClick={() => void revertir()}>
-          Revertir lote
+          {IMPORTAR_UI.revertir}
         </button>
       </div>
     </section>

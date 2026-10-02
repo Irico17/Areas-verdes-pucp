@@ -4,7 +4,7 @@ import { formatFecha, hoyISO } from "../fecha"
 import { Esqueleto } from "../ui/Esqueleto"
 import { ApiError } from "../operacion"
 import { crearRiego, fetchRiego } from "../producto"
-import { COLA, RIEGO, etiquetaZonaSupervision } from "../ui/nomenclatura"
+import { COLA, FALLO, RIEGO, etiquetaZonaSupervision } from "../ui/nomenclatura"
 import { listarSectores, type SectorCapataz } from "./zonificacion"
 import { encolarRegistro, type QueuedRegistro } from "../offline/queue"
 import { COLA_VACIADA, pendientesDe, rutaRiego, vaciarRegistros, type DetalleCola } from "../offline/registros"
@@ -18,7 +18,7 @@ function riegoLocal(item: QueuedRegistro): RiegoLocal | null {
   return { id: row.id, sectorId: row.sector_id, turno: row.turno ?? "", fecha: row.fecha ?? "", nota: row.nota ?? "" }
 }
 
-export function RiegoPanel(props: { capatazId: string }) {
+export function RiegoPanel(props: { capatazId: string; mostrarFormulario?: boolean }) {
   const [rows, setRows] = useState<Awaited<ReturnType<typeof fetchRiego>>["registros"]>([])
   const [sectores, setSectores] = useState<SectorCapataz[]>([])
   const [cobertura, setCobertura] = useState<number | null>(null)
@@ -141,7 +141,7 @@ export function RiegoPanel(props: { capatazId: string }) {
           </li>
         ))}
       </ul>
-      <form
+      {props.mostrarFormulario !== false && <form
         className="form"
         onSubmit={(event) => {
           event.preventDefault()
@@ -173,6 +173,14 @@ export function RiegoPanel(props: { capatazId: string }) {
             .catch((err: unknown) => {
               if (err instanceof ApiError && err.status === 409) {
                 setAvisoCola(COLA.conflicto)
+                return
+              }
+              if (err instanceof ApiError && err.status === 403) {
+                setError(FALLO.riego)
+                return
+              }
+              if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
+                setError(err.message)
                 return
               }
               if (err instanceof ApiError && err.status === 0) {
@@ -242,7 +250,7 @@ export function RiegoPanel(props: { capatazId: string }) {
         <button type="submit" className="primary" disabled={sectores.length === 0}>
           {RIEGO.registrar}
         </button>
-      </form>
+      </form>}
     </section>
   )
 }

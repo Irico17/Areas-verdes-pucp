@@ -15,6 +15,7 @@ test("el pin abre el detalle sin cambiar de pestaña y a 390 px se ve la lista",
   await page.getByLabel("Clave").fill("pando-local")
   await page.getByRole("button", { name: "Entrar" }).click()
 
+  await page.locator(".guard").getByRole("button", { name: "Mapa", exact: true }).click()
   await expect(page.locator(".guard").getByRole("button", { name: "Mapa", exact: true })).toHaveAttribute("aria-current", "page")
   await page.waitForFunction(() => {
     const host = document.querySelector(".map-host") as { mapa?: { getLayer: (id: string) => unknown; querySourceFeatures: (id: string) => { geometry?: { type?: string; coordinates?: number[] } }[] } } | null

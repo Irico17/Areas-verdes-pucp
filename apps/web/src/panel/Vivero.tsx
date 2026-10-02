@@ -3,15 +3,18 @@ import { FechaCampo } from "../FechaCampo"
 import { Esqueleto } from "../ui/Esqueleto"
 import { AREAS, VIVERO_VACIO, validarVivero, type ViveroItem } from "./vivero"
 import { apiUrl } from "../api"
+import { ApiError } from "../operacion"
+import { send } from "../producto"
 import { encolarRegistro } from "../offline/queue"
 import { COLA_VACIADA, pendientesDe, rutaVivero, vaciarRegistros, type DetalleCola } from "../offline/registros"
-import { COLA, VIVERO } from "../ui/nomenclatura"
+import { COLA, FALLO, REGISTRO_CAMPO, VIVERO } from "../ui/nomenclatura"
 
 type Props = {
   iniciales?: ViveroItem[]
   subprocesos?: string[]
   etapas?: string[]
   delta?: string
+  mostrarFormulario?: boolean
 }
 
 export function ViveroPanel(props: Props) {
@@ -92,7 +95,7 @@ export function ViveroPanel(props: Props) {
       )}
       {cargando && <Esqueleto />}
       <ul className="labor-list">
-        {!cargando && visibles.length === 0 && <li className="empty">No hay registros de vivero en este mes.</li>}
+        {!cargando && visibles.length === 0 && <li className="empty">{REGISTRO_CAMPO.vacioVivero}</li>}
         {visibles.map((item) => (
           <li key={item.id} className="agenda">
             <strong>{item.area || "Sin área"}</strong>
@@ -103,7 +106,7 @@ export function ViveroPanel(props: Props) {
           </li>
         ))}
       </ul>
-      <form
+      {props.mostrarFormulario !== false && <form
         className="form"
         onSubmit={(event) => {
           event.preventDefault()
@@ -128,39 +131,42 @@ export function ViveroPanel(props: Props) {
             responsables: guardado.responsables,
             lugar_libre: guardado.lugar,
           }
-          void fetch(rutaVivero(), {
-            method: "POST",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(cuerpo),
-          })
-            .then((res) => {
-              if (res.status === 409) {
-                setAviso(COLA.conflicto)
-                return
-              }
-              if (!res.ok) {
-                setAviso(VIVERO.error)
-                return
-              }
+          void send(rutaVivero(), "POST", cuerpo)
+            .then(() => {
               setItems((current) => [...current.filter((item) => item.id !== guardado.id), guardado])
               setEnCola((actual) => actual.filter((id) => id !== guardado.id))
               setAviso(VIVERO.guardado)
               setForm(VIVERO_VACIO)
             })
-            .catch(() => {
-              void encolarRegistro({
-                id: guardado.id,
-                tipo: "vivero",
-                path: rutaVivero(),
-                method: "POST",
-                body: cuerpo,
-                createdAt: new Date().toISOString(),
-              }).then(() => {
-                setItems((current) => [...current.filter((item) => item.id !== guardado.id), guardado])
-                setEnCola((actual) => [...actual.filter((id) => id !== guardado.id), guardado.id])
-                setAviso(VIVERO.enCola)
-              })
+            .catch((error: unknown) => {
+              if (error instanceof ApiError && error.status === 409) {
+                setAviso(COLA.conflicto)
+                return
+              }
+              if (error instanceof ApiError && error.status === 403) {
+                setAviso(FALLO.vivero)
+                return
+              }
+              if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+                setAviso(error.message)
+                return
+              }
+              if (error instanceof ApiError && error.status === 0) {
+                void encolarRegistro({
+                  id: guardado.id,
+                  tipo: "vivero",
+                  path: rutaVivero(),
+                  method: "POST",
+                  body: cuerpo,
+                  createdAt: new Date().toISOString(),
+                }).then(() => {
+                  setItems((current) => [...current.filter((item) => item.id !== guardado.id), guardado])
+                  setEnCola((actual) => [...actual.filter((id) => id !== guardado.id), guardado.id])
+                  setAviso(VIVERO.enCola)
+                })
+                return
+              }
+              setAviso(VIVERO.error)
             })
         }}
       >
@@ -222,7 +228,7 @@ export function ViveroPanel(props: Props) {
           Guardar registro
         </button>
         {aviso && <p className="hint">{aviso}</p>}
-      </form>
+      </form>}
     </section>
   )
 }

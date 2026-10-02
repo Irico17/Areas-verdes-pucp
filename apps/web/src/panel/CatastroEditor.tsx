@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react"
 import { listarVertices, medirGeom, moverVertice, type ModoDibujo, type Position, type VerticeRef } from "../map/draw"
 import { mostrarEnPanel } from "../ui/desplazar"
-import { CATASTRO, etiquetaZonaSupervision } from "../ui/nomenclatura"
+import { CATASTRO, DEMO, etiquetaZonaSupervision } from "../ui/nomenclatura"
+import { CalendarioReservas } from "./CalendarioReservas"
 import { SelectorLugar } from "./SelectorLugar"
 import { SectoresCapataz } from "./SectoresCapataz"
 import { listarLugaresCatalogo, type LugarCatalogo } from "./zonificacion"
@@ -47,6 +48,7 @@ type Props = {
   areasIniciales?: AreaVerde[]
   zonasIniciales?: ZonaSupervision[]
   entidadInicial?: Entidad
+  editable?: boolean
 }
 
 const ETIQUETA_AREA = {
@@ -116,6 +118,7 @@ export function CatastroEditor({
   areasIniciales,
   zonasIniciales,
   entidadInicial = "area",
+  editable = true,
 }: Props) {
   const baseId = useId()
   const conDatos = areasIniciales != null || zonasIniciales != null
@@ -352,7 +355,7 @@ export function CatastroEditor({
   return (
     <section className="split catastro-editor" data-vista={vista}>
       <div className="split-list" ref={listaRef}>
-        <h2>Catastro</h2>
+        <h2>Áreas y sectores</h2>
         <div className="roles" role="group" aria-label="Entidad del catastro">
           <button type="button" aria-pressed={entidad === "area"} onClick={() => { setEntidad("area"); setErrores([]); setEditandoGeom(false) }}>
             Áreas verdes
@@ -374,7 +377,7 @@ export function CatastroEditor({
         </form>
         {vista === "lista" && aviso && <p className={aviso.toLowerCase().includes("no se") || aviso.toLowerCase().includes("respondió") ? "status error" : "banner"}>{aviso}</p>}
         <p className="row-actions">
-          {entidad === "area" ? (
+          {editable && entidad === "area" ? (
             <button
               type="button"
               onClick={() => {
@@ -387,7 +390,7 @@ export function CatastroEditor({
             >
               Nueva área
             </button>
-          ) : (
+          ) : editable ? (
             <button
               type="button"
               onClick={() => {
@@ -400,7 +403,7 @@ export function CatastroEditor({
             >
               {CATASTRO.nuevaZona}
             </button>
-          )}
+          ) : null}
           <button
             type="button"
             onClick={() => descargar(entidad === "area" ? "areas-verdes.csv" : "zonas-supervision.csv", entidad === "area" ? csvAreas(areas) : csvZonas(zonas))}
@@ -411,10 +414,10 @@ export function CatastroEditor({
         {error && <p className="status error">{error}</p>}
         {error && (
           <button type="button" onClick={() => void load(true)}>
-            Abrir GeoJSON de prueba
+            Abrir copia de demostración
           </button>
         )}
-        {fixture && <p className="hint">GeoJSON de prueba. Guardar arma el payload y no escribe en la base.</p>}
+        {fixture && <p className="hint">{DEMO.aviso}</p>}
         {loading && (
           <div className="skel-wrap" aria-hidden="true">
             <div className="skel" />
@@ -621,10 +624,12 @@ export function CatastroEditor({
                 {resumenErrores(errores)}
               </p>
             )}
+            {editable && (
             <button type="submit" className="primary">
               Guardar área
             </button>
-            {!altaArea && (
+            )}
+            {editable && !altaArea && (
               <button
                 type="button"
                 className="danger"
@@ -632,7 +637,7 @@ export function CatastroEditor({
                   if (fixture) {
                     setAreas((rows) => rows.filter((row) => row.feature_id !== area.feature_id))
                     setArea(null)
-                    setAviso("Baja lógica en el GeoJSON de prueba.")
+                    setAviso(DEMO.aviso)
                     return
                   }
                   void archivarArea(area.feature_id)
@@ -708,10 +713,12 @@ export function CatastroEditor({
                 {resumenErrores(errores)}
               </p>
             )}
+            {editable && (
             <button type="submit" className="primary">
               Guardar zona de supervisión
             </button>
-            {!altaZona && (
+            )}
+            {editable && !altaZona && (
               <button
                 type="button"
                 className="danger"
@@ -719,7 +726,7 @@ export function CatastroEditor({
                   if (fixture) {
                     setZonas((rows) => rows.filter((row) => row.codigo !== zona.codigo))
                     setZona(null)
-                    setAviso("Baja lógica en el GeoJSON de prueba.")
+                    setAviso(DEMO.aviso)
                     return
                   }
                   void archivarZona(zona.codigo)
@@ -737,7 +744,8 @@ export function CatastroEditor({
           </form>
         )}
         {vista === "ficha" && aviso && <p className={aviso.toLowerCase().includes("no se") || aviso.toLowerCase().includes("respondió") ? "status error" : "banner"}>{aviso}</p>}
-        <SectoresCapataz />
+        <SectoresCapataz editable={editable} />
+        <CalendarioReservas />
       </div>
     </section>
   )

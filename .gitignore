@@ -84,6 +84,9 @@ crash.*.log
 # backend (init/backend)
 backend/app/bin/
 
+# Capturas de la ola de claridad (se archivan fuera del commit si pesan)
+apps/web/e2e-artifacts/
+
 # Fotos recuperadas de Drive: caché local, nunca al repo
 data/raw/drive_fotos/*.jpg
 data/raw/drive_fotos/*.jpeg

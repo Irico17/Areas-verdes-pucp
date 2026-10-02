@@ -9,7 +9,7 @@ test("el importador nombra las entidades del mapa y pide confirmación", () => {
   assert.equal(ENTIDADES.some((item) => item.id === "lugares"), true)
   assert.equal(ENTIDADES.some((item) => item.id === "indicadores"), false)
   const html = renderToStaticMarkup(createElement(ImportacionesPanel))
-  for (const texto of ["Vista previa", "Confirmar escritura", "Revertir lote", "Lugares", "Puntos del campus", "Actividades", "Puertas y entradas", "Playas de estacionamiento"]) {
+  for (const texto of ["Revisar archivo", "Confirmar importación", "Revertir esta importación", "Territorio", "Lugares", "Puntos del campus", "Actividades", "Puertas y entradas", "Playas de estacionamiento"]) {
     assert.ok(html.includes(texto), texto)
   }
 })

@@ -200,7 +200,7 @@ export function reporteQuery(filtro: FiltroReporte, formato?: "csv" | "xls"): st
   return q.toString()
 }
 
-async function send(path: string, method: string, body?: unknown): Promise<Response> {
+export async function send(path: string, method: string, body?: unknown): Promise<Response> {
   const init: RequestInit = { method, credentials: "include" }
   if (body !== undefined) {
     init.headers = { "Content-Type": "application/json" }

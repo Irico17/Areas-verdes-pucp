@@ -7,8 +7,8 @@ test("el alta de una actividad muestra clase, tipo, riesgo y lugar de catálogo"
   await page.getByRole("button", { name: "Entrar" }).click()
 
   await page.getByRole("button", { name: "Actividades", exact: true }).click()
-  await page.getByRole("button", { name: "Marcar actividad" }).click()
-  await expect(page.getByText("Haga clic en el mapa para ubicar la actividad.")).toBeVisible()
+  await page.getByRole("button", { name: "Nueva actividad" }).click()
+  await expect(page.getByText("Toque el mapa donde está el trabajo.")).toBeVisible()
 
   const mapa = page.locator(".maplibregl-canvas")
   await mapa.waitFor({ state: "visible" })

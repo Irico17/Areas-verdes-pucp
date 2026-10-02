@@ -5,18 +5,28 @@
  */
 
 export const MODULO = {
+  hoy: "Hoy",
+  resumen: "Resumen",
   mapa: "Mapa",
   labores: "Actividades",
-  catastro: "Catastro",
+  laboresCapataz: "Mis actividades",
+  registros: "Registros de campo",
+  registrosCorto: "Registros",
+  catastro: "Áreas y sectores",
   inventario: "Inventario",
-  solicitudes: "Solicitudes",
+  solicitudes: "Solicitudes y servicios",
+  solicitudesCorto: "Solicitudes",
   reportes: "Reportes",
   catalogos: "Catálogos",
-  importaciones: "Importar",
+  importaciones: "Importar datos",
   admin: "Administración",
   ejemplares: "Ejemplares",
   bitacora: "Bitácora",
   historial: "Historial",
+  configuracion: "Configuración",
+  mas: "Más",
+  operacion: "Operación",
+  datos: "Datos",
 } as const
 
 export const EJEMPLAR = {
@@ -120,9 +130,9 @@ export const ACTIVIDAD = {
   sinCuadrilla: "Sin cuadrilla",
   tipo: "Tipo de actividad",
   todosTipos: "Todos",
-  marcar: "Marcar actividad",
+  marcar: "+ Nueva actividad",
   cancelarMarca: "Cancelar marca",
-  ubicar: "Haga clic en el mapa para ubicar la actividad.",
+  ubicar: "Toque el mapa donde está el trabajo.",
   quienEjecuta: "Quién ejecuta",
   personalPropio: "Personal propio",
   servicioTercerizado: "Servicio tercerizado",
@@ -132,10 +142,9 @@ export const ACTIVIDAD = {
   tituloCampo: "Título",
   crear: "Crear actividad",
   guardando: "Guardando…",
-  vacio: "No hay actividades con este filtro.",
   reintentar: "Reintentar envío",
   estado: "Estado",
-  guardarEstado: "Guardar estado",
+  guardarEstado: "Cambiar estado",
   reasignarA: "Reasignar a",
   motivo: "Motivo de archivo",
   elegir: "Elegir",
@@ -175,12 +184,15 @@ export const ACTIVIDAD = {
   creePrimero: "Cree la actividad en el mapa para poder guardar la ficha.",
   sinTitulo: "Actividad",
   creada: "Actividad creada. Marque el siguiente punto.",
-  enCola: "Sin conexión: la actividad quedó en la cola de este navegador.",
+  enCola: "Sin señal. La actividad quedó guardada en este teléfono y se enviará sola.",
   archivada: "Actividad archivada. Ya no aparece en el mapa abierto.",
   noCierra: "El rol capataz no puede cerrar ni cancelar una actividad.",
-  duplicada: "Una actividad en cola ya existía con otro contenido y se descartó.",
+  duplicada: "Una actividad pendiente ya existía con otro contenido y se descartó.",
   noLeer: "No se pudieron leer las actividades",
-  colaLocal: (n: number) => `${n} en cola local.`,
+  vacio: "No hay actividades con este filtro. Quite un filtro o ubique una nueva en el mapa.",
+  colaLocal: (n: number) => `${n} por enviar.`,
+  archivarPregunta: (titulo: string) => `¿Archivar "${titulo}"? Deja de verse en el mapa; no se borra.`,
+  quitarFiltros: "Quitar filtros",
   avance: "Avance",
   avanceLede: "Queda en la actividad que ya es de esta cuadrilla.",
   guardarAvance: "Guardar avance",
@@ -307,7 +319,7 @@ export const RIEGO = {
   fecha: "Fecha",
   nota: "Nota",
   registrar: "Registrar turno",
-  enCola: "Sin conexión: el turno quedó en cola.",
+  enCola: "Sin señal. El turno quedó guardado en este teléfono y se enviará solo.",
   sinCuadrilla: "sin cuadrilla",
   vacio: "Todavía no hay turnos registrados.",
   manana: "Mañana",
@@ -382,36 +394,143 @@ export const EVIDENCIA = {
   fotos: "Fotos de la actividad",
   sinFotos: "Esta actividad no tiene fotos.",
   esperaServidor: "La foto se guarda cuando la actividad ya está en el servidor.",
-  enNavegador: "Guardado en este navegador.",
-  enNavegadorSinPunto: "Guardado en este navegador, sin ubicación.",
-  sesion: "La sesión venció. La foto sigue en este navegador.",
-  sinPermiso: "Sin permiso para esta actividad. La foto sigue en este navegador.",
-  noSincronizada: "La actividad aún no está sincronizada. La foto sigue en este navegador.",
+  enNavegador: "Guardado en este teléfono.",
+  enNavegadorSinPunto: "Guardado en este teléfono, sin ubicación.",
+  sesion: "La sesión venció. La foto sigue en este teléfono.",
+  sinPermiso: "Sin permiso para esta actividad. La foto sigue en este teléfono.",
+  noSincronizada: "La actividad aún no está sincronizada. La foto sigue en este teléfono.",
 } as const
 
 export const PODA = {
   lede: "Registro de poda sobre un ejemplar. El código externo solo se conserva si ya viene como OSG.",
-  enCola: "Sin conexión: la poda quedó en cola.",
+  enCola: "Sin señal. La poda quedó guardada en este teléfono y se enviará sola.",
   guardada: "Poda guardada. No se creó un código OSG.",
   error: "No se pudo guardar la poda.",
 } as const
 
 export const VIVERO = {
-  enCola: "Sin conexión: el registro de vivero quedó en cola.",
+  enCola: "Sin señal. El registro de vivero quedó guardado en este teléfono y se enviará solo.",
   guardado: "Registro de vivero guardado.",
   error: "No se pudo guardar el registro de vivero.",
 } as const
 
 export const COLA = {
-  marca: "en cola",
-  local: (n: number) => `${n} en cola local.`,
+  marca: "por enviar",
+  local: (n: number) => `${n} por enviar.`,
   reintentar: "Reintentar envío",
-  conflicto: "Un registro en cola ya existía con otro contenido y se descartó.",
-  avance: "Sin conexión: el avance quedó en cola.",
-  ficha: "Sin conexión: la ficha quedó en cola.",
+  conflicto: "Un registro pendiente ya existía con otro contenido y se descartó.",
+  avance: "Sin señal. El avance quedó guardado en este teléfono y se enviará solo.",
+  ficha: "Sin señal. La ficha quedó guardada en este teléfono y se enviará sola.",
   fichaGuardada: "Ficha guardada. El pin del mapa no cambia.",
   fichaError: "No se pudo guardar la ficha.",
-  sinConexion: "Sin conexión con la API.",
+  sinConexion: "Sin conexión. Intente de nuevo.",
+} as const
+
+export const FALLO = {
+  sinRed: "Sin conexión. Intente de nuevo.",
+  poda: "Su rol no puede registrar podas. Pida a Coordinación que lo haga.",
+  vivero: "Su rol no puede registrar vivero. Pida a Coordinación que lo haga.",
+  inventario: "Su rol no puede registrar inventario. Pida a Coordinación que lo haga.",
+  ficha: "Su rol no puede guardar la ficha. Pida a Coordinación que lo haga.",
+  riego: "Su rol no puede registrar riego. Pida a Coordinación que lo haga.",
+} as const
+
+export const DEMO = {
+  aviso: "Datos de demostración. Esta fuente sigue pendiente de validar.",
+} as const
+
+export const HOY = {
+  actividades: "Mis actividades de hoy",
+  enLinea: "En línea",
+  sinConexion: (n: number) => `Sin conexión · ${n} por enviar`,
+  porIniciar: "Por iniciar",
+  enProceso: "En proceso",
+  bloqueadas: "Bloqueadas",
+  bloqueadaNota: "Bloqueada se conserva como estado provisional hasta que el cliente decida.",
+  iniciar: "Iniciar",
+  terminar: "Terminar y Foto",
+  verMotivo: "Ver motivo",
+  lista: "Lista",
+  mapa: "Mapa",
+  riego: "Registrar riego",
+  poda: "Registrar poda",
+  vivero: "Registrar vivero",
+  mas: "Poda y vivero",
+  vacio: "No hay actividades abiertas en su cuadrilla. Cuando Coordinación asigne una, aparecerá aquí.",
+  forzada: "Sin conexión. El mapa queda oculto y se muestra la lista.",
+  bitacora: "Bitácora",
+  ejemplares: "Ejemplares",
+} as const
+
+export const RESUMEN = {
+  titulo: "Resumen",
+  lede: "Lo que pide una decisión hoy.",
+  bloqueadas: "Bloqueadas",
+  sinCuadrilla: "Sin cuadrilla asignada",
+  tercerizadas: "Tercerizadas sin servicio",
+  solicitudes: "Solicitudes sin actividad",
+  sincronizar: "Pendientes de sincronizar",
+  riego: "Riego de hoy",
+  verTodas: "Ver todas",
+  vacio: "Nada en este bloque.",
+  nueva: "+ Nueva actividad",
+  solicitud: "Registrar solicitud",
+  operacion: "Estado de la operación",
+  verReporte: "Ver reporte",
+  excel: "Descargar Excel",
+  indicadores: "Indicadores pendientes de validar",
+  cuentas: "Cuentas por rol",
+  cambios: "Últimos cambios",
+  importar: "Importar datos",
+  provisional: "Bloqueada sigue como estado provisional.",
+} as const
+
+export const REGISTRO_CAMPO = {
+  titulo: "Registros de campo",
+  lede: "La lista va primero. El formulario se abre con Nuevo registro.",
+  nuevo: "Nuevo registro",
+  cerrar: "Cerrar formulario",
+  riego: "Riego",
+  poda: "Poda",
+  vivero: "Vivero",
+  vacioRiego: "Todavía no hay turnos. Use Nuevo registro para anotar el de hoy.",
+  vacioPoda: "Todavía no hay podas. Use Nuevo registro para anotar una.",
+  vacioVivero: "Todavía no hay registros de vivero. Use Nuevo registro para anotar uno.",
+} as const
+
+export const IMPORTAR_UI = {
+  titulo: "Importar datos",
+  lede: "Cuatro pasos. Nada se escribe hasta confirmar.",
+  paso1: "1 Elegir qué importar",
+  paso2: "2 Subir archivo",
+  paso3: "3 Revisar",
+  paso4: "4 Confirmar",
+  revisar: "Revisar archivo",
+  confirmar: "Confirmar importación",
+  revertir: "Revertir esta importación",
+  territorio: "Territorio",
+  operacion: "Operación",
+  arbolado: "Arbolado",
+  mobiliario: "Mobiliario y puntos",
+  faltaArchivo: "Elija un archivo para poder revisarlo.",
+  faltaRevision: "Revise el archivo antes de confirmar.",
+  region: "Revisar archivo",
+} as const
+
+export const CUENTA = {
+  menu: "Cuenta",
+  salir: "Salir",
+  ayuda: "¿Cómo se usa?",
+  cerrarAyuda: "Cerrar ayuda",
+  omitir: "Omitir",
+  siguiente: "Siguiente",
+  listo: "Listo",
+} as const
+
+export const AYUDA = {
+  sector: "Polígono operativo de una cuadrilla. No es la zona de supervisión Z1–Z4.",
+  bloqueada: "Estado provisional. El cliente todavía no decidió si se conserva.",
+  cobertura: "El porcentaje no es la fórmula oficial. Sigue pendiente de validar.",
 } as const
 
 export const ADMIN = {
@@ -497,6 +616,7 @@ export const INVENTARIO_PESTANAS = {
   tachos: "Tachos",
   bebederos: "Bebederos",
   puntos: "Puntos del campus",
+  otras: "Otras capas",
   reservas: "Reservas de jardín",
 } as const
 

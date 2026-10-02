@@ -157,7 +157,7 @@ test("un 409 saca el registro, avisa y no lo vuelve a enviar", async () => {
   )
   assert.deepEqual(primero.conflictos, [{ id: "1", tipo: "avance" }])
   assert.equal(primero.conflictos.length > 0, true)
-  assert.equal(COLA.conflicto.includes("en cola"), true)
+  assert.equal(COLA.conflicto.includes("pendiente"), true)
   assert.equal(envios, 1)
   assert.deepEqual(items, [])
   await drenarRegistros(
@@ -282,7 +282,7 @@ test("al capataz no se le ofrece la cola de altas", () => {
     }),
   )
   assert.equal(html.includes("Crear actividad"), false)
-  assert.equal(html.includes("Marcar actividad"), false)
+  assert.equal(html.includes("Nueva actividad"), false)
   assert.equal(html.includes("en cola local"), false)
   assert.match(html, /Guardar avance/)
   assert.match(html, /Guardar ficha/)

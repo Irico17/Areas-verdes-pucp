@@ -7,7 +7,7 @@ import { ConmutadorVista, ListaActividades, type MotivoPlano, type Vista } from 
 import type { ModoDibujo } from "./map/draw"
 import { MapBoundary } from "./map/MapBoundary"
 import { useEngancharCola } from "./offline/enganchar"
-import { enqueue, enqueueEstado, listEstados, listQueue, loadLabores, removeEstado, removeQueued, saveLabores, type QueuedLabor } from "./offline/queue"
+import { enqueue, enqueueEstado, listEstados, listQueue, listRegistros, loadLabores, removeEstado, removeQueued, saveLabores, type QueuedLabor } from "./offline/queue"
 import {
   ApiError,
   archivar,
@@ -29,14 +29,16 @@ import {
 } from "./operacion"
 import { BitacoraPanel } from "./panel/Bitacora"
 import { Labores, type LaborItem } from "./panel/Labores"
-import { PodaPanel } from "./panel/Poda"
-import { ViveroPanel } from "./panel/Vivero"
 import { CatastroEditor } from "./panel/CatastroEditor"
 import { InventarioCapas } from "./panel/InventarioCapas"
-import { CalendarioReservas } from "./panel/CalendarioReservas"
 import { conCategorias, conteoPorCategoria, sectoresDesdeCatalogo, SIN_SECTOR, USOS, type Categoria, type ColorPor } from "./map/categorias"
-import { ACTIVIDAD, CAPA, MAPA, ZONIFICACION, conteoCatastro, resumenCatastro } from "./ui/nomenclatura"
+import { ACTIVIDAD, CUENTA, MAPA, MODULO, etiquetaCuadrilla, resumenCatastro } from "./ui/nomenclatura"
 import { BottomSheet } from "./ui/BottomSheet"
+import { ControlMapa } from "./map/ControlMapa"
+import { Hoy } from "./panel/Hoy"
+import { RegistrosCampo } from "./panel/RegistrosCampo"
+import { Resumen } from "./panel/Resumen"
+import { Recorrido } from "./ui/Recorrido"
 import { ImportacionesPanel } from "./panel/Importaciones"
 import { AdminPanel } from "./panel/Admin"
 import { AuditoriaPanel } from "./panel/Auditoria"
@@ -44,15 +46,15 @@ import { CatalogosPanel } from "./panel/Catalogos"
 import { EjemplaresPanel } from "./panel/Ejemplares"
 import { Login } from "./panel/Login"
 import { ReportesPanel } from "./panel/Reportes"
-import { RiegoPanel } from "./panel/Riego"
 import { SolicitudesPanel } from "./panel/Solicitudes"
 import { etiquetaRol, fetchCatalogo, fetchSesion, salir, sugerirTipo, type CatalogoItem, type Usuario } from "./producto"
 import { readColorPor, readEquipo, writeColorPor, writeEquipo } from "./session"
 import { listarSectores } from "./panel/zonificacion"
 import { LAYERS, type FeatureCollection, type GeoFeature, type LayerId, type Rol } from "./types"
 import { MQ_MOVIL, useMedia } from "./ui/media"
-import { repartirModulos } from "./ui/navegacion"
-import { MODULOS, modulosDe, type Modulo } from "./ui/registroModulos"
+import { barraMovil } from "./ui/navegacion"
+import { tienePermiso, permisosDeRol } from "./ui/permisos"
+import { entradaDe, etiquetaCorta, etiquetaModulo, grupoDe, modulosPorPermisos, type GrupoNav, type Modulo } from "./ui/registroModulos"
 
 type LoadState = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ready" }
 
@@ -99,7 +101,7 @@ function queuedFeature(item: QueuedLabor): GeoFeature {
 export default function App() {
   const [sesion, setSesion] = useState<Usuario | null>(null)
   const [sesionLista, setSesionLista] = useState(false)
-  const [modulo, setModulo] = useState<Modulo>("mapa")
+  const [modulo, setModulo] = useState<Modulo>("resumen")
   const rol = (sesion?.rol ?? "coordinacion") as Rol
   const [equipoId, setEquipoId] = useState(() => readEquipo())
   const [equipos, setEquipos] = useState<Capataz[]>([])
@@ -121,7 +123,13 @@ export default function App() {
   const [planoForzado, setPlanoForzado] = useState<MotivoPlano>(() =>
     navigator.onLine === false ? "red" : null,
   )
-  const [railOpen, setRailOpen] = useState(() => !window.matchMedia(MQ_MOVIL).matches)
+  const [railOpen, setRailOpen] = useState(false)
+  const [enLinea, setEnLinea] = useState(() => navigator.onLine)
+  const [estadosPendientes, setEstadosPendientes] = useState(0)
+  const [registrosPendientes, setRegistrosPendientes] = useState(0)
+  const [filtroHoy, setFiltroHoy] = useState("")
+  const [ayudaForzada, setAyudaForzada] = useState(false)
+  const [cuentaAbierta, setCuentaAbierta] = useState(false)
   const [picked, setPicked] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pinMode, setPinMode] = useState(false)
@@ -161,7 +169,7 @@ export default function App() {
       const cached = await loadLabores<FeatureCollection>().catch(() => null)
       if (cached && Array.isArray(cached.features)) {
         setActivities(cached)
-        setActivityError("Sin conexión: se muestra la última lista guardada en este navegador.")
+        setActivityError("Sin conexión. Se muestra la última lista guardada en este teléfono.")
       } else {
         const message = error instanceof Error ? error.message : ACTIVIDAD.noLeer
         setActivityError(message)
@@ -174,6 +182,16 @@ export default function App() {
       setQueue(await listQueue())
     } catch {
       setQueue([])
+    }
+    try {
+      setEstadosPendientes((await listEstados()).length)
+    } catch {
+      setEstadosPendientes(0)
+    }
+    try {
+      setRegistrosPendientes((await listRegistros()).length)
+    } catch {
+      setRegistrosPendientes(0)
     }
   }, [])
 
@@ -221,6 +239,10 @@ export default function App() {
         if (user?.rol === "capataz" && user.capataz_id) {
           setEquipoId(user.capataz_id)
           writeEquipo(user.capataz_id)
+        }
+        if (user) {
+          setModulo(entradaDe(user.rol))
+          setRailOpen(true)
         }
       })
       .catch(() => {
@@ -309,7 +331,7 @@ export default function App() {
         const cached = await loadLabores<FeatureCollection>().catch(() => null)
         if (cached && Array.isArray(cached.features)) {
           setActivities(cached)
-          setActivityError("Sin conexión: se muestra la última lista guardada en este navegador.")
+          setActivityError("Sin conexión. Se muestra la última lista guardada en este teléfono.")
           setLaboresListas(true)
           return
         }
@@ -322,8 +344,14 @@ export default function App() {
   }, [sesion, rol, equipoId, filtro])
 
   useEffect(() => {
-    const caer = () => setPlanoForzado("red")
-    const volver = () => setPlanoForzado((actual) => (actual === "red" ? null : actual))
+    const caer = () => {
+      setPlanoForzado("red")
+      setEnLinea(false)
+    }
+    const volver = () => {
+      setPlanoForzado((actual) => (actual === "red" ? null : actual))
+      setEnLinea(true)
+    }
     window.addEventListener("offline", caer)
     window.addEventListener("online", volver)
     return () => {
@@ -530,7 +558,7 @@ export default function App() {
             },
             rol,
           )
-          setNotice("Sin conexión: el cambio de estado quedó en la cola.")
+          setNotice(ACTIVIDAD.enCola)
         } catch (err) {
           setNotice(err instanceof Error ? err.message : "No se pudo encolar el estado")
         }
@@ -605,18 +633,24 @@ export default function App() {
   }
   if (!sesion) return <Login onIn={setSesion} />
 
-  const permitidos = modulosDe(rol)
-  const moduloActivo = permitidos.includes(modulo) ? modulo : "mapa"
+  const permisos = permisosDeRol(rol)
+  const permitidos = modulosPorPermisos(permisos, rol)
+  const moduloActivo = permitidos.includes(modulo) ? modulo : entradaDe(rol)
   const tipos = tiposCat.length > 0 ? tiposCat.map((item) => ({ id: item.codigo, label: item.nombre })) : TIPOS.map((item) => ({ id: item.id, label: item.label }))
-  const visiblesModulos = MODULOS.filter((item) => permitidos.includes(item.id))
-  const { barra, mas } = movil ? repartirModulos(visiblesModulos) : { barra: visiblesModulos, mas: [] as typeof visiblesModulos }
+  const entradas = permitidos.map((id) => ({ id, label: etiquetaModulo(id, rol), corto: etiquetaCorta(id, rol) }))
+  const { barra, mas } = movil ? barraMovil(rol, entradas) : { barra: entradas, mas: [] as typeof entradas }
   const enMas = mas.find((item) => item.id === moduloActivo)
   const menuMas = masAbierto && movil && mas.length > 0
+  const puede = (accion: "consultar" | "registrar" | "validar" | "solicitudes" | "reportes" | "catalogos" | "usuarios" | "evidencias") => tienePermiso(permisos, accion)
+  const porEnviar = (rol === "capataz" ? 0 : queue.length) + estadosPendientes + registrosPendientes
+  const cuadrillaNombre = etiquetaCuadrilla(equipoId, equipos.find((item) => item.id === equipoId)?.equipo || "Cuadrilla")
+  const gruposNav: GrupoNav[] = ["operacion", "datos", "configuracion"]
 
   function irA(id: Modulo) {
     setModulo(id)
-    setRailOpen(true)
+    setRailOpen(id !== "mapa")
     setMasAbierto(false)
+    setCuentaAbierta(false)
   }
   function cerrarPanel() {
     setRailOpen(false)
@@ -639,23 +673,61 @@ export default function App() {
           </div>
         </div>
         <div className="top-spacer" />
-        <div className="roles" role="group" aria-label="Vista del mapa">
-          <button type="button" aria-pressed={!relieve} onClick={() => setRelieve(false)}>Plano</button>
-          <button type="button" aria-pressed={relieve} onClick={() => setRelieve(true)}>Relieve</button>
-        </div>
         <div className="session">
-          <span>{sesion.nombre}</span>
+          <span className="session-nombre">{sesion.nombre}</span>
           <span className="chip">{etiquetaRol(sesion.rol, sesion.rol_nombre)}</span>
-          <button type="button" onClick={() => void salir().then(() => setSesion(null))}>Salir</button>
+          {!movil && (
+            <button type="button" onClick={() => void salir().then(() => setSesion(null))}>
+              {CUENTA.salir}
+            </button>
+          )}
+          <div className="cuenta">
+            <button type="button" aria-expanded={cuentaAbierta} aria-controls="menu-cuenta" onClick={() => setCuentaAbierta((abierto) => !abierto)}>
+              {CUENTA.menu}
+            </button>
+            {cuentaAbierta && (
+              <div className="cuenta-menu" id="menu-cuenta" role="group" aria-label={CUENTA.menu}>
+                {movil && (
+                  <button type="button" onClick={() => void salir().then(() => setSesion(null))}>
+                    {CUENTA.salir}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAyudaForzada(true)
+                    setCuentaAbierta(false)
+                  }}
+                >
+                  {CUENTA.ayuda}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
       <nav className="guard" aria-label="Módulos">
-        <div className="rail-mark"><img src="/isotipo.svg" alt="VerdePUCP" /></div>
-        {barra.map((item) => (
-          <button key={item.id} type="button" aria-current={moduloActivo === item.id ? "page" : undefined} onClick={() => irA(item.id)}>
-            {item.label}
-          </button>
-        ))}
+        {movil
+          ? barra.map((item) => (
+              <button key={item.id} type="button" aria-current={moduloActivo === item.id ? "page" : undefined} onClick={() => irA(item.id)}>
+                {item.corto}
+              </button>
+            ))
+          : gruposNav.map((grupo) => {
+              const items = entradas.filter((item) => grupoDe(item.id) === grupo)
+              if (items.length === 0) return null
+              const titulo = grupo === "operacion" ? MODULO.operacion : grupo === "datos" ? MODULO.datos : MODULO.configuracion
+              return (
+                <div key={grupo} className="guard-grupo">
+                  <p className="guard-sep">{titulo}</p>
+                  {items.map((item) => (
+                    <button key={item.id} type="button" aria-current={moduloActivo === item.id ? "page" : undefined} onClick={() => irA(item.id)}>
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )
+            })}
         {mas.length > 0 && (
           <button
             type="button"
@@ -664,7 +736,7 @@ export default function App() {
             aria-controls="mas-modulos"
             onClick={() => setMasAbierto((abierto) => !abierto)}
           >
-            {enMas?.label ?? "Más"}
+            {enMas ? enMas.corto : MODULO.mas}
           </button>
         )}
       </nav>
@@ -685,11 +757,21 @@ export default function App() {
             if (!(siguiente instanceof Element) || !siguiente.closest(".guard-menu, .guard-mas")) setMasAbierto(false)
           }}
         >
-          {mas.map((item) => (
-            <button key={item.id} type="button" aria-current={moduloActivo === item.id ? "page" : undefined} onClick={() => irA(item.id)}>
-              {item.label}
-            </button>
-          ))}
+          {gruposNav.map((grupo) => {
+            const items = mas.filter((item) => grupoDe(item.id) === grupo)
+            if (items.length === 0) return null
+            const titulo = grupo === "operacion" ? MODULO.operacion : grupo === "datos" ? MODULO.datos : MODULO.configuracion
+            return (
+              <div key={grupo} className="guard-grupo">
+                <p className="guard-sep">{titulo}</p>
+                {items.map((item) => (
+                  <button key={item.id} type="button" aria-current={moduloActivo === item.id ? "page" : undefined} onClick={() => irA(item.id)}>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )
+          })}
         </div>
       )}
       <BottomSheet
@@ -747,84 +829,75 @@ export default function App() {
             sugerencia=""
           />
         )}
+        {moduloActivo === "hoy" && (
+          <Hoy
+            cuadrilla={cuadrillaNombre}
+            enLinea={enLinea}
+            porEnviar={porEnviar}
+            items={items}
+            filtroEstado={filtroHoy}
+            onFiltro={setFiltroHoy}
+            onAccion={(item) => {
+              if (item.estado === "bloqueada") {
+                choose(item.id)
+                return
+              }
+              const siguiente = item.estado === "pendiente" ? "en_proceso" : "ejecutado"
+              setSelectedId(item.id)
+              setEstadoNuevo(siguiente)
+              void cambiarEstado(item.id, siguiente, rol, equipoId)
+                .then(() => reloadActivities())
+                .catch(async (error: unknown) => {
+                  if (error instanceof ApiError && error.status === 0) {
+                    await enqueueEstado({ id: crypto.randomUUID(), actividadId: item.id, estado: siguiente, createdAt: new Date().toISOString() }, rol)
+                    setNotice(ACTIVIDAD.enCola)
+                    await reloadQueue()
+                    return
+                  }
+                  setNotice(error instanceof Error ? error.message : ACTIVIDAD.noLeer)
+                })
+              if (item.estado === "en_proceso") {
+                choose(item.id)
+                setRailOpen(true)
+              }
+            }}
+            onAbrir={choose}
+            onRiego={() => irA("registros")}
+            onPoda={() => irA("registros")}
+            onVivero={() => irA("registros")}
+            onBitacora={permitidos.includes("bitacora") ? () => irA("bitacora") : undefined}
+            onEjemplares={permitidos.includes("ejemplares") ? () => irA("ejemplares") : undefined}
+            vista={vista}
+            onVista={setVista}
+            mapaBloqueado={planoForzado !== null}
+          />
+        )}
+        {moduloActivo === "resumen" && (
+          <Resumen
+            rol={rol}
+            items={items}
+            porEnviar={porEnviar}
+            puedeValidar={puede("validar")}
+            puedeSolicitudes={puede("solicitudes")}
+            puedeUsuarios={puede("usuarios")}
+            puedeReportes={puede("reportes")}
+            onVerActividades={(siguiente) => {
+              setFiltro(siguiente)
+              irA("labores")
+            }}
+            onNueva={() => {
+              setPinMode(true)
+              irA("labores")
+            }}
+            onSolicitud={() => irA("solicitudes")}
+            onReportes={() => irA("reportes")}
+            onImportar={() => irA("importaciones")}
+          />
+        )}
         {moduloActivo === "mapa" && (
           <section className="block">
             <h2>{MAPA.capas}</h2>
-            <div className="layer">
-              <span className="swatch" style={{ background: "#c8c0b2" }} />
-              <label>
-                <input type="checkbox" checked={showEdificios} onChange={() => setShowEdificios((on) => !on)} /> {CAPA.edificios.label}
-                <small>{CAPA.edificios.hint}</small>
-              </label>
-              <span className="count">{edificios.features.length || "—"}</span>
-            </div>
-            <fieldset className="grupo catastro-color">
-              <legend>{MAPA.catastro}</legend>
-              <label className="layer-toggle">
-                <input type="checkbox" checked={catastroOn} onChange={() => setCatastroOn((on) => !on)} /> {MAPA.mostrarCatastro}
-                <small>{conteoCatastro(data.areas?.features.length ?? "—", data.zonas?.features.length ?? "—")}</small>
-              </label>
-              <div className="roles segmentado" role="group" aria-label={MAPA.colorear}>
-                <button type="button" aria-pressed={colorPor === "uso"} onClick={() => setColorPor("uso")}>
-                  {MAPA.uso}
-                </button>
-                <button type="button" aria-pressed={colorPor === "sector"} onClick={() => setColorPor("sector")}>
-                  {MAPA.sector}
-                </button>
-              </div>
-              <ul className="leyenda" aria-label={colorPor === "uso" ? MAPA.leyendaUso : MAPA.leyendaSector}>
-                {catsColor.map((cat) => {
-                  const n = conteoColor[cat.id]
-                  return (
-                    <li key={cat.id}>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={!ocultas[colorPor].includes(cat.id)}
-                          disabled={n === 0}
-                          onChange={() =>
-                            setOcultas((current) => {
-                              const activas = current[colorPor]
-                              const siguiente = activas.includes(cat.id) ? activas.filter((id) => id !== cat.id) : [...activas, cat.id]
-                              return { ...current, [colorPor]: siguiente }
-                            })
-                          }
-                        />
-                        <span className="swatch" style={{ background: `color-mix(in srgb, ${cat.fill} 55%, var(--hoja))`, borderColor: cat.line }} />
-                        <span>{cat.label}</span>
-                        <span className="count">{n}</span>
-                      </label>
-                    </li>
-                  )
-                })}
-              </ul>
-              {colorPor === "sector" && <p className="hint">{MAPA.cuadrillasFicticias}</p>}
-            </fieldset>
-            {LAYERS.filter((layer) => layer.id === "jardines_reserva" || layer.id === "xerofitica" || layer.id === "vias" || layer.id === "cuarteles").map((layer) => (
-              <div className="layer" key={layer.id}>
-                <span className="swatch" style={{ background: layer.fill }} />
-                <label>
-                  <input type="checkbox" checked={visible[layer.id]} onChange={() => setVisible((current) => ({ ...current, [layer.id]: !current[layer.id] }))} />{" "}
-                  {layer.label}
-                  <small>{layer.id === "cuarteles" && (data.cuarteles?.features.length ?? 0) === 0 ? ZONIFICACION.sinCuarteles : layer.hint}</small>
-                </label>
-                <span className="count">{data[layer.id]?.features.length ?? "—"}</span>
-              </div>
-            ))}
-            <h2>{MAPA.inventario}</h2>
-            <p className="lede">{MAPA.inventarioLede}</p>
-            {INVENTARIO.map((layer) => (
-              <div className="layer" key={layer.id}>
-                <span className="swatch" style={{ background: layer.color }} />
-                <label>
-                  <input type="checkbox" checked={inventoryOn[layer.id] === true} onChange={() => setInventoryOn((current) => ({ ...current, [layer.id]: !current[layer.id] }))} />{" "}
-                  {layer.label}
-                  <small>{layer.hint}</small>
-                </label>
-                <span className="count">{inventory[layer.id]?.features.length ?? "—"}</span>
-              </div>
-            ))}
-            <CalendarioReservas />
+            <p className="lede">Las capas, la leyenda y Plano o Relieve están sobre el mapa.</p>
           </section>
         )}
         {moduloActivo === "labores" && (
@@ -902,12 +975,10 @@ export default function App() {
               pista={pista}
               sugerencia={sugerencia}
             />
-            <RiegoPanel capatazId={rol === "capataz" ? equipoId : formEquipo} />
-            <PodaPanel />
-            <ViveroPanel delta="La copia local trae 683 filas; la hoja viva del 2026-09-25 trae 689." />
           </>
         )}
-        {moduloActivo === "catastro" && <CatastroEditor onModoDibujo={setModoDibujo} />}
+        {moduloActivo === "registros" && <RegistrosCampo capatazId={rol === "capataz" ? equipoId : formEquipo} />}
+        {moduloActivo === "catastro" && <CatastroEditor editable={puede("registrar")} onModoDibujo={setModoDibujo} />}
         {moduloActivo === "inventario" && <InventarioCapas />}
         {moduloActivo === "solicitudes" && <SolicitudesPanel actividadId={selected?.queued ? "" : selected?.id ?? ""} />}
         {moduloActivo === "reportes" && <ReportesPanel />}
@@ -920,6 +991,7 @@ export default function App() {
         {moduloActivo === "admin" && <AdminPanel />}
         {moduloActivo === "historial" && <AuditoriaPanel />}
       </BottomSheet>
+      <Recorrido rol={rol} usuario={sesion.usuario} forzar={ayudaForzada} onCerrar={() => setAyudaForzada(false)} />
       <div className="stage" ref={stageRef}>
         <ConmutadorVista
           vista={planoForzado ? "lista" : vista}
@@ -936,6 +1008,36 @@ export default function App() {
             }}
           />
         )}
+        <ControlMapa
+          relieve={relieve}
+          onRelieve={setRelieve}
+          showEdificios={showEdificios}
+          onEdificios={() => setShowEdificios((on) => !on)}
+          edificios={edificios.features.length}
+          catastroOn={catastroOn}
+          onCatastro={() => setCatastroOn((on) => !on)}
+          areas={data.areas?.features.length ?? "—"}
+          zonas={data.zonas?.features.length ?? "—"}
+          colorPor={colorPor}
+          onColorPor={setColorPor}
+          categorias={catsColor}
+          conteo={conteoColor}
+          ocultas={ocultas[colorPor]}
+          onOculta={(id) =>
+            setOcultas((current) => {
+              const activas = current[colorPor]
+              const siguiente = activas.includes(id) ? activas.filter((item) => item !== id) : [...activas, id]
+              return { ...current, [colorPor]: siguiente }
+            })
+          }
+          visible={visible}
+          onCapa={(id) => setVisible((current) => ({ ...current, [id]: !current[id] }))}
+          data={data}
+          inventoryOn={inventoryOn}
+          onInventario={(id) => setInventoryOn((current) => ({ ...current, [id]: !current[id] }))}
+          inventory={inventory}
+          resumen={summary}
+        />
         <MapBoundary>
           <CampusMap
             data={dataMapa}

@@ -21,7 +21,8 @@ import {
   type EntidadInventario,
   type ErrorCampo,
 } from "./inventarioCapas"
-import { CONTEO_TACHO, INVENTARIO_PESTANAS, SUBTIPO_BEBEDERO } from "../ui/nomenclatura"
+import { ApiError } from "../operacion"
+import { CONTEO_TACHO, DEMO, FALLO, INVENTARIO_PESTANAS, SUBTIPO_BEBEDERO } from "../ui/nomenclatura"
 
 type Fila = { id: number; etiqueta: string; raw: Record<string, unknown> }
 
@@ -30,18 +31,6 @@ const ceros = Object.fromEntries(CONTEOS_TACHO.map((campo) => [campo, 0])) as Co
 const GEO_PUNTO = '{"type":"Point","coordinates":[-77.08,-12.07]}'
 
 const PESTANAS = INVENTARIO_PESTANAS
-
-const CAMPO = {
-  nombre: "nombre",
-  codigo: "código",
-  nota: "nota",
-  clase: "clase",
-  riego: "riego",
-  area_m2: "área",
-  perimetro_m: "perímetro",
-  pertenecen: "pertenecen",
-  uso: "uso",
-} as const
 
 function numeroOpcional(texto: string): number | null {
   const limpio = texto.trim()
@@ -229,7 +218,7 @@ export function InventarioCapas({
       const body = await enviarInventario(cliente, { method: "GET", path: rutaListar(entidad) })
       setFilas(listaDe(body, entidad))
     } catch (error) {
-      setAviso(error instanceof Error ? error.message : "No se pudo guardar.")
+      setAviso(textoInventario(error))
     }
   }
 
@@ -242,7 +231,7 @@ export function InventarioCapas({
       const body = await enviarInventario(cliente, { method: "GET", path: rutaListar(entidad) })
       setFilas(listaDe(body, entidad))
     } catch (error) {
-      setAviso(error instanceof Error ? error.message : "No se pudo dar de baja.")
+      setAviso(textoInventario(error))
     }
   }
 
@@ -254,21 +243,32 @@ export function InventarioCapas({
       <div className="split-list" ref={listaRef}>
         <h2>Inventario</h2>
         <div className="roles" role="group" aria-label="Inventario">
-          {(["tachos", "bebederos", "puntos", "reservas"] as const).map((item) => (
-            <button key={item} type="button" aria-pressed={entidad === item} onClick={() => elegir(item)}>
+          {(["tachos", "bebederos", "puntos", "otras"] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              aria-pressed={item === "otras" ? entidad !== "tachos" && entidad !== "bebederos" && entidad !== "puntos" : entidad === item}
+              onClick={() => elegir(item === "otras" ? "reservas" : item)}
+            >
               {PESTANAS[item]}
             </button>
           ))}
         </div>
+        {entidad !== "tachos" && entidad !== "bebederos" && entidad !== "puntos" && (
+          <label className="field">
+            Capa
+            <select value={entidad} onChange={(event) => elegir(event.target.value as EntidadInventario)}>
+              <option value="reservas">{PESTANAS.reservas}</option>
+              {CAPAS_EDITABLES.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <ul className="labor-list">
-          {CAPAS_EDITABLES.map((item) => (
-            <li key={item.id}>
-              <button type="button" className={entidad === item.id ? "labor on" : "labor"} onClick={() => elegir(item.id)}>
-                <span>{item.label}</span>
-                <small>Campos: {item.campos.map((campo) => CAMPO[campo]).join(", ")}</small>
-              </button>
-            </li>
-          ))}
+          {!cargando && filas.length === 0 && <li className="empty">No hay registros en esta capa. Use el formulario para dar de alta el primero.</li>}
           {!cargando &&
             filas.map((fila) => (
               <li key={fila.id}>
@@ -387,7 +387,7 @@ export function InventarioCapas({
           )}
           {entidad === "reservas" && (
             <>
-              <p className="hint">Reserva de jardín ficticia. La hoja de origen respondió 401 y no se copia.</p>
+              <p className="hint">{DEMO.aviso}</p>
               <label className="field">
                 Fecha
                 <input value={reserva.fecha} onChange={(event) => setReserva({ ...reserva, fecha: event.target.value })} />
@@ -515,6 +515,13 @@ export function InventarioCapas({
       </div>
     </section>
   )
+}
+
+function textoInventario(error: unknown): string {
+  if (error instanceof ApiError && error.status === 403) return FALLO.inventario
+  if (error instanceof ApiError && error.status === 0) return FALLO.sinRed
+  if (error instanceof ApiError && error.status >= 400 && error.status < 500) return error.message
+  return error instanceof Error ? error.message : "No se pudo guardar."
 }
 
 export type { CapaId }

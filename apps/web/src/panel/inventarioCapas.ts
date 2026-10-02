@@ -1,4 +1,5 @@
 import { apiUrl } from "../api"
+import { ApiError } from "../operacion"
 import { CAPA } from "../ui/nomenclatura"
 
 export const CAPAS_EDITABLES = [
@@ -88,7 +89,7 @@ export function validarPunto(row: { titulo: string; lat: number; lon: number; ur
 
 export function validarReserva(row: { origen: string; fecha: string; hora_inicio: string; hora_fin: string; estado: string; evento: string }): ErrorCampo[] {
   const errores: ErrorCampo[] = []
-  if (row.origen !== "ficticio") errores.push({ campo: "origen", motivo: "Mientras la hoja responda 401 solo se acepta origen ficticio." })
+  if (row.origen !== "ficticio") errores.push({ campo: "origen", motivo: "Mientras la fuente siga pendiente de validar solo se acepta origen ficticio." })
   if (!/^\d{4}-\d{2}-\d{2}$/.test(row.fecha)) errores.push({ campo: "fecha", motivo: "La fecha va en ISO." })
   if (!(row.hora_fin > row.hora_inicio)) errores.push({ campo: "hora_fin", motivo: "La hora fin es posterior al inicio." })
   if (!["reservado", "realizado", "cancelado"].includes(row.estado)) errores.push({ campo: "estado", motivo: "Estado fuera del catálogo." })
@@ -212,23 +213,37 @@ export function cuerpoPunto(row: { titulo: string; lat: number; lon: number; url
 }
 
 export async function enviarInventario(cliente: typeof fetch, solicitud: Solicitud): Promise<unknown> {
-  const res = await cliente(solicitud.path, {
-    method: solicitud.method,
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      ...(solicitud.body === undefined ? {} : { "Content-Type": "application/json" }),
-    },
-    body: solicitud.body === undefined ? undefined : JSON.stringify(solicitud.body),
-  })
+  let res: Response
+  try {
+    res = await cliente(solicitud.path, {
+      method: solicitud.method,
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        ...(solicitud.body === undefined ? {} : { "Content-Type": "application/json" }),
+      },
+      body: solicitud.body === undefined ? undefined : JSON.stringify(solicitud.body),
+    })
+  } catch {
+    throw new ApiError(0, "Sin conexión. Intente de nuevo.")
+  }
   if (!res.ok) {
-    let detalle = ""
+    let message = `La API respondió ${res.status}`
     try {
-      detalle = await res.text()
+      const texto = await res.text()
+      if (texto) {
+        try {
+          const payload = JSON.parse(texto) as { error?: string }
+          if (payload.error) message = payload.error
+          else message = texto
+        } catch {
+          message = texto
+        }
+      }
     } catch {
-      detalle = ""
+      /* se queda el estado */
     }
-    throw new Error(detalle || `La API respondió ${res.status}`)
+    throw new ApiError(res.status, message)
   }
   const tipo = res.headers.get("content-type") ?? ""
   if (!tipo.includes("json")) return null

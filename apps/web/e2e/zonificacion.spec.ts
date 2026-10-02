@@ -15,7 +15,7 @@ test("el mapa dice sectores de capataz y el editor elige el lugar en un select",
   await expect(page.getByRole("checkbox", { name: /sin archivo de cuarteles/ })).toBeVisible()
   await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/mapa-sectores-capataz.png", fullPage: true })
 
-  await page.getByRole("button", { name: "Catastro", exact: true }).click()
+  await page.getByRole("button", { name: "Áreas y sectores", exact: true }).click()
   await page.getByRole("button", { name: "Nueva área" }).click()
   const ficha = page.locator("form").filter({ has: page.getByRole("button", { name: "Guardar área" }) })
   const lugar = ficha.getByLabel("Lugar")

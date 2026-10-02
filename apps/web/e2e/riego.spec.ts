@@ -6,7 +6,8 @@ test("el riego elige el sector de capataz y muestra la cobertura provisional", a
   await page.getByLabel("Clave").fill("pando-local")
   await page.getByRole("button", { name: "Entrar" }).click()
 
-  await page.getByRole("button", { name: "Actividades" }).click()
+  await page.getByRole("button", { name: "Registros de campo" }).click()
+  await page.getByRole("button", { name: "Nuevo registro" }).click()
   const riego = page.locator("#riego")
   await riego.scrollIntoViewIfNeeded()
   await expect(riego.getByRole("heading", { name: "Riego" })).toBeVisible()

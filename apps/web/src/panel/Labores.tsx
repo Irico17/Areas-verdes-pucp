@@ -4,6 +4,7 @@ import { hoyISO } from "../fecha"
 import { mostrarEnPanel } from "../ui/desplazar"
 import { Esqueleto } from "../ui/Esqueleto"
 import {
+  ApiError,
   estadosPermitidos,
   fetchTaxonomiaActividad,
   tipoGrueso,
@@ -15,12 +16,12 @@ import {
   type FiltroActividades,
   type TaxonomiaActividad,
 } from "../operacion"
-import type { CatalogoItem } from "../producto"
+import { send, type CatalogoItem } from "../producto"
 import type { Rol } from "../types"
 import { IconoClase } from "../map/iconoClase"
-import { listEstados, ofreceColaDeAltas } from "../offline/queue"
+import { encolarRegistro, listEstados, ofreceColaDeAltas } from "../offline/queue"
 import { COLA_VACIADA, publicarOEncolar, rutaAvance, rutaFicha, vaciarRegistros, type DetalleCola } from "../offline/registros"
-import { ACTIVIDAD, COLA, VISTA_ACTIVIDAD, marcaEjecutor } from "../ui/nomenclatura"
+import { ACTIVIDAD, COLA, FALLO, VISTA_ACTIVIDAD, marcaEjecutor } from "../ui/nomenclatura"
 import { Bitacora } from "./Bitacora"
 import { FiltrosActividad } from "./FiltrosActividad"
 import { EvidenciasCampo } from "./EvidenciasCampo"
@@ -108,7 +109,6 @@ export function Labores(props: Props) {
           </p>
           {props.selected.detalle && <p className="lede">{props.selected.detalle}</p>}
           <FichaLabor key={props.selected.id} actividadId={props.selected.queued ? "" : props.selected.id} />
-          {!props.selected.queued && <AvanceCampo key={`avance-${props.selected.id}`} actividadId={props.selected.id} />}
           {!props.selected.queued && <AvanceCampo key={`avance-${props.selected.id}`} actividadId={props.selected.id} />}
           {props.selected.queued ? (
             <p className="hint">Aún no está en el servidor. El id ya quedó reservado para el reintento.</p>
@@ -228,7 +228,7 @@ export function Labores(props: Props) {
           </button>
         </p>
       )}
-      {props.notice && !(totalCola === 0 && props.notice.includes("quedó en la cola")) && (
+      {props.notice && !(totalCola === 0 && props.notice.includes("Sin señal")) && (
         <p className={avisoError ? "status error" : "banner"} role="status">
           {props.notice}
         </p>
@@ -607,32 +607,44 @@ function FichaLabor(props: { actividadId?: string }) {
       setAviso(ACTIVIDAD.creePrimero)
       return
     }
-    const resultado = await publicarOEncolar({
-      id: crypto.randomUUID(),
-      tipo: "ficha",
-      path: rutaFicha(props.actividadId),
-      method: "PATCH",
-      body: {
-        clase,
-        fecha_solicitud: solicitud,
-        fecha_atencion: atencion,
-        lugar,
-        comentario,
-      },
-    })
-    if (resultado === "ok") {
+    const cuerpo = {
+      clase,
+      fecha_solicitud: solicitud,
+      fecha_atencion: atencion,
+      lugar,
+      comentario,
+    }
+    const ruta = rutaFicha(props.actividadId)
+    try {
+      await send(ruta, "PATCH", cuerpo)
       setAviso(lugar || COLA.fichaGuardada)
-      return
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        setAviso(COLA.conflicto)
+        return
+      }
+      if (error instanceof ApiError && error.status === 403) {
+        setAviso(FALLO.ficha)
+        return
+      }
+      if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+        setAviso(error.message)
+        return
+      }
+      if (error instanceof ApiError && error.status === 0) {
+        await encolarRegistro({
+          id: crypto.randomUUID(),
+          tipo: "ficha",
+          path: ruta,
+          method: "PATCH",
+          body: cuerpo,
+          createdAt: new Date().toISOString(),
+        })
+        setAviso(COLA.ficha)
+        return
+      }
+      setAviso(COLA.fichaError)
     }
-    if (resultado === "conflicto") {
-      setAviso(COLA.conflicto)
-      return
-    }
-    if (resultado === "encolado") {
-      setAviso(COLA.ficha)
-      return
-    }
-    setAviso(COLA.fichaError)
   }
   return (
     <fieldset className="form grupo" ref={fichaRef}>

@@ -45,7 +45,7 @@ export function CalendarioReservas({ cliente = fetch }: { cliente?: typeof fetch
   const [vista, setVista] = useState<VistaCalendario>("mes")
   const [cursor, setCursor] = useState(() => new Date())
   const [filas, setFilas] = useState<ReservaCalendario[]>([])
-  const [aviso, setAviso] = useState("Agenda ficticia. La hoja institucional responde 401 y no se abre.")
+  const [aviso, setAviso] = useState("Datos de demostración. Esta fuente sigue pendiente de validar.")
   const [error, setError] = useState("")
 
   useEffect(() => {
