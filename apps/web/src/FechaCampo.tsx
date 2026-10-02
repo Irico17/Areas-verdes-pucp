@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { formatFecha, parseFechaPE } from "./fecha"
 
-export function FechaCampo(props: { id?: string; value: string; onChange: (iso: string) => void; required?: boolean }) {
+export function FechaCampo(props: { id?: string; value: string; onChange: (iso: string) => void; required?: boolean; soloLectura?: boolean }) {
   const [text, setText] = useState(() => (props.value ? formatFecha(props.value) : ""))
   const [bad, setBad] = useState(false)
   const [externo, setExterno] = useState(props.value)
@@ -23,6 +23,7 @@ export function FechaCampo(props: { id?: string; value: string; onChange: (iso: 
       value={text}
       aria-invalid={bad}
       required={props.required}
+      readOnly={props.soloLectura}
       onChange={(event) => {
         const next = event.target.value
         setText(next)

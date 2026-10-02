@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { FILTRO_ACTIVIDADES, TIPOS, estadosPermitidos, fetchCapataces, fetchTaxonomiaActividad, type FiltroActividades } from "../operacion"
+import { FILTRO_ACTIVIDADES, TIPOS, estadosPermitidos, etiquetaEstado, fetchCapataces, fetchTaxonomiaActividad, type FiltroActividades } from "../operacion"
 import type { Rol } from "../types"
 import { ACTIVIDAD, MAPA, SECTOR_CAPATAZ, etiquetaCuadrilla } from "../ui/nomenclatura"
 
@@ -13,6 +13,7 @@ type Props = {
   tipos?: Opcion[]
   riesgos?: Opcion[]
   origenes?: Opcion[]
+  conteos?: Record<string, number>
 }
 
 const SECTORES = Object.entries(SECTOR_CAPATAZ)
@@ -73,10 +74,61 @@ export function FiltrosActividad(props: Props) {
     { id: "alto", label: "Alto" },
   ])
   const origenes = props.origenes ?? origenesRemotos
+  const conteos = props.conteos ?? {}
+  const conocidos = estadosPermitidos(props.rol)
+  const idsConocidos = new Set(conocidos.map((estado) => estado.id))
+  const contadores = [
+    ...conocidos.map((estado) => ({ id: estado.id, label: estado.label, n: conteos[estado.id] ?? 0 })),
+    ...Object.entries(conteos)
+      .filter(([id, n]) => !idsConocidos.has(id) && n > 0)
+      .map(([id, n]) => ({ id, label: etiquetaEstado(id), n })),
+  ]
+  const textoDe = (id: string, opciones: Opcion[]) => opciones.find((item) => item.id === id)?.label ?? id
+  const chips: { clave: keyof FiltroActividades; texto: string }[] = []
+  if (valor.estado) chips.push({ clave: "estado", texto: etiquetaEstado(valor.estado) })
+  if (valor.tipo) chips.push({ clave: "tipo", texto: textoDe(valor.tipo, tipos) })
+  if (valor.cuadrillaId) chips.push({ clave: "cuadrillaId", texto: textoDe(valor.cuadrillaId, cuadrillas) })
+  if (valor.sector) chips.push({ clave: "sector", texto: textoDe(valor.sector, SECTORES) })
+  if (valor.ejecutor) chips.push({ clave: "ejecutor", texto: valor.ejecutor === "tercerizada" ? ACTIVIDAD.servicioTercerizado : ACTIVIDAD.personalPropio })
+  if (valor.origen) chips.push({ clave: "origen", texto: textoDe(valor.origen, origenes) })
+  if (valor.nivelRiesgo) chips.push({ clave: "nivelRiesgo", texto: textoDe(valor.nivelRiesgo, riesgos) })
+  if (valor.desde) chips.push({ clave: "desde", texto: `${ACTIVIDAD.desde} ${valor.desde}` })
+  if (valor.hasta) chips.push({ clave: "hasta", texto: `${ACTIVIDAD.hasta} ${valor.hasta}` })
+  if (valor.ejemplarId) chips.push({ clave: "ejemplarId", texto: valor.ejemplarId })
+  if (valor.responsable) chips.push({ clave: "responsable", texto: valor.responsable })
+  if (valor.historico) chips.push({ clave: "historico", texto: ACTIVIDAD.historico })
+
+  function quitar(clave: keyof FiltroActividades) {
+    avisar({ ...valor, [clave]: FILTRO_ACTIVIDADES[clave] })
+  }
 
   return (
     <fieldset className="filtros-actividad">
       <legend>{ACTIVIDAD.filtros}</legend>
+      <div className="estado-contadores" role="group" aria-label={ACTIVIDAD.estado}>
+        {contadores.map((estado) => (
+          <button
+            key={estado.id}
+            type="button"
+            aria-pressed={valor.estado === estado.id}
+            onClick={() => patch({ estado: valor.estado === estado.id ? "" : estado.id })}
+          >
+            {estado.label} {estado.n}
+          </button>
+        ))}
+      </div>
+      {chips.length > 0 && (
+        <div className="chips-filtro">
+          {chips.map((chip) => (
+            <button key={chip.clave} type="button" className="chip-filtro" onClick={() => quitar(chip.clave)}>
+              {chip.texto}
+            </button>
+          ))}
+          <button type="button" onClick={() => avisar({ ...FILTRO_ACTIVIDADES })}>
+            {ACTIVIDAD.quitarFiltros}
+          </button>
+        </div>
+      )}
       <label className="field">
         {ACTIVIDAD.estado}
         <select name="estado" value={valor.estado} onChange={(event) => patch({ estado: event.target.value })}>

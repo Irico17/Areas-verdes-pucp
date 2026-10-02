@@ -145,11 +145,17 @@ export const ACTIVIDAD = {
   reintentar: "Reintentar envío",
   estado: "Estado",
   guardarEstado: "Cambiar estado",
+  foto: "Foto",
+  masAcciones: "Más acciones",
   reasignarA: "Reasignar a",
   motivo: "Motivo de archivo",
   elegir: "Elegir",
   reasignar: "Reasignar",
   archivar: "Archivar",
+  cancelar: "Cancelar",
+  faltaMotivo: "Elija el motivo de archivo.",
+  que: "Qué",
+  quien: "Quién",
   confirmarArchivo: "Confirmar archivo",
   bitacora: "Bitácora",
   ficha: "Ficha de la actividad",
@@ -390,6 +396,7 @@ export const REPORTE = {
 } as const
 
 export const EVIDENCIA = {
+  titulo: "Evidencia",
   aria: "Evidencias de la actividad",
   fotos: "Fotos de la actividad",
   sinFotos: "Esta actividad no tiene fotos.",

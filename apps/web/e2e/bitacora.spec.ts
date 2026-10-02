@@ -44,8 +44,10 @@ test("la bitácora muestra la reasignación y la foto bajo ese hito", async ({ p
 
   await page.getByRole("button", { name: "Actividades", exact: true }).click()
   await page.getByRole("button", { name: /Riego del eje central/ }).click()
+  await page.getByRole("button", { name: "Más acciones" }).click()
   await page.getByLabel("Reasignar a").selectOption({ label: "Cuadrilla Sur" })
   await page.getByRole("button", { name: "Reasignar", exact: true }).click()
+  await page.locator("#detalle-actividad summary", { hasText: "Bitácora" }).click()
 
   const hito = page.locator(".bitacora-hito", { hasText: "Reasignada" })
   await expect(hito).toBeVisible()
@@ -63,7 +65,7 @@ test("la bitácora muestra la reasignación y la foto bajo ese hito", async ({ p
   await expect(foto).toBeVisible()
   await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/bitacora-evidencia.png" })
 
-  await page.getByRole("button", { name: "Bitácora", exact: true }).click()
+  await page.locator(".guard").getByRole("button", { name: "Bitácora", exact: true }).click()
   await expect(page.getByText("Quién hizo qué, a qué hora")).toBeVisible()
   const enPanel = page.locator(".bitacora-panel .bitacora-hito", { hasText: "Reasignada" })
   const fotoPanel = enPanel.locator("img[alt='aspersor.png']").first()

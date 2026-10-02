@@ -66,7 +66,7 @@ async function publicar(
   return almacen === "s3" && resultado.tipo === "ok" ? { ...resultado, almacen } : resultado
 }
 
-export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
+export function EvidenciasCampo({ actividadId, sinTitulo = false }: { actividadId: string; sinTitulo?: boolean }) {
   const [enviadas, setEnviadas] = useState<Evidencia[]>([])
   const [pendientes, setPendientes] = useState<QueuedEvidencia[]>([])
   const [cargadoDe, setCargadoDe] = useState<string | null>(null)
@@ -213,12 +213,14 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
 
   return (
     <section className="evidencia-campo" aria-label={EVIDENCIA.aria}>
-      <h3>Evidencia</h3>
+      {!sinTitulo && <h3>{EVIDENCIA.titulo}</h3>}
       <p className="evidencia-ayuda">La foto se reduce en el teléfono antes de enviarse.</p>
       <div className="evidencia-acciones">
-        <label className="primary evidencia-captura">
+        <label className="primary evidencia-captura" htmlFor="foto-actividad">
           {etiquetaCaptura}
           <input
+            id="foto-actividad"
+            className="campo-archivo"
             type="file"
             accept="image/*"
             capture="environment"

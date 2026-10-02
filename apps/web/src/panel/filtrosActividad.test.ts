@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
+import { FILTRO_ACTIVIDADES } from "../operacion.ts"
 import { FiltrosActividad } from "./FiltrosActividad.tsx"
 
 const comunes = {
@@ -19,6 +20,23 @@ test("la oficina ve los ocho criterios", () => {
   assert.match(html, /name="cuadrilla_id"/)
   assert.match(html, /name="nivel_riesgo"/)
   assert.match(html, /name="desde"/)
+})
+
+test("los contadores de estado y Quitar filtros usan el número visible", () => {
+  const html = renderToStaticMarkup(
+    createElement(FiltrosActividad, {
+      rol: "coordinacion",
+      ...comunes,
+      conteos: { pendiente: 3, en_proceso: 1, bloqueada: 1 },
+      valor: { ...FILTRO_ACTIVIDADES, estado: "pendiente", tipo: "riego_manual" },
+    }),
+  )
+  assert.match(html, /Por iniciar 3/)
+  assert.match(html, /En proceso 1/)
+  assert.match(html, /Bloqueada \(provisional\) 1/)
+  assert.match(html, /Quitar filtros/)
+  assert.match(html, /aria-pressed="true"/)
+  assert.match(html, /Riego manual/)
 })
 
 test("el capataz no ve el filtro de cuadrilla ajena", () => {

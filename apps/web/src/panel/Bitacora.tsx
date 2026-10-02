@@ -13,6 +13,7 @@ type Props = {
   error?: string
   embebida?: boolean
   autonomo?: boolean
+  sinTitulo?: boolean
 }
 
 function nombre(valor: string | undefined, vacio: string): string {
@@ -98,8 +99,8 @@ export function Bitacora(props: Props) {
   const tituloEnElPanel = props.embebida && props.autonomo
 
   return (
-    <section className="bitacora" aria-labelledby={tituloEnElPanel ? undefined : tituloId} aria-label={tituloEnElPanel ? BITACORA.titulo : undefined}>
-      {!tituloEnElPanel && <Titulo id={tituloId}>{BITACORA.titulo}</Titulo>}
+    <section className="bitacora" aria-labelledby={tituloEnElPanel || props.sinTitulo ? undefined : tituloId} aria-label={tituloEnElPanel || props.sinTitulo ? BITACORA.titulo : undefined}>
+      {!tituloEnElPanel && !props.sinTitulo && <Titulo id={tituloId}>{BITACORA.titulo}</Titulo>}
       {!props.embebida && <p className="lede">{BITACORA.lede}</p>}
       {aviso && <p className="status error">{aviso}</p>}
       {props.autonomo && propias === null && !aviso && <p className="hint">{BITACORA.cargando}</p>}

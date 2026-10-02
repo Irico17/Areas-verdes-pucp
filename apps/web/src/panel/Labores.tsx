@@ -21,7 +21,7 @@ import type { Rol } from "../types"
 import { IconoClase } from "../map/iconoClase"
 import { encolarRegistro, listEstados, ofreceColaDeAltas } from "../offline/queue"
 import { COLA_VACIADA, publicarOEncolar, rutaAvance, rutaFicha, vaciarRegistros, type DetalleCola } from "../offline/registros"
-import { ACTIVIDAD, COLA, FALLO, VISTA_ACTIVIDAD, marcaEjecutor } from "../ui/nomenclatura"
+import { ACTIVIDAD, COLA, EVIDENCIA, FALLO, VISTA_ACTIVIDAD, etiquetaCuadrilla, marcaEjecutor } from "../ui/nomenclatura"
 import { Bitacora } from "./Bitacora"
 import { FiltrosActividad } from "./FiltrosActividad"
 import { EvidenciasCampo } from "./EvidenciasCampo"
@@ -74,7 +74,8 @@ type Props = {
   reasignarA: string
   onReasignarA: (id: string) => void
   onReasignar: () => void
-  onArchivar: () => void
+  onArchivar: (motivo: string) => void
+  conteos?: Record<string, number>
   confirmarArchivo: boolean
   notice: string
   queueCount: number
@@ -92,14 +93,33 @@ type Props = {
 
 export function Labores(props: Props) {
   const puedeAsignar = props.rol !== "capataz"
+  const puedeValidar = props.rol !== "capataz"
+  const puedeRegistrar = props.rol !== "jefatura"
+  const [menuAbierto, setMenuAbierto] = useState(false)
+  const [dialogoArchivo, setDialogoArchivo] = useState(false)
+  const [motivoDialogo, setMotivoDialogo] = useState("")
+  const dialogoRef = useRef<HTMLDialogElement>(null)
   const estadosPendientes = usePendientesEstados(props.notice)
   const totalCola = (ofreceColaDeAltas(props.rol) ? props.queueCount : 0) + estadosPendientes
   const avisoError = /no se|sin conexión|error/i.test(props.notice)
   const detalleRef = useRef<HTMLDivElement>(null)
   const elegida = props.selected?.id
+  const [vistaId, setVistaId] = useState(elegida)
+  if (elegida !== vistaId) {
+    setVistaId(elegida)
+    setMenuAbierto(false)
+    setDialogoArchivo(false)
+    setMotivoDialogo("")
+  }
   useEffect(() => {
     if (elegida) mostrarEnPanel(detalleRef.current, "inicio")
   }, [elegida])
+  useEffect(() => {
+    const el = dialogoRef.current
+    if (!el) return
+    if (dialogoArchivo && !el.open) el.showModal()
+    if (!dialogoArchivo && el.open) el.close()
+  }, [dialogoArchivo])
   const detalle = props.selected ? (
         <div className="detail" id="detalle-actividad" ref={detalleRef}>
           <h3>{props.selected.titulo}</h3>
@@ -108,40 +128,88 @@ export function Labores(props: Props) {
             {` · ${marcaEjecutor(props.selected.ejecutor) || ACTIVIDAD.propioMarca}`}
           </p>
           {props.selected.detalle && <p className="lede">{props.selected.detalle}</p>}
-          <FichaLabor key={props.selected.id} actividadId={props.selected.queued ? "" : props.selected.id} />
-          {!props.selected.queued && <AvanceCampo key={`avance-${props.selected.id}`} actividadId={props.selected.id} />}
           {props.selected.queued ? (
             <p className="hint">Aún no está en el servidor. El id ya quedó reservado para el reintento.</p>
           ) : (
             <>
-              <label className="field">
-                {ACTIVIDAD.estado}
-                <select value={props.estadoNuevo} onChange={(event) => props.onEstadoNuevo(event.target.value)}>
-                  {estadosPermitidos(props.rol).map((estado) => (
-                    <option key={estado.id} value={estado.id}>
-                      {estado.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button type="button" className="primary" onClick={props.onEstado}>
-                {ACTIVIDAD.guardarEstado}
-              </button>
-              {puedeAsignar && (
-                <>
-                  <label className="field">
-                    {ACTIVIDAD.reasignarA}
-                    <select value={props.reasignarA} onChange={(event) => props.onReasignarA(event.target.value)}>
-                      {props.equipos.map((equipo) => (
-                        <option key={equipo.id} value={equipo.id}>
-                          {equipo.equipo}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+              <div className="detalle-acciones">
+                <label className="field">
+                  {ACTIVIDAD.estado}
+                  <select value={props.estadoNuevo} onChange={(event) => props.onEstadoNuevo(event.target.value)}>
+                    {estadosPermitidos(props.rol).map((estado) => (
+                      <option key={estado.id} value={estado.id}>
+                        {estado.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button type="button" className="primary" onClick={props.onEstado}>
+                  {ACTIVIDAD.guardarEstado}
+                </button>
+                <label className="btn-foto" htmlFor="foto-actividad">
+                  {ACTIVIDAD.foto}
+                </label>
+                {puedeValidar && (
+                  <div className="menu-detalle">
+                    <button
+                      type="button"
+                      aria-expanded={menuAbierto}
+                      aria-haspopup="menu"
+                      aria-label={ACTIVIDAD.masAcciones}
+                      onClick={() => setMenuAbierto((abierto) => !abierto)}
+                    >
+                      ⋯
+                    </button>
+                    {menuAbierto && (
+                      <div className="menu-panel" role="menu">
+                        <label className="field">
+                          {ACTIVIDAD.reasignarA}
+                          <select value={props.reasignarA} onChange={(event) => props.onReasignarA(event.target.value)}>
+                            {props.equipos.map((equipo) => (
+                              <option key={equipo.id} value={equipo.id}>
+                                {etiquetaCuadrilla(equipo.id, equipo.equipo)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setMenuAbierto(false)
+                            props.onReasignar()
+                          }}
+                        >
+                          {ACTIVIDAD.reasignar}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="danger"
+                          onClick={() => {
+                            setMenuAbierto(false)
+                            setMotivoDialogo("")
+                            setDialogoArchivo(true)
+                          }}
+                        >
+                          {ACTIVIDAD.archivar}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              {puedeValidar && (
+                <dialog
+                  ref={dialogoRef}
+                  className="dialogo-archivo"
+                  aria-labelledby="archivo-pregunta"
+                  onClose={() => setDialogoArchivo(false)}
+                >
+                  <h3 id="archivo-pregunta">{ACTIVIDAD.archivarPregunta(props.selected.titulo)}</h3>
                   <label className="field">
                     {ACTIVIDAD.motivo}
-                    <select value={props.motivo} onChange={(event) => props.onMotivo(event.target.value)}>
+                    <select value={motivoDialogo} onChange={(event) => setMotivoDialogo(event.target.value)}>
                       <option value="">{ACTIVIDAD.elegir}</option>
                       {props.motivos.map((item) => (
                         <option key={item.codigo} value={item.codigo}>
@@ -150,23 +218,48 @@ export function Labores(props: Props) {
                       ))}
                     </select>
                   </label>
+                  {!motivoDialogo && (
+                    <p className="hint" id="archivo-falta">
+                      {ACTIVIDAD.faltaMotivo}
+                    </p>
+                  )}
                   <div className="row-actions">
-                    <button type="button" onClick={props.onReasignar}>
-                      {ACTIVIDAD.reasignar}
+                    <button type="button" onClick={() => setDialogoArchivo(false)}>
+                      {ACTIVIDAD.cancelar}
                     </button>
-                    <button type="button" className="danger" onClick={props.onArchivar}>
-                      {props.confirmarArchivo ? ACTIVIDAD.confirmarArchivo : ACTIVIDAD.archivar}
+                    <button
+                      type="button"
+                      className="danger"
+                      disabled={!motivoDialogo}
+                      onClick={() => {
+                        const motivo = motivoDialogo
+                        setDialogoArchivo(false)
+                        props.onArchivar(motivo)
+                      }}
+                    >
+                      {ACTIVIDAD.archivar}
                     </button>
                   </div>
-                </>
+                </dialog>
               )}
-              <EvidenciasCampo key={props.selected.id} actividadId={props.selected.queued ? "" : props.selected.id} />
-              <Bitacora
-                embebida
-                actividadId={props.selected.queued ? "" : props.selected.id}
-                eventos={props.timeline}
-                error={props.timelineError}
-              />
+              <details className="pliegue">
+                <summary>{ACTIVIDAD.ficha}</summary>
+                <FichaLabor key={props.selected.id} actividadId={props.selected.id} puedeRegistrar={puedeRegistrar} />
+              </details>
+              {puedeRegistrar && (
+                <details className="pliegue">
+                  <summary>{ACTIVIDAD.avance}</summary>
+                  <AvanceCampo key={`avance-${props.selected.id}`} actividadId={props.selected.id} />
+                </details>
+              )}
+              <details className="pliegue">
+                <summary>{EVIDENCIA.titulo}</summary>
+                <EvidenciasCampo sinTitulo actividadId={props.selected.id} />
+              </details>
+              <details className="pliegue">
+                <summary>{ACTIVIDAD.bitacora}</summary>
+                <Bitacora embebida sinTitulo actividadId={props.selected.id} eventos={props.timeline} error={props.timelineError} />
+              </details>
             </>
           )}
         </div>
@@ -185,7 +278,7 @@ export function Labores(props: Props) {
       <h2>{ACTIVIDAD.titulo}</h2>
       <p className="lede">{ACTIVIDAD.lede}</p>
       {props.rol === "capataz" && <p className="hint">{ACTIVIDAD.soloCuadrilla}</p>}
-      <FiltrosActividad rol={props.rol} valor={props.filtro} onChange={props.onFiltro} tipos={props.tipos} />
+      <FiltrosActividad rol={props.rol} valor={props.filtro} onChange={props.onFiltro} tipos={props.tipos} conteos={props.conteos} />
       {puedeAsignar && (
         <button type="button" className={props.pinMode ? "primary sheet-action on" : "primary sheet-action"} onClick={() => props.onPinMode(!props.pinMode)}>
           {props.pinMode ? ACTIVIDAD.cancelarMarca : ACTIVIDAD.marcar}
@@ -400,7 +493,7 @@ function AltaActividad(props: AltaProps) {
         </strong>
       </header>
       <fieldset>
-        <legend>{ACTIVIDAD.clasificacion}</legend>
+        <legend>{ACTIVIDAD.que}</legend>
         <div className="alta-par">
           <label className="field">
             {ACTIVIDAD.clase}
@@ -424,24 +517,22 @@ function AltaActividad(props: AltaProps) {
               ))}
             </select>
           </label>
-        </div>
-        {clase && tipos.length === 0 && <p className="hint">{ACTIVIDAD.sinTipos}</p>}
-        <p className="hint">{ACTIVIDAD.regla}</p>
-        {props.sugerencia && <p className="hint">{props.sugerencia}</p>}
-        <div className="row-actions">
-          <button type="button" onClick={props.onSugerir}>
-            {ACTIVIDAD.sugerir}
-          </button>
-          {props.pista?.codigo && (
-            <button type="button" onClick={confirmarPista}>
-              Confirmar {props.pista.etiqueta || props.pista.codigo}
-            </button>
-          )}
-        </div>
-      </fieldset>
-      <fieldset>
-        <legend>{ACTIVIDAD.pedido}</legend>
-        <div className="alta-par">
+          <label className="field">
+            {ACTIVIDAD.tituloCampo}
+            <input value={props.formTitulo} maxLength={160} onChange={(event) => props.onForm({ titulo: event.target.value })} required />
+          </label>
+          <SelectorLugar id="alta-lugar" lugares={lugares} lugarId={lugarId} onChange={setLugarId} />
+          <label className="field">
+            {ACTIVIDAD.zonaSupervision}
+            <select name="zona_supervision_id" value={zona} onChange={(event) => setZona(event.target.value)}>
+              <option value="">{ACTIVIDAD.sinZona}</option>
+              {zonas.map((item) => (
+                <option key={item.codigo} value={item.codigo}>
+                  {item.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="field">
             {ACTIVIDAD.origen}
             <select name="origen" value={origen} onChange={(event) => setOrigen(event.target.value)}>
@@ -482,67 +573,70 @@ function AltaActividad(props: AltaProps) {
             <input name="cantidad" inputMode="decimal" value={cantidad} onChange={(event) => setCantidad(event.target.value)} />
           </label>
         </div>
+        {clase && tipos.length === 0 && <p className="hint">{ACTIVIDAD.sinTipos}</p>}
+        <p className="hint">{ACTIVIDAD.regla}</p>
+        {props.sugerencia && <p className="hint">{props.sugerencia}</p>}
+        <div className="row-actions">
+          <button type="button" onClick={props.onSugerir}>
+            {ACTIVIDAD.sugerir}
+          </button>
+          {props.pista?.codigo && (
+            <button type="button" onClick={confirmarPista}>
+              Confirmar {props.pista.etiqueta || props.pista.codigo}
+            </button>
+          )}
+        </div>
       </fieldset>
-      <fieldset className="alta-personal">
-        <legend>{ACTIVIDAD.personal}</legend>
-        <p className="hint">{ACTIVIDAD.personalLede}</p>
-        <ul>
-          {tax.personal.map((item) => (
-            <li key={item.id}>
-              <label>
-                <input
-                  type="checkbox"
-                  name="personal"
-                  value={item.nombre_ficticio}
-                  checked={personal.includes(item.nombre_ficticio)}
-                  onChange={() => alternarPersonal(item.nombre_ficticio)}
-                />
-                {item.nombre_ficticio}
-              </label>
-            </li>
-          ))}
-        </ul>
-      </fieldset>
-      <div className="alta-par">
-        <SelectorLugar id="alta-lugar" lugares={lugares} lugarId={lugarId} onChange={setLugarId} />
-        <label className="field">
-          {ACTIVIDAD.zonaSupervision}
-          <select name="zona_supervision_id" value={zona} onChange={(event) => setZona(event.target.value)}>
-            <option value="">{ACTIVIDAD.sinZona}</option>
-            {zonas.map((item) => (
-              <option key={item.codigo} value={item.codigo}>
-                {item.nombre}
-              </option>
+      <fieldset>
+        <legend>{ACTIVIDAD.quien}</legend>
+        <fieldset className="alta-personal">
+          <legend>{ACTIVIDAD.personal}</legend>
+          <p className="hint">{ACTIVIDAD.personalLede}</p>
+          <ul>
+            {tax.personal.map((item) => (
+              <li key={item.id}>
+                <label>
+                  <input
+                    type="checkbox"
+                    name="personal"
+                    value={item.nombre_ficticio}
+                    checked={personal.includes(item.nombre_ficticio)}
+                    onChange={() => alternarPersonal(item.nombre_ficticio)}
+                  />
+                  {item.nombre_ficticio}
+                </label>
+              </li>
             ))}
-          </select>
-        </label>
+          </ul>
+        </fieldset>
+        <div className="alta-par">
+          <label className="field">
+            {ACTIVIDAD.cuadrilla}
+            <select value={props.formEquipo} onChange={(event) => props.onForm({ equipo: event.target.value })}>
+              <option value="">{ACTIVIDAD.sinAsignar}</option>
+              {props.equipos.map((equipo) => (
+                <option key={equipo.id} value={equipo.id}>
+                  {etiquetaCuadrilla(equipo.id, equipo.equipo)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            {ACTIVIDAD.quienEjecuta}
+            <select value={props.formEjecutor} onChange={(event) => props.onForm({ ejecutor: event.target.value })}>
+              <option value="propia">{ACTIVIDAD.personalPropio}</option>
+              <option value="tercerizada">{ACTIVIDAD.servicioTercerizado}</option>
+            </select>
+          </label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>{ACTIVIDAD.detalle}</legend>
         <label className="field">
-          {ACTIVIDAD.tituloCampo}
-          <input value={props.formTitulo} maxLength={160} onChange={(event) => props.onForm({ titulo: event.target.value })} required />
+          <span className="sr-only">{ACTIVIDAD.detalle}</span>
+          <textarea value={props.formDetalle} maxLength={2000} rows={3} onChange={(event) => props.onForm({ detalle: event.target.value })} />
         </label>
-        <label className="field">
-          {ACTIVIDAD.quienEjecuta}
-          <select value={props.formEjecutor} onChange={(event) => props.onForm({ ejecutor: event.target.value })}>
-            <option value="propia">{ACTIVIDAD.personalPropio}</option>
-            <option value="tercerizada">{ACTIVIDAD.servicioTercerizado}</option>
-          </select>
-        </label>
-      </div>
-      <label className="field">
-        {ACTIVIDAD.detalle}
-        <textarea value={props.formDetalle} maxLength={2000} rows={3} onChange={(event) => props.onForm({ detalle: event.target.value })} />
-      </label>
-      <label className="field">
-        {ACTIVIDAD.cuadrilla}
-        <select value={props.formEquipo} onChange={(event) => props.onForm({ equipo: event.target.value })}>
-          <option value="">{ACTIVIDAD.sinAsignar}</option>
-          {props.equipos.map((equipo) => (
-            <option key={equipo.id} value={equipo.id}>
-              {equipo.equipo}
-            </option>
-          ))}
-        </select>
-      </label>
+      </fieldset>
       {aviso && <p className="status error">{aviso}</p>}
       <button type="submit" className="primary" disabled={props.creating}>
         {props.creating ? ACTIVIDAD.guardando : ACTIVIDAD.crear}
@@ -574,7 +668,8 @@ function usePendientesEstados(aviso: string): number {
   return n
 }
 
-function FichaLabor(props: { actividadId?: string }) {
+function FichaLabor(props: { actividadId?: string; puedeRegistrar?: boolean }) {
+  const editable = props.puedeRegistrar !== false
   const [clase, setClase] = useState("Mantenimiento de jardines")
   const [solicitud, setSolicitud] = useState("")
   const [atencion, setAtencion] = useState("")
@@ -651,27 +746,29 @@ function FichaLabor(props: { actividadId?: string }) {
       <legend>{ACTIVIDAD.ficha}</legend>
       <label className="field">
         {ACTIVIDAD.clase}
-        <input value={clase} onChange={(event) => setClase(event.target.value)} />
+        <input value={clase} readOnly={!editable} onChange={(event) => setClase(event.target.value)} />
       </label>
       <label className="field">
         {ACTIVIDAD.fechaSolicitud}
-        <FechaCampo value={solicitud} onChange={setSolicitud} />
+        <FechaCampo value={solicitud} onChange={setSolicitud} soloLectura={!editable} />
       </label>
       <label className="field">
         {ACTIVIDAD.fechaAtencion}
-        <FechaCampo value={atencion} onChange={setAtencion} />
+        <FechaCampo value={atencion} onChange={setAtencion} soloLectura={!editable} />
       </label>
       <label className="field">
         {ACTIVIDAD.lugar}
-        <input value={lugar} onChange={(event) => setLugar(event.target.value)} placeholder={ACTIVIDAD.lugarPlaceholder} />
+        <input value={lugar} readOnly={!editable} onChange={(event) => setLugar(event.target.value)} placeholder={ACTIVIDAD.lugarPlaceholder} />
       </label>
       <label className="field">
         {ACTIVIDAD.comentario}
-        <textarea value={comentario} rows={2} maxLength={2000} onChange={(event) => setComentario(event.target.value)} />
+        <textarea value={comentario} readOnly={!editable} rows={2} maxLength={2000} onChange={(event) => setComentario(event.target.value)} />
       </label>
-      <button type="button" onClick={() => void guardar()}>
-        {ACTIVIDAD.guardarFicha}
-      </button>
+      {editable && (
+        <button type="button" onClick={() => void guardar()}>
+          {ACTIVIDAD.guardarFicha}
+        </button>
+      )}
       {aviso && <p className="hint">{aviso}</p>}
     </fieldset>
   )

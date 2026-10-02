@@ -158,10 +158,40 @@ export default function App() {
   const [edificios, setEdificios] = useState<FeatureCollection>({ type: "FeatureCollection", features: [] })
   const [inventory, setInventory] = useState<Partial<Record<string, FeatureCollection>>>({})
   const [inventoryOn, setInventoryOn] = useState<Record<string, boolean>>({})
+  const filtroCarga = useMemo<FiltroActividades>(
+    () => ({
+      estado: "",
+      tipo: filtro.tipo,
+      cuadrillaId: filtro.cuadrillaId,
+      sector: filtro.sector,
+      ejecutor: filtro.ejecutor,
+      origen: filtro.origen,
+      nivelRiesgo: filtro.nivelRiesgo,
+      desde: filtro.desde,
+      hasta: filtro.hasta,
+      ejemplarId: filtro.ejemplarId,
+      responsable: filtro.responsable,
+      historico: filtro.historico,
+    }),
+    [
+      filtro.tipo,
+      filtro.cuadrillaId,
+      filtro.sector,
+      filtro.ejecutor,
+      filtro.origen,
+      filtro.nivelRiesgo,
+      filtro.desde,
+      filtro.hasta,
+      filtro.ejemplarId,
+      filtro.responsable,
+      filtro.historico,
+    ],
+  )
+
   const reloadActivities = useCallback(async () => {
     if (!sesion) return
     try {
-      const fc = await fetchActividades(rol, equipoId, filtro)
+      const fc = await fetchActividades(rol, equipoId, filtroCarga)
       setActivities(fc)
       void saveLabores(fc)
       setActivityError("")
@@ -175,7 +205,7 @@ export default function App() {
         setActivityError(message)
       }
     }
-  }, [sesion, rol, equipoId, filtro])
+  }, [sesion, rol, equipoId, filtroCarga])
 
   const reloadQueue = useCallback(async () => {
     try {
@@ -318,7 +348,7 @@ export default function App() {
   useEffect(() => {
     if (!sesion) return
     let cancelled = false
-    fetchActividades(rol, equipoId, filtro)
+    fetchActividades(rol, equipoId, filtroCarga)
       .then((fc) => {
         if (cancelled) return
         setActivities(fc)
@@ -341,7 +371,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [sesion, rol, equipoId, filtro])
+  }, [sesion, rol, equipoId, filtroCarga])
 
   useEffect(() => {
     const caer = () => {
@@ -416,16 +446,26 @@ export default function App() {
       .map((item) => toItem(queuedFeature(item), true))
       .filter((item): item is LaborItem => item != null)
     return [...local, ...fromApi].filter((item) => {
-      if (filtro.estado && item.estado !== filtro.estado) return false
       if (filtro.tipo && item.tipo !== filtro.tipo && item.clase !== filtro.tipo) return false
       if (filtro.ejecutor && item.ejecutor !== filtro.ejecutor) return false
       if (rol !== "capataz" && filtro.cuadrillaId && item.capatazId !== filtro.cuadrillaId) return false
       return true
     })
-  }, [activities, queue, filtro, rol, equipoId])
+  }, [activities, queue, filtro.tipo, filtro.ejecutor, filtro.cuadrillaId, rol, equipoId])
+
+  const conteosEstado = useMemo(() => {
+    const conteos: Record<string, number> = {}
+    for (const item of items) conteos[item.estado] = (conteos[item.estado] ?? 0) + 1
+    return conteos
+  }, [items])
+
+  const itemsVisibles = useMemo(
+    () => items.filter((item) => !filtro.estado || item.estado === filtro.estado),
+    [items, filtro.estado],
+  )
 
   const mapActivities = useMemo<FeatureCollection>(() => {
-    const ids = new Set(items.map((item) => item.id))
+    const ids = new Set(itemsVisibles.map((item) => item.id))
     const features = [
       ...queue.map(queuedFeature),
       ...activities.features,
@@ -440,7 +480,7 @@ export default function App() {
         return true
       }),
     }
-  }, [items, queue, activities])
+  }, [itemsVisibles, queue, activities])
 
   useEffect(() => {
     writeColorPor(colorPor)
@@ -459,13 +499,13 @@ export default function App() {
   const catsColor = colorPor === "uso" ? USOS : sectoresCat
   const conteoColor: Record<string, number> = colorPor === "uso" ? conteoUso : conteoSector
 
-  const selected = items.find((item) => item.id === selectedId) ?? null
+  const selected = itemsVisibles.find((item) => item.id === selectedId) ?? null
   const summary = useMemo(() => {
     const areas = data.areas?.features.length
     const zonas = data.zonas?.features.length
     if (areas == null || zonas == null) return MAPA.leyendo
-    return resumenCatastro(areas, zonas, items.length)
-  }, [data, items.length])
+    return resumenCatastro(areas, zonas, itemsVisibles.length)
+  }, [data, itemsVisibles.length])
 
   function choose(id: string) {
     setSelectedId(id)
@@ -519,6 +559,7 @@ export default function App() {
       setFormDetalle("")
       setSugerencia("")
       setNotice(ACTIVIDAD.creada)
+      setPinMode(true)
       await reloadActivities()
       setSelectedId(body.id)
     } catch (error) {
@@ -579,19 +620,17 @@ export default function App() {
     }
   }
 
-  async function onArchivar() {
+  async function onArchivar(motivoCodigo: string) {
     if (!selected || selected.queued) return
-    if (!confirmarArchivo) {
-      setConfirmarArchivo(true)
-      return
-    }
-    if (!motivo) {
-      setNotice("Elija un motivo de archivo.")
+    if (!motivoCodigo) {
+      setNotice(ACTIVIDAD.faltaMotivo)
       return
     }
     try {
-      await archivar(selected.id, rol, motivo)
+      await archivar(selected.id, rol, motivoCodigo)
       setSelectedId(null)
+      setMotivo("")
+      setConfirmarArchivo(false)
       setNotice(ACTIVIDAD.archivada)
       await reloadActivities()
     } catch (error) {
@@ -808,7 +847,7 @@ export default function App() {
             equipos={equipos}
             equipoId={equipoId}
             onEquipo={() => {}}
-            items={items}
+            items={itemsVisibles}
             pinMode={false}
             onPinMode={() => {}}
             draft={null}
@@ -829,7 +868,8 @@ export default function App() {
             reasignarA={reasignarA}
             onReasignarA={setReasignarA}
             onReasignar={() => void onReasignar()}
-            onArchivar={() => void onArchivar()}
+            onArchivar={(motivo) => void onArchivar(motivo)}
+            conteos={conteosEstado}
             confirmarArchivo={confirmarArchivo}
             notice=""
             queueCount={0}
@@ -848,7 +888,7 @@ export default function App() {
             cuadrilla={cuadrillaNombre}
             enLinea={enLinea}
             porEnviar={porEnviar}
-            items={items}
+            items={itemsVisibles}
             filtroEstado={filtroHoy}
             onFiltro={setFiltroHoy}
             onAccion={(item) => {
@@ -889,7 +929,7 @@ export default function App() {
         {moduloActivo === "resumen" && (
           <Resumen
             rol={rol}
-            items={items}
+            items={itemsVisibles}
             porEnviar={porEnviar}
             puedeValidar={puede("validar")}
             puedeSolicitudes={puede("solicitudes")}
@@ -926,7 +966,7 @@ export default function App() {
                 writeEquipo(id)
                 setSelectedId(null)
               }}
-              items={items}
+              items={itemsVisibles}
               filtro={filtro}
               onFiltro={setFiltro}
               pinMode={pinMode}
@@ -962,7 +1002,8 @@ export default function App() {
               reasignarA={reasignarA}
               onReasignarA={setReasignarA}
               onReasignar={() => void onReasignar()}
-              onArchivar={() => void onArchivar()}
+              onArchivar={(motivo) => void onArchivar(motivo)}
+            conteos={conteosEstado}
               confirmarArchivo={confirmarArchivo}
               notice={notice}
               queueCount={queue.length}
@@ -1014,7 +1055,7 @@ export default function App() {
         />
         {(planoForzado || vista === "lista") && (
           <ListaActividades
-            items={items}
+            items={itemsVisibles}
             selectedId={selectedId}
             onSelect={(id) => {
               choose(id)
