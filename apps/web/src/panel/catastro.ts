@@ -261,10 +261,13 @@ async function enviar(path: string, method: string, body: unknown): Promise<void
   if (!res.ok) throw new Error(`La API respondió ${res.status}`)
 }
 
-function lista(body: unknown, clave: string): unknown[] {
+function lista(body: unknown, ...claves: string[]): unknown[] {
   if (Array.isArray(body)) return body
-  if (body && typeof body === "object" && Array.isArray((body as Record<string, unknown>)[clave])) {
-    return (body as Record<string, unknown>)[clave] as unknown[]
+  if (body && typeof body === "object") {
+    const obj = body as Record<string, unknown>
+    for (const clave of claves) {
+      if (Array.isArray(obj[clave])) return obj[clave] as unknown[]
+    }
   }
   return []
 }
@@ -295,7 +298,8 @@ export async function bajaArea(featureId: string): Promise<void> {
 
 export async function listarZonas(): Promise<ZonaSupervision[]> {
   const body = await leer(apiUrl("/catastro/zonas-supervision"))
-  return lista(body, "zonas").map((row) => {
+  // La API responde { zonas_supervision: [...] }; "zonas" queda por compatibilidad.
+  return lista(body, "zonas_supervision", "zonas").map((row) => {
     if (row && typeof row === "object" && "geometry" in (row as object)) {
       return zonaDesdeFeature(row as { geometry?: unknown; properties?: PropsFuente | null })
     }

@@ -3,6 +3,7 @@ import { test } from "node:test"
 import {
   CAMPOS_AREA,
   CAMPOS_ZONA,
+  listarZonas,
   validarArea,
   validarZona,
   zonasDeFixture,
@@ -53,4 +54,49 @@ test("la referencia no pasa de 500 caracteres y el perímetro no es negativo", (
   assert.ok(larga.some((item) => item.campo === "referencia"))
   const negativa = validarArea({ ...area, perimetro_m: -1 })
   assert.ok(negativa.some((item) => item.campo === "perimetro_m"))
+})
+
+test("listarZonas acepta el cuerpo real { zonas_supervision: [...] }", async () => {
+  const original = globalThis.fetch
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({
+        zonas_supervision: [
+          {
+            id: 1,
+            codigo: "Z3",
+            nombre: "Zona Tres",
+            area_m2: 1200,
+            con_geometria: false,
+            activo: true,
+          },
+        ],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    )) as typeof fetch
+  try {
+    const zonas = await listarZonas()
+    assert.equal(zonas.length, 1)
+    assert.equal(zonas[0].codigo, "Z3")
+    assert.equal(zonas[0].nombre, "Zona Tres")
+    assert.equal(zonas[0].area_m2, 1200)
+  } finally {
+    globalThis.fetch = original
+  }
+})
+
+test("listarZonas sigue aceptando la clave zonas por compatibilidad", async () => {
+  const original = globalThis.fetch
+  globalThis.fetch = (async () =>
+    new Response(JSON.stringify({ zonas: [{ codigo: "Z1", nombre: "Zona Uno", area_m2: null }] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })) as typeof fetch
+  try {
+    const zonas = await listarZonas()
+    assert.equal(zonas.length, 1)
+    assert.equal(zonas[0].codigo, "Z1")
+  } finally {
+    globalThis.fetch = original
+  }
 })
