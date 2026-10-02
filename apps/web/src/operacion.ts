@@ -1,6 +1,6 @@
 import { apiUrl, fetchCollection } from "./api"
 import type { FeatureCollection, GeoFeature, Rol } from "./types"
-import { TIPO_RESPALDO } from "./ui/nomenclatura"
+import { etiquetaHito, TIPO_RESPALDO } from "./ui/nomenclatura"
 
 export class ApiError extends Error {
   status: number
@@ -116,15 +116,25 @@ export function puedeEncolarEstado(rol: string | undefined, estado: string): boo
 
 export type Capataz = { id: string; equipo: string; turno: string }
 
+export type EvidenciaEvento = {
+  id: string
+  nombre: string
+  mime: string
+}
+
 export type Evento = {
   id: number
   tipo: string
   estado?: string
   capataz_id?: string
   equipo?: string
+  capataz_anterior?: string
+  cuadrilla_anterior?: string
   actor_rol: string
+  usuario_nombre?: string
   nota?: string
   created_at: string
+  evidencias?: EvidenciaEvento[]
 }
 
 export type CreateBody = {
@@ -199,18 +209,8 @@ export async function fetchTaxonomiaActividad(): Promise<TaxonomiaActividad> {
   }
 }
 
-const EVENTO_LABEL: Record<string, string> = {
-  creada: "Creada",
-  asignada: "Asignada",
-  reasignada: "Reasignada",
-  estado: "Estado",
-  cancelada: "Cancelada",
-  archivada: "Archivada",
-  evidencia: "Evidencia",
-}
-
 export function etiquetaEvento(tipo: string): string {
-  return EVENTO_LABEL[tipo] ?? tipo
+  return etiquetaHito(tipo)
 }
 
 export function etiquetaEstado(id: string): string {

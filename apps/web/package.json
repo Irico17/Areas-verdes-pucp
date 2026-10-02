@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint --max-warnings 0",
     "e2e": "playwright test",
-    "test": "node --experimental-strip-types --import ./src/test/register.mjs --test src/map/categorias.test.ts src/map/coverage.test.ts src/map/draw.test.ts src/panel/catalogos.test.ts src/panel/catastro.test.ts src/panel/CatastroEditor.test.ts src/panel/SelectorLugar.test.ts src/panel/atencion.test.ts src/panel/inventarioCapas.test.ts src/panel/reportes.test.ts src/panel/importaciones.test.ts src/panel/calendario.test.ts src/ui/bottomSheet.test.ts src/ui/navegacion.test.ts src/ui/registroModulos.test.ts src/panel/ejemplares.test.ts src/ui/nomenclatura.test.ts src/ui/teclado.test.ts src/offline/cola.test.ts src/offline/comprimir.test.ts src/offline/exif.test.ts src/offline/subida.test.ts",
+    "test": "node --experimental-strip-types --import ./src/test/register.mjs --test src/map/categorias.test.ts src/map/coverage.test.ts src/map/draw.test.ts src/panel/catalogos.test.ts src/panel/catastro.test.ts src/panel/CatastroEditor.test.ts src/panel/SelectorLugar.test.ts src/panel/atencion.test.ts src/panel/inventarioCapas.test.ts src/panel/reportes.test.ts src/panel/importaciones.test.ts src/panel/calendario.test.ts src/ui/bottomSheet.test.ts src/ui/navegacion.test.ts src/ui/registroModulos.test.ts src/panel/ejemplares.test.ts src/panel/bitacora.test.ts src/ui/nomenclatura.test.ts src/ui/teclado.test.ts src/offline/cola.test.ts src/offline/comprimir.test.ts src/offline/exif.test.ts src/offline/subida.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

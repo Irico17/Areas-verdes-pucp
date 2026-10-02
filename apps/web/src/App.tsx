@@ -24,6 +24,7 @@ import {
   type CreateBody,
   type Evento,
 } from "./operacion"
+import { BitacoraPanel } from "./panel/Bitacora"
 import { Labores, type LaborItem } from "./panel/Labores"
 import { PodaPanel } from "./panel/Poda"
 import { ViveroPanel } from "./panel/Vivero"
@@ -850,6 +851,9 @@ export default function App() {
         {moduloActivo === "reportes" && <ReportesPanel />}
         {moduloActivo === "catalogos" && <CatalogosPanel editable={rol === "admin"} />}
         {moduloActivo === "ejemplares" && <EjemplaresPanel rol={rol} />}
+        {moduloActivo === "bitacora" && (
+          <BitacoraPanel rol={rol} capatazId={rol === "capataz" ? equipoId : ""} actividadId={selected?.queued ? "" : (selected?.id ?? "")} />
+        )}
         {moduloActivo === "importaciones" && <ImportacionesPanel />}
         {moduloActivo === "admin" && <AdminPanel />}
       </BottomSheet>

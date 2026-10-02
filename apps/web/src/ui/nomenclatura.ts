@@ -15,6 +15,7 @@ export const MODULO = {
   importaciones: "Importar",
   admin: "Administración",
   ejemplares: "Ejemplares",
+  bitacora: "Bitácora",
 } as const
 
 export const EJEMPLAR = {
@@ -171,6 +172,51 @@ export const ACTIVIDAD = {
   colaLocal: (n: number) => `${n} en cola local.`,
   servicioMarca: "servicio tercerizado",
   propioMarca: "personal propio",
+} as const
+
+export const HITO = {
+  creada: "Creada",
+  asignada: "Asignada",
+  reasignada: "Reasignada",
+  estado: "Estado",
+  cancelada: "Cancelada",
+  archivada: "Archivada",
+  evidencia: "Evidencia",
+  inicio: "Inicio",
+  supervision: "Supervisión",
+  derivacion: "Derivación",
+  observacion: "Observación",
+  conformidad: "Conformidad",
+  avance: "Avance",
+} as const
+
+export function etiquetaHito(tipo: string): string {
+  if (Object.prototype.hasOwnProperty.call(HITO, tipo)) {
+    return HITO[tipo as keyof typeof HITO]
+  }
+  return tipo
+}
+
+export const BITACORA = {
+  titulo: "Bitácora",
+  lede: "Quién hizo qué, a qué hora, y la evidencia que quedó bajo ese hito.",
+  vacio: "Esta actividad todavía no tiene hitos.",
+  sinActividad: "Elija una actividad para leer su cadena.",
+  anterior: "Cuadrilla anterior",
+  nueva: "Cuadrilla nueva",
+  sinCuadrilla: "Sin cuadrilla",
+  quien: "Registró",
+  texto: "Texto del hito",
+  tipo: "Tipo de hito",
+  anotar: "Anotar hito",
+  anotando: "Anotando…",
+  adjuntar: "Adjuntar evidencia a este hito",
+  subiendo: "Subiendo…",
+  evidenciaDe: "Evidencia del hito",
+  elegirTipo: "Elegir tipo",
+  error: "No se pudo actualizar la bitácora.",
+  cargando: "Leyendo la cadena…",
+  actividades: "Actividades abiertas",
 } as const
 
 export const MAPA = {
