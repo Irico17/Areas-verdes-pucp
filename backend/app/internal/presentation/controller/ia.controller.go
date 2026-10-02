@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/requests"
@@ -17,19 +16,12 @@ type IIAController interface {
 }
 
 type iaController struct {
-	uc     contracts.IIAUseCase
-	logger zerolog.Logger
+	uc contracts.IIAUseCase
 }
 
 // NewIAController creates a new IIAController instance.
-func NewIAController(
-	uc contracts.IIAUseCase,
-	logger zerolog.Logger,
-) IIAController {
-	return &iaController{
-		uc:     uc,
-		logger: logger,
-	}
+func NewIAController(uc contracts.IIAUseCase) IIAController {
+	return &iaController{uc: uc}
 }
 
 // Sugerir godoc

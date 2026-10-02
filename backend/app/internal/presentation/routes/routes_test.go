@@ -587,7 +587,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	viveroCtrl := controller.NewViveroController(mockViveroRoutesUC{}, zerolog.Nop())
 	evidenciaCtrl := controller.NewEvidenciaController(mockEvidenciaRoutesUC{}, zerolog.Nop())
 	reporteCtrl := controller.NewReporteController(mockReporteRoutesUC{}, zerolog.Nop())
-	iaCtrl := controller.NewIAController(mockIARoutesUC{}, zerolog.Nop())
+	iaCtrl := controller.NewIAController(mockIARoutesUC{})
 	auditoriaCtrl := controller.NewAuditoriaController(mockLoteRoutesUC{}, zerolog.Nop())
 	importacionCtrl := controller.NewImportacionController(mockImportacionRoutesUC{}, zerolog.Nop())
 

@@ -43,9 +43,6 @@ func (uc *loteUseCase) Importar(ctx context.Context, usuarioID int64, req dto.Im
 
 func (uc *loteUseCase) Revertir(ctx context.Context, loteID, usuarioID int64, confirmar bool) (*dto.ReporteReversionDTO, error) {
 	rep, err := uc.repo.Revertir(ctx, loteID, usuarioID, confirmar)
-	if rep == nil {
-		return nil, err
-	}
 	excluidas := make([]dto.ExcluidaDTO, len(rep.Excluidas))
 	for i, e := range rep.Excluidas {
 		excluidas[i] = dto.ExcluidaDTO{

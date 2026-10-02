@@ -28,10 +28,7 @@ func NewImportacionUseCase(
 
 // Entidades returns the list of importable entity names.
 func (u *importacionUseCase) Entidades(ctx context.Context) []string {
-	if u.lector != nil {
-		return u.lector.EntidadesImportables()
-	}
-	return nil
+	return u.lector.EntidadesImportables()
 }
 
 // Previsualizar parses and validates an uploaded file, saving a batch preview.
