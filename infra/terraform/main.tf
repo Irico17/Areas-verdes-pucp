@@ -17,20 +17,20 @@ data "aws_caller_identity" "current" {}
 
 resource "aws_ecr_repository" "api" {
   count                = var.create_ecr ? 1 : 0
-  name                 = "campus-verde-api"
+  name                 = "${local.name_prefix}-api"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 }
 
 resource "aws_ecr_repository" "web" {
   count                = var.create_ecr ? 1 : 0
-  name                 = "campus-verde-web"
+  name                 = "${local.name_prefix}-web"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 }
 
 resource "aws_security_group" "app" {
-  name        = "campus-verde-app"
+  name        = "${local.name_prefix}-app"
   description = "HTTP, HTTPS reservado y SSH del piloto Campus Verde"
 
   ingress {
@@ -86,6 +86,13 @@ resource "aws_instance" "app" {
     registry        = local.registry
     region          = var.aws_region
     evidence_bucket = var.create_evidence_bucket ? aws_s3_bucket.evidencias[0].id : ""
+    app_env         = var.ambiente
+    seed_profile    = local.seed_profile
+    swagger_enabled = local.swagger_enabled
+    gin_mode        = local.gin_mode
+    log_level       = local.log_level
+    log_format      = local.log_format
+    campus_env      = local.campus_env
   })
 
   # Un cambio de user_data (por ejemplo el tag de la imagen) se aplica in-place.
@@ -102,7 +109,7 @@ resource "aws_instance" "app" {
   }
 
   tags = {
-    Name = "campus-verde"
+    Name = local.name_prefix
   }
 }
 
@@ -112,7 +119,7 @@ resource "aws_ebs_volume" "data" {
   type              = "gp3"
 
   tags = {
-    Name = "campus-verde-data"
+    Name = "${local.name_prefix}-data"
   }
 }
 
@@ -126,7 +133,7 @@ resource "aws_eip" "app" {
   domain = "vpc"
 
   tags = {
-    Name = "campus-verde"
+    Name = local.name_prefix
   }
 }
 
@@ -137,7 +144,7 @@ resource "aws_eip_association" "app" {
 
 resource "aws_s3_bucket" "evidencias" {
   count  = var.create_evidence_bucket ? 1 : 0
-  bucket = "campus-verde-ev-${data.aws_caller_identity.current.account_id}"
+  bucket = local.evidence_bucket_name
 }
 
 resource "aws_s3_bucket_versioning" "evidencias" {
@@ -158,9 +165,18 @@ resource "aws_s3_bucket_public_access_block" "evidencias" {
 }
 
 locals {
-  api_image = var.api_image != "" ? var.api_image : (var.create_ecr ? "${aws_ecr_repository.api[0].repository_url}:latest" : "")
-  web_image = var.web_image != "" ? var.web_image : (var.create_ecr ? "${aws_ecr_repository.web[0].repository_url}:latest" : "")
-  registry  = try(split("/", local.api_image)[0], "")
+  # produccion mantiene campus-verde, campus-verde-api y campus-verde-data.
+  name_prefix          = var.ambiente == "produccion" ? "campus-verde" : "campus-verde-${var.ambiente}"
+  seed_profile         = var.ambiente == "produccion" ? "etl" : "ficticio"
+  swagger_enabled      = var.ambiente == "produccion" ? "false" : "true"
+  gin_mode             = var.ambiente == "develop" ? "debug" : "release"
+  log_level            = var.ambiente == "develop" ? "debug" : "info"
+  log_format           = var.ambiente == "develop" ? "console" : "json"
+  campus_env           = var.ambiente == "produccion" ? "production" : var.ambiente
+  evidence_bucket_name = var.ambiente == "produccion" ? "campus-verde-ev-${data.aws_caller_identity.current.account_id}" : "campus-verde-${var.ambiente}-ev-${data.aws_caller_identity.current.account_id}"
+  api_image            = var.api_image != "" ? var.api_image : (var.create_ecr ? "${aws_ecr_repository.api[0].repository_url}:latest" : "")
+  web_image            = var.web_image != "" ? var.web_image : (var.create_ecr ? "${aws_ecr_repository.web[0].repository_url}:latest" : "")
+  registry             = try(split("/", local.api_image)[0], "")
 }
 
 check "ecs_no_es_el_default" {

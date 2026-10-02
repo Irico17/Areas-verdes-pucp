@@ -49,10 +49,15 @@ services:
       EVIDENCIAS_BUCKET: "${evidence_bucket}"
       AWS_REGION: ${region}
       AWS_DEFAULT_REGION: ${region}
-      CAMPUS_ENV: production
-      SERVER_GIN_MODE: release
-      SWAGGER_ENABLED: "false"
+      APP_ENV: ${app_env}
+      SEED_PROFILE: ${seed_profile}
+      CAMPUS_ENV: ${campus_env}
+      SERVER_GIN_MODE: ${gin_mode}
+      SWAGGER_ENABLED: "${swagger_enabled}"
+      LOG_LEVEL: ${log_level}
+      LOG_FORMAT: ${log_format}
       MIGRATIONS_DIR: /opt/campus/migrations
+      SEED_FILE: /opt/campus/seed/ficticio.sql
     volumes:
       - /opt/campus/data/app:/data
     depends_on:

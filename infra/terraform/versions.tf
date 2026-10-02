@@ -24,8 +24,9 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project = "campus-verde"
-      Stack   = "learner-lab"
+      Project  = "campus-verde"
+      Stack    = "learner-lab"
+      Ambiente = var.ambiente
     }
   }
 }

@@ -1,3 +1,14 @@
+variable "ambiente" {
+  description = "develop, qa o produccion. produccion conserva los nombres históricos del Learner Lab (campus-verde). Cada ambiente va en su propio workspace de Terraform."
+  type        = string
+  default     = "produccion"
+
+  validation {
+    condition     = contains(["develop", "qa", "produccion"], var.ambiente)
+    error_message = "ambiente debe ser develop, qa o produccion."
+  }
+}
+
 variable "aws_region" {
   description = "Solo us-east-1 o us-west-2 en AWS Academy Learner Lab. us-east-1 es el default; sa-east-1 queda más cerca de Lima y no está habilitado en el lab."
   type        = string
