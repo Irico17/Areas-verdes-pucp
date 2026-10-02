@@ -17,7 +17,14 @@ func NewMetaGroup(controller controller.IMetaController) *MetaGroup {
 }
 
 // Register registers the index and contract routes under the given router.
-func (group *MetaGroup) Register(router gin.IRouter) {
+// If swaggerEnabled is false, /openapi.yaml is omitted so requests receive 404.
+func (group *MetaGroup) Register(router gin.IRouter, swaggerEnabled ...bool) {
 	router.GET("", group.controller.Index)
-	router.GET("/openapi.yaml", group.controller.OpenAPI)
+	enabled := true
+	if len(swaggerEnabled) > 0 {
+		enabled = swaggerEnabled[0]
+	}
+	if enabled {
+		router.GET("/openapi.yaml", group.controller.OpenAPI)
+	}
 }

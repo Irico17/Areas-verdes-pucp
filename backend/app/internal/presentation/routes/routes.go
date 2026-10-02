@@ -136,7 +136,7 @@ func (r *Router) Setup() {
 	r.healthGroup.Register(servicePath)
 
 	for _, prefix := range []gin.IRouter{servicePath, legacyPath} {
-		r.metaGroup.Register(prefix)
+		r.metaGroup.Register(prefix, r.cfg.Swagger.Enabled)
 		r.sesionGroup.Register(prefix)
 		r.accesosGroup.Register(prefix)
 		r.catalogoGroup.Register(prefix)

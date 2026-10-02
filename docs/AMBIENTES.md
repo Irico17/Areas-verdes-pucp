@@ -9,7 +9,7 @@ El corte de la EC2 que ya tiene datos sigue en [`RUNBOOK-CORTE-PRODUCCION.md`](R
 | | develop | qa | produccion |
 | --- | --- | --- | --- |
 | `APP_ENV` | `develop` | `qa` | `produccion` |
-| Swagger | encendido | encendido | apagado |
+| Swagger y openapi.yaml | encendido | encendido | apagado (404) |
 | Logs | debug, consola | info, JSON | info, JSON |
 | Pool (open / idle / vida) | 5 / 2 / 15 min | 8 / 3 / 20 min | 10 / 4 / 30 min |
 | Datos si la base está vacía | semilla ficticia | semilla ficticia | ETL de `data/raw` |
@@ -28,7 +28,7 @@ El corte de la EC2 que ya tiene datos sigue en [`RUNBOOK-CORTE-PRODUCCION.md`](R
 
 En una misma máquina los tres stacks conviven: puertos, nombres, volúmenes, redes y bases no se pisan. `make down ENV=qa` no borra volúmenes (`down` no usa `-v`).
 
-`SWAGGER_ENABLED`, `CAMPUS_CORS_ORIGINS`, `LOG_LEVEL`, `LOG_FORMAT`, `SERVER_GIN_MODE`, `DATABASE_MAX_OPEN_CONNS`, `DATABASE_MAX_IDLE_CONNS` y `DATABASE_CONN_MAX_LIFETIME` pisan el default del ambiente. Un asterisco en CORS se descarta. Sin `APP_ENV` el proceso se queda en el comportamiento histórico (pool 10/4/30 min, Swagger según el modo de Gin).
+`SWAGGER_ENABLED`, `CAMPUS_CORS_ORIGINS`, `LOG_LEVEL`, `LOG_FORMAT`, `SERVER_GIN_MODE`, `DATABASE_MAX_OPEN_CONNS`, `DATABASE_MAX_IDLE_CONNS` y `DATABASE_CONN_MAX_LIFETIME` pisan el default del ambiente. Un asterisco en CORS se descarta. Sin `APP_ENV` el proceso se queda en el comportamiento histórico (pool 10/4/30 min, Swagger y openapi.yaml según el modo de Gin).
 
 La cookie `Secure` la sigue mandando `CAMPUS_COOKIE_SECURE`. En HTTP (el lab y el compose local) es `false`. Con TLS es `true`. `APP_ENV=produccion` no la enciende sola.
 
@@ -67,7 +67,7 @@ Esta misma precedencia aplica invocando directamente `deploy/deploy.sh`, `deploy
 
 `make up` sin `ENV` sigue levantando solo el Postgres del `docker-compose.yml` histórico. `make bootstrap` también. El detalle del compose por ambiente está en [`deploy/README.md`](../deploy/README.md).
 
-Smoke (`deploy/smoke.sh`): `GET /health` con `"status":"ok"`, `POST /api/v1/sesion` con la cuenta ficticia `coordinacion`, `GET /api/v1/geo/resumen` y `GET /api/v1/catalogos`. En develop y qa Swagger responde; en produccion responde 404.
+Smoke (`deploy/smoke.sh`): `GET /health` con `"status":"ok"`, `POST /api/v1/sesion` con la cuenta ficticia `coordinacion`, `GET /api/v1/geo/resumen` y `GET /api/v1/catalogos`. En develop y qa Swagger y openapi.yaml responden; en produccion responden 404.
 
 Rollback local, si el smoke falla y había una imagen anterior de ese ambiente:
 
