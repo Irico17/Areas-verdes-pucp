@@ -33,6 +33,8 @@ RUN chmod +x /entrypoint.sh /usr/local/bin/api /usr/local/bin/migrate /usr/local
  && mkdir -p /data/evidencias /data/v1 \
  && chown -R 10001:10001 /data
 
+# CAMPUS_DEV_PASSWORD no va en la imagen. El entrypoint sale si falta.
+# Desarrollo local: pando-local, documentado en .env.example y en docker-compose.yml.
 ENV SERVER_PORT=8091 \
     API_ADDR=:8091 \
     SERVER_GIN_MODE=release \

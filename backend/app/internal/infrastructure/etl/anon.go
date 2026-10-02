@@ -7,20 +7,6 @@ import (
 	"unicode"
 )
 
-// Ficticios fijos del campus (MAPA-DATOS-Y-EDICION.md §2).
-// La clave es el conteo del hash, no el nombre de origen.
-const (
-	ficticio259 = "Valeria Quispe"
-	ficticio168 = "Mateo Salazar"
-	ficticio104 = "Renato Cárdenas"
-)
-
-var ficticiosPorFrecuencia = []string{
-	"Nora Beltrán",
-	"Iván Paredes",
-	"Lucía Mendoza",
-}
-
 // etiquetaSector conserva rótulos que no son personas.
 func etiquetaSector(normalizado string) (visible string, ok bool) {
 	switch normalizado {
@@ -135,19 +121,6 @@ func asignarCuadrillas(valores []string) map[string]cuadrillaFicticia {
 		out["etiqueta:"+visible] = cuadrillaFicticia{ID: id, Nombre: visible, Etiqueta: true}
 	}
 	return out
-}
-
-func ficticioPorConteo(n int) string {
-	switch n {
-	case 259:
-		return ficticio259
-	case 168:
-		return ficticio168
-	case 104:
-		return ficticio104
-	default:
-		return ""
-	}
 }
 
 func cuadrillaDe(tabla map[string]cuadrillaFicticia, valor string) (cuadrillaFicticia, bool) {

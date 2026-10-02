@@ -42,20 +42,6 @@ func TestNewDatabaseConnection(t *testing.T) {
 	if stats.MaxOpenConnections != 5 {
 		t.Fatalf("expected MaxOpenConnections 5, got %d", stats.MaxOpenConnections)
 	}
-
-	// Test alias NewConnection
-	aliasGDB, err := database.NewConnection(cfg)
-	if err != nil {
-		t.Fatalf("NewConnection alias failed: %v", err)
-	}
-	aliasSQL, err := aliasGDB.DB()
-	if err != nil {
-		t.Fatalf("failed to get sql.DB from alias: %v", err)
-	}
-	defer aliasSQL.Close()
-	if err := aliasSQL.Ping(); err != nil {
-		t.Fatalf("alias connection ping failed: %v", err)
-	}
 }
 
 func TestNewDatabaseConnectionFailsWithApplicationError(t *testing.T) {

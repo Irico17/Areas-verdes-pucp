@@ -10,7 +10,7 @@ import (
 )
 
 // TestSwaggerRouteCoverage walks engine.Routes() and requires every /areas-verdes/v1 route
-// to appear in swagger.json, and validates that swagger.json has at least 62 business operations.
+// to appear in swagger.json. The documented operations must match the routes actually registered.
 func TestSwaggerRouteCoverage(t *testing.T) {
 	engine := setupTestRouter(true)
 
@@ -42,20 +42,22 @@ func TestSwaggerRouteCoverage(t *testing.T) {
 
 	reParam := regexp.MustCompile(`\{([^}]+)\}`)
 	swaggerRoutes := make(map[string]bool)
+	httpMethods := map[string]bool{
+		"get": true, "post": true, "put": true, "patch": true, "delete": true, "head": true, "options": true,
+	}
 	var businessOpsCount int
 
 	for path, methods := range swaggerDoc.Paths {
 		ginPath := reParam.ReplaceAllString(path, ":$1")
 		fullPath := swaggerDoc.BasePath + ginPath
 		for method := range methods {
+			if !httpMethods[strings.ToLower(method)] {
+				continue
+			}
 			key := fmt.Sprintf("%s %s", strings.ToUpper(method), fullPath)
 			swaggerRoutes[key] = true
 			businessOpsCount++
 		}
-	}
-
-	if businessOpsCount < 62 {
-		t.Fatalf("expected >= 62 business operations in swagger.json, got %d", businessOpsCount)
 	}
 
 	ginRoutes := make(map[string]bool)
@@ -87,6 +89,9 @@ func TestSwaggerRouteCoverage(t *testing.T) {
 
 	if matchedRoutes == 0 {
 		t.Fatalf("no /areas-verdes/v1 routes were matched")
+	}
+	if businessOpsCount != matchedRoutes {
+		t.Fatalf("swagger documenta %d operaciones y el router registra %d rutas /areas-verdes/v1 (sin la UI de swagger)", businessOpsCount, matchedRoutes)
 	}
 
 	t.Logf("Swagger coverage test passed: %d routes checked, %d business operations in swagger.json", matchedRoutes, businessOpsCount)

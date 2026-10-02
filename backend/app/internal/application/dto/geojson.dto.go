@@ -47,15 +47,6 @@ func (f RoundedFloat) MarshalJSON() ([]byte, error) {
 	return []byte(strconv.FormatFloat(float64(f), 'f', 3, 64)), nil
 }
 
-// FloatPtr converts a *float64 to *RoundedFloat.
-func FloatPtr(v *float64) *RoundedFloat {
-	if v == nil {
-		return nil
-	}
-	r := RoundedFloat(*v)
-	return &r
-}
-
 // CatastroPropertiesDTO represents non-sensitive cadastral properties shared by areas and zones.
 type CatastroPropertiesDTO struct {
 	ID          int64         `json:"id"`

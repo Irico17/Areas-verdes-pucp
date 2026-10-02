@@ -5,28 +5,6 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/models"
 )
 
-// AreaVerdeModelToEntity maps AreaVerdeModel to domain entity AreaVerde.
-func AreaVerdeModelToEntity(m *models.AreaVerdeModel) *entities.AreaVerde {
-	if m == nil {
-		return nil
-	}
-	return &entities.AreaVerde{
-		ID:          m.ID,
-		FeatureID:   m.FeatureID,
-		SourceIndex: m.SourceIndex,
-		Codigo:      m.Codigo,
-		Nombre:      m.Nombre,
-		Uso:         m.Uso,
-		ProyRiego:   m.ProyRiego,
-		RiegoAct:    m.RiegoAct,
-		Referencia:  m.Referencia,
-		PerimetroM:  m.PerimetroM,
-		AreaM2:      m.AreaM2,
-		CreatedAt:   m.CreatedAt,
-		UpdatedAt:   m.UpdatedAt,
-	}
-}
-
 // AreaVerdeModelToFicha converts an AreaVerdeModel to entities.AreaVerdeFicha.
 func AreaVerdeModelToFicha(m *models.AreaVerdeModel, conGeom bool) entities.AreaVerdeFicha {
 	if m == nil {

@@ -20,19 +20,6 @@ func CuadrillaModelToEntity(m *models.CuadrillaModel) *entities.Cuadrilla {
 	}
 }
 
-// CuadrillaEntityToModel maps domain Cuadrilla to CuadrillaModel.
-func CuadrillaEntityToModel(e *entities.Cuadrilla) *models.CuadrillaModel {
-	if e == nil {
-		return nil
-	}
-	return &models.CuadrillaModel{
-		ID:             e.ID,
-		NombreFicticio: e.NombreFicticio,
-		Turno:          e.Turno,
-		Activo:         e.Activo,
-	}
-}
-
 // ZonaSupervisionModelToEntity maps ZonaSupervisionModel to domain ZonaSupervision.
 func ZonaSupervisionModelToEntity(m *models.ZonaSupervisionModel, conGeom bool) *entities.ZonaSupervision {
 	if m == nil {

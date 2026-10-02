@@ -1,6 +1,16 @@
 #!/bin/sh
 # Compatible con el sh de busybox (Alpine). Sin bash.
 set -eu
+
+# La imagen no trae una clave. El valor de laboratorio (cuentas ficticias) vive
+# solo en el compose local; ver .env.example (CAMPUS_DEV_PASSWORD=pando-local).
+if [ -z "${CAMPUS_DEV_PASSWORD:-}" ]; then
+  echo "ERROR: falta CAMPUS_DEV_PASSWORD. La imagen no incluye una clave." >&2
+  echo "En desarrollo local el valor documentado, solo para cuentas ficticias, es pando-local (docker-compose.yml y .env.example)." >&2
+  echo "En cualquier otro entorno inyecte CAMPUS_DEV_PASSWORD. No reutilice la clave de laboratorio." >&2
+  exit 1
+fi
+
 MIGRATE_BIN="${MIGRATE_BIN:-/usr/local/bin/migrate}"
 ETL_BIN="${ETL_BIN:-/usr/local/bin/etl}"
 API_BIN="${API_BIN:-/usr/local/bin/api}"
