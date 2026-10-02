@@ -105,31 +105,103 @@ El workflow `ci` publica, en cada push que no es un pull request, dos imágenes 
 
 | Workflow | Qué hace |
 | --- | --- |
-| `.github/workflows/ci.yml` | pruebas de `apps/api`, web, backend, prohibición de `AutoMigrate` / borrados / initdb, y publicación de las imágenes por SHA |
-| `.github/workflows/deploy.yml` | despliegue. Espera a que el CI de ese SHA esté en verde |
+| `.github/workflows/ci.yml` | Pruebas de `apps/api`, web, backend con PostGIS, escaneo de seguridad (Trivy fs/image, Gitleaks), prohibición de `AutoMigrate`/borrados/initdb, y publicación de imágenes inmutables por SHA en GHCR |
+| `.github/workflows/deploy.yml` | Despliegue en runner self-hosted por ambiente. Valida CI en verde, controla promoción estricta por SHA, solicita aprobación en producción y ejecuta `deploy/host-deploy.sh` |
 
-Disparo automático de `deploy.yml`:
+Disparo de `deploy.yml`:
 
-- push a `develop` o a `backend/arquitectura-equipo` → ambiente `develop`
-- tag `rc-*` → ambiente `qa`
-- producción no sale de un push
+- **develop:** push automático a `develop` (tras CI en verde) o `workflow_dispatch`.
+- **qa:** push de tag `rc-*` o `workflow_dispatch` (exige promoción: despliegue previo exitoso en `develop`).
+- **produccion:** solo `workflow_dispatch` manual (exige promoción: despliegue previo exitoso en `qa`, y aprobación humana obligatoria).
 
-A mano:
+### Despliegue con Runners Self-Hosted
+
+Cada instancia EC2 de VerdePUCP corre un runner self-hosted de GitHub Actions con etiquetas fijas según el ambiente:
+- **develop:** `[self-hosted, campus-develop]`
+- **qa:** `[self-hosted, campus-qa]`
+- **produccion:** `[self-hosted, campus-prod]`
+
+El job `deploy` corre directamente dentro de la máquina destino. No requiere credenciales AWS ni variables de Terraform en los secretos de GitHub Actions. El runner ejecuta:
 
 ```bash
-gh workflow run deploy --ref backend/arquitectura-equipo -f ambiente=qa -f ref=<sha>
-gh workflow run deploy --ref backend/arquitectura-equipo -f ambiente=produccion -f ref=<sha>
-gh workflow run deploy --ref backend/arquitectura-equipo -f ambiente=produccion -f rollback=<sha-anterior>
+bash deploy/host-deploy.sh <ambiente> --sha <sha> [--rollback <tag>]
 ```
 
-`ref` vacío usa el commit de la rama desde la que se dispara el workflow. No dispare el workflow contra `main` mientras `deploy.yml` no esté en esa rama.
+`host-deploy.sh` lee su configuración del archivo local `$CAMPUS_HOME/host.env` en la EC2, autentica en GHCR, realiza backup previo en producción, actualiza contenedores, valida con smoke test local y gestiona el rollback automático en caso de fallo.
 
-El job de deploy usa `environment:` con el nombre del ambiente (`develop`, `qa`, `produccion`). La aprobación manual de producción es la protección **Required reviewers** de ese environment. El YAML no puede crearla: hay que ponerla en GitHub antes del primer despliegue real.
+**Sin omisiones artificiales:** Si el runner self-hosted del ambiente no está disponible, el job permanece en cola de GitHub Actions hasta que se inicie o venza el tiempo límite (`timeout-minutes: 30`). No hay estados "omitido en verde".
 
-El comportamiento ante la falta de credenciales o secretos (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `TF_VAR_db_password` o `TF_VAR_dev_password`) depende del tipo de evento que disparó el workflow:
-- **Disparo manual (`workflow_dispatch`):** la falta de credenciales en **cualquier** ambiente (`develop`, `qa` o `produccion`) es un error explícito (código de salida 1, anotación `::error::`), impidiendo que una orden manual de despliegue termine erróneamente en verde cuando no se pudo ejecutar.
-- **Disparo automático por `push` (ramas `develop` / `backend/arquitectura-equipo` o tags `rc-*`):** si faltan credenciales del lab en `develop` o `qa`, el paso finaliza con código de salida 0 para no romper el pipeline general (el lab suele estar cerrado fuera de sesiones de trabajo), pero emite una advertencia (`::warning::`), marca la salida del paso `desplegado=false` y registra una sección clara «### Despliegue en <ambiente>: OMITIDO» en `$GITHUB_STEP_SUMMARY`.
-- **Producción:** falla de forma estricta (código 1, anotación `::error::`) ante cualquier falta de credenciales, independientemente del origen del evento.
+### Guía de Promoción entre Ambientes
+
+El flujo de despliegue exige avanzar el mismo SHA verificado a través de los ambientes:
+
+1. **Despliegue inicial en develop:**
+   Se produce automáticamente tras hacer push a la rama `develop` una vez que el workflow `ci.yml` finaliza exitosamente.
+
+2. **Promoción a QA:**
+   Una vez verificado el funcionamiento en develop, se dispara la promoción hacia qa indicando el SHA:
+   ```bash
+   gh workflow run deploy.yml -f ambiente=qa -f ref=<sha>
+   ```
+   O creando un tag de release candidate sobre dicho commit (`git tag rc-1.0.0 <sha> && git push origin rc-1.0.0`).
+   El workflow consulta la API de Deployments de GitHub (`gh api repos/:owner/:repo/deployments?sha=<sha>&environment=develop`) y exige que el commit tenga un status `success` en `develop`. Si nunca se desplegó en develop o falló, la promoción se rechaza con error explícito.
+
+3. **Promoción a Producción:**
+   Verificado QA, se promueve el mismo commit exacto a producción:
+   ```bash
+   gh workflow run deploy.yml -f ambiente=produccion -f ref=<sha>
+   ```
+   El workflow exige que el commit tenga un despliegue previo con status `success` en `qa`.
+
+4. **Aprobación manual de Producción:**
+   El ambiente `produccion` está protegido por la política de **Required reviewers**. Al lanzarse el workflow, el job `deploy` entra en estado de espera y notifica a los revisores. Un revisor autorizado debe aprobar el despliegue desde la interfaz de GitHub Actions o vía CLI:
+   ```bash
+   gh run review <run-id> --approve -c "Despliegue a producción autorizado tras verificación en QA"
+   ```
+   Adicionalmente, se puede activar un temporizador de espera (*wait-timer*) de cortesía (por ejemplo, 5 minutos) para permitir cancelaciones de último momento.
+
+5. **Rollback:**
+   Si se requiere volver a una versión previa:
+   ```bash
+   gh workflow run deploy.yml -f ambiente=<qa|produccion> -f rollback=<sha-anterior-o-tag-rc>
+   ```
+   En caso de rollback explícito, el workflow omite la exigencia de despliegue previo del commit por promoción y valida que el tag corresponda a un SHA de 40 dígitos hexadecimales o un tag `rc-*`.
+
+### Variables por Environment en GitHub
+
+El workflow espera las siguientes variables configuradas en cada ambiente de GitHub (**Settings → Environments**):
+
+| Variable | Dónde | Propósito | Ejemplo |
+| --- | --- | --- | --- |
+| `PUBLIC_URL` | Cada environment | URL pública del servicio. Utilizada para registrar enlaces en el resumen del despliegue y para la verificación post-despliegue (`GET /health`) | `http://198.51.100.1:8088` o `https://campusverde.pucp.edu.pe` |
+
+### Configuración requerida del Operador (con `gh`)
+
+El operador del repositorio debe configurar las protecciones y variables mediante `gh` o la consola web de GitHub (referencia informativa; no ejecutar en pipelines automatizados):
+
+```bash
+# 1. Crear los ambientes
+gh api -X PUT repos/:owner/:repo/environments/develop
+gh api -X PUT repos/:owner/:repo/environments/qa
+gh api -X PUT repos/:owner/:repo/environments/produccion
+
+# 2. Configurar revisores requeridos (Required Reviewers) y wait-timer en producción
+gh api -X PUT repos/:owner/:repo/environments/produccion \
+  -f 'reviewers[][type]=User' -F 'reviewers[][id]=<user-id-o-equipo>' \
+  -F 'wait_timer=5'
+
+# 3. Restricción de ramas permitidas para despliegue en producción (Branch Policy)
+gh api -X PUT repos/:owner/:repo/environments/produccion \
+  -F 'deployment_branch_policy[protected_branches]=true' \
+  -F 'deployment_branch_policy[custom_branch_policies]=false'
+
+# 4. Asignar variable PUBLIC_URL por ambiente
+gh variable set PUBLIC_URL --env develop --body 'http://<ip-develop>:8088'
+gh variable set PUBLIC_URL --env qa --body 'http://<ip-qa>:8188'
+gh variable set PUBLIC_URL --env produccion --body 'http://<ip-produccion>:8288'
+```
+
+*Nota sobre seguridad de Forks:* En **Settings → Actions → General → Fork pull request workflows**, asegúrese de tener configurado "Require approval for all outside collaborators" para prevenir ejecución no autorizada de acciones en runners del repositorio.
 
 En producción el script (`deploy/deploy.sh produccion --aws`) ejecuta el siguiente orden estricto:
 
@@ -215,10 +287,10 @@ El stack que ya está desplegado vive en el workspace `default`. Trátelo como p
 
 ## Flujo develop → qa → producción
 
-1. Se integra en `develop` o en `backend/arquitectura-equipo`. El CI prueba y publica el SHA. Si queda en verde, `deploy.yml` despliega ese SHA a develop.
-2. Cuando develop está aceptado, se etiqueta `rc-<algo>` en ese commit. El CI publica el tag y `deploy.yml` despliega qa.
-3. Producción: una persona dispara `workflow_dispatch` con `ambiente=produccion` y el `ref` del SHA que pasó por qa. GitHub pide la aprobación del environment. El job hace snapshot, backup, conteos, despliegue, smoke y conteos otra vez.
-4. Para volver atrás: el mismo workflow con `rollback` = el SHA que estaba sirviendo. No se revierten columnas.
+1. Se integra en `develop`. El CI prueba y publica el SHA. Si queda en verde, `deploy.yml` despliega ese SHA a develop.
+2. Cuando develop está aceptado, se promueve a QA vía `workflow_dispatch` indicando el SHA o etiquetando `rc-<algo>` en ese commit. El CI valida y publica el tag, y `deploy.yml` despliega qa tras comprobar el despliegue previo exitoso en develop.
+3. Producción: una persona dispara `workflow_dispatch` con `ambiente=produccion` y el `ref` del SHA que pasó por qa. El workflow exige que el commit tenga despliegue exitoso en qa y GitHub pide la aprobación del environment `produccion` (Required reviewers).
+4. Para volver atrás: el mismo workflow con `rollback` = el SHA o tag `rc-*` que estaba sirviendo (omite verificación previa por promoción). No se revierten columnas.
 
 El checklist largo del corte (ensayo en copia, evidencias, tag anotado) sigue siendo el de [`RUNBOOK-CORTE-PRODUCCION.md`](RUNBOOK-CORTE-PRODUCCION.md). El workflow automatiza el backup, el snapshot, los conteos y el smoke; no sustituye la decisión de la persona que aprueba.
 
