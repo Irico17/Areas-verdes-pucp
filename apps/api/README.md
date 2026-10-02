@@ -8,7 +8,7 @@ El mapa no tiene backend propio: consume estas rutas.
 
 ```
 cmd/api          proceso HTTP
-cmd/migrate      aplica apps/api/migrations/*.sql
+cmd/migrate      aplica db/migrations/*.sql (MIGRATIONS_DIR)
 cmd/etl          data/raw → data/v1 → PostGIS
 internal/config  DATABASE_URL, API_ADDR, rutas del repo
 internal/db      conexión GORM / Postgres
@@ -17,7 +17,7 @@ internal/handlers
 internal/catastro lectura GeoJSON
 internal/etl     normalización (sin el campo jefes) y carga
 internal/migrate
-migrations/      001 PostGIS, 002 catastro
+../db/migrations esquema vigente (esta carpeta ya no guarda los .sql)
 openapi.yaml
 ```
 

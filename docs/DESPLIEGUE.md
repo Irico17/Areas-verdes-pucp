@@ -52,3 +52,9 @@ El lab publica `http://<elastic-ip>` sin TLS. Una cookie `Secure` no se guarda e
 - Si no, en la instancia mira `/opt/campus/certs/fullchain.pem` y `privkey.pem` (el mismo par que el contenedor web monta en `/etc/nginx/certs`). Con los dos archivos pone `true`. Sin ellos pone `false`.
 
 Después de copiar o quitar el certificado hay que volver a correr `poner-secretos.sh` y reiniciar la API para que la cookie coincida con nginx.
+
+## Esquema
+
+La imagen de la API copia `db/migrations` a `/opt/campus/migrations` y el compose fija `MIGRATIONS_DIR=/opt/campus/migrations`. Postgres no monta ningún `.sql` en `docker-entrypoint-initdb.d`. `db/referencia/` no se aplica.
+
+El corte de la base que ya está en la EC2 (backup, snapshot, conteos, tag de rollback) está en `docs/RUNBOOK-CORTE-PRODUCCION.md`. No es un paso de este flujo de sesión.

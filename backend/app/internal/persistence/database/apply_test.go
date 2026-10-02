@@ -51,7 +51,7 @@ func findMigrationsDir() string {
 	wd, err := os.Getwd()
 	if err == nil {
 		for dir := wd; ; {
-			candidate := filepath.Join(dir, "apps", "api", "migrations")
+			candidate := filepath.Join(dir, "db", "migrations")
 			if fi, err := os.Stat(candidate); err == nil && !fi.IsDir() || (err == nil && fi.IsDir()) {
 				if fi.IsDir() {
 					return candidate
@@ -64,7 +64,7 @@ func findMigrationsDir() string {
 			dir = parent
 		}
 	}
-	return filepath.Join("..", "..", "..", "..", "..", "apps", "api", "migrations")
+	return filepath.Join("..", "..", "..", "..", "..", "db", "migrations")
 }
 
 func recrear(t *testing.T, admin *sql.DB, name string) {

@@ -16,7 +16,7 @@ help:
 	@echo "make docker-down # alias docker compose down"
 	@echo "make stack       # postgis + api + web en compose"
 	@echo "make wait        # espera a que Postgres acepte conexiones"
-	@echo "make migrate     # aplica SQL de apps/api/migrations (backend/app)"
+	@echo "make migrate     # aplica SQL de db/migrations (backend/app)"
 	@echo "make etl         # data/raw → data/v1 → PostGIS"
 	@echo "make etl-lote    # upsert del frente 1E (sin TRUNCATE)"
 	@echo "make sectores    # data/raw/lote/jefe_de_grupo.json → data/v1/zonas_sector.json"

@@ -144,7 +144,13 @@ Detalle de fases mapa/API: `docs/PLAN-INTEGRACION-MAPA.md`. Plan legacy amplio: 
 - Cloud AWS (RNF backlog); detalles con TI.
 - Secretos solo por env. Postgres sin exposición pública.
 
-## 9. Estado de implementación
+## 9. Esquema vigente
+
+La base se define solo con `db/migrations` (`001` en adelante, mismos nombres que `schema_migrations.version`). `047` y `048` agregan columnas nulas. No hay carga por `initdb` ni `AutoMigrate`.
+
+El proceso que atiende `/areas-verdes/v1` (y el alias `/api/v1`) es `backend/app`. `apps/api` queda como referencia de código y lee el mismo directorio de migraciones. El esquema del equipo no se copia a la base; ver ADR-013 en `docs/DECISIONES.md` y `db/referencia/README.md`.
+
+## 10. Estado de implementación
 
 Fases A y B del plan de mapa están en el repo: API Go (`apps/api`), Compose de PostgreSQL+PostGIS y ETL de catastro (`make bootstrap`). Siguen fuera de este corte:
 

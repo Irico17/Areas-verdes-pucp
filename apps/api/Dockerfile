@@ -13,7 +13,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=build /out/api /out/migrate /out/etl /usr/local/bin/
-COPY apps/api/migrations /opt/campus/migrations
+COPY db/migrations /opt/campus/migrations
 COPY apps/api/openapi.yaml /opt/campus/openapi.yaml
 COPY apps/api/docker-entrypoint.sh /entrypoint.sh
 COPY data/raw /opt/campus/raw

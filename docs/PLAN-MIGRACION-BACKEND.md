@@ -9,7 +9,7 @@
 
 ## Corrección 2026-10-01 (decisión del responsable): nuestra BD es la única fuente de verdad
 
-**Regla.** La base de datos que se construye con `apps/api/migrations` (`001`–`046`) es la única fuente de verdad. El esquema `db/schema_v1.1.sql` del equipo **no se adopta**: no se aplica, no se monta en `initdb`, no se replica en vistas (`v11`, `nucleo`) ni se agregan columnas o tablas solo para parecerse a él. Las decisiones D1–D5 del análisis quedan **cerradas «no aplica»**. Los riesgos R-19 a R-23 (de la versión anterior de esta sección) quedan **archivados** (ver §8).
+**Regla.** La base de datos que se construye con las migraciones `001`–`048` (desde el lote 23 en `db/migrations/`, antes en `apps/api/migrations`) es la única fuente de verdad. El esquema `db/schema_v1.1.sql` del equipo **no se adopta**: no se aplica, no se monta en `initdb`, no se replica en vistas (`v11`, `nucleo`) ni se agregan columnas o tablas solo para parecerse a él. Las decisiones D1–D5 del análisis quedan **cerradas «no aplica»**. Los riesgos R-19 a R-23 (de la versión anterior de esta sección) quedan **archivados** (ver §8).
 
 **Qué sí se toma del equipo (solo arquitectura de backend, `main` `0807825`):**
 
@@ -26,7 +26,7 @@
 
 ### ADR-PLAN-01: `db/migrations` es la fuente de verdad del esquema
 - **Contexto:** el equipo mantiene un esquema propio (`schema_v1.1.sql`, antes `schema_nucleo_v0.2.sql`) y un compose que lo carga por `initdb`. Nuestra BD tiene datos reales cargados (521 áreas, labores, evidencias, `cambios`).
-- **Decisión:** el esquema se define **solo** por migraciones SQL aditivas e idempotentes numeradas (`NNN_nombre.sql`). Durante la transición viven en `apps/api/migrations`; tras el corte (lote 23, manual) en `db/migrations/` con los mismos nombres. **Próximo número libre: `047`.** La BD con datos **nunca** se carga por `initdb` ni se le aplica un esquema completo; `AutoMigrate` está prohibido.
+- **Decisión:** el esquema se define **solo** por migraciones SQL aditivas e idempotentes numeradas (`NNN_nombre.sql`). Durante la transición vivieron en `apps/api/migrations`; el lote 23 del repositorio las movió a `db/migrations/` con los mismos nombres. **Próximo número libre: `049`.** `047` y `048` ya existen. No hay `049_bajas_logicas_catastro`: `activo` ya estaba en áreas y zonas. La BD con datos **nunca** se carga por `initdb` ni se le aplica un esquema completo; `AutoMigrate` está prohibido. El corte en la EC2 no se ejecutó: checklist en `docs/RUNBOOK-CORTE-PRODUCCION.md`. `db/schema_nucleo_v0.2.sql` no está en este repositorio.
 - **Consecuencias:** el CI (lote 22) falla si encuentra `AutoMigrate`, `DROP TABLE|DROP COLUMN|TRUNCATE` en migraciones nuevas, o `.sql` montado en `docker-entrypoint-initdb.d` del compose principal. Cualquier herramienta de introspección (`modelgen`) corre solo contra copias desechables.
 
 ---
@@ -712,6 +712,7 @@ Cambios de código asociados (lote 6):
 ### Lote 23: Corte en producción y mudanza de migraciones
 - **EXCLUIDO de toda ejecución automática (2026-10-01):** ni agentes ni scripts ejecutan este lote; se hace solo con orden expresa del responsable, siguiendo el §4.4 completo.
 - **Alcance:** `git mv apps/api/migrations/*.sql db/migrations/` (**mismos nombres**), `MIGRATIONS_DIR=/opt/campus/migrations` apuntando al nuevo origen en el dockerfile, `db/schema_nucleo_v0.2.sql` a `db/referencia/`, ADR en `docs/DECISIONES.md`, actualización de `DESPLIEGUE.md`, `DEPLOY-AWS.md`, `OPERACION.md`, `ARQUITECTURA.md` y `README.md`. Ejecutar el §4.4 completo en la EC2.
+- **Hecho en el repositorio, sin corte:** los `.sql` están en `db/migrations/` (incluye `047` y `048`). `schema_nucleo_v0.2.sql` no existe en este repo; `db/referencia/README.md` deja escrito que no se aplica. El checklist del §4.4 está en `docs/RUNBOOK-CORTE-PRODUCCION.md` para el responsable. No se ejecutó contra la EC2.
 - **Aceptación:** checklist del §4.4 firmado: backup y snapshot con fecha; conteos antes = después en todas las tablas existentes; `/health` ok desde `campus-healthcheck`; login, mapa, labor y evidencia verificados en producción; tag de rollback anotado. `apps/api` queda **solo como referencia** (código, no datos) y su retiro se hace en un PR aparte, ≥14 días después y sin tráfico en `/api/v1`.
 
 ### Lote 24: Migraciones propias aditivas y huecos del frontend

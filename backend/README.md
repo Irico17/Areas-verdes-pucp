@@ -148,7 +148,7 @@ Por seguridad, `modelgen` cuenta con guardas estrictas que abortan si:
 psql "postgres://campus:campus@127.0.0.1:5432/campus_verde?sslmode=disable" -c "CREATE DATABASE vp_modelgen_x"
 
 # 2. Aplicar nuestras migraciones con cmd/migrate
-(cd app && DATABASE_URL="postgres://campus:campus@127.0.0.1:5432/vp_modelgen_x?sslmode=disable" MIGRATIONS_DIR="../../apps/api/migrations" go run ./cmd/migrate)
+(cd app && DATABASE_URL="postgres://campus:campus@127.0.0.1:5432/vp_modelgen_x?sslmode=disable" MIGRATIONS_DIR="../../db/migrations" go run ./cmd/migrate)
 
 # 3. Ejecutar gen-models apuntando a la base desechable
 DATABASE_URL="postgres://campus:campus@127.0.0.1:5432/vp_modelgen_x?sslmode=disable" make gen-models

@@ -138,3 +138,22 @@ Registro de decisiones del scaffold `campus-verde`. Zona horaria de referencia: 
 - El ETL vive en el mismo módulo Go (`cmd/etl`). Recarga el catastro semilla (TRUNCATE + insert) de forma idempotente.
 
 **Consecuencias:** `data/v1/zonas.geojson` y `GET /api/v1/geo/zonas` no contienen nombres de jefes. Re-ejecutar `make etl` sustituye esas tablas; no es un cargador incremental de edición humana.
+
+---
+
+## ADR-013 — El esquema vive en `db/migrations`, no en un SQL de initdb
+
+**Fecha:** 2026-10-02
+
+**Contexto:** La base con datos cargados se construyó con migraciones numeradas (`001`–`046`, más `047` y `048`). El equipo describe otro esquema (`schema_v1.1.sql`, antes `schema_nucleo_v0.2.sql`) y un compose que lo monta en `docker-entrypoint-initdb.d`. Ese archivo de núcleo no está en este repositorio. Aplicarlo crearía tablas paralelas junto a las que ya tienen datos.
+
+**Decisión:**
+
+- La única definición del esquema es `db/migrations/*.sql`, con los mismos nombres de archivo que ya registró `schema_migrations.version`.
+- La imagen copia esa carpeta a `/opt/campus/migrations` y `MIGRATIONS_DIR` apunta ahí. El entrypoint sale si el directorio no existe.
+- `apps/api` queda como referencia de código. Su `migrate` y sus pruebas leen `db/migrations`.
+- `db/referencia/` no se monta en Postgres. No se aplica `schema_nucleo_v0.2.sql` ni `schema_v1.1.sql`.
+- No hay `AutoMigrate`. Las migraciones nuevas son aditivas e idempotentes. No se hace `DROP`/`TRUNCATE`/`DELETE FROM` de datos cargados.
+- El corte en la EC2 (backup, snapshot, conteos, tag de rollback) lo ejecuta una persona con `docs/RUNBOOK-CORTE-PRODUCCION.md`. Este ADR no lo autoriza por sí solo.
+
+**Consecuencias:** Un volumen nuevo de Postgres queda vacío hasta que corre `migrate`. No se crea el núcleo del equipo al lado de nuestras tablas.

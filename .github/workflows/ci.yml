@@ -82,7 +82,8 @@ jobs:
               r"(?i)\b(?:DROP\s+TABLE|DROP\s+COLUMN|TRUNCATE|DELETE\s+FROM)\b"
           )
           checked = 0
-          bases = [root / "apps/api/migrations", root / "db/migrations"]
+          # Fuente vigente: db/migrations. apps/api/migrations se revisa si reaparece.
+          bases = [root / "db/migrations", root / "apps/api/migrations"]
           for base in bases:
               if not base.is_dir():
                   continue

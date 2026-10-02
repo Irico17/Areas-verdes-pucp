@@ -115,8 +115,11 @@ Detalle del contrato: [`apps/api/openapi.yaml`](apps/api/openapi.yaml) y [`apps/
 ## Estructura
 
 ```
-apps/api          API Go (cmd/api, cmd/migrate, cmd/etl)
+backend/app       API que sirve /areas-verdes/v1 (y el alias /api/v1)
+apps/api          API anterior, solo referencia de código
 apps/web          Visor PWA (React, MapLibre, OSM)
+db/migrations     esquema SQL (001 en adelante). Fuente de verdad
+db/referencia     esquemas ajenos: no se aplican ni se montan en initdb
 data/raw          recovery, no editar
 data/v1           GeoJSON normalizado (salida del ETL)
 data/mocks        reservas FAKE
@@ -124,6 +127,8 @@ docs/             arquitectura, ADRs, plan de mapa
 scripts/          espera de Postgres, bootstrap, conteos
 docker-compose.yml
 ```
+
+El esquema no se carga con `initdb`. `make migrate` aplica `db/migrations`. La imagen copia esa carpeta a `/opt/campus/migrations`. El corte de la base que ya está en servicio está descrito en [`docs/RUNBOOK-CORTE-PRODUCCION.md`](docs/RUNBOOK-CORTE-PRODUCCION.md) y lo ejecuta el responsable; no es un paso de este README.
 
 ## Documentación
 
@@ -133,7 +138,8 @@ docker-compose.yml
 | [`docs/PLAN-INTEGRACION-MAPA.md`](docs/PLAN-INTEGRACION-MAPA.md) | Fases A–F del visor, hechas |
 | [`docs/PLAN-PRODUCTO-Y-UI.md`](docs/PLAN-PRODUCTO-Y-UI.md) | Backlog, interfaz y olas de producto |
 | [`docs/PLAN-MIGRACION.md`](docs/PLAN-MIGRACION.md) | Migración legacy → DP2 |
-| [`docs/DECISIONES.md`](docs/DECISIONES.md) | ADRs, incluido CRS y PII de zonas |
+| [`docs/DECISIONES.md`](docs/DECISIONES.md) | ADRs, incluido CRS, PII de zonas y `db/migrations` |
+| [`docs/RUNBOOK-CORTE-PRODUCCION.md`](docs/RUNBOOK-CORTE-PRODUCCION.md) | Checklist del corte en la EC2 (no ejecutado desde el repo) |
 | [`docs/legacy-recovery/`](docs/legacy-recovery/) | Análisis del monolito Leaflet |
 
 El visor crea labores con un pin (Jefatura y Coordinación), las asigna a un equipo y muestra la bitácora. El rol Capataz solo recibe las de su equipo. Si la API no responde, el alta queda en IndexedDB y se reintenta con el mismo UUID.

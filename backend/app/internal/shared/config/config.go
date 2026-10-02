@@ -156,7 +156,7 @@ func New() *Config {
 			OpenAPIPath:   valueOrDefault("OPENAPI_PATH", filepath.Join(root, "apps", "api", "openapi.yaml")),
 		},
 		Migraciones: MigracionesConfig{
-			Dir: valueOrDefault("MIGRATIONS_DIR", filepath.Join(root, "apps", "api", "migrations")),
+			Dir: valueOrDefault("MIGRATIONS_DIR", filepath.Join(root, "db", "migrations")),
 		},
 		Accesos: AccesosConfig{
 			DevPassword: os.Getenv("CAMPUS_DEV_PASSWORD"),

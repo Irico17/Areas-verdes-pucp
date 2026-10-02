@@ -32,6 +32,7 @@ services:
       SERVER_GIN_MODE: release
       SWAGGER_ENABLED: "false"
       CAMPUS_DEV_PASSWORD: ${CAMPUS_DEV_PASSWORD:-pando-local}
+      MIGRATIONS_DIR: /opt/campus/migrations
       EVIDENCIAS_BUCKET: ${EVIDENCIAS_BUCKET:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}

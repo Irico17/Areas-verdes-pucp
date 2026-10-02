@@ -63,7 +63,7 @@ func TestSubirEvidencia409YIdempotente(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer sqlDB.Close()
-	dir := filepath.Join("..", "..", "migrations")
+	dir := filepath.Join("..", "..", "..", "..", "db", "migrations")
 	if err := migrate.Apply(gdb, dir); err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +197,7 @@ func TestArchivoCabecerasCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer sqlDB.Close()
-	dir := filepath.Join("..", "..", "migrations")
+	dir := filepath.Join("..", "..", "..", "..", "db", "migrations")
 	if err := migrate.Apply(gdb, dir); err != nil {
 		t.Fatal(err)
 	}
@@ -311,7 +311,7 @@ func TestJefaturaPuedeSubirEvidenciaYCapatazLimitadoASuLabor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir := filepath.Join("..", "..", "migrations")
+	dir := filepath.Join("..", "..", "..", "..", "db", "migrations")
 	if err := migrate.Apply(gdb, dir); err != nil {
 		t.Fatal(err)
 	}

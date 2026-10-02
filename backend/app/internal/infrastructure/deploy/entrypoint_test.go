@@ -21,6 +21,8 @@ func createFakeBinary(t *testing.T, dir, name, script string) string {
 }
 
 func TestDockerEntrypoint(t *testing.T) {
+	t.Setenv("CAMPUS_DEV_PASSWORD", "pando-local")
+	t.Setenv("MIGRATIONS_DIR", t.TempDir())
 	entrypointPath, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "docker-entrypoint.sh"))
 	if err != nil {
 		t.Fatal(err)

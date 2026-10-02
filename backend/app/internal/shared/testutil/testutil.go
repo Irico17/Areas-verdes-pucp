@@ -33,9 +33,9 @@ func FindMigrationsDir() string {
 		}
 	}
 	root := FindRepoRoot()
-	candidate := filepath.Join(root, "apps", "api", "migrations")
+	candidate := filepath.Join(root, "db", "migrations")
 	if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
 		return candidate
 	}
-	return filepath.Join("..", "..", "..", "..", "..", "apps", "api", "migrations")
+	return filepath.Join("..", "..", "..", "..", "..", "db", "migrations")
 }

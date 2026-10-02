@@ -56,7 +56,7 @@ func TestRevertirLoteRestauraElAntesYNoPisaEdicionPosterior(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer sqlDB.Close()
-	dir := filepath.Join("..", "..", "migrations")
+	dir := filepath.Join("..", "..", "..", "..", "db", "migrations")
 	if err := migrate.Apply(gdb, dir); err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +294,7 @@ func abrirLotes(t *testing.T) *gorm.DB {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { sqlDB.Close() })
-	if err := migrate.Apply(gdb, filepath.Join("..", "..", "migrations")); err != nil {
+	if err := migrate.Apply(gdb, filepath.Join("..", "..", "..", "..", "db", "migrations")); err != nil {
 		t.Fatal(err)
 	}
 	return gdb

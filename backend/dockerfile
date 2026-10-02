@@ -1,4 +1,4 @@
-# Contexto de build: raíz del repositorio (hace falta apps/api/migrations y data/).
+# Contexto de build: raíz del repositorio (hace falta db/migrations y data/).
 FROM golang:1.25.3-alpine AS build
 
 WORKDIR /src
@@ -21,8 +21,8 @@ RUN apk add --no-cache ca-certificates tzdata \
  && adduser -S -D -H -u 10001 -G app app
 
 COPY --from=build /out/api /out/migrate /out/etl /out/etl-lote /out/sectores /usr/local/bin/
-# Las migraciones siguen en apps/api hasta el lote 23. No se mudan aquí.
-COPY apps/api/migrations /opt/campus/migrations
+# Origen del esquema: db/migrations (mismos nombres que schema_migrations.version).
+COPY db/migrations /opt/campus/migrations
 COPY apps/api/openapi.yaml /opt/campus/openapi.yaml
 COPY apps/api/openapi /opt/campus/openapi
 COPY data/raw /opt/campus/raw

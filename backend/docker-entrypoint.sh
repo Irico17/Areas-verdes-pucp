@@ -11,6 +11,13 @@ if [ -z "${CAMPUS_DEV_PASSWORD:-}" ]; then
   exit 1
 fi
 
+MIGRATIONS_DIR="${MIGRATIONS_DIR:-/opt/campus/migrations}"
+export MIGRATIONS_DIR
+if [ ! -d "$MIGRATIONS_DIR" ]; then
+  echo "ERROR: MIGRATIONS_DIR=$MIGRATIONS_DIR no existe. El esquema se copia desde db/migrations." >&2
+  exit 1
+fi
+
 MIGRATE_BIN="${MIGRATE_BIN:-/usr/local/bin/migrate}"
 ETL_BIN="${ETL_BIN:-/usr/local/bin/etl}"
 API_BIN="${API_BIN:-/usr/local/bin/api}"

@@ -178,7 +178,7 @@ func TestCapatazFichaYAvancesPermisos(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir := filepath.Join("..", "..", "migrations")
+	dir := filepath.Join("..", "..", "..", "..", "db", "migrations")
 	if err := migrate.Apply(gdb, dir); err != nil {
 		t.Fatal(err)
 	}

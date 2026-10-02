@@ -38,7 +38,7 @@ func Load() Config {
 		RepoRoot:         root,
 		RawDir:           env("DATA_RAW_DIR", filepath.Join(root, "data", "raw")),
 		V1Dir:            env("DATA_V1_DIR", filepath.Join(root, "data", "v1")),
-		MigrationsDir:    env("MIGRATIONS_DIR", filepath.Join(root, "apps", "api", "migrations")),
+		MigrationsDir:    env("MIGRATIONS_DIR", filepath.Join(root, "db", "migrations")),
 		OpenAPIPath:      env("OPENAPI_PATH", filepath.Join(root, "apps", "api", "openapi.yaml")),
 		EdificiosPath:    env("EDIFICIOS_PATH", filepath.Join(root, "data", "osm", "edificios_pando.geojson")),
 		ReservasPath:     env("RESERVAS_MOCK_PATH", filepath.Join(root, "data", "mocks", "reservas_agenda.mock.json")),

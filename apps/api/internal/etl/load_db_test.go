@@ -52,7 +52,7 @@ func TestLoadSobreBaseMigrada(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer sqlDB.Close()
-	dir := filepath.Join("..", "..", "migrations")
+	dir := filepath.Join("..", "..", "..", "..", "db", "migrations")
 	if err := migrate.Apply(gdb, dir); err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +121,7 @@ func TestLoadRenombraCodigoDuplicado(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer sqlDB.Close()
-	dir := filepath.Join("..", "..", "migrations")
+	dir := filepath.Join("..", "..", "..", "..", "db", "migrations")
 	if err := migrate.Apply(gdb, dir); err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +299,7 @@ func TestLoadSeNiegaSiHayEjemplares(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer sqlDB.Close()
-	dir := filepath.Join("..", "..", "migrations")
+	dir := filepath.Join("..", "..", "..", "..", "db", "migrations")
 	if err := migrate.Apply(gdb, dir); err != nil {
 		t.Fatal(err)
 	}

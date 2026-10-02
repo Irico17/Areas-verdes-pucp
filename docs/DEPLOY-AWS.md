@@ -32,7 +32,7 @@ export AWS_DEFAULT_REGION=us-east-1
 bash scripts/deploy-learner-lab.sh
 ```
 
-El script hace `terraform init -reconfigure` y `apply` en `infra/terraform`, construye las dos imágenes, las sube a ECR y pide a la instancia, por SSM, que reinicie `campus.service`. Ese servicio hace `docker compose pull` y `up`. La API, al arrancar, migra y corre el ETL una vez (521 áreas y el resto del catastro) si `/data/.etl-done` no existe.
+El script hace `terraform init -reconfigure` y `apply` en `infra/terraform`, construye las dos imágenes, las sube a ECR y pide a la instancia, por SSM, que reinicie `campus.service`. Ese servicio hace `docker compose pull` y `up`. La API, al arrancar, aplica `db/migrations` desde `/opt/campus/migrations` y corre el ETL una vez (521 áreas y el resto del catastro) si `/data/.etl-done` no existe y `areas_verdes` está vacía. No hay esquema montado en `initdb`. El checklist para cortar la base que ya tiene datos está en `docs/RUNBOOK-CORTE-PRODUCCION.md`.
 
 El estado de Terraform vive en S3, no en la laptop. El cubo es `campus-verde-tfstate-890991908027` (versionado, cifrado SSE-S3, sin acceso público), clave `learner-lab/terraform.tfstate`, región `us-east-1`. No hay tabla de lock: no haga dos `apply` a la vez. El bloque está en `infra/terraform/versions.tf`:
 

@@ -55,7 +55,7 @@ func migrarDBTemporal(t *testing.T, name string) *gorm.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := migrate.Apply(gdb, filepath.Join("..", "..", "migrations")); err != nil {
+	if err := migrate.Apply(gdb, filepath.Join("..", "..", "..", "..", "db", "migrations")); err != nil {
 		t.Fatal(err)
 	}
 	return gdb

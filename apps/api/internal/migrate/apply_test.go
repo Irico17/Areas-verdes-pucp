@@ -27,7 +27,7 @@ func TestMigraciones001a019EnVacioYSobre008(t *testing.T) {
 		t.Skipf("sin postgres de prueba: %v", err)
 	}
 
-	dir := filepath.Join("..", "..", "migrations")
+	dir := filepath.Join("..", "..", "..", "..", "db", "migrations")
 	vacia := "campus_verde_ola1a_vacia"
 	actual := "campus_verde_ola1a_actual"
 	recrear(t, admin, vacia)
@@ -323,7 +323,7 @@ func TestMigracionesConCodigosDuplicados(t *testing.T) {
 		t.Skipf("sin postgres de prueba: %v", err)
 	}
 
-	dir := filepath.Join("..", "..", "migrations")
+	dir := filepath.Join("..", "..", "..", "..", "db", "migrations")
 	name := "campus_verde_dup_codigo"
 	recrear(t, admin, name)
 	defer func() {
@@ -512,7 +512,7 @@ func TestComprobarNecesitaETL(t *testing.T) {
 		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + name)
 	}()
 
-	dir := filepath.Join("..", "..", "migrations")
+	dir := filepath.Join("..", "..", "..", "..", "db", "migrations")
 	if err := aplicar(name, dir); err != nil {
 		t.Fatal(err)
 	}

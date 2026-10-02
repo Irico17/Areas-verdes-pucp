@@ -55,7 +55,7 @@ func TestCargarAreasVerdesResuelveDuplicadosYNoPisaEdiciones(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer sqlDB.Close()
-	if err := migrate.Apply(gdb, filepath.Join("..", "..", "migrations")); err != nil {
+	if err := migrate.Apply(gdb, filepath.Join("..", "..", "..", "..", "db", "migrations")); err != nil {
 		t.Fatal(err)
 	}
 

@@ -52,6 +52,7 @@ services:
       CAMPUS_ENV: production
       SERVER_GIN_MODE: release
       SWAGGER_ENABLED: "false"
+      MIGRATIONS_DIR: /opt/campus/migrations
     volumes:
       - /opt/campus/data/app:/data
     depends_on:

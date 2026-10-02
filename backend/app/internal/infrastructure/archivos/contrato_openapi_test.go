@@ -76,7 +76,7 @@ func TestContratoRechazaPathRepetido(t *testing.T) {
 }
 
 func TestMigracionesNuevasSinTruncate(t *testing.T) {
-	dir := filepath.Join(testutil.FindRepoRoot(), "apps", "api", "migrations")
+	dir := filepath.Join(testutil.FindRepoRoot(), "db", "migrations")
 	for _, name := range []string{"007_auditoria.sql", "008_fk_minimas.sql", "020_labores.sql", "021_poda.sql", "022_vivero.sql", "023_riego_zona.sql", "024_ordenes_solicitud.sql", "041_lotes.sql"} {
 		body, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {
