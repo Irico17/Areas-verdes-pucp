@@ -4,7 +4,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
 	"time"
 
@@ -71,48 +70,8 @@ func (r *intervencionRepository) Capataces(ctx context.Context) ([]entities.Capa
 
 func (r *intervencionRepository) List(ctx context.Context, f entities.FiltroIntervenciones) (entities.FeatureCollection, error) {
 	fc := entities.Collection("actividades")
-	where := []string{"1=1"}
-	args := []any{}
-	n := 1
-
-	if f.SoloAbiertas {
-		where = append(where, "a.archivada_en IS NULL AND a.estado NOT IN ('cancelada', 'cerrada')")
-	} else {
-		where = append(where, "a.archivada_en IS NULL")
-	}
-	if f.Rol == usecases.RolCapataz {
-		where = append(where, fmt.Sprintf("a.assigned_capataz_id = $%d", n))
-		args = append(args, f.CapatazID)
-		n++
-	}
-	if f.Estado != "" {
-		where = append(where, fmt.Sprintf("a.estado = $%d", n))
-		args = append(args, f.Estado)
-		n++
-	}
-	if f.Tipo != "" {
-		where = append(where, fmt.Sprintf("a.tipo = $%d", n))
-		args = append(args, f.Tipo)
-		n++
-	}
-	if f.ZonaSupervisionID != "" {
-		where = append(where, fmt.Sprintf("a.zona_supervision_id = $%d", n))
-		args = append(args, f.ZonaSupervisionID)
-		n++
-	}
-	if f.CuadrillaID != "" {
-		where = append(where, fmt.Sprintf("a.cuadrilla_id = $%d", n))
-		args = append(args, f.CuadrillaID)
-		n++
-	}
-	if f.Origen != "" {
-		where = append(where, fmt.Sprintf("a.origen = $%d", n))
-		args = append(args, f.Origen)
-		n++
-	}
-	_ = n
-
-	query := selectActividadFeature + " WHERE " + strings.Join(where, " AND ") + " ORDER BY a.created_at DESC"
+	where, args := clausulasActividades(f)
+	query := selectActividadFeature + " WHERE " + where + " ORDER BY a.created_at DESC"
 	rows, err := r.db.WithContext(ctx).Raw(query, args...).Rows()
 	if err != nil {
 		return fc, err

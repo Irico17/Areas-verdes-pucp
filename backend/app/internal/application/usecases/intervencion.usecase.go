@@ -66,6 +66,14 @@ func refCatalogo(v string) bool {
 	return refRe.MatchString(v)
 }
 
+func fechaFiltro(v string) bool {
+	if strings.TrimSpace(v) == "" {
+		return true
+	}
+	_, err := time.Parse("2006-01-02", v)
+	return err == nil
+}
+
 // SavedPayload represents a persisted labor used for idempotent duplicate payload comparison.
 type SavedPayload struct {
 	Tipo              string
@@ -194,8 +202,20 @@ func (u *intervencionUseCase) ListarActividades(ctx context.Context, f dto.Filtr
 	if f.Tipo != "" && !slugRe.MatchString(f.Tipo) {
 		return entities.Collection("actividades"), domainErrors.InputError{Reason: "tipo no reconocido"}
 	}
-	if !refCatalogo(f.ZonaSupervisionID) || !refCatalogo(f.CuadrillaID) || !refCatalogo(f.Origen) {
+	if !refCatalogo(f.ZonaSupervisionID) || !refCatalogo(f.CuadrillaID) || !refCatalogo(f.Origen) || !refCatalogo(f.Sector) {
 		return entities.Collection("actividades"), domainErrors.InputError{Reason: "filtro no reconocido"}
+	}
+	if f.NivelRiesgo != "" && !slugRe.MatchString(f.NivelRiesgo) {
+		return entities.Collection("actividades"), domainErrors.InputError{Reason: "nivel_riesgo no reconocido"}
+	}
+	if f.Ejecutor != "" && f.Ejecutor != string(enums.EjecutorPropia) && f.Ejecutor != string(enums.EjecutorTercerizada) {
+		return entities.Collection("actividades"), domainErrors.InputError{Reason: "ejecutor no reconocido"}
+	}
+	if !fechaFiltro(f.Desde) || !fechaFiltro(f.Hasta) {
+		return entities.Collection("actividades"), domainErrors.InputError{Reason: "la fecha del filtro no es válida"}
+	}
+	if f.Desde != "" && f.Hasta != "" && f.Hasta < f.Desde {
+		return entities.Collection("actividades"), domainErrors.InputError{Reason: "la fecha hasta es anterior a desde"}
 	}
 
 	filter := entities.FiltroIntervenciones{
@@ -206,6 +226,11 @@ func (u *intervencionUseCase) ListarActividades(ctx context.Context, f dto.Filtr
 		ZonaSupervisionID: f.ZonaSupervisionID,
 		CuadrillaID:       f.CuadrillaID,
 		Origen:            f.Origen,
+		Sector:            f.Sector,
+		Ejecutor:          f.Ejecutor,
+		NivelRiesgo:       f.NivelRiesgo,
+		Desde:             f.Desde,
+		Hasta:             f.Hasta,
 		SoloAbiertas:      f.SoloAbiertas,
 	}
 	return u.repo.List(ctx, filter)
