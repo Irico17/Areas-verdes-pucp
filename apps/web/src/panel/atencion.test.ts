@@ -3,6 +3,7 @@ import { test } from "node:test"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { Labores, type LaborItem } from "./Labores.tsx"
+import { SolicitudesPanel } from "./Solicitudes.tsx"
 import { PodaPanel } from "./Poda.tsx"
 import { codigoExterno, validarPoda, type PodaItem } from "./poda.ts"
 import { etiquetaRol } from "../producto.ts"
@@ -309,5 +310,25 @@ test("capataz no puede cerrar ni cancelar labores ni encolar esos estados", () =
   assert.match(htmlCapataz, /Ejecutado/)
   assert.equal(htmlCapataz.includes(">ejecutado<"), false)
   assert.equal(htmlCapataz.includes(">pendiente<"), false)
+})
+
+test("la solicitud no es solo un texto de lugar y la orden elige empresa", () => {
+  const html = renderToStaticMarkup(createElement(SolicitudesPanel, { actividadId: "" }))
+  const solicitud = html.slice(html.indexOf('class="form solicitud-alta"'), html.indexOf('class="form orden-alta"'))
+  assert.match(solicitud, /name="lugar_id"/)
+  assert.equal(solicitud.includes('name="lugar"'), false)
+  assert.match(solicitud, /name="lat"/)
+  assert.match(solicitud, /name="lon"/)
+  assert.match(solicitud, /name="cantidad_solicitada"/)
+  assert.match(solicitud, /name="cantidad_ejecutada"/)
+  assert.match(solicitud, /Cantidad solicitada/)
+  assert.match(solicitud, /Cantidad ejecutada/)
+  const orden = html.slice(html.indexOf('class="form orden-alta"'))
+  assert.match(orden, /name="empresa_id"/)
+  assert.match(orden, /name="frecuencia_id"/)
+  assert.match(orden, /Elegir empresa/)
+  assert.equal(orden.includes('name="empresa"'), false)
+  assert.match(orden, /name="conformidad"/)
+  assert.match(html, /Evidencias de la orden/)
 })
 

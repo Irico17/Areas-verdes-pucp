@@ -65,7 +65,23 @@ export type Solicitud = {
   prioridad: string
   estado: string
   lugar?: string
+  lugar_id?: number
+  lugar_nombre?: string
+  lat?: number
+  lon?: number
+  cantidad?: number
+  cantidad_solicitada?: number
+  cantidad_ejecutada?: number
   actividad_id?: string
+  created_at: string
+}
+
+export type EvidenciaOrden = {
+  id: string
+  nombre: string
+  mime: string
+  bytes: number
+  nota?: string
   created_at: string
 }
 
@@ -73,10 +89,18 @@ export type Orden = {
   id: string
   actividad_id: string
   empresa: string
+  empresa_id?: number
+  empresa_catalogo?: string
+  empresa_codigo?: string
   referencia: string
   frecuencia?: string
+  frecuencia_id?: number
+  frecuencia_catalogo?: string
+  frecuencia_codigo?: string
   estado: string
+  conformidad?: string
   created_at: string
+  evidencias?: EvidenciaOrden[]
 }
 
 export type Riego = {
@@ -282,8 +306,13 @@ export async function crearSolicitud(body: {
   fuente: string
   codigo_externo: string
   prioridad: string
-  lugar: string
+  estado: string
   detalle: string
+  lugar_id?: number
+  lat?: number
+  lon?: number
+  cantidad_solicitada?: number
+  cantidad_ejecutada?: number
 }): Promise<void> {
   await send(apiUrl("/solicitudes"), "POST", body)
 }
@@ -297,9 +326,10 @@ export async function fetchOrdenes(): Promise<Orden[]> {
 export async function crearOrden(body: {
   id: string
   actividad_id: string
-  empresa: string
+  empresa_id: number
   referencia: string
-  frecuencia: string
+  frecuencia_id: number
+  conformidad: string
 }): Promise<void> {
   await send(apiUrl("/ordenes"), "POST", body)
 }

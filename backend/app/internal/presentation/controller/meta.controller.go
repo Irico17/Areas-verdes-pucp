@@ -54,6 +54,7 @@ var RutasV1 = []Route{
 	{Metodo: "POST", Ruta: "/api/v1/solicitudes", Descripcion: "Alta manual de solicitud"},
 	{Metodo: "GET", Ruta: "/api/v1/ordenes", Descripcion: "Órdenes de servicio tercerizado"},
 	{Metodo: "POST", Ruta: "/api/v1/ordenes", Descripcion: "Orden ligada a una labor tercerizada"},
+	{Metodo: "GET", Ruta: "/api/v1/ordenes/:id/evidencias", Descripcion: "Evidencias ya colgadas de la orden"},
 	{Metodo: "GET", Ruta: "/api/v1/riego", Descripcion: "Riego por sector y turno"},
 	{Metodo: "POST", Ruta: "/api/v1/riego", Descripcion: "Registrar un turno de riego"},
 	{Metodo: "GET", Ruta: "/api/v1/evidencias", Descripcion: "Metadatos de evidencias"},

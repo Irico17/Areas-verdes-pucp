@@ -21,4 +21,5 @@ type IServicioTercerizadoUseCase interface {
 	Listar(ctx context.Context) (*dto.OrdenesResponseDTO, error)
 	Crear(ctx context.Context, in dto.CrearOrdenDTO, actorRol, capatazID string) (*dto.OrdenDTO, error)
 	Editar(ctx context.Context, in dto.EditarOrdenDTO, actorRol, capatazID string) (*dto.EditarOrdenResponseDTO, error)
+	Evidencias(ctx context.Context, ordenID string) (*dto.EvidenciasOrdenDTO, error)
 }

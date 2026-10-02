@@ -17,6 +17,7 @@ type IServicioTercerizadoController interface {
 	List(*gin.Context)
 	Create(*gin.Context)
 	Edit(*gin.Context)
+	Evidencias(*gin.Context)
 }
 
 type servicioTercerizadoController struct {
@@ -79,6 +80,22 @@ func (ctrl *servicioTercerizadoController) Create(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, res)
+}
+
+// Evidencias godoc
+// @Summary Evidence already linked to a work order
+// @Tags atencion
+// @Produce json
+// @Param id path string true "Work order UUID"
+// @Success 200 {object} dto.EvidenciasOrdenDTO
+// @Router /v1/ordenes/{id}/evidencias [get]
+func (ctrl *servicioTercerizadoController) Evidencias(c *gin.Context) {
+	res, err := ctrl.uc.Evidencias(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		writeOperacionErr(c, &ctrl.logger, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
 }
 
 // Edit godoc

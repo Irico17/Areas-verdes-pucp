@@ -44,6 +44,7 @@ func (g *AtencionGroup) Register(router gin.IRouter) {
 	ord := router.Group("/ordenes")
 	ord.GET("", middleware.RequierePermiso(g.permisos, "consultar"), g.ordenCtrl.List)
 	ord.POST("", middleware.RequierePermiso(g.permisos, "registrar"), g.ordenCtrl.Create)
+	ord.GET("/:id/evidencias", middleware.RequierePermiso(g.permisos, "consultar"), g.ordenCtrl.Evidencias)
 	ord.PATCH("/:id", middleware.RequierePermiso(g.permisos, "registrar"), g.ordenCtrl.Edit)
 
 	// Riego

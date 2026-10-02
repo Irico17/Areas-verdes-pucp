@@ -1,0 +1,48 @@
+# Flujo o3-solicitudes. Paths nuevos. El POST de solicitudes y de órdenes ya está en atencion.yaml.
+# Alta de solicitud: cantidad_solicitada, cantidad_ejecutada (puede diferir), lugar_id o lat/lon
+# dentro del campus (fuera responde 400). fuente y estado se validan contra catálogo.
+# Alta de orden: empresa_id y frecuencia_id de catálogo. La conformidad se sigue guardando.
+# No hay portal del proveedor ni adjunto del reporte.
+/api/v1/ordenes/{id}/evidencias:
+  get:
+    tags: [operacion]
+    summary: Evidencias ya colgadas de la orden
+    description: >
+      Lista los archivos cuya fila tiene este orden_id. No adjunta el reporte del proveedor
+      ni abre un portal. Si la orden no existe responde 404.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Evidencias de esa orden
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orden_id, evidencias]
+              properties:
+                orden_id:
+                  type: string
+                  format: uuid
+                evidencias:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      nombre: { type: string }
+                      mime: { type: string }
+                      bytes: { type: integer }
+                      nota: { type: string }
+                      created_at: { type: string, format: date-time }
+      "400":
+        description: El id no es un UUID
+      "401":
+        description: Sin sesión
+      "404":
+        description: La orden no existe

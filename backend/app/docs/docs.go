@@ -3579,6 +3579,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/ordenes/{id}/evidencias": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "atencion"
+                ],
+                "summary": "Evidence already linked to a work order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Work order UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.EvidenciasOrdenDTO"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/ordenes/{id}": {
             "patch": {
                 "consumes": [
