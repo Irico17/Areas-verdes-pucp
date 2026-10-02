@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { FechaCampo } from "../FechaCampo"
+import { hoyISO } from "../fecha"
 import { mostrarEnPanel } from "../ui/desplazar"
 import { Esqueleto } from "../ui/Esqueleto"
 import {
@@ -17,15 +18,15 @@ import {
 import type { CatalogoItem } from "../producto"
 import type { Rol } from "../types"
 import { IconoClase } from "../map/iconoClase"
-import { ACTIVIDAD, VISTA_ACTIVIDAD, marcaEjecutor } from "../ui/nomenclatura"
+import { listEstados, ofreceColaDeAltas } from "../offline/queue"
+import { COLA_VACIADA, publicarOEncolar, rutaAvance, rutaFicha, vaciarRegistros, type DetalleCola } from "../offline/registros"
+import { ACTIVIDAD, COLA, VISTA_ACTIVIDAD, marcaEjecutor } from "../ui/nomenclatura"
 import { Bitacora } from "./Bitacora"
 import { FiltrosActividad } from "./FiltrosActividad"
 import { EvidenciasCampo } from "./EvidenciasCampo"
 import { SelectorLugar } from "./SelectorLugar"
 import { listarZonas } from "./catastro"
 import { listarLugaresCatalogo, type LugarCatalogo } from "./zonificacion"
-import { apiUrl } from "../api"
-
 export type LaborItem = {
   id: string
   titulo: string
@@ -90,6 +91,8 @@ type Props = {
 
 export function Labores(props: Props) {
   const puedeAsignar = props.rol !== "capataz"
+  const estadosPendientes = usePendientesEstados(props.notice)
+  const totalCola = (ofreceColaDeAltas(props.rol) ? props.queueCount : 0) + estadosPendientes
   const avisoError = /no se|sin conexión|error/i.test(props.notice)
   const detalleRef = useRef<HTMLDivElement>(null)
   const elegida = props.selected?.id
@@ -105,6 +108,8 @@ export function Labores(props: Props) {
           </p>
           {props.selected.detalle && <p className="lede">{props.selected.detalle}</p>}
           <FichaLabor key={props.selected.id} actividadId={props.selected.queued ? "" : props.selected.id} />
+          {!props.selected.queued && <AvanceCampo key={`avance-${props.selected.id}`} actividadId={props.selected.id} />}
+          {!props.selected.queued && <AvanceCampo key={`avance-${props.selected.id}`} actividadId={props.selected.id} />}
           {props.selected.queued ? (
             <p className="hint">Aún no está en el servidor. El id ya quedó reservado para el reintento.</p>
           ) : (
@@ -208,15 +213,22 @@ export function Labores(props: Props) {
           zonas={props.zonas}
         />
       )}
-      {props.queueCount > 0 && (
-        <p className="hint">
-          {ACTIVIDAD.colaLocal(props.queueCount)}{" "}
-          <button type="button" className="link" onClick={props.onFlush}>
+      {totalCola > 0 && (
+        <p className="hint" role="status">
+          {ACTIVIDAD.colaLocal(totalCola)} <span className="marca-cola">{COLA.marca}</span>{" "}
+          <button
+            type="button"
+            className="link"
+            onClick={() => {
+              props.onFlush()
+              void vaciarRegistros()
+            }}
+          >
             {ACTIVIDAD.reintentar}
           </button>
         </p>
       )}
-      {props.notice && (
+      {props.notice && !(totalCola === 0 && props.notice.includes("quedó en la cola")) && (
         <p className={avisoError ? "status error" : "banner"} role="status">
           {props.notice}
         </p>
@@ -539,6 +551,29 @@ function AltaActividad(props: AltaProps) {
   )
 }
 
+function usePendientesEstados(aviso: string): number {
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    let vivo = true
+    const leer = () => {
+      void listEstados()
+        .then((filas) => {
+          if (vivo) setN(filas.length)
+        })
+        .catch(() => {
+          if (vivo) setN(0)
+        })
+    }
+    leer()
+    window.addEventListener(COLA_VACIADA, leer)
+    return () => {
+      vivo = false
+      window.removeEventListener(COLA_VACIADA, leer)
+    }
+  }, [aviso])
+  return n
+}
+
 function FichaLabor(props: { actividadId?: string }) {
   const [clase, setClase] = useState("Mantenimiento de jardines")
   const [solicitud, setSolicitud] = useState("")
@@ -547,6 +582,18 @@ function FichaLabor(props: { actividadId?: string }) {
   const [comentario, setComentario] = useState("")
   const [aviso, setAviso] = useState("")
   const fichaRef = useRef<HTMLFieldSetElement>(null)
+  useEffect(() => {
+    const alVolver = (ev: Event) => {
+      const detail = (ev as CustomEvent<DetalleCola>).detail
+      if (detail?.conflictos?.some((item) => item.tipo === "ficha")) {
+        setAviso(COLA.conflicto)
+        return
+      }
+      setAviso((actual) => (actual === COLA.ficha ? "" : actual))
+    }
+    window.addEventListener(COLA_VACIADA, alVolver)
+    return () => window.removeEventListener(COLA_VACIADA, alVolver)
+  }, [])
   async function guardar() {
     if (fichaRef.current?.querySelector('[aria-invalid="true"]')) {
       setAviso("Corrija la fecha antes de guardar.")
@@ -560,27 +607,32 @@ function FichaLabor(props: { actividadId?: string }) {
       setAviso(ACTIVIDAD.creePrimero)
       return
     }
-    try {
-      const res = await fetch(apiUrl(`/operacion/actividades/${props.actividadId}/ficha`), {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clase,
-          fecha_solicitud: solicitud,
-          fecha_atencion: atencion,
-          lugar,
-          comentario,
-        }),
-      })
-      if (!res.ok) {
-        setAviso("No se pudo guardar la ficha.")
-        return
-      }
-      setAviso(lugar || "Ficha guardada. El pin del mapa no cambia.")
-    } catch {
-      setAviso("Sin conexión con la API.")
+    const resultado = await publicarOEncolar({
+      id: crypto.randomUUID(),
+      tipo: "ficha",
+      path: rutaFicha(props.actividadId),
+      method: "PATCH",
+      body: {
+        clase,
+        fecha_solicitud: solicitud,
+        fecha_atencion: atencion,
+        lugar,
+        comentario,
+      },
+    })
+    if (resultado === "ok") {
+      setAviso(lugar || COLA.fichaGuardada)
+      return
     }
+    if (resultado === "conflicto") {
+      setAviso(COLA.conflicto)
+      return
+    }
+    if (resultado === "encolado") {
+      setAviso(COLA.ficha)
+      return
+    }
+    setAviso(COLA.fichaError)
   }
   return (
     <fieldset className="form grupo" ref={fichaRef}>
@@ -609,6 +661,96 @@ function FichaLabor(props: { actividadId?: string }) {
         {ACTIVIDAD.guardarFicha}
       </button>
       {aviso && <p className="hint">{aviso}</p>}
+    </fieldset>
+  )
+}
+
+function AvanceCampo(props: { actividadId: string }) {
+  const [fecha, setFecha] = useState(hoyISO)
+  const [nota, setNota] = useState("")
+  const [area, setArea] = useState("")
+  const [ejemplar, setEjemplar] = useState("")
+  const [aviso, setAviso] = useState("")
+  const ref = useRef<HTMLFieldSetElement>(null)
+  useEffect(() => {
+    const alVolver = (ev: Event) => {
+      const detail = (ev as CustomEvent<DetalleCola>).detail
+      if (detail?.conflictos?.some((item) => item.tipo === "avance")) {
+        setAviso(COLA.conflicto)
+        return
+      }
+      setAviso((actual) => (actual === COLA.avance ? "" : actual))
+    }
+    window.addEventListener(COLA_VACIADA, alVolver)
+    return () => window.removeEventListener(COLA_VACIADA, alVolver)
+  }, [])
+  async function guardar() {
+    if (ref.current?.querySelector('[aria-invalid="true"]')) {
+      setAviso("Corrija la fecha antes de guardar.")
+      return
+    }
+    if (!area.trim() && !ejemplar.trim()) {
+      setAviso(ACTIVIDAD.faltaLugarAvance)
+      return
+    }
+    const id = crypto.randomUUID()
+    const resultado = await publicarOEncolar({
+      id,
+      tipo: "avance",
+      path: rutaAvance(props.actividadId),
+      method: "POST",
+      body: {
+        id,
+        fecha,
+        nota: nota.trim(),
+        area_feature_id: area.trim(),
+        ejemplar_ref: ejemplar.trim(),
+      },
+    })
+    if (resultado === "ok") {
+      setNota("")
+      setAviso(ACTIVIDAD.avanceGuardado)
+      return
+    }
+    if (resultado === "conflicto") {
+      setAviso(COLA.conflicto)
+      return
+    }
+    if (resultado === "encolado") {
+      setAviso(COLA.avance)
+      return
+    }
+    setAviso(ACTIVIDAD.avanceError)
+  }
+  return (
+    <fieldset className="form grupo" ref={ref}>
+      <legend>{ACTIVIDAD.avance}</legend>
+      <p className="hint">{ACTIVIDAD.avanceLede}</p>
+      <label className="field">
+        {ACTIVIDAD.fechaAvance}
+        <FechaCampo value={fecha} onChange={setFecha} required />
+      </label>
+      <label className="field">
+        {ACTIVIDAD.comentario}
+        <textarea value={nota} rows={2} maxLength={2000} onChange={(event) => setNota(event.target.value)} />
+      </label>
+      <label className="field">
+        {ACTIVIDAD.area}
+        <input value={area} onChange={(event) => setArea(event.target.value)} placeholder={ACTIVIDAD.areaPlaceholder} />
+      </label>
+      <label className="field">
+        {ACTIVIDAD.ejemplar}
+        <input value={ejemplar} onChange={(event) => setEjemplar(event.target.value)} placeholder={ACTIVIDAD.ejemplarPlaceholder} />
+      </label>
+      <button type="button" onClick={() => void guardar()}>
+        {ACTIVIDAD.guardarAvance}
+      </button>
+      {aviso && (
+        <p className="hint">
+          {aviso}
+          {aviso === COLA.avance && <span className="marca-cola">{COLA.marca}</span>}
+        </p>
+      )}
     </fieldset>
   )
 }

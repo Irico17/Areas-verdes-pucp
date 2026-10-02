@@ -3,7 +3,9 @@ import { FechaCampo } from "../FechaCampo"
 import { Esqueleto } from "../ui/Esqueleto"
 import { PODA_VACIA, codigoExterno, validarPoda, type PodaItem } from "./poda"
 import { apiUrl } from "../api"
-import { PODA } from "../ui/nomenclatura"
+import { encolarRegistro } from "../offline/queue"
+import { COLA_VACIADA, pendientesDe, rutaPoda, vaciarRegistros, type DetalleCola } from "../offline/registros"
+import { COLA, PODA } from "../ui/nomenclatura"
 
 type Props = {
   iniciales?: PodaItem[]
@@ -15,6 +17,7 @@ export function PodaPanel(props: Props) {
   const [cargando, setCargando] = useState(!props.iniciales)
   const [form, setForm] = useState<PodaItem>({ ...PODA_VACIA, id: "nueva" })
   const [aviso, setAviso] = useState("")
+  const [enCola, setEnCola] = useState<string[]>([])
   const fallos = useMemo(() => validarPoda(form), [form])
   useEffect(() => {
     if (props.iniciales) return
@@ -32,6 +35,29 @@ export function PodaPanel(props: Props) {
       cancelado = true
     }
   }, [props.iniciales])
+  useEffect(() => {
+    let vivo = true
+    const leer = (conflictos = false) => {
+      void pendientesDe("poda")
+        .then((filas) => {
+          if (!vivo) return
+          setEnCola(filas.map((fila) => fila.id))
+          if (conflictos) setAviso(COLA.conflicto)
+          else if (filas.length === 0) setAviso((actual) => (actual === PODA.enCola ? "" : actual))
+        })
+        .catch(() => {})
+    }
+    leer()
+    const alVolver = (ev: Event) => {
+      const detail = (ev as CustomEvent<DetalleCola>).detail
+      leer(detail?.conflictos?.some((item) => item.tipo === "poda") ?? false)
+    }
+    window.addEventListener(COLA_VACIADA, alVolver)
+    return () => {
+      vivo = false
+      window.removeEventListener(COLA_VACIADA, alVolver)
+    }
+  }, [])
   function set<K extends keyof PodaItem>(key: K, value: PodaItem[K]) {
     setForm((current) => ({ ...current, [key]: value }))
   }
@@ -39,6 +65,14 @@ export function PodaPanel(props: Props) {
     <section className="block">
       <h2>Poda</h2>
       <p className="lede">{PODA.lede}</p>
+      {enCola.length > 0 && (
+        <p className="hint" role="status">
+          {COLA.local(enCola.length)} <span className="marca-cola">{COLA.marca}</span>{" "}
+          <button type="button" className="link" onClick={() => void vaciarRegistros()}>
+            {COLA.reintentar}
+          </button>
+        </p>
+      )}
       {cargando && <Esqueleto />}
       <ul className="labor-list">
         {!cargando && items.length === 0 && <li className="empty">No hay podas en esta vista.</li>}
@@ -50,6 +84,7 @@ export function PodaPanel(props: Props) {
                 <small>
                   {item.ubicacion || "Sin ubicación"} · {item.prioridad}
                   {item.codigo_externo ? ` · ${item.codigo_externo}` : ""}
+                  {enCola.includes(item.id) ? ` · ${COLA.marca}` : ""}
                 </small>
               </span>
             </button>
@@ -72,30 +107,52 @@ export function PodaPanel(props: Props) {
           const externo = codigoExterno(form.codigo_externo).codigo
           const nueva = !form.id || form.id === "nueva"
           const guardada = { ...form, codigo_externo: externo, id: nueva ? crypto.randomUUID() : form.id }
-          const ruta = nueva ? apiUrl("/podas") : apiUrl(`/podas/${guardada.id}`)
+          const cuerpo = {
+            ...guardada,
+            cantidad_pedida: Number(guardada.cantidad_pedida),
+            cantidad_ejecutada: Number(guardada.cantidad_ejecutada),
+          }
+          const ruta = rutaPoda(guardada.id, nueva)
           void fetch(ruta, {
             method: nueva ? "POST" : "PATCH",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ...guardada,
-              cantidad_pedida: Number(guardada.cantidad_pedida),
-              cantidad_ejecutada: Number(guardada.cantidad_ejecutada),
-            }),
+            body: JSON.stringify(cuerpo),
           })
             .then((res) => {
+              if (res.status === 409) {
+                setAviso(COLA.conflicto)
+                return
+              }
               if (!res.ok) {
-                setAviso("No se pudo guardar la poda.")
+                setAviso(PODA.error)
                 return
               }
               setItems((current) => {
                 const sin = current.filter((item) => item.codigo !== guardada.codigo)
                 return [...sin, guardada]
               })
+              setEnCola((actual) => actual.filter((id) => id !== guardada.id))
               props.onGuardar?.(guardada)
-              setAviso("Poda guardada. No se creó un código OSG.")
+              setAviso(PODA.guardada)
             })
-            .catch(() => setAviso("Sin conexión con la API."))
+            .catch(() => {
+              void encolarRegistro({
+                id: guardada.id,
+                tipo: "poda",
+                path: ruta,
+                method: nueva ? "POST" : "PATCH",
+                body: cuerpo,
+                createdAt: new Date().toISOString(),
+              }).then(() => {
+                setItems((current) => {
+                  const sin = current.filter((item) => item.codigo !== guardada.codigo && item.id !== guardada.id)
+                  return [...sin, guardada]
+                })
+                setEnCola((actual) => [...actual.filter((id) => id !== guardada.id), guardada.id])
+                setAviso(PODA.enCola)
+              })
+            })
         }}
       >
         <label className="field">
