@@ -55,9 +55,9 @@ jobs:
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
       - name: Construir imágenes (verificación con caché)
         run: |
-          docker buildx build -f apps/api/Dockerfile -t campus-verde-api:ci --cache-from type=gha,scope=api-legacy --cache-to type=gha,mode=max,scope=api-legacy .
-          docker buildx build -f backend/dockerfile -t campus-verde-backend:ci --cache-from type=gha,scope=api --cache-to type=gha,mode=max,scope=api .
-          docker buildx build -f apps/web/Dockerfile -t campus-verde-web:ci --cache-from type=gha,scope=web --cache-to type=gha,mode=max,scope=web .
+          docker buildx build -f apps/api/Dockerfile -t campus-verde-api:ci .
+          docker buildx build -f backend/dockerfile -t campus-verde-backend:ci .
+          docker buildx build -f apps/web/Dockerfile -t campus-verde-web:ci .
 
   backend:
     runs-on: ubuntu-24.04
@@ -214,14 +214,12 @@ jobs:
             -f backend/dockerfile \
             -t campus-verde-api:scan \
             --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
-            --cache-from type=gha,scope=api \
             --load \
             .
           docker buildx build \
             -f apps/web/Dockerfile \
             -t campus-verde-web:scan \
             --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
-            --cache-from type=gha,scope=web \
             --load \
             .
       - name: Escaneo Trivy image (API)
@@ -303,8 +301,8 @@ jobs:
             -f backend/dockerfile \
             "${tags_api[@]}" \
             --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
-            --cache-from type=gha,scope=api \
-            --cache-to type=gha,mode=max,scope=api \
+            --cache-from type=registry,ref=${api}:buildcache \
+            --cache-to type=registry,ref=${api}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true \
             --push \
             .
 
@@ -312,8 +310,8 @@ jobs:
             -f apps/web/Dockerfile \
             "${tags_web[@]}" \
             --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
-            --cache-from type=gha,scope=web \
-            --cache-to type=gha,mode=max,scope=web \
+            --cache-from type=registry,ref=${web}:buildcache \
+            --cache-to type=registry,ref=${web}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true \
             --push \
             .
 
