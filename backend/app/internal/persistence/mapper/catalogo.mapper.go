@@ -11,11 +11,12 @@ func CatalogoToEntity(m *models.CatalogoModel) *entities.CatalogoItem {
 		return nil
 	}
 	return &entities.CatalogoItem{
-		ID:     m.ID,
-		Clase:  m.Clase,
-		Codigo: m.Codigo,
-		Nombre: m.Nombre,
-		Activo: m.Activo,
-		Orden:  m.Orden,
+		ID:          m.ID,
+		Clase:       m.Clase,
+		Codigo:      m.Codigo,
+		Nombre:      m.Nombre,
+		Activo:      m.Activo,
+		Orden:       m.Orden,
+		Provisional: m.Provisional,
 	}
 }

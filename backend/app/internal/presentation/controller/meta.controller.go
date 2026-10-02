@@ -45,6 +45,7 @@ var RutasV1 = []Route{
 	{Metodo: "GET", Ruta: "/api/v1/accesos/usuarios", Descripcion: "Cuentas y permisos semilla (solo admin)"},
 	{Metodo: "GET", Ruta: "/api/v1/catalogos", Descripcion: "Catálogos configurables"},
 	{Metodo: "POST", Ruta: "/api/v1/catalogos", Descripcion: "Alta o reactivación de un ítem"},
+	{Metodo: "PATCH", Ruta: "/api/v1/catalogos/:id", Descripcion: "Corregir el nombre de un ítem"},
 	{Metodo: "POST", Ruta: "/api/v1/catalogos/:id/desactivar", Descripcion: "Baja lógica de un ítem"},
 	{Metodo: "GET", Ruta: "/api/v1/catastro/areas", Descripcion: "Fichas de áreas para edición de metadatos"},
 	{Metodo: "POST", Ruta: "/api/v1/catastro/areas", Descripcion: "Área sin geometría"},

@@ -12,12 +12,14 @@ type ICatalogoRepository interface {
 	List(ctx context.Context, clase string, soloActivos bool) ([]entities.CatalogoItem, error)
 	Activo(ctx context.Context, clase, codigo string) (bool, error)
 	Create(ctx context.Context, clase, codigo, nombre string) (*entities.CatalogoItem, error)
-	Deactivate(ctx context.Context, id int64) error
+	Deactivate(ctx context.Context, id int64, usuarioID int64) error
+	Renombrar(ctx context.Context, id int64, nombre string, usuarioID int64) (*entities.CatalogoItem, error)
 }
 
 // ICatalogoUseCase defines business use cases for catalog management.
 type ICatalogoUseCase interface {
 	Listar(ctx context.Context, filtro dto.FiltroCatalogoDTO) (*dto.CatalogoListResponseDTO, error)
 	Crear(ctx context.Context, in dto.CrearCatalogoDTO) (*dto.CatalogoItemDTO, error)
-	Desactivar(ctx context.Context, id int64) (*dto.DesactivarCatalogoResponseDTO, error)
+	Desactivar(ctx context.Context, id int64, usuarioID int64) (*dto.DesactivarCatalogoResponseDTO, error)
+	Renombrar(ctx context.Context, in dto.RenombrarCatalogoDTO) (*dto.CatalogoItemDTO, error)
 }

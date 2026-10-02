@@ -17,7 +17,8 @@ type mockCatalogoRepository struct {
 	listFn       func(ctx context.Context, clase string, soloActivos bool) ([]entities.CatalogoItem, error)
 	activoFn     func(ctx context.Context, clase, codigo string) (bool, error)
 	createFn     func(ctx context.Context, clase, codigo, nombre string) (*entities.CatalogoItem, error)
-	deactivateFn func(ctx context.Context, id int64) error
+	deactivateFn func(ctx context.Context, id int64, usuarioID int64) error
+	renombrarFn  func(ctx context.Context, id int64, nombre string, usuarioID int64) (*entities.CatalogoItem, error)
 }
 
 func (m *mockCatalogoRepository) List(ctx context.Context, clase string, soloActivos bool) ([]entities.CatalogoItem, error) {
@@ -48,11 +49,18 @@ func (m *mockCatalogoRepository) Create(ctx context.Context, clase, codigo, nomb
 	}, nil
 }
 
-func (m *mockCatalogoRepository) Deactivate(ctx context.Context, id int64) error {
+func (m *mockCatalogoRepository) Deactivate(ctx context.Context, id int64, usuarioID int64) error {
 	if m.deactivateFn != nil {
-		return m.deactivateFn(ctx, id)
+		return m.deactivateFn(ctx, id, usuarioID)
 	}
 	return nil
+}
+
+func (m *mockCatalogoRepository) Renombrar(ctx context.Context, id int64, nombre string, usuarioID int64) (*entities.CatalogoItem, error) {
+	if m.renombrarFn != nil {
+		return m.renombrarFn(ctx, id, nombre, usuarioID)
+	}
+	return &entities.CatalogoItem{ID: id, Nombre: nombre, Activo: true}, nil
 }
 
 func TestCatalogoUseCase_Crear_Validaciones(t *testing.T) {
@@ -201,18 +209,45 @@ func TestCatalogoUseCase_Listar(t *testing.T) {
 	}
 }
 
+func TestCatalogoUseCase_Renombrar(t *testing.T) {
+	mockRepo := &mockCatalogoRepository{
+		renombrarFn: func(ctx context.Context, id int64, nombre string, usuarioID int64) (*entities.CatalogoItem, error) {
+			if id != 3 || nombre != "Por iniciar" || usuarioID != 9 {
+				t.Fatalf("argumentos inesperados: %d %q %d", id, nombre, usuarioID)
+			}
+			return &entities.CatalogoItem{ID: id, Clase: "estado", Codigo: "pendiente", Nombre: nombre, Activo: true}, nil
+		},
+	}
+	uc := usecases.NewCatalogoUseCase(mockRepo)
+	res, err := uc.Renombrar(context.Background(), dto.RenombrarCatalogoDTO{ID: 3, Nombre: "  Por iniciar  ", UsuarioID: 9})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Nombre != "Por iniciar" || res.ID != 3 {
+		t.Fatalf("respuesta inesperada: %+v", res)
+	}
+
+	_, err = uc.Renombrar(context.Background(), dto.RenombrarCatalogoDTO{ID: 3, Nombre: "   "})
+	if !errors.Is(err, apperrors.ErrNombreObligatorio) {
+		t.Fatalf("se esperaba nombre obligatorio, se obtuvo %v", err)
+	}
+}
+
 func TestCatalogoUseCase_Desactivar(t *testing.T) {
 	t.Run("exito", func(t *testing.T) {
 		mockRepo := &mockCatalogoRepository{
-			deactivateFn: func(ctx context.Context, id int64) error {
+			deactivateFn: func(ctx context.Context, id int64, usuarioID int64) error {
 				if id != 10 {
 					t.Fatalf("id esperado 10, obtenido %d", id)
+				}
+				if usuarioID != 4 {
+					t.Fatalf("usuario esperado 4, obtenido %d", usuarioID)
 				}
 				return nil
 			},
 		}
 		uc := usecases.NewCatalogoUseCase(mockRepo)
-		res, err := uc.Desactivar(context.Background(), 10)
+		res, err := uc.Desactivar(context.Background(), 10, 4)
 		if err != nil {
 			t.Fatalf("error inesperado: %v", err)
 		}
@@ -223,12 +258,12 @@ func TestCatalogoUseCase_Desactivar(t *testing.T) {
 
 	t.Run("no existe", func(t *testing.T) {
 		mockRepo := &mockCatalogoRepository{
-			deactivateFn: func(ctx context.Context, id int64) error {
+			deactivateFn: func(ctx context.Context, id int64, usuarioID int64) error {
 				return apperrors.ErrItemNoExiste
 			},
 		}
 		uc := usecases.NewCatalogoUseCase(mockRepo)
-		_, err := uc.Desactivar(context.Background(), 999)
+		_, err := uc.Desactivar(context.Background(), 999, 0)
 		if !errors.Is(err, apperrors.ErrItemNoExiste) {
 			t.Fatalf("se esperaba ErrItemNoExiste, se obtuvo %v", err)
 		}

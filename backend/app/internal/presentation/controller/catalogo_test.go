@@ -20,7 +20,8 @@ import (
 type mockCatalogoControllerUseCase struct {
 	listarFn     func(ctx context.Context, filtro dto.FiltroCatalogoDTO) (*dto.CatalogoListResponseDTO, error)
 	crearFn      func(ctx context.Context, in dto.CrearCatalogoDTO) (*dto.CatalogoItemDTO, error)
-	desactivarFn func(ctx context.Context, id int64) (*dto.DesactivarCatalogoResponseDTO, error)
+	desactivarFn func(ctx context.Context, id int64, usuarioID int64) (*dto.DesactivarCatalogoResponseDTO, error)
+	renombrarFn  func(ctx context.Context, in dto.RenombrarCatalogoDTO) (*dto.CatalogoItemDTO, error)
 }
 
 func (m *mockCatalogoControllerUseCase) Listar(ctx context.Context, filtro dto.FiltroCatalogoDTO) (*dto.CatalogoListResponseDTO, error) {
@@ -37,11 +38,18 @@ func (m *mockCatalogoControllerUseCase) Crear(ctx context.Context, in dto.CrearC
 	return &dto.CatalogoItemDTO{ID: 1, Clase: in.Clase, Codigo: in.Codigo, Nombre: in.Nombre, Activo: true, Orden: 0}, nil
 }
 
-func (m *mockCatalogoControllerUseCase) Desactivar(ctx context.Context, id int64) (*dto.DesactivarCatalogoResponseDTO, error) {
+func (m *mockCatalogoControllerUseCase) Desactivar(ctx context.Context, id int64, usuarioID int64) (*dto.DesactivarCatalogoResponseDTO, error) {
 	if m.desactivarFn != nil {
-		return m.desactivarFn(ctx, id)
+		return m.desactivarFn(ctx, id, usuarioID)
 	}
 	return &dto.DesactivarCatalogoResponseDTO{Activo: false, ID: id}, nil
+}
+
+func (m *mockCatalogoControllerUseCase) Renombrar(ctx context.Context, in dto.RenombrarCatalogoDTO) (*dto.CatalogoItemDTO, error) {
+	if m.renombrarFn != nil {
+		return m.renombrarFn(ctx, in)
+	}
+	return &dto.CatalogoItemDTO{ID: in.ID, Nombre: in.Nombre, Activo: true}, nil
 }
 
 func TestCatalogoController_Listar(t *testing.T) {
@@ -218,7 +226,7 @@ func TestCatalogoController_Desactivar(t *testing.T) {
 
 	t.Run("item no existe da 404", func(t *testing.T) {
 		mockUC := &mockCatalogoControllerUseCase{
-			desactivarFn: func(ctx context.Context, id int64) (*dto.DesactivarCatalogoResponseDTO, error) {
+			desactivarFn: func(ctx context.Context, id int64, usuarioID int64) (*dto.DesactivarCatalogoResponseDTO, error) {
 				return nil, apperrors.ErrItemNoExiste
 			},
 		}
@@ -240,7 +248,7 @@ func TestCatalogoController_Desactivar(t *testing.T) {
 
 	t.Run("exito retorna 200 con activo=false y id", func(t *testing.T) {
 		mockUC := &mockCatalogoControllerUseCase{
-			desactivarFn: func(ctx context.Context, id int64) (*dto.DesactivarCatalogoResponseDTO, error) {
+			desactivarFn: func(ctx context.Context, id int64, usuarioID int64) (*dto.DesactivarCatalogoResponseDTO, error) {
 				return &dto.DesactivarCatalogoResponseDTO{Activo: false, ID: id}, nil
 			},
 		}

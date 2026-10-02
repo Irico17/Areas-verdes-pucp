@@ -3,6 +3,7 @@ package postgres_test
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 
 	apperrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
@@ -37,7 +38,7 @@ func TestCatalogoRepository_CRUD(t *testing.T) {
 	}
 
 	// 3. Deactivate sets activo = false
-	if err := repo.Deactivate(ctx, item.ID); err != nil {
+	if err := repo.Deactivate(ctx, item.ID, 0); err != nil {
 		t.Fatalf("error desactivando item: %v", err)
 	}
 
@@ -62,7 +63,7 @@ func TestCatalogoRepository_CRUD(t *testing.T) {
 	}
 
 	// 5. Deactivate on non-existent id returns ErrItemNoExiste
-	err = repo.Deactivate(ctx, 99999999)
+	err = repo.Deactivate(ctx, 99999999, 0)
 	if !errors.Is(err, apperrors.ErrItemNoExiste) {
 		t.Fatalf("se esperaba ErrItemNoExiste, se obtuvo %v", err)
 	}
@@ -88,7 +89,7 @@ func TestCatalogoRepository_CRUD(t *testing.T) {
 	if err := gdb.Raw("SELECT count(*) FROM catalogos").Scan(&countBefore).Error; err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.Deactivate(ctx, item.ID); err != nil {
+	if err := repo.Deactivate(ctx, item.ID, 0); err != nil {
 		t.Fatal(err)
 	}
 	var countAfter int64
@@ -97,5 +98,94 @@ func TestCatalogoRepository_CRUD(t *testing.T) {
 	}
 	if countBefore != countAfter {
 		t.Fatalf("el conteo total de filas cambió tras desactivar: antes=%d, despues=%d", countBefore, countAfter)
+	}
+}
+
+func TestCatalogoRepository_RenombrarConservaFilaYHistorial(t *testing.T) {
+	_, gdb := testutil.MigrarDBTemporal(t, "cat_nom")
+	ctx := context.Background()
+	repo := postgres.NewCatalogoRepository(gdb)
+
+	item, err := repo.Create(ctx, "lugar", "sector_demo", "Sector demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	primero, err := repo.Renombrar(ctx, item.ID, "Sector de demostración", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if primero.ID != item.ID || primero.Nombre != "Sector de demostración" || primero.Codigo != "sector_demo" {
+		t.Fatalf("renombre inesperado: %+v", primero)
+	}
+	segundo, err := repo.Renombrar(ctx, item.ID, "Sector norte ficticio", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if segundo.ID != item.ID {
+		t.Fatalf("el id cambió: %d → %d", item.ID, segundo.ID)
+	}
+
+	var filas int
+	if err := gdb.Raw(`SELECT count(*) FROM catalogos WHERE clase = 'lugar' AND codigo = 'sector_demo'`).Scan(&filas).Error; err != nil {
+		t.Fatal(err)
+	}
+	if filas != 1 {
+		t.Fatalf("filas del ítem = %d, se esperaba 1", filas)
+	}
+	var ediciones int
+	id := strconv.FormatInt(item.ID, 10)
+	if err := gdb.Raw(`SELECT count(*) FROM cambios WHERE entidad = 'catalogos' AND entidad_id = $1 AND accion = 'edicion'`, id).Scan(&ediciones).Error; err != nil {
+		t.Fatal(err)
+	}
+	if ediciones != 2 {
+		t.Fatalf("ediciones = %d, se esperaban 2", ediciones)
+	}
+	var antes string
+	if err := gdb.Raw(`SELECT antes->>'nombre' FROM cambios WHERE entidad = 'catalogos' AND entidad_id = $1 AND accion = 'edicion' ORDER BY id`, id).Row().Scan(&antes); err != nil {
+		t.Fatal(err)
+	}
+	if antes != "Sector demo" {
+		t.Fatalf("la edición anterior no conservó el nombre %q", antes)
+	}
+}
+
+func TestMigracionEstadosYClases(t *testing.T) {
+	_, gdb := testutil.MigrarDBTemporal(t, "cat_seed")
+
+	var nombre string
+	if err := gdb.Raw(`SELECT nombre FROM catalogos WHERE clase = 'estado' AND codigo = 'pendiente'`).Scan(&nombre).Error; err != nil {
+		t.Fatal(err)
+	}
+	if nombre != "Por iniciar" {
+		t.Fatalf("etiqueta pendiente = %q", nombre)
+	}
+	var activo, provisional bool
+	if err := gdb.Raw(`SELECT activo, provisional FROM catalogos WHERE clase = 'estado' AND codigo = 'bloqueada'`).Row().Scan(&activo, &provisional); err != nil {
+		t.Fatal(err)
+	}
+	if activo || !provisional {
+		t.Fatalf("bloqueada activo=%v provisional=%v", activo, provisional)
+	}
+	var n int
+	if err := gdb.Raw(`SELECT count(*) FROM catalogos WHERE clase = 'clase_actividad' AND codigo IN ('habilitacion', 'fitosanitario', 'inspeccion_monitoreo')`).Scan(&n).Error; err != nil {
+		t.Fatal(err)
+	}
+	if n != 3 {
+		t.Fatalf("clases de actividad conservadas y nuevas = %d", n)
+	}
+	if err := gdb.Raw(`SELECT count(*) FROM catalogos WHERE clase = 'estado' AND codigo = 'ejecutado' AND nombre = 'Ejecutado' AND activo`).Scan(&n).Error; err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatal("falta Ejecutado activo")
+	}
+	for _, clase := range []string{"plaga", "producto_fitosanitario", "frecuencia", "sede", "cuartel", "sector_capataz", "clase_actividad"} {
+		var c int
+		if err := gdb.Raw(`SELECT count(*) FROM catalogos WHERE clase = $1`, clase).Scan(&c).Error; err != nil {
+			t.Fatal(err)
+		}
+		if c == 0 {
+			t.Fatalf("la clase %s no tiene ítems", clase)
+		}
 	}
 }

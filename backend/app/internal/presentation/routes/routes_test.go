@@ -97,10 +97,18 @@ func (mockCatalogoRoutesUC) Crear(_ context.Context, in dto.CrearCatalogoDTO) (*
 	}, nil
 }
 
-func (mockCatalogoRoutesUC) Desactivar(_ context.Context, id int64) (*dto.DesactivarCatalogoResponseDTO, error) {
+func (mockCatalogoRoutesUC) Desactivar(_ context.Context, id int64, _ int64) (*dto.DesactivarCatalogoResponseDTO, error) {
 	return &dto.DesactivarCatalogoResponseDTO{
 		Activo: false,
 		ID:     id,
+	}, nil
+}
+
+func (mockCatalogoRoutesUC) Renombrar(_ context.Context, in dto.RenombrarCatalogoDTO) (*dto.CatalogoItemDTO, error) {
+	return &dto.CatalogoItemDTO{
+		ID:     in.ID,
+		Nombre: in.Nombre,
+		Activo: true,
 	}, nil
 }
 
@@ -804,6 +812,8 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 		{http.MethodPost, "/areas-verdes/v1/catalogos", 401},
 		{http.MethodPost, "/api/v1/catalogos/1/desactivar", 401},
 		{http.MethodPost, "/areas-verdes/v1/catalogos/1/desactivar", 401},
+		{http.MethodPatch, "/api/v1/catalogos/1", 401},
+		{http.MethodPatch, "/areas-verdes/v1/catalogos/1", 401},
 		// Geo de lectura (Lote 8)
 		{http.MethodGet, "/api/v1/geo/resumen", 401},
 		{http.MethodGet, "/areas-verdes/v1/geo/resumen", 401},
@@ -955,6 +965,10 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 			path = "/api/v1/catalogos/:id/desactivar"
 		case "/areas-verdes/v1/catalogos/1/desactivar":
 			path = "/areas-verdes/v1/catalogos/:id/desactivar"
+		case "/api/v1/catalogos/1":
+			path = "/api/v1/catalogos/:id"
+		case "/areas-verdes/v1/catalogos/1":
+			path = "/areas-verdes/v1/catalogos/:id"
 		case "/api/v1/geo/capas/jardines_reserva":
 			path = "/api/v1/geo/capas/:capa"
 		case "/areas-verdes/v1/geo/capas/jardines_reserva":
@@ -1061,9 +1075,11 @@ func TestRutasCatalogos_SinAutenticacionDa401(t *testing.T) {
 		{http.MethodGet, "/api/v1/catalogos"},
 		{http.MethodPost, "/api/v1/catalogos"},
 		{http.MethodPost, "/api/v1/catalogos/1/desactivar"},
+		{http.MethodPatch, "/api/v1/catalogos/1"},
 		{http.MethodGet, "/areas-verdes/v1/catalogos"},
 		{http.MethodPost, "/areas-verdes/v1/catalogos"},
 		{http.MethodPost, "/areas-verdes/v1/catalogos/1/desactivar"},
+		{http.MethodPatch, "/areas-verdes/v1/catalogos/1"},
 	}
 
 	for _, r := range rutas {
@@ -1101,16 +1117,20 @@ func TestRutasCatalogos_PermisosPorRol(t *testing.T) {
 		{http.MethodPost, "/areas-verdes/v1/catalogos", "token-norte", `{"clase":"estado","codigo":"test","nombre":"Test"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/api/v1/catalogos/1/desactivar", "token-norte", "", 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/areas-verdes/v1/catalogos/1/desactivar", "token-norte", "", 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/catalogos/1", "token-norte", `{"nombre":"Otro"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/areas-verdes/v1/catalogos/1", "token-norte", `{"nombre":"Otro"}`, 403, "su rol no tiene ese permiso"},
 
 		// Coordinación: consultar=true, catalogos=false
 		{http.MethodGet, "/api/v1/catalogos", "token-coordinacion", "", 200, ""},
 		{http.MethodPost, "/api/v1/catalogos", "token-coordinacion", `{"clase":"estado","codigo":"test","nombre":"Test"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/api/v1/catalogos/1/desactivar", "token-coordinacion", "", 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/catalogos/1", "token-coordinacion", `{"nombre":"Otro"}`, 403, "su rol no tiene ese permiso"},
 
 		// Jefatura: consultar=true, catalogos=false
 		{http.MethodGet, "/api/v1/catalogos", "token-jefatura", "", 200, ""},
 		{http.MethodPost, "/api/v1/catalogos", "token-jefatura", `{"clase":"estado","codigo":"test","nombre":"Test"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/api/v1/catalogos/1/desactivar", "token-jefatura", "", 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/catalogos/1", "token-jefatura", `{"nombre":"Otro"}`, 403, "su rol no tiene ese permiso"},
 
 		// Admin: consultar=true, catalogos=true
 		{http.MethodGet, "/api/v1/catalogos", "token-admin", "", 200, ""},
@@ -1119,6 +1139,8 @@ func TestRutasCatalogos_PermisosPorRol(t *testing.T) {
 		{http.MethodPost, "/areas-verdes/v1/catalogos", "token-admin", `{"clase":"estado","codigo":"nuevo","nombre":"Nuevo"}`, 201, ""},
 		{http.MethodPost, "/api/v1/catalogos/1/desactivar", "token-admin", "", 200, ""},
 		{http.MethodPost, "/areas-verdes/v1/catalogos/1/desactivar", "token-admin", "", 200, ""},
+		{http.MethodPatch, "/api/v1/catalogos/1", "token-admin", `{"nombre":"Nombre corregido"}`, 200, ""},
+		{http.MethodPatch, "/areas-verdes/v1/catalogos/1", "token-admin", `{"nombre":"Nombre corregido"}`, 200, ""},
 	}
 
 	for _, c := range casos {

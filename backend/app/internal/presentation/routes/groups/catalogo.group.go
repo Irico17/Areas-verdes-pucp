@@ -23,5 +23,6 @@ func NewCatalogoGroup(controller controller.ICatalogoController, permisos contra
 func (g *CatalogoGroup) Register(router gin.IRouter) {
 	router.GET("/catalogos", middleware.RequierePermiso(g.permisos, "consultar"), g.controller.Listar)
 	router.POST("/catalogos", middleware.RequierePermiso(g.permisos, "catalogos"), g.controller.Crear)
+	router.PATCH("/catalogos/:id", middleware.RequierePermiso(g.permisos, "catalogos"), g.controller.Renombrar)
 	router.POST("/catalogos/:id/desactivar", middleware.RequierePermiso(g.permisos, "catalogos"), g.controller.Desactivar)
 }

@@ -6,3 +6,8 @@ type CrearCatalogoRequest struct {
 	Codigo string `json:"codigo"`
 	Nombre string `json:"nombre"`
 }
+
+// RenombrarCatalogoRequest defines the JSON payload for correcting a catalog item name.
+type RenombrarCatalogoRequest struct {
+	Nombre string `json:"nombre"`
+}
