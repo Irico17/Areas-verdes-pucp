@@ -86,7 +86,7 @@ func TestAreaVerdeController_Listar(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Areas) != 1 || got.Areas[0].FeatureID != "AV-0001" {
+	if len(got.Areas) != 1 || got.Areas[0].FeatureID != "AV-0001" || !got.Areas[0].Activo {
 		t.Fatalf("body %s", w.Body.Bytes())
 	}
 }
@@ -122,6 +122,40 @@ func TestAreaVerdeController_Actualizar(t *testing.T) {
 	r.ServeHTTP(w, httptest.NewRequest(http.MethodPatch, "/api/v1/catastro/areas/AV-0001", bytes.NewBufferString(bodyJSON)))
 	if w.Code != http.StatusOK {
 		t.Fatalf("status %d body %s", w.Code, w.Body.Bytes())
+	}
+	var gotAct dto.FichaDTO
+	if err := json.Unmarshal(w.Body.Bytes(), &gotAct); err != nil {
+		t.Fatal(err)
+	}
+	if !gotAct.Activo {
+		t.Fatal("la ficha activa debe exponer activo=true")
+	}
+
+	// Ficha de baja con activo=false
+	resInactiva := &dto.FichaDTO{
+		FeatureID:  "AV-BAJA-01",
+		Nombre:     "Área Inactiva",
+		Uso:        "jardín",
+		RiegoAct:   "goteo",
+		Referencia: "",
+		AreaM2:     &area,
+		ConGeom:    false,
+		Activo:     false,
+	}
+	ctrlInact := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{actualizarRes: resInactiva}, zerolog.Nop())
+	rInact := gin.New()
+	rInact.PATCH("/api/v1/catastro/areas/:id", ctrlInact.Actualizar)
+	wInact := httptest.NewRecorder()
+	rInact.ServeHTTP(wInact, httptest.NewRequest(http.MethodPatch, "/api/v1/catastro/areas/AV-BAJA-01", bytes.NewBufferString(bodyJSON)))
+	if wInact.Code != http.StatusOK {
+		t.Fatalf("status %d body %s", wInact.Code, wInact.Body.Bytes())
+	}
+	var gotInact dto.FichaDTO
+	if err := json.Unmarshal(wInact.Body.Bytes(), &gotInact); err != nil {
+		t.Fatal(err)
+	}
+	if gotInact.Activo {
+		t.Fatal("la ficha inactiva debe exponer activo=false")
 	}
 
 	// No encontrada -> 404

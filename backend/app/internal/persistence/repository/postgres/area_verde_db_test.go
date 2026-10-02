@@ -87,10 +87,21 @@ func TestAreaVerdeRepository_Baja(t *testing.T) {
 	_, gdb := testutil.MigrarDBTemporal(t, "area_verde_baja")
 	ctx := context.Background()
 	repo := postgres.NewAreaVerdeRepository(gdb)
+	geoRepo := postgres.NewGeoRepository(gdb)
 
-	if _, err := repo.CrearSinGeom(ctx, "AV-BAJA-01", "Área a dar de baja", "jardín"); err != nil {
-		t.Fatalf("crear: %v", err)
+	polyGeom := `ST_SetSRID(ST_Multi(ST_GeomFromGeoJSON('{"type":"Polygon","coordinates":[[[-77.085,-12.072],[-77.080,-12.072],[-77.080,-12.068],[-77.085,-12.068],[-77.085,-12.072]]]}')), 4326)`
+	if err := gdb.Exec(`
+		INSERT INTO areas_verdes (feature_id, source_index, codigo, nombre, uso, geom, activo)
+		VALUES ('AV-ACTIVA-01', 100, 'AV-ACTIVA-01', 'Área Activa', 'jardín', ` + polyGeom + `, true)`).Error; err != nil {
+		t.Fatalf("insertar area activa: %v", err)
 	}
+
+	if err := gdb.Exec(`
+		INSERT INTO areas_verdes (feature_id, source_index, codigo, nombre, uso, geom, activo)
+		VALUES ('AV-BAJA-01', 101, 'AV-BAJA-01', 'Área a dar de baja', 'jardín', ` + polyGeom + `, true)`).Error; err != nil {
+		t.Fatalf("insertar area baja: %v", err)
+	}
+
 	var uid int64
 	if err := gdb.Raw(`
 		INSERT INTO usuarios (usuario, nombre, rol, password_hash)
@@ -132,18 +143,54 @@ func TestAreaVerdeRepository_Baja(t *testing.T) {
 		t.Fatalf("esperado ErrFichaNoEncontrada, obtenido %v", err)
 	}
 
-	lista, err := repo.Fichas(ctx, "AV-BAJA-01")
+	// 1. Fichas: área activa aparece, área de baja no aparece
+	listaTodas, err := repo.Fichas(ctx, "")
+	if err != nil {
+		t.Fatalf("fichas todas tras baja: %v", err)
+	}
+	if len(listaTodas) != 1 || listaTodas[0].FeatureID != "AV-ACTIVA-01" {
+		t.Fatalf("esperada solo 1 area activa (AV-ACTIVA-01), obtenido: %+v", listaTodas)
+	}
+	listaBaja, err := repo.Fichas(ctx, "AV-BAJA-01")
 	if err != nil {
 		t.Fatalf("fichas tras baja: %v", err)
 	}
-	if len(lista) != 0 {
-		t.Fatalf("listado debe ocultar áreas inactivas, obtenido %+v", lista)
+	if len(listaBaja) != 0 {
+		t.Fatalf("listado debe ocultar áreas inactivas, obtenido %+v", listaBaja)
 	}
-	ficha, err := repo.ObtenerFichaPorFeatureID(ctx, "AV-BAJA-01")
+
+	// 2. geo/areas: área activa aparece, área de baja no aparece
+	fc, err := geoRepo.Areas(ctx, entities.FiltroGeo{})
+	if err != nil {
+		t.Fatalf("geo areas: %v", err)
+	}
+	if len(fc.Features) != 1 || fc.Features[0].ID != "AV-ACTIVA-01" {
+		t.Fatalf("geo/areas debe incluir solo activa, obtenido %d features: %+v", len(fc.Features), fc.Features)
+	}
+
+	// 3. Resumen: cuenta solo activas
+	res, err := geoRepo.Resumen(ctx)
+	if err != nil {
+		t.Fatalf("geo resumen: %v", err)
+	}
+	if res.Areas != 1 || res.AreasConGeometria != 1 {
+		t.Fatalf("resumen debe contar solo activas (1/1), obtenido areas=%d con_geom=%d", res.Areas, res.AreasConGeometria)
+	}
+
+	// 4. ObtenerFichaPorFeatureID: la ficha de la baja sí se obtiene y expone activo=false
+	fichaBaja, err := repo.ObtenerFichaPorFeatureID(ctx, "AV-BAJA-01")
 	if err != nil {
 		t.Fatalf("ficha tras baja: %v", err)
 	}
-	if ficha.Activo {
-		t.Fatal("la ficha debe exponer activo=false tras la baja")
+	if fichaBaja.Activo {
+		t.Fatal("la ficha de baja debe exponer activo=false")
+	}
+
+	fichaActiva, err := repo.ObtenerFichaPorFeatureID(ctx, "AV-ACTIVA-01")
+	if err != nil {
+		t.Fatalf("ficha activa: %v", err)
+	}
+	if !fichaActiva.Activo {
+		t.Fatal("la ficha activa debe exponer activo=true")
 	}
 }

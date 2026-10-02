@@ -201,9 +201,22 @@ normalize_response() {
           sub("^/areas-verdes/v1"; "/api/v1")
         else . end
       ) |
-      if type == "object" then
-        del(.timestamp, .request_id, .requestId, ."x-request-id", .duracion_ms)
-      else . end' \
+      # F2: Ignorar la clave "activo" en fichas de áreas verdes (tanto en listados .areas[]
+      # como en fichas individuales con feature_id y uso/riego_act/con_geometria),
+      # ya que el backend nuevo expone este campo tras la baja lógica pero apps/api no lo incluye.
+      (if type == "object" then
+        del(.timestamp, .request_id, .requestId, ."x-request-id", .duracion_ms) |
+        (if .areas and (.areas | type == "array") then
+          .areas |= map(if type == "object" then del(.activo) else . end)
+        else . end) |
+        (if has("feature_id") and (has("uso") or has("riego_act") or has("con_geometria")) then
+          del(.activo)
+        else . end)
+      elif type == "array" then
+        map(if type == "object" and has("feature_id") and (has("uso") or has("riego_act") or has("con_geometria")) then
+          del(.activo)
+        else . end)
+      else . end)' \
       "$in_file" > "$out_file" 2>/dev/null || cp "$in_file" "$out_file"
   else
     tr -d '\r' < "$in_file" > "$out_file"
