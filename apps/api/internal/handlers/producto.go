@@ -189,7 +189,7 @@ func (h Sesion) Usuarios(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"usuarios": rows,
 		"permisos": perms,
-		"aviso":    "Cuentas locales de desarrollo. El SSO de la PUCP sigue pendiente de validación.",
+		"aviso":    "Cuentas de VerdePUCP. Las administra la jefatura de sección.",
 	})
 }
 

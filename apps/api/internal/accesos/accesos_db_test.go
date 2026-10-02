@@ -129,16 +129,16 @@ func TestEnsureConservaFilasExtraYEsIdempotente(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Login falló: %v", err)
 	}
-	if u.RolNombre != "Jefatura / Jefe de sección" {
-		t.Fatalf("Login rol_nombre esperado 'Jefatura / Jefe de sección', obtuve %q", u.RolNombre)
+	if u.RolNombre != "Jefatura de sección" {
+		t.Fatalf("Login rol_nombre esperado 'Jefatura de sección', obtuve %q", u.RolNombre)
 	}
 
 	uTok, err := store.FromToken(ctx, token)
 	if err != nil {
 		t.Fatalf("FromToken falló: %v", err)
 	}
-	if uTok.RolNombre != "Jefatura / Jefe de sección" {
-		t.Fatalf("FromToken rol_nombre esperado 'Jefatura / Jefe de sección', obtuve %q", uTok.RolNombre)
+	if uTok.RolNombre != "Jefatura de sección" {
+		t.Fatalf("FromToken rol_nombre esperado 'Jefatura de sección', obtuve %q", uTok.RolNombre)
 	}
 
 	// Verificamos Usuarios()
@@ -150,8 +150,8 @@ func TestEnsureConservaFilasExtraYEsIdempotente(t *testing.T) {
 	for _, usr := range usuarios {
 		if usr.Usuario == "coordinacion" {
 			encontrado = true
-			if usr.RolNombre != "Ingeniería/Coordinación" {
-				t.Fatalf("Usuarios rol_nombre esperado 'Ingeniería/Coordinación', obtuve %q", usr.RolNombre)
+			if usr.RolNombre != "Ingeniería / Coordinación" {
+				t.Fatalf("Usuarios rol_nombre esperado 'Ingeniería / Coordinación', obtuve %q", usr.RolNombre)
 			}
 		}
 	}

@@ -43,7 +43,7 @@ func TestUsuarioController_Listar(t *testing.T) {
 				Permisos: []dto.PermisoDTO{
 					{Rol: enums.RolAdmin.String(), Accion: "consultar"},
 				},
-				Aviso: "Cuentas locales de desarrollo. El SSO de la PUCP sigue pendiente de validación.",
+				Aviso: "Cuentas de VerdePUCP. Las administra la jefatura de sección.",
 			}, nil
 		},
 	}
