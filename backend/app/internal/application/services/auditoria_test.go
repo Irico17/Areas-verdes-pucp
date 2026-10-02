@@ -53,3 +53,25 @@ func TestAuditoriaService_RegistrarCambio(t *testing.T) {
 		t.Fatalf("despues inesperado: %v", c.Despues)
 	}
 }
+
+func TestAuditoriaService_SkipNoOpEdit(t *testing.T) {
+	repo := &mockCambioRepository{}
+	svc := services.NewAuditoriaService(repo)
+
+	var uid int64 = 42
+	err := svc.RegistrarCambio(context.Background(), dto.RegistrarCambioDTO{
+		Entidad:   "areas_verdes",
+		EntidadID: "AV-0001",
+		Accion:    "edicion",
+		Antes:     map[string]string{"nombre": "Mismo"},
+		Despues:   map[string]string{"nombre": "Mismo"},
+		UsuarioID: &uid,
+	})
+	if err != nil {
+		t.Fatalf("error registrando cambio: %v", err)
+	}
+
+	if len(repo.creados) != 0 {
+		t.Fatalf("se esperaba 0 cambios creados para no-op edit, obtenido: %d", len(repo.creados))
+	}
+}

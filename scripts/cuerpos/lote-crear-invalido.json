@@ -1,0 +1,17 @@
+{
+  "entidad": "inexistente",
+  "filas": [
+    {
+      "entidad_id": "90001",
+      "accion": "alta",
+      "antes": null,
+      "despues": {
+        "clase": "lugar",
+        "codigo": "p17",
+        "nombre": "P17",
+        "activo": true,
+        "orden": 1
+      }
+    }
+  ]
+}

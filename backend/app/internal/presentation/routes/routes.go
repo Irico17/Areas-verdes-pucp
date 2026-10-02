@@ -46,6 +46,7 @@ type Router struct {
 	evidenciaGroup       *groups.EvidenciaGroup
 	reporteGroup         *groups.ReporteGroup
 	iaGroup              *groups.IAGroup
+	auditoriaGroup       *groups.AuditoriaGroup
 }
 
 // RouterParams contains injected router dependencies.
@@ -76,6 +77,7 @@ type RouterParams struct {
 	EvidenciaGroup       *groups.EvidenciaGroup
 	ReporteGroup         *groups.ReporteGroup
 	IAGroup              *groups.IAGroup
+	AuditoriaGroup       *groups.AuditoriaGroup
 }
 
 // NewRouter creates the main router.
@@ -105,6 +107,7 @@ func NewRouter(p RouterParams) *Router {
 		evidenciaGroup:       p.EvidenciaGroup,
 		reporteGroup:         p.ReporteGroup,
 		iaGroup:              p.IAGroup,
+		auditoriaGroup:       p.AuditoriaGroup,
 	}
 }
 
@@ -146,6 +149,7 @@ func (r *Router) Setup() {
 		r.evidenciaGroup.Register(prefix)
 		r.reporteGroup.Register(prefix)
 		r.iaGroup.Register(prefix)
+		r.auditoriaGroup.Register(prefix)
 	}
 
 	if r.cfg.Swagger.Enabled {

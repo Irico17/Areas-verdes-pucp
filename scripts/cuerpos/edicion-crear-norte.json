@@ -1,0 +1,11 @@
+{
+  "entidad": "catalogos",
+  "entidad_id": "90001",
+  "despues": {
+    "clase": "lugar",
+    "codigo": "p17-alta",
+    "nombre": "P17 Norte Edit",
+    "activo": true,
+    "orden": 1
+  }
+}

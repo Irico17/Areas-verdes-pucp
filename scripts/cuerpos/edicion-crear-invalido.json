@@ -1,0 +1,11 @@
+{
+  "entidad": "catalogos",
+  "entidad_id": "",
+  "despues": {
+    "clase": "lugar",
+    "codigo": "p17-alta",
+    "nombre": "P17 Edit",
+    "activo": true,
+    "orden": 1
+  }
+}

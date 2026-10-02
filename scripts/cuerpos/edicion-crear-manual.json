@@ -1,0 +1,13 @@
+{
+  "entidad": "catalogos",
+  "entidad_id": "90001",
+  "despues": {
+    "clase": "lugar",
+    "codigo": "p17-alta",
+    "nombre": "P17 Manual Edit",
+    "activo": true,
+    "orden": 1,
+    "zona": "Z1",
+    "origen": "ficticio"
+  }
+}

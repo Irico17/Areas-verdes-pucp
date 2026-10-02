@@ -1,0 +1,29 @@
+{
+  "entidad": "catalogos",
+  "filas": [
+    {
+      "entidad_id": "90001",
+      "accion": "alta",
+      "antes": null,
+      "despues": {
+        "clase": "lugar",
+        "codigo": "p17-alta",
+        "nombre": "P17 Alta",
+        "activo": true,
+        "orden": 1
+      }
+    },
+    {
+      "entidad_id": "90002",
+      "accion": "alta",
+      "antes": null,
+      "despues": {
+        "clase": "lugar",
+        "codigo": "p17-alta-2",
+        "nombre": "P17 Alta 2",
+        "activo": true,
+        "orden": 2
+      }
+    }
+  ]
+}

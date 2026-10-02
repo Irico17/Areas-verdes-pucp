@@ -266,8 +266,23 @@ jefatura GET /api/v1/reportes/labores?formato=xls
 coordinacion GET /api/v1/reportes/labores?desde=invalido 400
 
 # Lote 17: Auditoría
-# admin GET /api/v1/auditoria/cambios
-# admin GET /api/v1/auditoria/timeline
+admin GET /api/v1/auditoria/cambios
+coordinacion GET /api/v1/auditoria/cambios
+jefatura GET /api/v1/auditoria/cambios
+norte GET /api/v1/auditoria/cambios
+- GET /api/v1/auditoria/cambios 401
+admin GET /api/v1/auditoria/cambios?entidad=areas_verdes
+coordinacion GET /api/v1/auditoria/cambios?entidad=catalogos
+jefatura GET /api/v1/auditoria/cambios?zona=Z1
+admin GET /api/v1/auditoria/cambios?origen=ficticio
+coordinacion GET /api/v1/auditoria/cambios?desde=2026-01-01&hasta=2026-12-31
+coordinacion GET /api/v1/auditoria/cambios?desde=invalido 400
+admin GET /api/v1/auditoria/timeline 400
+admin GET /api/v1/auditoria/timeline?entidad=areas_verdes&entidad_id=259
+coordinacion GET /api/v1/auditoria/timeline?entidad=areas_verdes&entidad_id=259
+jefatura GET /api/v1/auditoria/timeline?entidad=areas_verdes&entidad_id=259
+norte GET /api/v1/auditoria/timeline?entidad=areas_verdes&entidad_id=259
+- GET /api/v1/auditoria/timeline 401
 
 # Lote 19: Importaciones
 # admin GET /api/v1/importaciones/entidades

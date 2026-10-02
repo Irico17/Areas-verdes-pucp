@@ -8,6 +8,7 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/database"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/mapper"
 )
 
@@ -34,9 +35,10 @@ func (r *cambioRepository) Crear(ctx context.Context, c *entities.Cambio) error 
 		despuesVal = *m.Despues
 	}
 
-	return r.db.WithContext(ctx).Exec(`
-		INSERT INTO cambios (entidad, entidad_id, accion, antes, despues, usuario_id, lote_id, created_at)
-		VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7, COALESCE(NULLIF($8, '0001-01-01 00:00:00+00'::timestamptz), now()))`,
-		m.Entidad, m.EntidadID, m.Accion, antesVal, despuesVal, m.UsuarioID, m.LoteID, m.CreatedAt,
+	db := database.DBFromContext(ctx, r.db)
+	return db.WithContext(ctx).Exec(`
+		INSERT INTO cambios (entidad, entidad_id, accion, antes, despues, usuario_id, lote_id)
+		VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7)`,
+		m.Entidad, m.EntidadID, m.Accion, antesVal, despuesVal, m.UsuarioID, m.LoteID,
 	).Error
 }

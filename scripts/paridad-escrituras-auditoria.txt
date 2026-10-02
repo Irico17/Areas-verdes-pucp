@@ -1,0 +1,33 @@
+# Paridad de escrituras para Lote 17: Auditoría y lotes
+# 1. Unauthenticated checks (401)
+- POST /api/v1/lotes @scripts/cuerpos/lote-crear-alta.json 401
+- POST /api/v1/auditoria/ediciones @scripts/cuerpos/edicion-crear-manual.json 401
+- POST /api/v1/lotes/1/revertir @scripts/cuerpos/revertir-con-confirmar.json 401
+
+# 2. Permission checks (capataz norte has no 'validar' -> 403)
+norte POST /api/v1/lotes @scripts/cuerpos/lote-crear-norte.json 403
+norte POST /api/v1/auditoria/ediciones @scripts/cuerpos/edicion-crear-norte.json 403
+norte POST /api/v1/lotes/1/revertir @scripts/cuerpos/revertir-con-confirmar.json 403
+
+# 3. Input validation errors (400)
+coordinacion POST /api/v1/lotes @scripts/cuerpos/lote-crear-invalido.json 400
+jefatura POST /api/v1/auditoria/ediciones @scripts/cuerpos/edicion-crear-invalido.json 400
+coordinacion POST /api/v1/lotes/abc/revertir @scripts/cuerpos/revertir-con-confirmar.json 400
+
+# 4. Non-existent batch (404)
+coordinacion POST /api/v1/lotes/99999/revertir @scripts/cuerpos/revertir-con-confirmar.json 404
+
+# 5. Create batch import with 2 rows (id 1, rows 90001 and 90002)
+coordinacion POST /api/v1/lotes @scripts/cuerpos/lote-crear-alta.json
+
+# 6. Manual edit on row 90001 by admin
+admin POST /api/v1/auditoria/ediciones @scripts/cuerpos/edicion-crear-manual.json
+
+# 7. Try revert lote 1 without confirm -> 409 conflict (row 90001 was edited after batch)
+coordinacion POST /api/v1/lotes/1/revertir @scripts/cuerpos/revertir-sin-confirmar.json 409
+
+# 8. Revert lote 1 with confirm -> 200 (reverts 90002, excludes 90001)
+coordinacion POST /api/v1/lotes/1/revertir @scripts/cuerpos/revertir-con-confirmar.json
+
+# 9. Try revert already reverted batch -> 400
+coordinacion POST /api/v1/lotes/1/revertir @scripts/cuerpos/revertir-con-confirmar.json 400

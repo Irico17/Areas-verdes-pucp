@@ -4,7 +4,7 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"time"
+	"reflect"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
@@ -20,7 +20,7 @@ func NewAuditoriaService(repo contracts.ICambioRepository) contracts.IAuditoriaS
 	return &auditoriaService{repo: repo}
 }
 
-// RegistrarCambio records an audit entry in the cambios table.
+// RegistrarCambio records an audit entry in the cambios table, skipping no-op edits.
 func (s *auditoriaService) RegistrarCambio(ctx context.Context, req dto.RegistrarCambioDTO) error {
 	var antesStr *string
 	if req.Antes != nil {
@@ -56,6 +56,18 @@ func (s *auditoriaService) RegistrarCambio(ctx context.Context, req dto.Registra
 		}
 	}
 
+	// Skip no-op edits where antes == despues
+	if antesStr != nil && despuesStr != nil {
+		var a, d any
+		if errA := json.Unmarshal([]byte(*antesStr), &a); errA == nil {
+			if errD := json.Unmarshal([]byte(*despuesStr), &d); errD == nil {
+				if reflect.DeepEqual(a, d) {
+					return nil
+				}
+			}
+		}
+	}
+
 	cambio := &entities.Cambio{
 		Entidad:   req.Entidad,
 		EntidadID: req.EntidadID,
@@ -64,7 +76,6 @@ func (s *auditoriaService) RegistrarCambio(ctx context.Context, req dto.Registra
 		Despues:   despuesStr,
 		UsuarioID: req.UsuarioID,
 		LoteID:    req.LoteID,
-		CreatedAt: time.Now(),
 	}
 
 	return s.repo.Crear(ctx, cambio)

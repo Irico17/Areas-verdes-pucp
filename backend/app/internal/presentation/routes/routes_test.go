@@ -19,6 +19,7 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/services"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 	domainEntities "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
+	apperrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/infrastructure/ratelimit"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/controller"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/routes"
@@ -487,6 +488,35 @@ func (mockIARoutesUC) Sugerir(_ context.Context, _ string) dto.SugerenciaIADTO {
 	}
 }
 
+type mockLoteRoutesUC struct{}
+
+func (mockLoteRoutesUC) Importar(_ context.Context, _ int64, in dto.ImportarLoteDTO) (*dto.ImportarLoteResponseDTO, error) {
+	return &dto.ImportarLoteResponseDTO{LoteID: 1, Filas: len(in.Filas)}, nil
+}
+
+func (mockLoteRoutesUC) Revertir(_ context.Context, loteID, _ int64, _ bool) (*dto.ReporteReversionDTO, error) {
+	return &dto.ReporteReversionDTO{LoteID: loteID, Revertidas: []string{"1"}, Excluidas: []dto.ExcluidaDTO{}}, nil
+}
+
+func (mockLoteRoutesUC) Editar(_ context.Context, _ int64, in dto.EditarAuditoriaDTO) (*dto.EditarAuditoriaResponseDTO, error) {
+	return &dto.EditarAuditoriaResponseDTO{Editada: true, EntidadID: in.EntidadID}, nil
+}
+
+func (mockLoteRoutesUC) Timeline(_ context.Context, f dto.FiltroAuditoriaDTO) ([]dto.EventoAuditoriaDTO, error) {
+	if f.Entidad == "" || f.EntidadID == "" {
+		return nil, apperrors.InputError{Reason: "entidad y entidad_id son obligatorios"}
+	}
+	return []dto.EventoAuditoriaDTO{
+		{ID: 1, Entidad: f.Entidad, EntidadID: f.EntidadID, Accion: "edicion", UsuarioID: 1, Usuario: "admin", Nombre: "Admin", CreatedAt: "2026-10-01T00:00:00Z"},
+	}, nil
+}
+
+func (mockLoteRoutesUC) Historial(_ context.Context, _ dto.FiltroAuditoriaDTO) ([]dto.EventoAuditoriaDTO, error) {
+	return []dto.EventoAuditoriaDTO{
+		{ID: 1, Entidad: "catalogos", EntidadID: "1", Accion: "edicion", UsuarioID: 1, Usuario: "admin", Nombre: "Admin", CreatedAt: "2026-10-01T00:00:00Z"},
+	}, nil
+}
+
 func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
@@ -535,6 +565,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	evidenciaCtrl := controller.NewEvidenciaController(mockEvidenciaRoutesUC{}, zerolog.Nop())
 	reporteCtrl := controller.NewReporteController(mockReporteRoutesUC{}, zerolog.Nop())
 	iaCtrl := controller.NewIAController(mockIARoutesUC{}, zerolog.Nop())
+	auditoriaCtrl := controller.NewAuditoriaController(mockLoteRoutesUC{}, zerolog.Nop())
 
 	permisosSvc := services.NewPermisosService()
 	limitador := ratelimit.NewMemoriaLimitador(100, time.Minute)
@@ -558,6 +589,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	evidenciaGrp := groups.NewEvidenciaGroup(evidenciaCtrl, permisosSvc)
 	reporteGrp := groups.NewReporteGroup(reporteCtrl, permisosSvc)
 	iaGrp := groups.NewIAGroup(iaCtrl, permisosSvc)
+	auditoriaGrp := groups.NewAuditoriaGroup(auditoriaCtrl, permisosSvc)
 
 	r := routes.NewRouter(routes.RouterParams{
 		Engine:               engine,
@@ -584,6 +616,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 		EvidenciaGroup:       evidenciaGrp,
 		ReporteGroup:         reporteGrp,
 		IAGroup:              iaGrp,
+		AuditoriaGroup:       auditoriaGrp,
 	})
 	r.Setup()
 	return engine
@@ -2097,6 +2130,125 @@ func TestRutasReportesEIA_PermisosPorRol(t *testing.T) {
 		}
 		req := httptest.NewRequest(c.metodo, c.ruta, body)
 		if c.metodo == http.MethodPost {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		req.AddCookie(&http.Cookie{Name: "cv_sesion", Value: c.token})
+		engine.ServeHTTP(w, req)
+
+		if w.Code != c.statusEsperado {
+			t.Errorf("%s %s (token=%s): esperado status %d, obtenido %d (%s)", c.metodo, c.ruta, c.token, c.statusEsperado, w.Code, w.Body.String())
+		}
+		if c.errorEsperado != "" {
+			var resp map[string]string
+			_ = json.Unmarshal(w.Body.Bytes(), &resp)
+			if resp["error"] != c.errorEsperado {
+				t.Errorf("%s %s (token=%s): error esperado %q, obtenido %q", c.metodo, c.ruta, c.token, c.errorEsperado, resp["error"])
+			}
+		}
+	}
+}
+
+func TestRutasAuditoriaELotes_SinAutenticacionRetorna401(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	rutas := []struct {
+		metodo string
+		ruta   string
+	}{
+		{http.MethodPost, "/api/v1/lotes"},
+		{http.MethodPost, "/areas-verdes/v1/lotes"},
+		{http.MethodPost, "/api/v1/lotes/1/revertir"},
+		{http.MethodPost, "/areas-verdes/v1/lotes/1/revertir"},
+		{http.MethodPost, "/api/v1/auditoria/ediciones"},
+		{http.MethodPost, "/areas-verdes/v1/auditoria/ediciones"},
+		{http.MethodGet, "/api/v1/auditoria/cambios"},
+		{http.MethodGet, "/areas-verdes/v1/auditoria/cambios"},
+		{http.MethodGet, "/api/v1/auditoria/timeline"},
+		{http.MethodGet, "/areas-verdes/v1/auditoria/timeline"},
+	}
+
+	for _, r := range rutas {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(r.metodo, r.ruta, nil)
+		engine.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s sin auth: esperado 401, obtenido %d", r.metodo, r.ruta, w.Code)
+		}
+		if w.Body.String() != `{"error":"inicie sesión"}` {
+			t.Errorf("%s %s sin auth: cuerpo inesperado %s", r.metodo, r.ruta, w.Body.String())
+		}
+	}
+}
+
+func TestRutasAuditoriaELotes_PermisosPorRol(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	casos := []struct {
+		metodo         string
+		ruta           string
+		token          string
+		body           string
+		statusEsperado int
+		errorEsperado  string
+	}{
+		// 1. Capataz: validar=false -> 403; consultar=true -> 200
+		{http.MethodPost, "/api/v1/lotes", "token-norte", `{"entidad":"catalogos","filas":[]}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/lotes", "token-norte", `{"entidad":"catalogos","filas":[]}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/lotes/1/revertir", "token-norte", `{"confirmar":false}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/lotes/1/revertir", "token-norte", `{"confirmar":false}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/auditoria/ediciones", "token-norte", `{"entidad":"catalogos","entidad_id":"1","despues":{}}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/auditoria/ediciones", "token-norte", `{"entidad":"catalogos","entidad_id":"1","despues":{}}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodGet, "/api/v1/auditoria/cambios", "token-norte", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/auditoria/cambios", "token-norte", "", 200, ""},
+		{http.MethodGet, "/api/v1/auditoria/timeline?entidad=catalogos&entidad_id=1", "token-norte", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/auditoria/timeline?entidad=catalogos&entidad_id=1", "token-norte", "", 200, ""},
+
+		// 2. Coordinación: validar=true, consultar=true
+		{http.MethodPost, "/api/v1/lotes", "token-coordinacion", `{"entidad":"catalogos","filas":[]}`, 201, ""},
+		{http.MethodPost, "/areas-verdes/v1/lotes", "token-coordinacion", `{"entidad":"catalogos","filas":[]}`, 201, ""},
+		{http.MethodPost, "/api/v1/lotes/1/revertir", "token-coordinacion", `{"confirmar":false}`, 200, ""},
+		{http.MethodPost, "/areas-verdes/v1/lotes/1/revertir", "token-coordinacion", `{"confirmar":false}`, 200, ""},
+		{http.MethodPost, "/api/v1/auditoria/ediciones", "token-coordinacion", `{"entidad":"catalogos","entidad_id":"1","despues":{"nombre":"Nuevo"}}`, 200, ""},
+		{http.MethodPost, "/areas-verdes/v1/auditoria/ediciones", "token-coordinacion", `{"entidad":"catalogos","entidad_id":"1","despues":{"nombre":"Nuevo"}}`, 200, ""},
+		{http.MethodGet, "/api/v1/auditoria/cambios", "token-coordinacion", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/auditoria/cambios", "token-coordinacion", "", 200, ""},
+		{http.MethodGet, "/api/v1/auditoria/timeline?entidad=catalogos&entidad_id=1", "token-coordinacion", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/auditoria/timeline?entidad=catalogos&entidad_id=1", "token-coordinacion", "", 200, ""},
+
+		// 3. Jefatura: validar=true, consultar=true
+		{http.MethodPost, "/api/v1/lotes", "token-jefatura", `{"entidad":"catalogos","filas":[]}`, 201, ""},
+		{http.MethodPost, "/areas-verdes/v1/lotes", "token-jefatura", `{"entidad":"catalogos","filas":[]}`, 201, ""},
+		{http.MethodPost, "/api/v1/lotes/1/revertir", "token-jefatura", `{"confirmar":false}`, 200, ""},
+		{http.MethodPost, "/areas-verdes/v1/lotes/1/revertir", "token-jefatura", `{"confirmar":false}`, 200, ""},
+		{http.MethodPost, "/api/v1/auditoria/ediciones", "token-jefatura", `{"entidad":"catalogos","entidad_id":"1","despues":{"nombre":"Nuevo"}}`, 200, ""},
+		{http.MethodPost, "/areas-verdes/v1/auditoria/ediciones", "token-jefatura", `{"entidad":"catalogos","entidad_id":"1","despues":{"nombre":"Nuevo"}}`, 200, ""},
+		{http.MethodGet, "/api/v1/auditoria/cambios", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/auditoria/cambios", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/api/v1/auditoria/timeline?entidad=catalogos&entidad_id=1", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/auditoria/timeline?entidad=catalogos&entidad_id=1", "token-jefatura", "", 200, ""},
+
+		// 4. Admin: validar=true, consultar=true
+		{http.MethodPost, "/api/v1/lotes", "token-admin", `{"entidad":"catalogos","filas":[]}`, 201, ""},
+		{http.MethodPost, "/areas-verdes/v1/lotes", "token-admin", `{"entidad":"catalogos","filas":[]}`, 201, ""},
+		{http.MethodPost, "/api/v1/lotes/1/revertir", "token-admin", `{"confirmar":false}`, 200, ""},
+		{http.MethodPost, "/areas-verdes/v1/lotes/1/revertir", "token-admin", `{"confirmar":false}`, 200, ""},
+		{http.MethodPost, "/api/v1/auditoria/ediciones", "token-admin", `{"entidad":"catalogos","entidad_id":"1","despues":{"nombre":"Nuevo"}}`, 200, ""},
+		{http.MethodPost, "/areas-verdes/v1/auditoria/ediciones", "token-admin", `{"entidad":"catalogos","entidad_id":"1","despues":{"nombre":"Nuevo"}}`, 200, ""},
+		{http.MethodGet, "/api/v1/auditoria/cambios", "token-admin", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/auditoria/cambios", "token-admin", "", 200, ""},
+		{http.MethodGet, "/api/v1/auditoria/timeline?entidad=catalogos&entidad_id=1", "token-admin", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/auditoria/timeline?entidad=catalogos&entidad_id=1", "token-admin", "", 200, ""},
+	}
+
+	for _, c := range casos {
+		w := httptest.NewRecorder()
+		var body io.Reader
+		if c.body != "" {
+			body = strings.NewReader(c.body)
+		}
+		req := httptest.NewRequest(c.metodo, c.ruta, body)
+		if c.body != "" {
 			req.Header.Set("Content-Type", "application/json")
 		}
 		req.AddCookie(&http.Cookie{Name: "cv_sesion", Value: c.token})

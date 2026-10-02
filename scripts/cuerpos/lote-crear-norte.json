@@ -1,0 +1,17 @@
+{
+  "entidad": "catalogos",
+  "filas": [
+    {
+      "entidad_id": "90001",
+      "accion": "alta",
+      "antes": null,
+      "despues": {
+        "clase": "lugar",
+        "codigo": "p17-norte",
+        "nombre": "P17 Norte",
+        "activo": true,
+        "orden": 1
+      }
+    }
+  ]
+}

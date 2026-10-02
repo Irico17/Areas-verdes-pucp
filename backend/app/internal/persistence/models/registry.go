@@ -19,6 +19,7 @@ func AllModels() []any {
 		&EspecieModel{},
 		&EvidenciaModel{},
 		&InventarioModel{},
+		&LoteImportacionModel{},
 		&LugarModel{},
 		&OrdenServicioModel{},
 		&PermisoModel{},
