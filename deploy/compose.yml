@@ -1,0 +1,81 @@
+# Compose base de VerdePUCP. Los puertos, nombres y la base salen del env del ambiente.
+# Postgres no recibe scripts al crear el volumen. El esquema lo aplica el entrypoint
+# desde /opt/campus/migrations.
+
+name: campus-${APP_ENV}
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: campus-${APP_ENV}-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - pg:/var/lib/postgresql/data
+    networks:
+      - campus
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ..
+      dockerfile: backend/dockerfile
+    image: campus-verde-api:${APP_ENV}
+    container_name: campus-${APP_ENV}-api
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      API_ADDR: ":8091"
+      SERVER_PORT: "8091"
+      MIGRATIONS_DIR: /opt/campus/migrations
+      SEED_FILE: /opt/campus/seed/ficticio.sql
+      CAMPUS_DEV_PASSWORD: ${CAMPUS_DEV_PASSWORD}
+      CAMPUS_COOKIE_SECURE: ${CAMPUS_COOKIE_SECURE:-false}
+      CAMPUS_CORS_ORIGINS: ${CAMPUS_CORS_ORIGINS:-}
+      CAMPUS_ENV: ${CAMPUS_ENV:-local}
+      EVIDENCIAS_BUCKET: ${EVIDENCIAS_BUCKET:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
+    volumes:
+      - data:/data
+    networks:
+      - campus
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT}:8091"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    image: campus-verde-web:${APP_ENV}
+    container_name: campus-${APP_ENV}-web
+    ports:
+      - "${WEB_PORT}:80"
+    networks:
+      - campus
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pg:
+    name: campus_${APP_ENV}_pg
+  data:
+    name: campus_${APP_ENV}_data
+
+networks:
+  campus:
+    name: campus-${APP_ENV}

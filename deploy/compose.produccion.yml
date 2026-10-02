@@ -1,0 +1,14 @@
+# produccion local: Swagger apagado, ETL solo si el catastro está vacío, pool histórico.
+# En la EC2 el compose lo escribe user_data; este override es el de la misma máquina.
+
+services:
+  api:
+    environment:
+      APP_ENV: produccion
+      SEED_PROFILE: etl
+      SERVER_GIN_MODE: release
+      SWAGGER_ENABLED: "false"
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      CAMPUS_COOKIE_SECURE: "false"
+      CAMPUS_ENV: production

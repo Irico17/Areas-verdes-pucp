@@ -1,0 +1,14 @@
+# qa: Swagger encendido, logs info en JSON, semilla ficticia si la base está vacía.
+
+services:
+  api:
+    environment:
+      APP_ENV: qa
+      SEED_PROFILE: ficticio
+      SERVER_GIN_MODE: release
+      SWAGGER_ENABLED: "true"
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      CAMPUS_CORS_ORIGINS: http://127.0.0.1:8188,http://localhost:8188
+      CAMPUS_COOKIE_SECURE: "false"
+      CAMPUS_ENV: qa

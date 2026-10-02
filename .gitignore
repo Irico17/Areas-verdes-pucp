@@ -64,6 +64,11 @@ apps/api/bin/
 *.exe
 *.test
 
+# Ambientes locales (los *.env.example sí se versionan)
+deploy/env/*.env
+!deploy/env/*.env.example
+deploy/state/
+
 # Terraform local (el lock sí se versiona)
 infra/terraform/.terraform/
 *.tfstate

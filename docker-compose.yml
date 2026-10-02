@@ -1,5 +1,6 @@
-# Campus Verde. `docker compose up -d db` es la base local.
+# Campus Verde. `docker compose up -d db` es la base local histórica.
 # `docker compose up -d --build` levanta PostGIS, la API y nginx en el mismo origen.
+# Los tres ambientes a la vez están en deploy/: make up ENV=develop|qa|produccion.
 
 services:
   db:

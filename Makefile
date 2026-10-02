@@ -6,13 +6,16 @@ include .env
 export
 endif
 
-.PHONY: help env setup up docker-up down docker-down wait migrate etl etl-lote sectores api web test backend-test swagger bootstrap counts stack
+.PHONY: help env setup up docker-up down docker-down wait migrate etl etl-lote sectores api web test backend-test swagger bootstrap counts stack smoke
 
 help:
 	@echo "make bootstrap   # compose + migraciones + ETL"
 	@echo "make setup       # crea .env desde .env.example sin sobrescribir"
-	@echo "make up          # solo PostGIS (el desarrollo local)"
-	@echo "make docker-up   # alias docker compose up -d"
+	@echo "make up          # solo PostGIS del compose histórico (sin ENV)"
+	@echo "make up ENV=develop|qa|produccion  # stack de ese ambiente"
+	@echo "make down ENV=develop|qa|produccion"
+	@echo "make smoke ENV=develop|qa|produccion"
+	@echo "make docker-up   # alias docker compose up -d (compose histórico)"
 	@echo "make docker-down # alias docker compose down"
 	@echo "make stack       # postgis + api + web en compose"
 	@echo "make wait        # espera a que Postgres acepte conexiones"
@@ -26,7 +29,7 @@ help:
 	@echo "make backend-test # go test de backend/app"
 	@echo "make swagger     # regenera docs de swag"
 	@echo "make counts      # conteos en PostGIS"
-	@echo "make down        # detiene compose"
+	@echo "make down        # detiene el compose histórico, o ENV=... un ambiente"
 
 env:
 	@test -f .env || cp .env.example .env
@@ -41,7 +44,11 @@ setup:
 	fi
 
 up: env
-	docker compose up -d db
+	@if [ -n "$(ENV)" ]; then \
+		bash deploy/deploy.sh "$(ENV)" --local; \
+	else \
+		docker compose up -d db; \
+	fi
 
 docker-up:
 	docker compose up -d
@@ -50,10 +57,18 @@ stack: env
 	docker compose up -d --build
 
 down:
-	docker compose down
+	@if [ -n "$(ENV)" ]; then \
+		bash deploy/deploy.sh "$(ENV)" --local --down; \
+	else \
+		docker compose down; \
+	fi
 
 docker-down:
 	docker compose down
+
+smoke:
+	@test -n "$(ENV)" || { echo "make smoke necesita ENV=develop|qa|produccion"; exit 1; }
+	bash deploy/deploy.sh "$(ENV)" --local --smoke
 
 wait: env
 	./scripts/wait-db.sh
@@ -85,7 +100,9 @@ backend-test:
 swagger:
 	$(MAKE) -C backend swagger
 
-bootstrap: up wait migrate etl
+bootstrap:
+	docker compose up -d db
+	$(MAKE) wait migrate etl
 	@echo "Listo. Arranca la API con: make api"
 
 counts: env
