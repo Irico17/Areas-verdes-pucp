@@ -5264,7 +5264,13 @@ const docTemplate = `{
                 "accion": {
                     "type": "string"
                 },
+                "antes": {
+                    "type": "string"
+                },
                 "created_at": {
+                    "type": "string"
+                },
+                "despues": {
                     "type": "string"
                 },
                 "entidad": {

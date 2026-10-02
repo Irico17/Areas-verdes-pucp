@@ -209,3 +209,16 @@ func tieneArg(args []any, want string) bool {
 	}
 	return false
 }
+
+func TestSoloAbiertasExcluyeCanceladaCerradaYArchivada(t *testing.T) {
+	consulta, _ := clausulasActividades(entities.FiltroIntervenciones{SoloAbiertas: true})
+	for _, estado := range []string{"'cancelada'", "'cerrada'", "'archivada'"} {
+		if !strings.Contains(consulta, estado) {
+			t.Fatalf("abiertas no excluye %s: %s", estado, consulta)
+		}
+	}
+	historico, _ := clausulasActividades(entities.FiltroIntervenciones{SoloAbiertas: false})
+	if strings.Contains(historico, "'archivada'") {
+		t.Fatalf("el histórico no debe excluir por estado: %s", historico)
+	}
+}

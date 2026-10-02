@@ -113,8 +113,6 @@ export const ACTIVIDAD = {
   desde: "Desde",
   hasta: "Hasta",
   historico: "Incluir cerradas",
-  ejemplar: "Ejemplar",
-  personal: "Personal de la actividad",
   soloCuadrilla: "Solo ve las actividades de su cuadrilla.",
   cuadrilla: "Cuadrilla",
   todas: "Todas las cuadrillas",

@@ -7,7 +7,7 @@ import { SolicitudesPanel } from "./Solicitudes.tsx"
 import { PodaPanel } from "./Poda.tsx"
 import { codigoExterno, validarPoda, type PodaItem } from "./poda.ts"
 import { etiquetaRol } from "../producto.ts"
-import { estadosPermitidos, puedeEncolarEstado } from "../operacion.ts"
+import { estadosPermitidos, puedeEncolarEstado, soloAbiertas } from "../operacion.ts"
 import { ViveroPanel } from "./Vivero.tsx"
 import { validarVivero } from "./vivero.ts"
 
@@ -320,3 +320,15 @@ test("la solicitud no es solo un texto de lugar y la orden elige empresa", () =>
   assert.match(html, /Evidencias de la orden/)
 })
 
+
+test("una actividad archivada no aparece entre las abiertas, pero sí en el histórico", () => {
+  const coleccion = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", geometry: null, properties: { id: "a", estado: "pendiente" } },
+      { type: "Feature", geometry: null, properties: { id: "b", estado: "archivada" } },
+    ],
+  } as unknown as Parameters<typeof soloAbiertas>[0]
+  assert.deepEqual(soloAbiertas(coleccion, false).features.map((f) => (f.properties as { id: string }).id), ["a"])
+  assert.equal(soloAbiertas(coleccion, true).features.length, 2)
+})

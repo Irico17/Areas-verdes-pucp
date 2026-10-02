@@ -21,7 +21,7 @@ func clausulasActividades(f entities.FiltroIntervenciones) (string, []any) {
 	}
 
 	if f.SoloAbiertas {
-		where = append(where, "a.estado NOT IN ('cancelada', 'cerrada')")
+		where = append(where, "a.estado NOT IN ('cancelada', 'cerrada', 'archivada')")
 	}
 	if f.Rol == usecases.RolCapataz {
 		id := strings.TrimSpace(f.CapatazID)

@@ -304,7 +304,16 @@ export function actividadesPath(rol: Rol, capatazId: string, filtro: FiltroActiv
 
 export async function fetchActividades(rol: Rol, capatazId: string, filtro: FiltroActividades = FILTRO_ACTIVIDADES): Promise<FeatureCollection> {
   await sincronizarEstados()
-  return fetchCollection(actividadesPath(rol, capatazId, filtro))
+  return soloAbiertas(await fetchCollection(actividadesPath(rol, capatazId, filtro)), filtro.historico)
+}
+
+// Una actividad archivada no se mezcla con las abiertas, aunque el servidor la envíe.
+export function soloAbiertas(coleccion: FeatureCollection, historico: boolean): FeatureCollection {
+  if (historico) return coleccion
+  return {
+    ...coleccion,
+    features: coleccion.features.filter((f) => String((f.properties as Record<string, unknown> | null)?.estado ?? "") !== "archivada"),
+  }
 }
 
 export async function fetchCapataces(): Promise<Capataz[]> {
