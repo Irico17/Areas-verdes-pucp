@@ -1,6 +1,6 @@
 # Ambientes: develop, qa y producción
 
-VerdePUCP corre el mismo backend y las mismas migraciones `db/migrations` (`001`–`048`) en tres ambientes. La base de cada ambiente es independiente. El entrypoint aplica solo las migraciones que falten en `schema_migrations`. No hay `AutoMigrate`, no se monta un `.sql` en `initdb` y no se borra el catastro cargado.
+VerdePUCP corre el mismo backend y las mismas migraciones `db/migrations` (`001`–`048`) en tres ambientes. La base de cada ambiente es independiente. El entrypoint (`backend/docker-entrypoint.sh` mediante el binario `migrate`; el binario `api` no migra) aplica solo las migraciones que falten en `schema_migrations`. No hay `AutoMigrate`, no se monta un `.sql` en `initdb` y no se borra el catastro cargado.
 
 El corte de la EC2 que ya tiene datos sigue en [`RUNBOOK-CORTE-PRODUCCION.md`](RUNBOOK-CORTE-PRODUCCION.md). Este documento no lo ejecuta.
 

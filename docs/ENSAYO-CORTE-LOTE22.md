@@ -19,30 +19,43 @@ Fecha: 2026-10-02. Rama `backend/arquitectura-equipo`. Este ensayo cubre los pas
 | `swag init -g cmd/main.go -o docs/` (swag v1.16.6) | `git diff` de `backend/app/docs` vacío |
 | Web (lote 21) | `npm run lint`, `npm test` (75) y `npm run build` en verde. Un segundo build con `VITE_API_BASE=/api/v1` deja la base `/api/v1` en el bundle |
 
-## Pasos 1–4 del §4.4
+## Pasos 1–4 del §4.4 (Ensayo ejecutado contra datos reales)
 
-Ejecutados después del lote 22 (y revalidados con lotes 23–24) sobre copias desechables `vp_*` de `campus_verde`, sin tocar la base de desarrollo ni la EC2. Ver `/workspace/informe-lotes-23-24.md` y el ensayo previo del lote 22.
+Ejecutados y revalidados tras los lotes 22–24 sobre copias desechables `vp_*` de `campus_verde` y bases vacías, sin tocar la base de desarrollo ni la EC2 (ver `/workspace/informe-lotes-23-24.md` §2 y §4).
 
-- Copias `vp_c_*` / `vp_rev_*` creadas con `pg_dump` en modo lectura y borradas al terminar.
-- `schema_migrations` y conteos por tabla antes/después: idénticos salvo las versiones nuevas (`047`/`048` en el tramo del lote 24).
-- Paridad GET y escrituras con `scripts/paridad-api.sh` / `paridad-escrituras-*` en verde.
-- Humo del proxy Vite → API nueva: login y rutas bajo `/areas-verdes/v1`.
+Las migraciones las aplica `backend/docker-entrypoint.sh` mediante el binario `migrate` (el binario `api` no migra).
+
+### Resultados de migraciones 001–048 (`db/migrations`, 38 archivos)
+- **Copia de `campus_verde` (36 versiones):**
+  - 1.ª corrida: aplica `047_evidencia_evento.sql` y `048_uuid_cliente_eventos.sql` («migraciones al día»).
+  - 2.ª corrida: 0 migraciones aplicadas («migraciones al día»).
+  - **Conteos por tabla antes vs después:** idénticos en las 38 tablas de usuario; única diferencia `schema_migrations` 36 → 38.
+  - **Columnas nuevas:** `evidencias.evento_id bigint NULL`, `actividad_eventos.uuid_cliente uuid NULL`; índices `evidencias_evento_id_idx` y `actividad_eventos_uuid_cliente_uidx` presentes.
+- **BD vacía:** 1.ª corrida aplica 38 migraciones; 2.ª corrida aplica 0. Total: 48 relaciones. Estructura idéntica (`information_schema`) a la copia migrada.
+- Migraciones `047` y `048` aditivas, sin `DROP`, `TRUNCATE` ni `DELETE`.
+
+### Resultados de ejecución del entrypoint (`backend/docker-entrypoint.sh`)
+Se ejecutó el script real del entrypoint con los binarios `migrate` y `etl` compilados (`API_BIN=/bin/true`):
+- **BD vacía (1.ª corrida):** aplica 38 migraciones, detecta «BD vacía: requiere carga inicial de ETL», ejecuta ETL (`areas=521 zonas=534`), crea `.etl-done`; BD con 521 áreas y 38 versiones.
+- **BD vacía (2.ª corrida):** migraciones al día, no repite ETL.
+- **Sin `.etl-done` pero BD ya con datos:** detecta «BD con datos … no se ejecuta la carga inicial»; 521 áreas intactas.
+- **Copia con datos (36 versiones), sin `.etl-done`:** aplica solo `047` y `048`; no corre ETL; 521 áreas antes y después.
+- **Copia (2.ª corrida):** 0 migraciones aplicadas.
+- **Sin `CAMPUS_DEV_PASSWORD`:** rc=1 con mensaje claro de error.
+- **`MIGRATIONS_DIR` inexistente:** rc=1 (`MIGRATIONS_DIR=/nope no existe`).
+- **Migración rota (049 de prueba con tabla inexistente):** rc=1, «FALLO DE MIGRACION: la transaccion se revirtio»; la versión no se registra en `schema_migrations`; la base de datos queda intacta.
+
+## Paridad de API
+- **Lecturas GET (237 rutas en `scripts/paridad-rutas.txt`):** 100 % de paridad (0 diferencias) en ambos prefijos (`/api/v1` y `/areas-verdes/v1`).
+- **Escrituras (10 archivos en ambos prefijos):** 100 % de paridad y conteos de tablas y `cambios` idénticos.
+- **Bajas lógicas (`scripts/paridad-escrituras-bajas.txt`):** verificado con arnés `solo-nueva` (401, 403, 404, 400 mismatch, PATCH 200, bajas 200 con `activo: false`, idempotencia y exclusión en lecturas).
 
 No se escribió en `campus_verde` ni en la EC2.
 
-## Qué no se probó por falta de Docker
+## Qué no se probó por falta de Docker en este entorno
 
 - `docker build -f backend/dockerfile`
 - `docker compose up`
-- el job `backend` de GitHub Actions (gofmt, vet, tests con el servicio PostGIS, y el build de la imagen)
+- el job `backend` de GitHub Actions como pipeline completo (se ejecutaron todos sus pasos por separado).
 
-El entrypoint, el UID 10001 y el `chown` de `user_data.sh.tftpl` / `up.sh` quedan revisados en el script y en el test de entrypoint, no en un contenedor.
-
-## Qué haría el ensayo cuando haya una copia de `campus_verde`
-
-1. `pg_dump -Fc` de `campus_verde` y restore en `vp_c_22` (y otra copia para la API anterior).
-2. Conteos de cada tabla de `public` (el SQL del §4.4) y `SELECT version FROM schema_migrations ORDER BY 1`.
-3. `MIGRATIONS_DIR` apuntando a `db/migrations` (fuente de verdad desde el lote 23; `apps/api/migrations` ya no tiene SQL), `go run ./cmd/migrate` del backend nuevo. Tiene que imprimir migración ya aplicada (o aplicar solo `047`/`048` si faltan) y no cambiar conteos de datos.
-4. `go run ./cmd/migrate -necesita-etl` debe salir con código 10 (la base tiene filas). El entrypoint, en ese caso, no llama a `etl`.
-5. API anterior y API nueva sobre copias distintas, `scripts/paridad-api.sh`, y los mismos conteos al final.
-6. `DROP DATABASE` de las copias `vp_c_*`.
+El entrypoint, el UID 10001 y el `chown` de `user_data.sh.tftpl` / `up.sh` quedan revisados en el script y en los tests de entrypoint (`internal/infrastructure/deploy`).
