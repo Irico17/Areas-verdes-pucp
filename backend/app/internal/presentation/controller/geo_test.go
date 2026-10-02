@@ -233,7 +233,7 @@ func TestGeoController_Edificios(t *testing.T) {
 	if ct := w.Header().Get("Content-Type"); ct != "application/geo+json; charset=utf-8" {
 		t.Fatalf("content-type %s", ct)
 	}
-	if string(w.Body.Bytes()) != string(edificiosJSON) {
+	if w.Body.String() != string(edificiosJSON) {
 		t.Fatalf("edificios body %s", w.Body.Bytes())
 	}
 }

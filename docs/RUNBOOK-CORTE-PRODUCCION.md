@@ -2,7 +2,7 @@
 
 Este documento es el checklist del §4.4 de `docs/PLAN-MIGRACION-BACKEND.md`. **No se ejecutó** al dejar el lote 23 en el repositorio. Lo corre el responsable, con orden expresa, sobre la EC2. No forma parte del arranque automático ni de un job de CI.
 
-La imagen nueva ya trae `db/migrations` en `/opt/campus/migrations` (`MIGRATIONS_DIR`). Al arrancar aplica solo las versiones que falten en `schema_migrations`. Hoy esas versiones nuevas, respecto de un despliegue que se quedó en `046`, son:
+La imagen nueva ya trae `db/migrations` en `/opt/campus/migrations` (`MIGRATIONS_DIR`). El `docker-entrypoint.sh` ejecuta el binario `migrate` (el binario `api` no migra) y aplica solo las versiones que falten en `schema_migrations`. Requiere `CAMPUS_DEV_PASSWORD` inyectada; sin ella el entrypoint sale con error. Hoy esas versiones nuevas, respecto de un despliegue que se quedó en `046`, son:
 
 - `047_evidencia_evento.sql` (`evidencias.evento_id`, nulo, con FK e índice)
 - `048_uuid_cliente_eventos.sql` (`actividad_eventos.uuid_cliente`, índice único parcial)

@@ -1,0 +1,12 @@
+# Humo de bajas lógicas — SOLO backend nuevo (apps/api no registra estas rutas).
+# Formato igual que los otros paridad-escrituras-*.txt, pensado para scripts/smoke-bajas.sh.
+# Usa áreas/zonas ficticias creadas en el propio script; no toca el catastro real.
+# Roles: admin/coordinacion pueden; jefatura no (permiso registrar).
+#
+# admin POST /api/v1/catastro/areas/:id/baja 200
+# jefatura POST /api/v1/catastro/areas/:id/baja 403
+# anon POST /api/v1/catastro/areas/:id/baja 401
+# admin POST /api/v1/catastro/zonas-supervision/:codigo/baja 200
+# jefatura POST /api/v1/catastro/zonas-supervision/:codigo/baja 403
+# Divergencia lecturas: tras la baja, GET /catastro/areas y /geo/areas del backend
+# nuevo ya no incluyen el feature; apps/api sí lo incluiría.
