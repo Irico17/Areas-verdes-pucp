@@ -143,19 +143,22 @@ subir AWS_SESSION_TOKEN "$TOKEN"
 unset KEY_ID SECRET TOKEN clip pegado
 
 echo "Secrets actualizados desde ${fuente} (los valores no se muestran)."
+echo "Son secrets del repositorio. Para separarlos por ambiente: gh secret set NOMBRE --env develop|qa|produccion"
+echo "Producción pide aprobación en el environment produccion. No lance el workflow contra main."
+
+rama="$(git rev-parse --abbrev-ref HEAD)"
+echo "Para desplegar esta rama: gh workflow run deploy --ref ${rama} -f ambiente=produccion"
 
 if [ -t 0 ]; then
-  printf '¿Lanzar el despliegue (gh workflow run ci --ref main)? [s/N] '
+  printf '¿Lanzar ese workflow_dispatch de producción? [s/N] '
   read -r respuesta || respuesta=""
   case "$respuesta" in
     s|S|y|Y)
-      gh workflow run ci --ref main
-      echo "Despliegue pedido en main. El job imprime la URL al terminar."
+      gh workflow run deploy --ref "$rama" -f ambiente=produccion
+      echo "Despliegue pedido en ${rama}. Si el environment produccion tiene revisores, queda esperando aprobación."
       ;;
     *)
-      echo "Para lanzarlo después: gh workflow run ci --ref main"
+      echo "No se lanzó."
       ;;
   esac
-else
-  echo "Para lanzarlo: gh workflow run ci --ref main"
 fi

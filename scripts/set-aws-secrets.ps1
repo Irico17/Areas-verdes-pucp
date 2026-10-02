@@ -109,16 +109,19 @@ $creds = $null
 $clip = $null
 
 Write-Host "Secrets actualizados desde $fuente (los valores no se muestran)."
+Write-Host "Son secrets del repositorio. Para separarlos por ambiente: gh secret set NOMBRE --env develop|qa|produccion"
+Write-Host "Producción pide aprobación en el environment produccion. No lance el workflow contra main."
+
+$rama = (git rev-parse --abbrev-ref HEAD).Trim()
+Write-Host "Para desplegar esta rama: gh workflow run deploy --ref $rama -f ambiente=produccion"
 
 if ([Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
-    $respuesta = Read-Host "Lanzar el despliegue (gh workflow run ci --ref main)? [s/N]"
+    $respuesta = Read-Host "Lanzar ese workflow_dispatch de producción? [s/N]"
     if ($respuesta -match '^[sSyY]$') {
-        & gh workflow run ci --ref main
+        & gh workflow run deploy --ref $rama -f ambiente=produccion
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-        Write-Host "Despliegue pedido en main. El job imprime la URL al terminar."
+        Write-Host "Despliegue pedido en $rama. Si el environment produccion tiene revisores, queda esperando aprobación."
     } else {
-        Write-Host "Para lanzarlo después: gh workflow run ci --ref main"
+        Write-Host "No se lanzó."
     }
-} else {
-    Write-Host "Para lanzarlo: gh workflow run ci --ref main"
 }

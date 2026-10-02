@@ -2,6 +2,10 @@ name: ci
 
 on:
   push:
+    branches:
+      - "**"
+    tags:
+      - "rc-*"
   pull_request:
   workflow_dispatch:
 
@@ -128,6 +132,22 @@ jobs:
           if reviewed == 0:
               raise SystemExit("no se encontró ningún compose para revisar initdb")
           print(f"compose sin initdb ({reviewed} archivos)")
+
+          seed = root / "deploy" / "seed"
+          if not seed.is_dir():
+              raise SystemExit("falta deploy/seed")
+          seeded = 0
+          for path in sorted(seed.glob("*.sql")):
+              seeded += 1
+              text = path.read_text(encoding="utf-8")
+              hit = destructive.search(text)
+              if hit:
+                  raise SystemExit(
+                      f"semilla no puede borrar datos ({hit.group(0)}): {path}"
+                  )
+          if seeded == 0:
+              raise SystemExit("deploy/seed no tiene SQL de semilla ficticia")
+          print(f"semilla ficticia sin borrado ({seeded} archivos)")
           PY
       - name: Swagger sin deriva
         working-directory: backend/app
@@ -136,24 +156,36 @@ jobs:
           swag init -g cmd/main.go -o docs/
           git diff --exit-code -- docs
 
-  deploy:
-    if: github.event_name == 'workflow_dispatch'
+  imagenes:
+    if: github.event_name != 'pull_request'
     needs: [test, backend]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v7
-      - uses: hashicorp/setup-terraform@v4
-      - name: Despliegue Learner Lab
+      - name: Publicar imágenes con el SHA
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-          TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
-          TF_VAR_dev_password: ${{ secrets.TF_VAR_dev_password }}
-          AWS_DEFAULT_REGION: us-east-1
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_SESSION_TOKEN" ]; then
-            echo "Sin las tres credenciales temporales. No se despliega."
-            exit 0
+          set -euo pipefail
+          owner="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          sha="${GITHUB_SHA}"
+          api="ghcr.io/${owner}/campus-verde-api"
+          web="ghcr.io/${owner}/campus-verde-web"
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker build -f backend/dockerfile -t "${api}:${sha}" .
+          docker build -f apps/web/Dockerfile -t "${web}:${sha}" .
+          if [[ "$GITHUB_REF" == refs/tags/rc-* ]]; then
+            docker tag "${api}:${sha}" "${api}:${GITHUB_REF_NAME}"
+            docker tag "${web}:${sha}" "${web}:${GITHUB_REF_NAME}"
           fi
-          bash scripts/deploy-learner-lab.sh
+          docker push "${api}:${sha}"
+          docker push "${web}:${sha}"
+          if [[ "$GITHUB_REF" == refs/tags/rc-* ]]; then
+            docker push "${api}:${GITHUB_REF_NAME}"
+            docker push "${web}:${GITHUB_REF_NAME}"
+          fi
+          echo "API ${api}:${sha}"
+          echo "WEB ${web}:${sha}"
