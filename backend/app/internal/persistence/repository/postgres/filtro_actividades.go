@@ -55,6 +55,31 @@ func clausulasActividades(f entities.FiltroIntervenciones) (string, []any) {
 	if f.Hasta != "" {
 		add("a.fecha_programada <= $?::date", f.Hasta)
 	}
+	if id := strings.TrimSpace(f.EjemplarID); id != "" {
+		add(`EXISTS (
+			SELECT 1 FROM actividad_avances av
+			WHERE av.actividad_id = a.id
+			  AND av.ejemplar_ref = $?
+		)`, id)
+	}
+	if responsable := strings.TrimSpace(f.Responsable); responsable != "" {
+		add(`(
+			EXISTS (
+				SELECT 1 FROM personal_labor pl
+				WHERE pl.actividad_id = a.id AND pl.nombre_ficticio = $?
+			)
+			OR a.cuadrilla_id = $?
+			OR a.assigned_capataz_id = $?
+			OR EXISTS (
+				SELECT 1 FROM cuadrillas q
+				WHERE q.id = a.cuadrilla_id AND q.nombre_ficticio = $?
+			)
+			OR EXISTS (
+				SELECT 1 FROM capataces cap
+				WHERE cap.id = a.assigned_capataz_id AND cap.equipo = $?
+			)
+		)`, responsable)
+	}
 	if f.Sector != "" {
 		add(`EXISTS (
 			SELECT 1 FROM poligonos_cuadrilla p

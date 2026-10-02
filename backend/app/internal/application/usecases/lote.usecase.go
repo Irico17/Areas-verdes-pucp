@@ -124,6 +124,8 @@ func mapearEventosADTO(ev []entities.EventoAuditoria) []dto.EventoAuditoriaDTO {
 			Nombre:    e.Nombre,
 			LoteID:    e.LoteID,
 			CreatedAt: e.CreatedAt.UTC().Format(time.RFC3339),
+			Antes:     e.Antes,
+			Despues:   e.Despues,
 		}
 	}
 	return out

@@ -231,6 +231,8 @@ func (u *intervencionUseCase) ListarActividades(ctx context.Context, f dto.Filtr
 		NivelRiesgo:       f.NivelRiesgo,
 		Desde:             f.Desde,
 		Hasta:             f.Hasta,
+		EjemplarID:        strings.TrimSpace(f.EjemplarID),
+		Responsable:       strings.TrimSpace(f.Responsable),
 		SoloAbiertas:      f.SoloAbiertas,
 	}
 	return u.repo.List(ctx, filter)

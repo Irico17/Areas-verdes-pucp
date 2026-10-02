@@ -257,6 +257,111 @@ func TestAltaInsertaYReimportacionPosteriorNoSePisa(t *testing.T) {
 	}
 }
 
+func TestRevertirMedidaPalmeraConservaLaFila(t *testing.T) {
+	gdb := abrirMedidas(t)
+	ctx := context.Background()
+	var sesion int64
+	if err := gdb.Raw(`
+		INSERT INTO usuarios (usuario, nombre, rol, password_hash)
+		VALUES ('medida.coord', 'Coordinación de medida', 'coordinacion', 'no-es-clave')
+		RETURNING id`).Row().Scan(&sesion); err != nil {
+		t.Fatal(err)
+	}
+	var ejemplarID int64
+	if err := gdb.Raw(`
+		INSERT INTO ejemplares (nombre_comun, tipo_vegetacion, cantidad)
+		VALUES ('Palmera de prueba', 'Palmera', 1)
+		RETURNING id`).Row().Scan(&ejemplarID); err != nil {
+		t.Fatal(err)
+	}
+	if err := gdb.Exec(`
+		INSERT INTO medidas_palmera (ejemplar_id, altura, dap)
+		VALUES ($1, 8, 0.4)`, ejemplarID).Error; err != nil {
+		t.Fatal(err)
+	}
+	var antes int
+	if err := gdb.Raw(`SELECT count(*) FROM medidas_palmera`).Row().Scan(&antes); err != nil {
+		t.Fatal(err)
+	}
+	var loteID int64
+	if err := gdb.Raw(`
+		INSERT INTO lotes_importacion (entidad, estado, usuario_id, filas)
+		VALUES ('medidas_palmera', 'confirmado', $1, 1)
+		RETURNING id`, sesion).Row().Scan(&loteID); err != nil {
+		t.Fatal(err)
+	}
+	if err := gdb.Exec(`
+		INSERT INTO cambios (entidad, entidad_id, accion, antes, despues, usuario_id, lote_id)
+		VALUES ('medidas_palmera', $1, 'importacion', 'null'::jsonb, '{"altura":8}'::jsonb, $2, $3)`,
+		fmt.Sprint(ejemplarID), sesion, loteID).Error; err != nil {
+		t.Fatal(err)
+	}
+	store := NewStore(gdb)
+	rep, err := store.Revertir(ctx, loteID, sesion, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var despues, bajas int
+	if err := gdb.Raw(`SELECT count(*) FROM medidas_palmera`).Row().Scan(&despues); err != nil {
+		t.Fatal(err)
+	}
+	if err := gdb.Raw(`SELECT count(*) FROM medidas_palmera WHERE baja_en IS NOT NULL`).Row().Scan(&bajas); err != nil {
+		t.Fatal(err)
+	}
+	if antes != 1 || despues != antes {
+		t.Fatalf("filas antes=%d despues=%d", antes, despues)
+	}
+	if bajas != 1 {
+		t.Fatalf("la medida no quedó en baja lógica: %d", bajas)
+	}
+	if len(rep.Revertidas) != 1 || rep.Revertidas[0] != fmt.Sprint(ejemplarID) {
+		t.Fatalf("revertidas %+v", rep.Revertidas)
+	}
+}
+
+func abrirMedidas(t *testing.T) *gorm.DB {
+	t.Helper()
+	base := os.Getenv("MIGRATE_TEST_URL")
+	if base == "" {
+		base = "postgres://campus:campus@127.0.0.1:5432/postgres?sslmode=disable"
+	}
+	admin, err := sql.Open("pgx", base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { admin.Close() })
+	if err := admin.Ping(); err != nil {
+		t.Skipf("sin postgres de prueba: %v", err)
+	}
+	name := "campus_verde_medida_baja"
+	if _, err := admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := admin.Exec("DROP DATABASE IF EXISTS " + name); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := admin.Exec("CREATE DATABASE " + name); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name)
+		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + name)
+	})
+	gdb, err := db.Open(fmt.Sprintf("postgres://campus:campus@127.0.0.1:5432/%s?sslmode=disable", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { sqlDB.Close() })
+	if err := migrate.Apply(gdb, filepath.Join("..", "..", "..", "..", "db", "migrations")); err != nil {
+		t.Fatal(err)
+	}
+	return gdb
+}
+
 func abrirLotes(t *testing.T) *gorm.DB {
 	t.Helper()
 	base := os.Getenv("MIGRATE_TEST_URL")

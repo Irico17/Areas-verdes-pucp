@@ -85,6 +85,8 @@ type EventoAuditoriaDTO struct {
 	Nombre    string `json:"nombre"`
 	LoteID    *int64 `json:"lote_id,omitempty"`
 	CreatedAt string `json:"created_at"`
+	Antes     string `json:"antes,omitempty"`
+	Despues   string `json:"despues,omitempty"`
 }
 
 // HistorialAuditoriaResponseDTO represents the list of audit events.

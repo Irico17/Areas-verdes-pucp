@@ -56,6 +56,14 @@
         schema: { type: string, format: date }
         description: fecha_programada inclusive.
       - in: query
+        name: ejemplar_id
+        schema: { type: string }
+        description: Actividades con un avance ligado a ese ejemplar, incluidas las cerradas si historico=1.
+      - in: query
+        name: responsable
+        schema: { type: string }
+        description: Personal de la actividad, cuadrilla o sector de capataz. Con historico=1 incluye cerradas.
+      - in: query
         name: zona_supervision_id
         schema: { type: string }
     responses:

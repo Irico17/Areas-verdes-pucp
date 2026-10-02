@@ -39,6 +39,7 @@ import { ACTIVIDAD, CAPA, MAPA, ZONIFICACION, conteoCatastro, resumenCatastro } 
 import { BottomSheet } from "./ui/BottomSheet"
 import { ImportacionesPanel } from "./panel/Importaciones"
 import { AdminPanel } from "./panel/Admin"
+import { AuditoriaPanel } from "./panel/Auditoria"
 import { CatalogosPanel } from "./panel/Catalogos"
 import { EjemplaresPanel } from "./panel/Ejemplares"
 import { Login } from "./panel/Login"
@@ -917,6 +918,7 @@ export default function App() {
         )}
         {moduloActivo === "importaciones" && <ImportacionesPanel />}
         {moduloActivo === "admin" && <AdminPanel />}
+        {moduloActivo === "historial" && <AuditoriaPanel />}
       </BottomSheet>
       <div className="stage" ref={stageRef}>
         <ConmutadorVista

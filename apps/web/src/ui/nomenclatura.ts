@@ -16,6 +16,7 @@ export const MODULO = {
   admin: "Administración",
   ejemplares: "Ejemplares",
   bitacora: "Bitácora",
+  historial: "Historial",
 } as const
 
 export const EJEMPLAR = {
@@ -112,6 +113,8 @@ export const ACTIVIDAD = {
   desde: "Desde",
   hasta: "Hasta",
   historico: "Incluir cerradas",
+  ejemplar: "Ejemplar",
+  personal: "Personal de la actividad",
   soloCuadrilla: "Solo ve las actividades de su cuadrilla.",
   cuadrilla: "Cuadrilla",
   todas: "Todas las cuadrillas",

@@ -137,6 +137,8 @@ func (ctrl *intervencionController) List(c *gin.Context) {
 		NivelRiesgo:       c.Query("nivel_riesgo"),
 		Desde:             c.Query("desde"),
 		Hasta:             c.Query("hasta"),
+		EjemplarID:        c.Query("ejemplar_id"),
+		Responsable:       c.Query("responsable"),
 		SoloAbiertas:      soloAbiertas,
 	}
 

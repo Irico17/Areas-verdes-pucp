@@ -265,6 +265,8 @@ export type FiltroActividades = {
   nivelRiesgo: string
   desde: string
   hasta: string
+  ejemplarId: string
+  responsable: string
   historico: boolean
 }
 
@@ -278,6 +280,8 @@ export const FILTRO_ACTIVIDADES: FiltroActividades = {
   nivelRiesgo: "",
   desde: "",
   hasta: "",
+  ejemplarId: "",
+  responsable: "",
   historico: false,
 }
 
@@ -293,6 +297,8 @@ export function actividadesPath(rol: Rol, capatazId: string, filtro: FiltroActiv
   if (filtro.nivelRiesgo) q.set("nivel_riesgo", filtro.nivelRiesgo)
   if (filtro.desde) q.set("desde", filtro.desde)
   if (filtro.hasta) q.set("hasta", filtro.hasta)
+  if (filtro.ejemplarId) q.set("ejemplar_id", filtro.ejemplarId)
+  if (filtro.responsable) q.set("responsable", filtro.responsable)
   return apiUrl(`/operacion/actividades?${q.toString()}`)
 }
 

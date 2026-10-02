@@ -46,7 +46,11 @@
         schema: { type: string }
     responses:
       "200":
-        description: Cambios con el usuario de sesión
+        description: Cambios con el usuario de sesión. Ingeniería / Coordinación, jefatura y admin.
+      "401":
+        description: Sin cookie de sesión
+      "403":
+        description: El capataz no consulta este historial
 /api/v1/auditoria/timeline:
   get:
     tags: [auditoria]

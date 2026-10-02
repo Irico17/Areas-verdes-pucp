@@ -1,0 +1,10 @@
+# Flujo o4-auditoria.
+# GET /api/v1/auditoria/cambios ya está en auditoria.yaml: no se repite aquí.
+# Lo consultan Ingeniería / Coordinación, jefatura y admin (permiso validar). El capataz recibe 403.
+# La reversión de medidas_palmera es baja lógica (columna baja_en, migración 078). No hay DELETE.
+# No hay plazo de retención y no hay un job que borre por antigüedad.
+# ejemplar_id y responsable se documentan en o3-mapa-filtros.yaml, que ya posee GET /operacion/actividades.
+x-o4-auditoria:
+  retencion: no decidida
+  borra_por_fecha: false
+  baja_medidas: logica

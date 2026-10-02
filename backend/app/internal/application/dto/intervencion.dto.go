@@ -29,6 +29,8 @@ type FiltroIntervencionesDTO struct {
 	NivelRiesgo       string
 	Desde             string
 	Hasta             string
+	EjemplarID        string
+	Responsable       string
 	SoloAbiertas      bool
 }
 

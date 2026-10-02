@@ -13,7 +13,7 @@ const comunes = {
 
 test("la oficina ve los ocho criterios", () => {
   const html = renderToStaticMarkup(createElement(FiltrosActividad, { rol: "coordinacion", ...comunes }))
-  for (const etiqueta of ["Estado", "Tipo de actividad", "Cuadrilla", "Sector de capataz", "Quién ejecuta", "Origen", "Nivel de riesgo", "Desde", "Hasta"]) {
+  for (const etiqueta of ["Estado", "Tipo de actividad", "Cuadrilla", "Sector de capataz", "Quién ejecuta", "Origen", "Nivel de riesgo", "Desde", "Hasta", "Ejemplar", "Personal de la actividad"]) {
     assert.ok(html.includes(etiqueta), etiqueta)
   }
   assert.match(html, /name="cuadrilla_id"/)
@@ -26,5 +26,7 @@ test("el capataz no ve el filtro de cuadrilla ajena", () => {
   assert.equal(html.includes('name="cuadrilla_id"'), false)
   assert.equal(html.includes("Cuadrilla Norte"), false)
   assert.match(html, /name="sector"/)
+  assert.match(html, /name="ejemplar_id"/)
+  assert.match(html, /name="responsable"/)
   assert.match(html, /Incluir cerradas/)
 })

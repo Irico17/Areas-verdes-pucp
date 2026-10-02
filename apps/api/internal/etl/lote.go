@@ -433,7 +433,8 @@ func cargarMedidas(tx *gorm.DB, medidas []medidaCarga, ejemplares []ejemplarCarg
 			  altura_fuste = EXCLUDED.altura_fuste,
 			  dap = EXCLUDED.dap,
 			  radio = EXCLUDED.radio,
-			  zunchado = EXCLUDED.zunchado`,
+			  zunchado = EXCLUDED.zunchado,
+			  baja_en = NULL`,
 			ejemplarID, m.UTMNorte, m.UTMEste, m.Altura, m.AlturaFuste, m.DAP, m.Radio, m.Zunchado).Error; err != nil {
 			return err
 		}

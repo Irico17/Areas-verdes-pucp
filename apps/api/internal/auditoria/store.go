@@ -408,7 +408,10 @@ func bajaLogica(tx *gorm.DB, entidad, entidadID string) error {
 			SET activo = false, referencia = COALESCE(referencia, 'baja lógica'), updated_at = now()
 			WHERE feature_id = $1`, entidadID).Error
 	case "medidas_palmera":
-		return tx.Exec(`DELETE FROM medidas_palmera WHERE ejemplar_id::text = $1`, entidadID).Error
+		return tx.Exec(`
+			UPDATE medidas_palmera
+			SET baja_en = COALESCE(baja_en, now())
+			WHERE ejemplar_id::text = $1`, entidadID).Error
 	default:
 		if spec, ok := bajaPorActivo[entidad]; ok {
 			q := fmt.Sprintf(`UPDATE %s SET activo = false WHERE %s = $1`, spec.tabla, spec.col)
@@ -565,6 +568,15 @@ func leerActual(tx *gorm.DB, entidad, entidadID string) (json.RawMessage, error)
 		err = tx.Raw(`
 			SELECT json_build_object('nombre', nombre, 'detalle', referencia)::text
 			FROM areas_verdes WHERE feature_id = $1`, entidadID).Row().Scan(&raw)
+	case "medidas_palmera":
+		err = tx.Raw(`
+			SELECT json_build_object(
+				'ejemplar_id', ejemplar_id,
+				'altura', altura,
+				'dap', dap,
+				'baja_en', baja_en
+			)::text
+			FROM medidas_palmera WHERE ejemplar_id::text = $1`, entidadID).Row().Scan(&raw)
 	default:
 		spec, ok := bajaPorActivo[entidad]
 		if !ok {

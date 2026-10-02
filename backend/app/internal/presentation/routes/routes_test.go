@@ -2447,15 +2447,15 @@ func TestRutasAuditoriaELotes_PermisosPorRol(t *testing.T) {
 		statusEsperado int
 		errorEsperado  string
 	}{
-		// 1. Capataz: validar=false -> 403; consultar=true -> 200
+		// 1. Capataz: validar=false -> 403. El historial de cambios exige validar.
 		{http.MethodPost, "/api/v1/lotes", "token-norte", `{"entidad":"catalogos","filas":[]}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/areas-verdes/v1/lotes", "token-norte", `{"entidad":"catalogos","filas":[]}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/api/v1/lotes/1/revertir", "token-norte", `{"confirmar":false}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/areas-verdes/v1/lotes/1/revertir", "token-norte", `{"confirmar":false}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/api/v1/auditoria/ediciones", "token-norte", `{"entidad":"catalogos","entidad_id":"1","despues":{}}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/areas-verdes/v1/auditoria/ediciones", "token-norte", `{"entidad":"catalogos","entidad_id":"1","despues":{}}`, 403, "su rol no tiene ese permiso"},
-		{http.MethodGet, "/api/v1/auditoria/cambios", "token-norte", "", 200, ""},
-		{http.MethodGet, "/areas-verdes/v1/auditoria/cambios", "token-norte", "", 200, ""},
+		{http.MethodGet, "/api/v1/auditoria/cambios", "token-norte", "", 403, "su rol no tiene ese permiso"},
+		{http.MethodGet, "/areas-verdes/v1/auditoria/cambios", "token-norte", "", 403, "su rol no tiene ese permiso"},
 		{http.MethodGet, "/api/v1/auditoria/timeline?entidad=catalogos&entidad_id=1", "token-norte", "", 200, ""},
 		{http.MethodGet, "/areas-verdes/v1/auditoria/timeline?entidad=catalogos&entidad_id=1", "token-norte", "", 200, ""},
 

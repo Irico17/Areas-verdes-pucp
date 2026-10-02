@@ -163,6 +163,14 @@ export function FiltrosActividad(props: Props) {
           <input name="hasta" type="date" value={valor.hasta} onChange={(event) => patch({ hasta: event.target.value })} />
         </label>
       </div>
+      <label className="field">
+        {ACTIVIDAD.ejemplar}
+        <input name="ejemplar_id" value={valor.ejemplarId} onChange={(event) => patch({ ejemplarId: event.target.value })} />
+      </label>
+      <label className="field">
+        {ACTIVIDAD.personal}
+        <input name="responsable" value={valor.responsable} onChange={(event) => patch({ responsable: event.target.value })} />
+      </label>
       <label className="check-linea">
         <input name="historico" type="checkbox" checked={valor.historico} onChange={(event) => patch({ historico: event.target.checked })} />
         {ACTIVIDAD.historico}

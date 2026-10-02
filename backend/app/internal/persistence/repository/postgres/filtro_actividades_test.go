@@ -111,6 +111,79 @@ func TestListRiesgoFechasNoDevuelveOtraCuadrillaNiCerradas(t *testing.T) {
 	}
 }
 
+func TestClausulasFiltranEjemplarYResponsable(t *testing.T) {
+	consulta, args := clausulasActividades(entities.FiltroIntervenciones{
+		EjemplarID:  "42",
+		Responsable: "Lucía Mendoza",
+	})
+	for _, parte := range []string{"ejemplar_ref", "nombre_ficticio", "cuadrilla_id", "assigned_capataz_id"} {
+		if !strings.Contains(consulta, parte) {
+			t.Fatalf("falta %q en %s", parte, consulta)
+		}
+	}
+	if !tieneArg(args, "42") || !tieneArg(args, "Lucía Mendoza") {
+		t.Fatalf("argumentos %v", args)
+	}
+}
+
+func TestListCerradasPorEjemplarYResponsable(t *testing.T) {
+	_, gdb := testutil.MigrarDBTemporal(t, "filtro_hist")
+	repo := NewIntervencionRepository(gdb)
+	ctx := context.Background()
+	if err := gdb.Exec(`
+		INSERT INTO actividades (
+		  id, tipo, estado, titulo, geom, origen, ejecutor, fecha_programada
+		) VALUES
+		  ('b1111111-1111-4111-8111-111111111111', 'riego', 'cerrada', 'Cerrada del ejemplar',
+		   ST_SetSRID(ST_MakePoint(-77.080, -12.070), 4326), 'interna', 'propia', DATE '2026-04-01'),
+		  ('b2222222-2222-4222-8222-222222222222', 'riego', 'pendiente', 'Abierta del mismo ejemplar',
+		   ST_SetSRID(ST_MakePoint(-77.081, -12.071), 4326), 'interna', 'propia', DATE '2026-04-02'),
+		  ('b3333333-3333-4333-8333-333333333333', 'riego', 'cerrada', 'Cerrada de otro ejemplar',
+		   ST_SetSRID(ST_MakePoint(-77.082, -12.072), 4326), 'externa', 'propia', DATE '2026-04-03');
+		INSERT INTO actividad_avances (id, actividad_id, fecha, ejemplar_ref) VALUES
+		  ('c1111111-1111-4111-8111-111111111111', 'b1111111-1111-4111-8111-111111111111', DATE '2026-04-01', '42'),
+		  ('c2222222-2222-4222-8222-222222222222', 'b2222222-2222-4222-8222-222222222222', DATE '2026-04-02', '42'),
+		  ('c3333333-3333-4333-8333-333333333333', 'b3333333-3333-4333-8333-333333333333', DATE '2026-04-03', '99');
+		INSERT INTO personal_labor (id, actividad_id, nombre_ficticio) VALUES
+		  ('d1111111-1111-4111-8111-111111111111', 'b1111111-1111-4111-8111-111111111111', 'Lucía Mendoza'),
+		  ('d2222222-2222-4222-8222-222222222222', 'b2222222-2222-4222-8222-222222222222', 'Lucía Mendoza'),
+		  ('d3333333-3333-4333-8333-333333333333', 'b3333333-3333-4333-8333-333333333333', 'Mateo Salazar')
+	`).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	historico, err := repo.List(ctx, entities.FiltroIntervenciones{
+		Rol:          "jefatura",
+		Estado:       "cerrada",
+		Origen:       "interna",
+		Desde:        "2026-01-01",
+		Hasta:        "2026-12-31",
+		EjemplarID:   "42",
+		Responsable:  "Lucía Mendoza",
+		SoloAbiertas: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := idsDe(historico)
+	if len(ids) != 1 || ids[0] != "b1111111-1111-4111-8111-111111111111" {
+		t.Fatalf("el histórico cerrado devolvió %v", ids)
+	}
+
+	abiertas, err := repo.List(ctx, entities.FiltroIntervenciones{
+		Rol:          "jefatura",
+		EjemplarID:   "42",
+		Responsable:  "Lucía Mendoza",
+		SoloAbiertas: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if contieneID(idsDe(abiertas), "b1111111-1111-4111-8111-111111111111") {
+		t.Fatal("abiertas=1 incluyó la cerrada del ejemplar")
+	}
+}
+
 func idsDe(fc entities.FeatureCollection) []string {
 	out := make([]string, 0, len(fc.Features))
 	for _, f := range fc.Features {

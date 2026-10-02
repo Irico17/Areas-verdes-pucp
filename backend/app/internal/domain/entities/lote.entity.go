@@ -50,6 +50,8 @@ type EventoAuditoria struct {
 	Nombre    string
 	LoteID    *int64
 	CreatedAt time.Time
+	Antes     string
+	Despues   string
 }
 
 // SnapAuditoria holds fields captured or updated in snapshots.

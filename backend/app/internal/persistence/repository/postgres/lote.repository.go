@@ -215,9 +215,10 @@ func (s *loteRepository) listar(ctx context.Context, f entities.FiltroAuditoria,
 	db := database.DBFromContext(ctx, s.db)
 	rows, err := db.WithContext(ctx).Raw(`
 		SELECT c.id, c.entidad, c.entidad_id, c.accion, c.usuario_id,
-		       u.usuario, u.nombre, c.lote_id, c.created_at
+		       COALESCE(u.usuario, ''), COALESCE(u.nombre, ''), c.lote_id, c.created_at,
+		       COALESCE(c.antes::text, ''), COALESCE(c.despues::text, '')
 		FROM cambios c
-		JOIN usuarios u ON u.id = c.usuario_id
+		LEFT JOIN usuarios u ON u.id = c.usuario_id
 		WHERE ($1 = '' OR c.entidad = $1)
 		  AND ($2 = '' OR c.entidad_id = $2)
 		  AND ($3 = '' OR c.antes->>'zona' = $3 OR c.despues->>'zona' = $3)
@@ -236,12 +237,21 @@ func (s *loteRepository) listar(ctx context.Context, f entities.FiltroAuditoria,
 	out := []entities.EventoAuditoria{}
 	for rows.Next() {
 		var ev entities.EventoAuditoria
-		var lote *int64
+		var usuarioID sql.NullInt64
+		var lote sql.NullInt64
 		var when time.Time
-		if err := rows.Scan(&ev.ID, &ev.Entidad, &ev.EntidadID, &ev.Accion, &ev.UsuarioID, &ev.Usuario, &ev.Nombre, &lote, &when); err != nil {
+		if err := rows.Scan(
+			&ev.ID, &ev.Entidad, &ev.EntidadID, &ev.Accion, &usuarioID,
+			&ev.Usuario, &ev.Nombre, &lote, &when, &ev.Antes, &ev.Despues,
+		); err != nil {
 			return nil, err
 		}
-		ev.LoteID = lote
+		if usuarioID.Valid {
+			ev.UsuarioID = usuarioID.Int64
+		}
+		if lote.Valid {
+			ev.LoteID = &lote.Int64
+		}
 		ev.CreatedAt = when.UTC()
 		out = append(out, ev)
 	}
@@ -349,10 +359,10 @@ func bajaLogica(tx *gorm.DB, entidad, entidadID string) error {
 			SET activo = false, referencia = COALESCE(referencia, 'baja lógica'), updated_at = now()
 			WHERE feature_id = $1`, entidadID).Error
 	case "medidas_palmera":
-		// Same as the old API (auditoria/store.go): reverting an import removes the
-		// measurement rows that the import itself created. This is not loaded
-		// catastro data; every other entity reverts by logical deactivation.
-		return tx.Exec(`DELETE FROM medidas_palmera WHERE ejemplar_id::text = $1`, entidadID).Error
+		return tx.Exec(`
+			UPDATE medidas_palmera
+			SET baja_en = COALESCE(baja_en, now())
+			WHERE ejemplar_id::text = $1`, entidadID).Error
 	default:
 		if spec, ok := bajaPorActivo[entidad]; ok {
 			q := fmt.Sprintf(`UPDATE %s SET activo = false WHERE %s = $1`, spec.tabla, spec.col)
@@ -511,6 +521,15 @@ func leerActual(tx *gorm.DB, entidad, entidadID string) (json.RawMessage, error)
 		err = tx.Raw(`
 			SELECT json_build_object('nombre', nombre, 'detalle', referencia)::text
 			FROM areas_verdes WHERE feature_id = $1`, entidadID).Row().Scan(&raw)
+	case "medidas_palmera":
+		err = tx.Raw(`
+			SELECT json_build_object(
+				'ejemplar_id', ejemplar_id,
+				'altura', altura,
+				'dap', dap,
+				'baja_en', baja_en
+			)::text
+			FROM medidas_palmera WHERE ejemplar_id::text = $1`, entidadID).Row().Scan(&raw)
 	default:
 		spec, ok := bajaPorActivo[entidad]
 		if !ok {

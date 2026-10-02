@@ -31,6 +31,6 @@ func (g *AuditoriaGroup) Register(router gin.IRouter) {
 	router.POST("/lotes", middleware.RequierePermiso(g.permisos, "validar"), g.ctrl.Importar)
 	router.POST("/lotes/:id/revertir", middleware.RequierePermiso(g.permisos, "validar"), g.ctrl.Revertir)
 	router.POST("/auditoria/ediciones", middleware.RequierePermiso(g.permisos, "validar"), g.ctrl.Editar)
-	router.GET("/auditoria/cambios", middleware.RequierePermiso(g.permisos, "consultar"), g.ctrl.Historial)
+	router.GET("/auditoria/cambios", middleware.RequierePermiso(g.permisos, "validar"), g.ctrl.Historial)
 	router.GET("/auditoria/timeline", middleware.RequierePermiso(g.permisos, "consultar"), g.ctrl.Timeline)
 }

@@ -215,6 +215,69 @@ func TestAltaInsertaYReimportacionPosteriorNoSePisa(t *testing.T) {
 	}
 }
 
+func TestRevertirMedidaPalmeraConservaLaFila(t *testing.T) {
+	_, gdb := testutil.MigrarDBTemporal(t, "medida_baja")
+	ctx := context.Background()
+	var sesion int64
+	if err := gdb.Raw(`
+		INSERT INTO usuarios (usuario, nombre, rol, password_hash)
+		VALUES ('medida.coord', 'Coordinación de medida', 'coordinacion', 'no-es-clave')
+		RETURNING id`).Row().Scan(&sesion); err != nil {
+		t.Fatal(err)
+	}
+	var ejemplarID int64
+	if err := gdb.Raw(`
+		INSERT INTO ejemplares (nombre_comun, tipo_vegetacion, cantidad)
+		VALUES ('Palmera de prueba', 'Palmera', 1)
+		RETURNING id`).Row().Scan(&ejemplarID); err != nil {
+		t.Fatal(err)
+	}
+	if err := gdb.Exec(`
+		INSERT INTO medidas_palmera (ejemplar_id, altura, dap)
+		VALUES ($1, 8, 0.4)`, ejemplarID).Error; err != nil {
+		t.Fatal(err)
+	}
+	var antes int
+	if err := gdb.Raw(`SELECT count(*) FROM medidas_palmera`).Row().Scan(&antes); err != nil {
+		t.Fatal(err)
+	}
+	var loteID int64
+	if err := gdb.Raw(`
+		INSERT INTO lotes_importacion (entidad, estado, usuario_id, filas)
+		VALUES ('medidas_palmera', 'confirmado', $1, 1)
+		RETURNING id`, sesion).Row().Scan(&loteID); err != nil {
+		t.Fatal(err)
+	}
+	if err := gdb.Exec(`
+		INSERT INTO cambios (entidad, entidad_id, accion, antes, despues, usuario_id, lote_id)
+		VALUES ('medidas_palmera', $1, 'importacion', 'null'::jsonb, '{"altura":8}'::jsonb, $2, $3)`,
+		fmt.Sprint(ejemplarID), sesion, loteID).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	store := postgres.NewLoteRepository(gdb)
+	rep, err := store.Revertir(ctx, loteID, sesion, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var despues, bajas int
+	if err := gdb.Raw(`SELECT count(*) FROM medidas_palmera`).Row().Scan(&despues); err != nil {
+		t.Fatal(err)
+	}
+	if err := gdb.Raw(`SELECT count(*) FROM medidas_palmera WHERE baja_en IS NOT NULL`).Row().Scan(&bajas); err != nil {
+		t.Fatal(err)
+	}
+	if antes != 1 || despues != antes {
+		t.Fatalf("filas antes=%d despues=%d", antes, despues)
+	}
+	if bajas != 1 {
+		t.Fatalf("la medida no quedó en baja lógica: %d", bajas)
+	}
+	if len(rep.Revertidas) != 1 || rep.Revertidas[0] != fmt.Sprint(ejemplarID) {
+		t.Fatalf("revertidas %+v", rep.Revertidas)
+	}
+}
+
 func nombreCatalogo(t *testing.T, gdb *gorm.DB, id int64) string {
 	t.Helper()
 	var n string
