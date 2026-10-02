@@ -6,6 +6,7 @@ COPY apps/web/ ./
 RUN npm run build
 
 FROM nginx:1.27-alpine
+LABEL org.opencontainers.image.source="https://github.com/Irico17/Areas-verdes-pucp"
 COPY apps/web/nginx.http.conf apps/web/nginx.tls.conf apps/web/nginx-headers.conf /opt/campus/
 COPY apps/web/docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh && rm -f /etc/nginx/conf.d/default.conf

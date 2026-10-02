@@ -16,6 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /out/api ./cmd \
  && CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /out/sectores ./cmd/sectores
 
 FROM alpine:3.22
+LABEL org.opencontainers.image.source="https://github.com/Irico17/Areas-verdes-pucp"
 RUN apk add --no-cache ca-certificates tzdata \
  && addgroup -g 10001 -S app \
  && adduser -S -D -H -u 10001 -G app app

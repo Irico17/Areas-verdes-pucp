@@ -6,24 +6,40 @@ on:
       - "**"
     tags:
       - "rc-*"
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
         with:
           go-version: "1.22.2"
+          cache: true
           cache-dependency-path: apps/api/go.sum
       - name: Go fmt y tests
         working-directory: apps/api
         run: |
           test -z "$(gofmt -l .)"
           go test ./...
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
         with:
           node-version: "22"
           cache: npm
@@ -35,14 +51,18 @@ jobs:
           npm run lint
           npm test
           npm run build
-      - name: Imágenes
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+      - name: Construir imágenes (verificación con caché)
         run: |
-          docker build -f apps/api/Dockerfile -t campus-verde-api:ci .
-          docker build -f backend/dockerfile -t campus-verde-backend:ci .
-          docker build -f apps/web/Dockerfile -t campus-verde-web:ci .
+          docker buildx build -f apps/api/Dockerfile -t campus-verde-api:ci --cache-from type=gha,scope=api-legacy --cache-to type=gha,mode=max,scope=api-legacy .
+          docker buildx build -f backend/dockerfile -t campus-verde-backend:ci --cache-from type=gha,scope=api --cache-to type=gha,mode=max,scope=api .
+          docker buildx build -f apps/web/Dockerfile -t campus-verde-web:ci --cache-from type=gha,scope=web --cache-to type=gha,mode=max,scope=web .
 
   backend:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     services:
       postgis:
         image: postgis/postgis:16-3.4
@@ -58,10 +78,11 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
         with:
           go-version-file: backend/app/go.mod
+          cache: true
           cache-dependency-path: backend/app/go.sum
       - name: gofmt, vet y tests
         working-directory: backend/app
@@ -162,36 +183,139 @@ jobs:
           swag init -g cmd/main.go -o docs/
           git diff --exit-code -- docs
 
+  escaneo:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Escaneo de secretos con Gitleaks
+        uses: gitleaks/gitleaks-action@f586c14365d4643c6aa59d472ae6e984bf47bb34 # v2.3.8
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Escaneo Trivy fs (sistema de archivos)
+        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          scanners: "vuln,secret,config"
+          severity: "HIGH,CRITICAL"
+          exit-code: "0"
+          format: "table"
+          output: "trivy-fs.txt"
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+      - name: Construir imágenes para escaneo
+        run: |
+          docker buildx build \
+            -f backend/dockerfile \
+            -t campus-verde-api:scan \
+            --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
+            --cache-from type=gha,scope=api \
+            --load \
+            .
+          docker buildx build \
+            -f apps/web/Dockerfile \
+            -t campus-verde-web:scan \
+            --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
+            --cache-from type=gha,scope=web \
+            --load \
+            .
+      - name: Escaneo Trivy image (API)
+        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
+        with:
+          scan-type: "image"
+          image-ref: "campus-verde-api:scan"
+          severity: "HIGH,CRITICAL"
+          exit-code: "0"
+          format: "table"
+          output: "trivy-api.txt"
+      - name: Escaneo Trivy image (Web)
+        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
+        with:
+          scan-type: "image"
+          image-ref: "campus-verde-web:scan"
+          severity: "HIGH,CRITICAL"
+          exit-code: "0"
+          format: "table"
+          output: "trivy-web.txt"
+      - name: Resumen de escaneo en step summary
+        if: always()
+        run: |
+          {
+            echo "## Resumen de escaneo de seguridad (no bloqueante)"
+            echo ""
+            if [ -s trivy-fs.txt ]; then
+              echo "### Trivy fs (vuln, secret, config - HIGH, CRITICAL)"
+              echo '```text'
+              cat trivy-fs.txt
+              echo '```'
+            fi
+            if [ -s trivy-api.txt ]; then
+              echo "### Trivy image: API (HIGH, CRITICAL)"
+              echo '```text'
+              cat trivy-api.txt
+              echo '```'
+            fi
+            if [ -s trivy-web.txt ]; then
+              echo "### Trivy image: Web (HIGH, CRITICAL)"
+              echo '```text'
+              cat trivy-web.txt
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
   imagenes:
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/backend/arquitectura-equipo' || startsWith(github.ref, 'refs/tags/rc-'))
     needs: [test, backend]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v7
-      - name: Publicar imágenes con el SHA
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+      - name: Iniciar sesión en GHCR
         env:
           GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Construir y publicar imágenes con el SHA
         run: |
           set -euo pipefail
           owner="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
           sha="${GITHUB_SHA}"
           api="ghcr.io/${owner}/campus-verde-api"
           web="ghcr.io/${owner}/campus-verde-web"
-          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker build -f backend/dockerfile -t "${api}:${sha}" .
-          docker build -f apps/web/Dockerfile -t "${web}:${sha}" .
+
+          tags_api=("-t" "${api}:${sha}")
+          tags_web=("-t" "${web}:${sha}")
           if [[ "$GITHUB_REF" == refs/tags/rc-* ]]; then
-            docker tag "${api}:${sha}" "${api}:${GITHUB_REF_NAME}"
-            docker tag "${web}:${sha}" "${web}:${GITHUB_REF_NAME}"
+            tags_api+=("-t" "${api}:${GITHUB_REF_NAME}")
+            tags_web+=("-t" "${web}:${GITHUB_REF_NAME}")
           fi
-          docker push "${api}:${sha}"
-          docker push "${web}:${sha}"
-          if [[ "$GITHUB_REF" == refs/tags/rc-* ]]; then
-            docker push "${api}:${GITHUB_REF_NAME}"
-            docker push "${web}:${GITHUB_REF_NAME}"
-          fi
+
+          docker buildx build \
+            -f backend/dockerfile \
+            "${tags_api[@]}" \
+            --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
+            --cache-from type=gha,scope=api \
+            --cache-to type=gha,mode=max,scope=api \
+            --push \
+            .
+
+          docker buildx build \
+            -f apps/web/Dockerfile \
+            "${tags_web[@]}" \
+            --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
+            --cache-from type=gha,scope=web \
+            --cache-to type=gha,mode=max,scope=web \
+            --push \
+            .
+
           echo "API ${api}:${sha}"
           echo "WEB ${web}:${sha}"

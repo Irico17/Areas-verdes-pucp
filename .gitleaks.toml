@@ -1,0 +1,24 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Claves de demostración y fixtures conocidos para entornos de desarrollo y pruebas"
+stopwords = [
+  "pando-local",
+  "campus-develop",
+  "campus-qa",
+  "campus-produccion-local",
+  "produccion-local-demo-2026",
+  "clave-cuentas-prueba-16"
+]
+regexes = [
+  '''(?i)pando-local''',
+  '''(?i)campus-develop''',
+  '''(?i)campus-qa''',
+  '''(?i)campus-produccion-local''',
+  '''(?i)produccion-local-demo-2026''',
+  '''(?i)clave-cuentas-prueba-16'''
+]
+paths = [
+  '''infra/terraform/reemplazo\.tftest\.hcl'''
+]
