@@ -65,35 +65,58 @@ if ! "$MIGRATE_BIN"; then
   exit 1
 fi
 
-# etl: carga inicial de data/raw solo si el catastro está vacío (producción).
-# ficticio: develop y qa. Inserta deploy/seed/ficticio.sql solo si está vacío.
-# Ninguno borra filas ya cargadas.
+# etl: carga data/raw. Base vacía → carga inicial. Catastro a medias (p. ej. un
+# solo polígono ficticio) → etl-lote, upsert, sin TRUNCATE. Catastro publicado
+# (521 áreas y 534 sectores) → no recarga.
+# develop y qa, o SEED_PROFILE=ficticio: además inserta polígonos de demostración
+# (ON CONFLICT DO NOTHING). Producción no recibe esa semilla.
+# Ninguno borra filas ya cargadas. .etl-done no impide completar un catastro a medias.
 SEED_PROFILE="${SEED_PROFILE:-etl}"
 SEED_FILE="${SEED_FILE:-/opt/campus/seed/ficticio.sql}"
+ETL_LOTE_BIN="${ETL_LOTE_BIN:-/usr/local/bin/etl-lote}"
 export SEED_FILE
+
+aplicar_semilla=0
+case "$SEED_PROFILE" in
+  ficticio) aplicar_semilla=1 ;;
+esac
+case "$norm_env" in
+  develop|qa) aplicar_semilla=1 ;;
+esac
+if [ "$aplicar_semilla" -eq 1 ]; then
+  if ! "$MIGRATE_BIN" -semilla-ficticia; then
+    echo "ERROR: no se pudo aplicar la semilla ficticia. No se borra nada." >&2
+    exit 1
+  fi
+fi
 
 case "$SEED_PROFILE" in
   ficticio)
-    if ! "$MIGRATE_BIN" -semilla-ficticia; then
-      echo "ERROR: no se pudo revisar la semilla ficticia. No se borra nada." >&2
-      exit 1
-    fi
     touch "$ETL_DONE_FILE"
     ;;
   etl)
-    if [ ! -f "$ETL_DONE_FILE" ]; then
-      status=0
-      "$MIGRATE_BIN" -necesita-etl || status=$?
-      if [ "$status" -eq 0 ]; then
+    incompleto=0
+    "$MIGRATE_BIN" -catastro-incompleto || incompleto=$?
+    if [ "$incompleto" -eq 10 ]; then
+      echo "Catastro completo: no se vuelve a cargar"
+      touch "$ETL_DONE_FILE"
+    elif [ "$incompleto" -eq 0 ]; then
+      vacio=0
+      "$MIGRATE_BIN" -necesita-etl || vacio=$?
+      if [ "$vacio" -eq 0 ]; then
         "$ETL_BIN"
         touch "$ETL_DONE_FILE"
-      elif [ "$status" -eq 10 ]; then
-        echo "BD con datos: no se ejecuta la carga inicial"
+      elif [ "$vacio" -eq 10 ]; then
+        echo "Catastro incompleto: upsert con etl-lote, sin TRUNCATE"
+        "$ETL_LOTE_BIN"
         touch "$ETL_DONE_FILE"
       else
-        echo "ERROR al verificar si la base necesita ETL (código $status)" >&2
-        exit "$status"
+        echo "ERROR al verificar si la base necesita ETL (código $vacio)" >&2
+        exit "$vacio"
       fi
+    else
+      echo "ERROR al verificar si el catastro está completo (código $incompleto)" >&2
+      exit "$incompleto"
     fi
     ;;
   *)

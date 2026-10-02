@@ -41,6 +41,9 @@ func TestDockerEntrypoint(t *testing.T) {
 		etlDone := filepath.Join(dataDir, ".etl-done")
 
 		migrateBin := createFakeBinary(t, binDir, "migrate", `
+if [ "$1" = "-catastro-incompleto" ]; then
+  exit 10
+fi
 if [ "$1" = "-necesita-etl" ]; then
   echo "BD con datos en: areas_verdes"
   exit 10
@@ -64,8 +67,8 @@ exit 0
 			t.Fatalf("fallo al ejecutar entrypoint: %v\nSalida: %s", err, string(out))
 		}
 
-		if !strings.Contains(string(out), "BD con datos: no se ejecuta la carga inicial") {
-			t.Fatalf("esperaba mensaje de BD con datos, obtuve: %s", string(out))
+		if !strings.Contains(string(out), "Catastro completo: no se vuelve a cargar") {
+			t.Fatalf("esperaba mensaje de catastro completo, obtuve: %s", string(out))
 		}
 
 		if _, err := os.Stat(etlDone); os.IsNotExist(err) {
@@ -123,6 +126,66 @@ exit 0
 		logContent := string(logBytes)
 		if !strings.Contains(logContent, "ETL_EJECUTADO") {
 			t.Fatalf("etl debió ejecutarse")
+		}
+		if !strings.Contains(logContent, "API_EJECUTADA") {
+			t.Fatalf("api debió ejecutarse")
+		}
+	})
+
+	t.Run("CatastroIncompleto_EjecutaLoteSinETL", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		binDir := filepath.Join(tmpDir, "bin")
+		if err := os.MkdirAll(binDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		dataDir := filepath.Join(tmpDir, "data")
+		if err := os.MkdirAll(dataDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		etlDone := filepath.Join(dataDir, ".etl-done")
+		if err := os.WriteFile(etlDone, []byte("previo"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		migrateBin := createFakeBinary(t, binDir, "migrate", `
+if [ "$1" = "-catastro-incompleto" ]; then
+  echo "catastro visible: areas_con_geom=1 zonas_con_sector=1"
+  exit 0
+fi
+if [ "$1" = "-necesita-etl" ]; then
+  echo "BD con datos en: areas_verdes (1)"
+  exit 10
+fi
+exit 0
+`)
+		etlBin := createFakeBinary(t, binDir, "etl", `echo "ETL_EJECUTADO" >> "`+tmpDir+`/log"; exit 0`)
+		loteBin := createFakeBinary(t, binDir, "etl-lote", `echo "LOTE_EJECUTADO" >> "`+tmpDir+`/log"; exit 0`)
+		apiBin := createFakeBinary(t, binDir, "api", `echo "API_EJECUTADA" >> "`+tmpDir+`/log"; exit 0`)
+
+		cmd := exec.Command("/bin/sh", entrypointPath)
+		cmd.Env = append(os.Environ(),
+			"MIGRATE_BIN="+migrateBin,
+			"ETL_BIN="+etlBin,
+			"ETL_LOTE_BIN="+loteBin,
+			"API_BIN="+apiBin,
+			"ETL_DONE_FILE="+etlDone,
+			"DATA_DIR="+dataDir,
+		)
+
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("fallo al ejecutar entrypoint: %v\nSalida: %s", err, string(out))
+		}
+		if !strings.Contains(string(out), "sin TRUNCATE") {
+			t.Fatalf("esperaba upsert sin TRUNCATE, obtuve: %s", string(out))
+		}
+		logBytes, _ := os.ReadFile(filepath.Join(tmpDir, "log"))
+		logContent := string(logBytes)
+		if strings.Contains(logContent, "ETL_EJECUTADO") {
+			t.Fatalf("la carga inicial no debe truncar un catastro que ya tiene filas")
+		}
+		if !strings.Contains(logContent, "LOTE_EJECUTADO") {
+			t.Fatalf("etl-lote debió completar el catastro: %s", logContent)
 		}
 		if !strings.Contains(logContent, "API_EJECUTADA") {
 			t.Fatalf("api debió ejecutarse")
@@ -302,7 +365,7 @@ func TestDockerEntrypoint_RechazoClavesProduccion(t *testing.T) {
 			}
 
 			migrateBin := createFakeBinary(t, binDir, "migrate", `
-if [ "$1" = "-necesita-etl" ]; then
+if [ "$1" = "-catastro-incompleto" ] || [ "$1" = "-necesita-etl" ]; then
   exit 10
 fi
 exit 0
