@@ -137,7 +137,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
       - name: Desplegar
+        id: desplegar
         env:
+          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -155,24 +157,40 @@ jobs:
           sha="$(git rev-parse HEAD)"
           echo "Ambiente: $AMBIENTE"
           echo "SHA: $sha"
-          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_SESSION_TOKEN" ]; then
-            if [ "$AMBIENTE" = "produccion" ]; then
-              echo "Producción no se despliega sin AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY y AWS_SESSION_TOKEN en el ambiente." >&2
+          echo "Evento: ${EVENT_NAME:-desconocido}"
+
+          omitir_o_fallar() {
+            local motivo="$1"
+            if [ "${EVENT_NAME:-}" = "workflow_dispatch" ] || [ "$AMBIENTE" = "produccion" ]; then
+              echo "::error::$motivo" >&2
               exit 1
+            else
+              echo "::warning::$motivo"
+              if [ -n "${GITHUB_OUTPUT:-}" ]; then
+                echo "desplegado=false" >> "$GITHUB_OUTPUT"
+              fi
+              if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+                {
+                  echo "### Despliegue en $AMBIENTE: OMITIDO"
+                  echo ""
+                  echo "$motivo"
+                } >> "$GITHUB_STEP_SUMMARY"
+              fi
+              exit 0
             fi
-            echo "Sin las tres credenciales temporales del ambiente $AMBIENTE. No se despliega."
-            exit 0
+          }
+
+          if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ] || [ -z "${AWS_SESSION_TOKEN:-}" ]; then
+            omitir_o_fallar "Faltan credenciales de AWS (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN) para el ambiente $AMBIENTE."
           fi
-          if [ -z "$TF_VAR_db_password" ] || [ -z "$TF_VAR_dev_password" ]; then
-            if [ "$AMBIENTE" = "produccion" ]; then
-              echo "Faltan TF_VAR_db_password o TF_VAR_dev_password en producción." >&2
-              exit 1
-            fi
-            echo "Faltan TF_VAR_db_password o TF_VAR_dev_password en $AMBIENTE. No se despliega."
-            exit 0
+          if [ -z "${TF_VAR_db_password:-}" ] || [ -z "${TF_VAR_dev_password:-}" ]; then
+            omitir_o_fallar "Faltan secretos TF_VAR_db_password o TF_VAR_dev_password para el ambiente $AMBIENTE."
           fi
           args=( "$AMBIENTE" --aws --sha "$sha" )
-          if [ -n "$ROLLBACK_TAG" ]; then
+          if [ -n "${ROLLBACK_TAG:-}" ]; then
             args+=( --rollback "$ROLLBACK_TAG" )
           fi
           bash deploy/deploy.sh "${args[@]}"
+          if [ -n "${GITHUB_OUTPUT:-}" ]; then
+            echo "desplegado=true" >> "$GITHUB_OUTPUT"
+          fi

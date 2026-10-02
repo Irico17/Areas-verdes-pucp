@@ -126,7 +126,10 @@ gh workflow run deploy --ref backend/arquitectura-equipo -f ambiente=produccion 
 
 El job de deploy usa `environment:` con el nombre del ambiente (`develop`, `qa`, `produccion`). La aprobación manual de producción es la protección **Required reviewers** de ese environment. El YAML no puede crearla: hay que ponerla en GitHub antes del primer despliegue real.
 
-Si faltan las credenciales de AWS, develop y qa terminan en verde sin desplegar (el lab suele estar cerrado). Producción falla si faltan, para no marcar como hecho un despliegue que no ocurrió.
+El comportamiento ante la falta de credenciales o secretos (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `TF_VAR_db_password` o `TF_VAR_dev_password`) depende del tipo de evento que disparó el workflow:
+- **Disparo manual (`workflow_dispatch`):** la falta de credenciales en **cualquier** ambiente (`develop`, `qa` o `produccion`) es un error explícito (código de salida 1, anotación `::error::`), impidiendo que una orden manual de despliegue termine erróneamente en verde cuando no se pudo ejecutar.
+- **Disparo automático por `push` (ramas `develop` / `backend/arquitectura-equipo` o tags `rc-*`):** si faltan credenciales del lab en `develop` o `qa`, el paso finaliza con código de salida 0 para no romper el pipeline general (el lab suele estar cerrado fuera de sesiones de trabajo), pero emite una advertencia (`::warning::`), marca la salida del paso `desplegado=false` y registra una sección clara «### Despliegue en <ambiente>: OMITIDO» en `$GITHUB_STEP_SUMMARY`.
+- **Producción:** falla de forma estricta (código 1, anotación `::error::`) ante cualquier falta de credenciales, independientemente del origen del evento.
 
 En producción el script (`deploy/deploy.sh produccion --aws`) ejecuta el siguiente orden estricto:
 
