@@ -16,5 +16,6 @@ type ActividadEvento struct {
 	Usuario     string
 	Nombre      string
 	Nota        string
+	UUIDCliente *string
 	CreatedAt   time.Time
 }

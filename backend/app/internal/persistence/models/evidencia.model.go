@@ -19,6 +19,7 @@ type EvidenciaModel struct {
 	Lat         *float64  `gorm:"column:lat"`
 	Lon         *float64  `gorm:"column:lon"`
 	Exif        *string   `gorm:"type:jsonb;column:exif"`
+	EventoID    *int64    `gorm:"column:evento_id"`
 }
 
 // TableName returns the table name in the database.

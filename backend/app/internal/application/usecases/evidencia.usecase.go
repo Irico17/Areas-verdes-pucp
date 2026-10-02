@@ -56,6 +56,7 @@ func (u *evidenciaUseCase) Listar(ctx context.Context, actividadID string) (*dto
 			Mime:        item.Mime,
 			Bytes:       item.Bytes,
 			Nota:        item.Nota,
+			EventoID:    item.EventoID,
 			CreatedAt:   item.CreatedAt.UTC().Format(time.RFC3339),
 		}
 	}

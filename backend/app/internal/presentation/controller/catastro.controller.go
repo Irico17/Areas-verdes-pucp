@@ -1,9 +1,12 @@
 package controller
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -11,6 +14,7 @@ import (
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/middleware"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/requests"
 )
 
@@ -18,6 +22,8 @@ import (
 type ICatastroController interface {
 	Zonas(*gin.Context)
 	CrearZona(*gin.Context)
+	ActualizarZona(*gin.Context)
+	BajaZona(*gin.Context)
 	Poligonos(*gin.Context)
 	Cuadrillas(*gin.Context)
 	CrearCuadrilla(*gin.Context)
@@ -128,6 +134,89 @@ func (ctrl *catastroController) CrearZona(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, item)
+}
+
+// ActualizarZona godoc
+// @Summary Update a supervision zone
+// @Tags catastro
+// @Accept json
+// @Produce json
+// @Param codigo path string true "Zone code"
+// @Param body body requests.ActualizarZonaSupervisionRequest true "Supervision zone data"
+// @Success 200 {object} dto.ZonaSupervisionDTO
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /v1/catastro/zonas-supervision/{codigo} [patch]
+func (ctrl *catastroController) ActualizarZona(c *gin.Context) {
+	var body requests.ActualizarZonaSupervisionRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido"})
+		return
+	}
+	codigo := strings.TrimSpace(c.Param("codigo"))
+	if body.Codigo != "" && strings.TrimSpace(body.Codigo) != codigo {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "el código de la ruta no coincide con el cuerpo"})
+		return
+	}
+	geojson, err := geometriaZona(body.Geom, body.GeoJSON)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido"})
+		return
+	}
+	var userID *int64
+	if u, ok := middleware.UsuarioEn(c); ok && u.ID > 0 {
+		userID = &u.ID
+	}
+	item, err := ctrl.zonaUC.Actualizar(c.Request.Context(), codigo, dto.ActualizarZonaSupervisionDTO{
+		Nombre:  body.Nombre,
+		AreaM2:  body.AreaM2,
+		GeoJSON: geojson,
+	}, userID)
+	if err != nil {
+		if errors.Is(err, domainErrors.ErrNoEncontrado) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "zona de supervisión no encontrada"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no se pudo actualizar la zona de supervisión"})
+		return
+	}
+	c.JSON(http.StatusOK, item)
+}
+
+// BajaZona godoc
+// @Summary Logical deactivation of a supervision zone
+// @Tags catastro
+// @Produce json
+// @Param codigo path string true "Zone code"
+// @Success 200 {object} dto.ZonaSupervisionDTO
+// @Failure 404 {object} map[string]string
+// @Router /v1/catastro/zonas-supervision/{codigo}/baja [post]
+func (ctrl *catastroController) BajaZona(c *gin.Context) {
+	var userID *int64
+	if u, ok := middleware.UsuarioEn(c); ok && u.ID > 0 {
+		userID = &u.ID
+	}
+	item, err := ctrl.zonaUC.Baja(c.Request.Context(), c.Param("codigo"), userID)
+	if err != nil {
+		if errors.Is(err, domainErrors.ErrNoEncontrado) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "zona de supervisión no encontrada"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no se pudo dar de baja la zona de supervisión"})
+		return
+	}
+	c.JSON(http.StatusOK, item)
+}
+
+func geometriaZona(geom json.RawMessage, geojson string) (string, error) {
+	geom = bytes.TrimSpace(geom)
+	if len(geom) > 0 && string(geom) != "null" {
+		if !json.Valid(geom) {
+			return "", domainErrors.ErrEntrada
+		}
+		return string(geom), nil
+	}
+	return strings.TrimSpace(geojson), nil
 }
 
 // Poligonos godoc

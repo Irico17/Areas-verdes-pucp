@@ -18,6 +18,7 @@ type Evidencia struct {
 	Lat         *float64
 	Lon         *float64
 	Exif        *string
+	EventoID    *int64
 	CreatedAt   time.Time
 }
 

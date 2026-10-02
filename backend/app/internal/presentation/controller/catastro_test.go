@@ -33,6 +33,20 @@ func (m *mockZonaUC) Crear(_ context.Context, req dto.CrearZonaSupervisionDTO) (
 	return dto.ZonaSupervisionDTO{ID: 1, Codigo: req.Codigo, Nombre: req.Nombre, AreaM2: req.AreaM2, ConGeom: true, Activo: true}, nil
 }
 
+func (m *mockZonaUC) Actualizar(_ context.Context, codigo string, req dto.ActualizarZonaSupervisionDTO, _ *int64) (dto.ZonaSupervisionDTO, error) {
+	if m.err != nil {
+		return dto.ZonaSupervisionDTO{}, m.err
+	}
+	return dto.ZonaSupervisionDTO{ID: 1, Codigo: codigo, Nombre: req.Nombre, AreaM2: req.AreaM2, ConGeom: true, Activo: true}, nil
+}
+
+func (m *mockZonaUC) Baja(_ context.Context, codigo string, _ *int64) (dto.ZonaSupervisionDTO, error) {
+	if m.err != nil {
+		return dto.ZonaSupervisionDTO{}, m.err
+	}
+	return dto.ZonaSupervisionDTO{ID: 1, Codigo: codigo, Nombre: "Zona", Activo: false, ConGeom: true}, nil
+}
+
 type mockCuadrillaUC struct {
 	items []dto.CuadrillaDTO
 	err   error
@@ -377,5 +391,67 @@ func TestCatastroController_ErrorPaths(t *testing.T) {
 	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	if resp["error"] != "ejemplar sin código anterior" {
 		t.Fatalf("expected 'ejemplar sin código anterior', got %q", resp["error"])
+	}
+}
+
+func TestCatastroController_ActualizarYBajaZona(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctrl := controller.NewCatastroController(&mockZonaUC{}, &mockCuadrillaUC{}, &mockLugarUC{}, &mockEspecieUC{}, &mockEjemplarUC{}, &mockRefUC{}, zerolog.Nop())
+	r := gin.New()
+	r.PATCH("/api/v1/catastro/zonas-supervision/:codigo", ctrl.ActualizarZona)
+	r.PATCH("/areas-verdes/v1/catastro/zonas-supervision/:codigo", ctrl.ActualizarZona)
+	r.POST("/api/v1/catastro/zonas-supervision/:codigo/baja", ctrl.BajaZona)
+	r.POST("/areas-verdes/v1/catastro/zonas-supervision/:codigo/baja", ctrl.BajaZona)
+
+	for _, path := range []string{
+		"/api/v1/catastro/zonas-supervision/Z1",
+		"/areas-verdes/v1/catastro/zonas-supervision/Z1",
+	} {
+		w := httptest.NewRecorder()
+		body := bytes.NewBufferString(`{"codigo":"Z1","nombre":"Zona Norte","area_m2":1200,"geom":{"type":"MultiPolygon","coordinates":[]}}`)
+		req := httptest.NewRequest(http.MethodPatch, path, body)
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s status %d body %s", path, w.Code, w.Body.Bytes())
+		}
+		var got map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+			t.Fatal(err)
+		}
+		if got["codigo"] != "Z1" || got["nombre"] != "Zona Norte" || got["activo"] != true {
+			t.Fatalf("%s body %s", path, w.Body.Bytes())
+		}
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodPatch, "/api/v1/catastro/zonas-supervision/Z1", bytes.NewBufferString(`{"codigo":"Z2","nombre":"Otra"}`)))
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("código distinto: status %d", w.Code)
+	}
+
+	ctrlMissing := controller.NewCatastroController(&mockZonaUC{err: domainErrors.ErrNoEncontrado}, &mockCuadrillaUC{}, &mockLugarUC{}, &mockEspecieUC{}, &mockEjemplarUC{}, &mockRefUC{}, zerolog.Nop())
+	rMissing := gin.New()
+	rMissing.POST("/api/v1/catastro/zonas-supervision/:codigo/baja", ctrlMissing.BajaZona)
+	w = httptest.NewRecorder()
+	rMissing.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/v1/catastro/zonas-supervision/Z9/baja", nil))
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("baja inexistente: status %d", w.Code)
+	}
+
+	ctrlOK := controller.NewCatastroController(&mockZonaUC{}, &mockCuadrillaUC{}, &mockLugarUC{}, &mockEspecieUC{}, &mockEjemplarUC{}, &mockRefUC{}, zerolog.Nop())
+	rOK := gin.New()
+	rOK.POST("/areas-verdes/v1/catastro/zonas-supervision/:codigo/baja", ctrlOK.BajaZona)
+	w = httptest.NewRecorder()
+	rOK.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/areas-verdes/v1/catastro/zonas-supervision/Z1/baja", bytes.NewBufferString(`{}`)))
+	if w.Code != http.StatusOK {
+		t.Fatalf("baja status %d body %s", w.Code, w.Body.Bytes())
+	}
+	var baja map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &baja); err != nil {
+		t.Fatal(err)
+	}
+	if baja["activo"] != false || baja["codigo"] != "Z1" {
+		t.Fatalf("baja body %s", w.Body.Bytes())
 	}
 }

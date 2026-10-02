@@ -2,6 +2,7 @@ package usecases_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -167,5 +168,29 @@ func TestAreaVerdeUseCase_Crear(t *testing.T) {
 	}
 	if creada.FeatureID != "AV-NUEVA-01" || creada.Nombre != "Jardín Nuevo" {
 		t.Fatalf("datos incorrectos en ficha creada: %+v", creada)
+	}
+}
+
+func (m *mockAreaVerdeRepo) Baja(_ context.Context, featureID string, _ *int64) error {
+	if _, ok := m.fichas[featureID]; !ok {
+		return domainErrors.ErrFichaNoEncontrada
+	}
+	delete(m.fichas, featureID)
+	return nil
+}
+
+func TestAreaVerdeUseCase_Baja(t *testing.T) {
+	repo := newMockAreaVerdeRepo()
+	uc := usecases.NewAreaVerdeUseCase(repo)
+	ctx := context.Background()
+	var userID int64 = 3
+	if err := uc.Baja(ctx, "AV-0001", &userID); err != nil {
+		t.Fatalf("baja: %v", err)
+	}
+	if _, ok := repo.fichas["AV-0001"]; ok {
+		t.Fatal("la ficha sigue en el mock")
+	}
+	if err := uc.Baja(ctx, "AV-NO", &userID); !errors.Is(err, domainErrors.ErrFichaNoEncontrada) {
+		t.Fatalf("esperado no encontrada, obtenido %v", err)
 	}
 }

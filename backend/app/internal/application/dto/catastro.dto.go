@@ -96,6 +96,13 @@ type CrearZonaSupervisionDTO struct {
 	GeoJSON string   `json:"geojson"`
 }
 
+// ActualizarZonaSupervisionDTO edits a supervision zone. Empty GeoJSON keeps the current polygon.
+type ActualizarZonaSupervisionDTO struct {
+	Nombre  string   `json:"nombre"`
+	AreaM2  *float64 `json:"area_m2"`
+	GeoJSON string   `json:"geojson"`
+}
+
 // CrearCuadrillaDTO represents the input data to create a work team.
 type CrearCuadrillaDTO struct {
 	ID     string `json:"id"`

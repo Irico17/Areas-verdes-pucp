@@ -29,7 +29,7 @@ func NewEvidenciaRepository(db *gorm.DB) contracts.IEvidenciaRepository {
 // Listar retrieves the latest 100 evidence items, optionally filtered by activity ID.
 func (r *evidenciaRepository) Listar(ctx context.Context, actividadID string) ([]entities.Evidencia, error) {
 	rows, err := r.db.WithContext(ctx).Raw(`
-		SELECT id::text, COALESCE(actividad_id::text, ''), nombre, mime, bytes, nota, created_at
+		SELECT id::text, COALESCE(actividad_id::text, ''), nombre, mime, bytes, nota, created_at, evento_id
 		FROM evidencias
 		WHERE ($1 = '' OR actividad_id::text = $1)
 		ORDER BY created_at DESC LIMIT 100`, actividadID).Rows()
@@ -42,7 +42,7 @@ func (r *evidenciaRepository) Listar(ctx context.Context, actividadID string) ([
 	for rows.Next() {
 		var e entities.Evidencia
 		var when time.Time
-		if err := rows.Scan(&e.ID, &e.ActividadID, &e.Nombre, &e.Mime, &e.Bytes, &e.Nota, &when); err != nil {
+		if err := rows.Scan(&e.ID, &e.ActividadID, &e.Nombre, &e.Mime, &e.Bytes, &e.Nota, &when, &e.EventoID); err != nil {
 			return nil, err
 		}
 		e.CreatedAt = when

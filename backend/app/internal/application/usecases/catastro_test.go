@@ -27,6 +27,20 @@ func (m *mockZonaRepo) Crear(_ context.Context, codigo, nombre, _ string, area *
 	return entities.ZonaSupervision{ID: 1, Codigo: codigo, Nombre: nombre, AreaM2: area, ConGeom: true, Activo: true}, nil
 }
 
+func (m *mockZonaRepo) Actualizar(_ context.Context, codigo, nombre, _ string, area *float64, _ *int64) (entities.ZonaSupervision, error) {
+	if m.err != nil {
+		return entities.ZonaSupervision{}, m.err
+	}
+	return entities.ZonaSupervision{ID: 1, Codigo: codigo, Nombre: nombre, AreaM2: area, ConGeom: true, Activo: true}, nil
+}
+
+func (m *mockZonaRepo) Baja(_ context.Context, codigo string, _ *int64) (entities.ZonaSupervision, error) {
+	if m.err != nil {
+		return entities.ZonaSupervision{}, m.err
+	}
+	return entities.ZonaSupervision{ID: 1, Codigo: codigo, Nombre: "Zona", Activo: false, ConGeom: true}, nil
+}
+
 func TestZonaSupervisionUseCase(t *testing.T) {
 	ctx := context.Background()
 	repo := &mockZonaRepo{items: []entities.ZonaSupervision{{ID: 1, Codigo: "Z1", Nombre: "Zona 1"}}}
@@ -49,6 +63,18 @@ func TestZonaSupervisionUseCase(t *testing.T) {
 	_, err = uc.Crear(ctx, dto.CrearZonaSupervisionDTO{Codigo: "Z9", Nombre: "Invalida", GeoJSON: `{"type":"Polygon"}`})
 	if !errors.Is(err, domainErrors.ErrEntrada) {
 		t.Fatalf("expected ErrEntrada, got: %v", err)
+	}
+
+	updated, err := uc.Actualizar(ctx, "Z1", dto.ActualizarZonaSupervisionDTO{Nombre: "Zona Norte", AreaM2: &area}, nil)
+	if err != nil || updated.Nombre != "Zona Norte" || !updated.Activo {
+		t.Fatalf("Actualizar failed: %+v %v", updated, err)
+	}
+	if _, err = uc.Actualizar(ctx, "Z9", dto.ActualizarZonaSupervisionDTO{Nombre: "No"}, nil); !errors.Is(err, domainErrors.ErrEntrada) {
+		t.Fatalf("Actualizar código inválido: %v", err)
+	}
+	baja, err := uc.Baja(ctx, "Z2", nil)
+	if err != nil || baja.Activo {
+		t.Fatalf("Baja failed: %+v %v", baja, err)
 	}
 }
 

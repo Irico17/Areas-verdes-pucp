@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
+	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/repository/postgres"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
 )
@@ -121,5 +122,67 @@ func TestCatastroRepositories_DB(t *testing.T) {
 			t.Fatalf("error listando capa %s: %v", capa, err)
 		}
 		_ = filas
+	}
+}
+
+func TestZonaSupervisionRepository_ActualizarYBaja(t *testing.T) {
+	_, gdb := testutil.MigrarDBTemporal(t, "zona_edicion_baja")
+	ctx := context.Background()
+	zonaRepo := postgres.NewZonaSupervisionRepository(gdb)
+	area := 5000.0
+	geoJSONPoly := `{"type":"MultiPolygon","coordinates":[[[[-77.085,-12.072],[-77.080,-12.072],[-77.080,-12.068],[-77.085,-12.068],[-77.085,-12.072]]]]}`
+	if _, err := zonaRepo.Crear(ctx, "Z2", "Zona original", geoJSONPoly, &area); err != nil {
+		t.Fatalf("crear: %v", err)
+	}
+
+	nuevaArea := 6100.0
+	uid := int64(1)
+	editada, err := zonaRepo.Actualizar(ctx, "Z2", "Zona editada", "", &nuevaArea, &uid)
+	if err != nil {
+		t.Fatalf("actualizar: %v", err)
+	}
+	if editada.Nombre != "Zona editada" || editada.AreaM2 == nil || *editada.AreaM2 != nuevaArea || !editada.Activo {
+		t.Fatalf("zona editada inesperada: %+v", editada)
+	}
+
+	var ediciones int64
+	if err := gdb.Raw(`SELECT count(*) FROM cambios WHERE entidad = 'zonas_supervision' AND entidad_id = 'Z2' AND accion = 'edicion'`).Scan(&ediciones).Error; err != nil {
+		t.Fatalf("contar ediciones: %v", err)
+	}
+	if ediciones != 1 {
+		t.Fatalf("ediciones = %d, esperado 1", ediciones)
+	}
+
+	baja, err := zonaRepo.Baja(ctx, "Z2", &uid)
+	if err != nil {
+		t.Fatalf("baja: %v", err)
+	}
+	if baja.Activo {
+		t.Fatal("la zona debe quedar inactiva y la fila debe seguir existiendo")
+	}
+	var activas int64
+	if err := gdb.Raw(`SELECT count(*) FROM zonas_supervision WHERE codigo = 'Z2'`).Scan(&activas).Error; err != nil {
+		t.Fatalf("contar filas: %v", err)
+	}
+	if activas != 1 {
+		t.Fatalf("la fila debe permanecer, count=%d", activas)
+	}
+
+	if _, err := zonaRepo.Baja(ctx, "Z2", &uid); err != nil {
+		t.Fatalf("segunda baja: %v", err)
+	}
+	var bajas int64
+	if err := gdb.Raw(`SELECT count(*) FROM cambios WHERE entidad = 'zonas_supervision' AND entidad_id = 'Z2' AND accion = 'baja'`).Scan(&bajas).Error; err != nil {
+		t.Fatalf("contar bajas: %v", err)
+	}
+	if bajas != 1 {
+		t.Fatalf("la segunda baja no debe duplicar el historial, obtenido %d", bajas)
+	}
+
+	if _, err := zonaRepo.Actualizar(ctx, "Z2", "No debe", "", nil, nil); err != domainErrors.ErrNoEncontrado {
+		t.Fatalf("editar una zona inactiva debe dar ErrNoEncontrado, obtenido %v", err)
+	}
+	if _, err := zonaRepo.Baja(ctx, "Z9", nil); err != domainErrors.ErrNoEncontrado {
+		t.Fatalf("baja inexistente: %v", err)
 	}
 }

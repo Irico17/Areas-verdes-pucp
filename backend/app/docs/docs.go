@@ -687,6 +687,44 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/catastro/areas/{id}/baja": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "Logical deactivation of a green area",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Feature ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/catastro/cuadrillas": {
             "get": {
                 "produces": [
@@ -1284,6 +1322,101 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/zonas-supervision/{codigo}": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "Update a supervision zone",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Zone code",
+                        "name": "codigo",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Supervision zone data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ActualizarZonaSupervisionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ZonaSupervisionDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/zonas-supervision/{codigo}/baja": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "Logical deactivation of a supervision zone",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Zone code",
+                        "name": "codigo",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ZonaSupervisionDTO"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4080,6 +4213,9 @@ const docTemplate = `{
                 },
                 "usuario_nombre": {
                     "type": "string"
+                },
+                "uuid_cliente": {
+                    "type": "string"
                 }
             }
         },
@@ -4094,6 +4230,9 @@ const docTemplate = `{
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "evento_id": {
+                    "type": "integer"
                 },
                 "id": {
                     "type": "string"
@@ -5188,6 +5327,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "uso": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.ActualizarZonaSupervisionRequest": {
+            "type": "object",
+            "properties": {
+                "area_m2": {
+                    "type": "number"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "geojson": {
+                    "type": "string"
+                },
+                "geom": {
+                    "type": "object"
+                },
+                "nombre": {
                     "type": "string"
                 }
             }

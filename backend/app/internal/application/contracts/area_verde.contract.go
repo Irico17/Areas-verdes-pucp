@@ -13,6 +13,7 @@ type IAreaVerdeRepository interface {
 	ObtenerFichaPorFeatureID(ctx context.Context, featureID string) (*entities.AreaVerdeFicha, error)
 	ActualizarFicha(ctx context.Context, featureID, nombre, uso, riego, referencia string) (*entities.AreaVerdeFicha, error)
 	CrearSinGeom(ctx context.Context, featureID, nombre, uso string) (*entities.AreaVerdeFicha, error)
+	Baja(ctx context.Context, featureID string, usuarioID *int64) error
 }
 
 // IAreaVerdeUseCase defines use case operations for managing area fichas.
@@ -20,4 +21,5 @@ type IAreaVerdeUseCase interface {
 	Fichas(ctx context.Context, q string) ([]dto.FichaDTO, error)
 	ActualizarFicha(ctx context.Context, featureID string, req dto.ActualizarFichaDTO, usuarioID *int64) (*dto.FichaDTO, error)
 	CrearSinGeom(ctx context.Context, req dto.CrearAreaSinGeomDTO, usuarioID *int64) (*dto.FichaDTO, error)
+	Baja(ctx context.Context, featureID string, usuarioID *int64) error
 }

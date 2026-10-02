@@ -9,6 +9,7 @@ type EvidenciaDTO struct {
 	Mime        string `json:"mime"`
 	Bytes       int    `json:"bytes"`
 	Nota        string `json:"nota,omitempty"`
+	EventoID    *int64 `json:"evento_id,omitempty"`
 	CreatedAt   string `json:"created_at"`
 }
 

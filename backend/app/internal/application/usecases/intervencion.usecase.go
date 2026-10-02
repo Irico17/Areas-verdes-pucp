@@ -283,17 +283,18 @@ func (u *intervencionUseCase) Timeline(ctx context.Context, id string) (dto.Time
 	out.Eventos = make([]dto.EventoTimelineDTO, len(events))
 	for i, ev := range events {
 		out.Eventos[i] = dto.EventoTimelineDTO{
-			ID:        ev.ID,
-			Tipo:      ev.Tipo,
-			Estado:    ev.Estado,
-			CapatazID: ev.CapatazID,
-			Equipo:    ev.Equipo,
-			ActorRol:  ev.ActorRol,
-			UsuarioID: ev.UsuarioID,
-			Usuario:   ev.Usuario,
-			Nombre:    ev.Nombre,
-			Nota:      ev.Nota,
-			CreatedAt: ev.CreatedAt.UTC().Format(time.RFC3339),
+			ID:          ev.ID,
+			Tipo:        ev.Tipo,
+			Estado:      ev.Estado,
+			CapatazID:   ev.CapatazID,
+			Equipo:      ev.Equipo,
+			ActorRol:    ev.ActorRol,
+			UsuarioID:   ev.UsuarioID,
+			Usuario:     ev.Usuario,
+			Nombre:      ev.Nombre,
+			Nota:        ev.Nota,
+			UUIDCliente: ev.UUIDCliente,
+			CreatedAt:   ev.CreatedAt.UTC().Format(time.RFC3339),
 		}
 	}
 	return out, nil

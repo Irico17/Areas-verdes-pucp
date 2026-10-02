@@ -146,6 +146,10 @@ func (mockAreaVerdeRoutesUC) CrearSinGeom(_ context.Context, req dto.CrearAreaSi
 	return &dto.FichaDTO{FeatureID: req.FeatureID, Nombre: req.Nombre, Uso: req.Uso, ConGeom: false}, nil
 }
 
+func (mockAreaVerdeRoutesUC) Baja(_ context.Context, _ string, _ *int64) error {
+	return nil
+}
+
 type mockZonaRoutesUC struct{}
 
 func (mockZonaRoutesUC) Listar(_ context.Context) ([]dto.ZonaSupervisionDTO, error) {
@@ -154,6 +158,14 @@ func (mockZonaRoutesUC) Listar(_ context.Context) ([]dto.ZonaSupervisionDTO, err
 
 func (mockZonaRoutesUC) Crear(_ context.Context, req dto.CrearZonaSupervisionDTO) (dto.ZonaSupervisionDTO, error) {
 	return dto.ZonaSupervisionDTO{ID: 1, Codigo: req.Codigo, Nombre: req.Nombre, ConGeom: true, Activo: true}, nil
+}
+
+func (mockZonaRoutesUC) Actualizar(_ context.Context, codigo string, req dto.ActualizarZonaSupervisionDTO, _ *int64) (dto.ZonaSupervisionDTO, error) {
+	return dto.ZonaSupervisionDTO{ID: 1, Codigo: codigo, Nombre: req.Nombre, ConGeom: req.GeoJSON != "", Activo: true}, nil
+}
+
+func (mockZonaRoutesUC) Baja(_ context.Context, codigo string, _ *int64) (dto.ZonaSupervisionDTO, error) {
+	return dto.ZonaSupervisionDTO{ID: 1, Codigo: codigo, Nombre: "Zona 1", Activo: false, ConGeom: true}, nil
 }
 
 type mockCuadrillaRoutesUC struct{}
@@ -770,6 +782,12 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 		{http.MethodPost, "/areas-verdes/v1/catastro/areas", 401},
 		{http.MethodPatch, "/api/v1/catastro/areas/AV-0001", 401},
 		{http.MethodPatch, "/areas-verdes/v1/catastro/areas/AV-0001", 401},
+		{http.MethodPost, "/api/v1/catastro/areas/AV-0001/baja", 401},
+		{http.MethodPost, "/areas-verdes/v1/catastro/areas/AV-0001/baja", 401},
+		{http.MethodPatch, "/api/v1/catastro/zonas-supervision/Z1", 401},
+		{http.MethodPatch, "/areas-verdes/v1/catastro/zonas-supervision/Z1", 401},
+		{http.MethodPost, "/api/v1/catastro/zonas-supervision/Z1/baja", 401},
+		{http.MethodPost, "/areas-verdes/v1/catastro/zonas-supervision/Z1/baja", 401},
 		// Inventario heredado y reservas mock (Lote 10)
 		{http.MethodGet, "/api/v1/geo/inventario", 401},
 		{http.MethodGet, "/areas-verdes/v1/geo/inventario", 401},
@@ -903,6 +921,18 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 			path = "/api/v1/catastro/areas/:id"
 		case "/areas-verdes/v1/catastro/areas/AV-0001":
 			path = "/areas-verdes/v1/catastro/areas/:id"
+		case "/api/v1/catastro/areas/AV-0001/baja":
+			path = "/api/v1/catastro/areas/:id/baja"
+		case "/areas-verdes/v1/catastro/areas/AV-0001/baja":
+			path = "/areas-verdes/v1/catastro/areas/:id/baja"
+		case "/api/v1/catastro/zonas-supervision/Z1":
+			path = "/api/v1/catastro/zonas-supervision/:codigo"
+		case "/areas-verdes/v1/catastro/zonas-supervision/Z1":
+			path = "/areas-verdes/v1/catastro/zonas-supervision/:codigo"
+		case "/api/v1/catastro/zonas-supervision/Z1/baja":
+			path = "/api/v1/catastro/zonas-supervision/:codigo/baja"
+		case "/areas-verdes/v1/catastro/zonas-supervision/Z1/baja":
+			path = "/areas-verdes/v1/catastro/zonas-supervision/:codigo/baja"
 		case "/api/v1/geo/inventario/fotos/x.jpg":
 			path = "/api/v1/geo/inventario/fotos/:name"
 		case "/areas-verdes/v1/geo/inventario/fotos/x.jpg":
@@ -1099,6 +1129,12 @@ func TestRutasGeoYCatastro_SinAutenticacionDa401(t *testing.T) {
 		{http.MethodPost, "/areas-verdes/v1/catastro/areas"},
 		{http.MethodPatch, "/api/v1/catastro/areas/AV-0001"},
 		{http.MethodPatch, "/areas-verdes/v1/catastro/areas/AV-0001"},
+		{http.MethodPost, "/api/v1/catastro/areas/AV-0001/baja"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/areas/AV-0001/baja"},
+		{http.MethodPatch, "/api/v1/catastro/zonas-supervision/Z1"},
+		{http.MethodPatch, "/areas-verdes/v1/catastro/zonas-supervision/Z1"},
+		{http.MethodPost, "/api/v1/catastro/zonas-supervision/Z1/baja"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/zonas-supervision/Z1/baja"},
 	}
 
 	for _, r := range rutas {
@@ -1136,6 +1172,11 @@ func TestRutasGeoYCatastro_PermisosPorRol(t *testing.T) {
 		{http.MethodGet, "/api/v1/catastro/areas", "token-norte", "", 200, ""},
 		{http.MethodPost, "/api/v1/catastro/areas", "token-norte", `{"nombre":"Nueva","uso":"jardín"}`, 201, ""},
 		{http.MethodPatch, "/api/v1/catastro/areas/AV-0001", "token-norte", `{"nombre":"Modif","uso":"jardín"}`, 200, ""},
+		{http.MethodPost, "/api/v1/catastro/areas/AV-0001/baja", "token-norte", `{}`, 200, ""},
+		{http.MethodPost, "/areas-verdes/v1/catastro/areas/AV-0001/baja", "token-norte", `{}`, 200, ""},
+		{http.MethodPatch, "/api/v1/catastro/zonas-supervision/Z1", "token-norte", `{"nombre":"Norte","geom":{"type":"MultiPolygon","coordinates":[]}}`, 200, ""},
+		{http.MethodPost, "/api/v1/catastro/zonas-supervision/Z1/baja", "token-norte", `{}`, 200, ""},
+		{http.MethodPost, "/areas-verdes/v1/catastro/zonas-supervision/Z1/baja", "token-norte", `{}`, 200, ""},
 
 		// Coordinación: consultar=true, registrar=true
 		{http.MethodGet, "/api/v1/geo/zonas", "token-coordinacion", "", 200, ""},
@@ -1151,6 +1192,9 @@ func TestRutasGeoYCatastro_PermisosPorRol(t *testing.T) {
 		{http.MethodPost, "/areas-verdes/v1/catastro/areas", "token-jefatura", `{"nombre":"Nueva","uso":"jardín"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPatch, "/api/v1/catastro/areas/AV-0001", "token-jefatura", `{"nombre":"Modif","uso":"jardín"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPatch, "/areas-verdes/v1/catastro/areas/AV-0001", "token-jefatura", `{"nombre":"Modif","uso":"jardín"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/catastro/areas/AV-0001/baja", "token-jefatura", `{}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/catastro/zonas-supervision/Z1", "token-jefatura", `{"nombre":"Norte"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/catastro/zonas-supervision/Z1/baja", "token-jefatura", `{}`, 403, "su rol no tiene ese permiso"},
 
 		// Admin: consultar=true, registrar=true
 		{http.MethodGet, "/api/v1/geo/edificios", "token-admin", "", 200, ""},

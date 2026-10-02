@@ -14,6 +14,7 @@ type ActividadEventoModel struct {
 	Nota        string    `gorm:"column:nota"`
 	CreatedAt   time.Time `gorm:"column:created_at"`
 	UsuarioID   *int64    `gorm:"column:usuario_id"`
+	UUIDCliente *string   `gorm:"type:uuid;column:uuid_cliente"`
 }
 
 // TableName returns the table name in the database.

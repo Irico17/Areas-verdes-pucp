@@ -329,7 +329,7 @@ func (r *intervencionRepository) Timeline(ctx context.Context, id string) ([]ent
 	}
 	rows, err := r.db.WithContext(ctx).Raw(`
 		SELECT e.id, e.tipo, e.estado, e.capataz_id, c.equipo, e.actor_rol, e.nota, e.created_at,
-		       e.usuario_id, u.usuario, u.nombre
+		       e.usuario_id, u.usuario, u.nombre, e.uuid_cliente
 		FROM actividad_eventos e
 		LEFT JOIN capataces c ON c.id = e.capataz_id
 		LEFT JOIN usuarios u ON u.id = e.usuario_id
@@ -352,8 +352,9 @@ func (r *intervencionRepository) Timeline(ctx context.Context, id string) ([]ent
 			usuario sql.NullInt64
 			login   sql.NullString
 			nombre  sql.NullString
+			uuidCli sql.NullString
 		)
-		if err := rows.Scan(&ev.ID, &ev.Tipo, &estado, &capataz, &equipo, &ev.ActorRol, &nota, &when, &usuario, &login, &nombre); err != nil {
+		if err := rows.Scan(&ev.ID, &ev.Tipo, &estado, &capataz, &equipo, &ev.ActorRol, &nota, &when, &usuario, &login, &nombre, &uuidCli); err != nil {
 			return nil, err
 		}
 		ev.ActividadID = id
@@ -370,6 +371,10 @@ func (r *intervencionRepository) Timeline(ctx context.Context, id string) ([]ent
 		}
 		if nombre.Valid {
 			ev.Nombre = nombre.String
+		}
+		if uuidCli.Valid {
+			idCli := uuidCli.String
+			ev.UUIDCliente = &idCli
 		}
 		ev.CreatedAt = when
 		out = append(out, ev)

@@ -96,17 +96,18 @@ type FichaIntervencionDTO struct {
 
 // EventoTimelineDTO represents an individual event in an activity timeline.
 type EventoTimelineDTO struct {
-	ID        int64   `json:"id"`
-	Tipo      string  `json:"tipo"`
-	Estado    *string `json:"estado,omitempty"`
-	CapatazID *string `json:"capataz_id,omitempty"`
-	Equipo    *string `json:"equipo,omitempty"`
-	ActorRol  string  `json:"actor_rol,omitempty"`
-	UsuarioID *int64  `json:"usuario_id,omitempty"`
-	Usuario   string  `json:"usuario,omitempty"`
-	Nombre    string  `json:"usuario_nombre,omitempty"`
-	Nota      string  `json:"nota,omitempty"`
-	CreatedAt string  `json:"created_at"`
+	ID          int64   `json:"id"`
+	Tipo        string  `json:"tipo"`
+	Estado      *string `json:"estado,omitempty"`
+	CapatazID   *string `json:"capataz_id,omitempty"`
+	Equipo      *string `json:"equipo,omitempty"`
+	ActorRol    string  `json:"actor_rol,omitempty"`
+	UsuarioID   *int64  `json:"usuario_id,omitempty"`
+	Usuario     string  `json:"usuario,omitempty"`
+	Nombre      string  `json:"usuario_nombre,omitempty"`
+	Nota        string  `json:"nota,omitempty"`
+	UUIDCliente *string `json:"uuid_cliente,omitempty"`
+	CreatedAt   string  `json:"created_at"`
 }
 
 // TimelineResponseDTO represents the full timeline response for an activity.

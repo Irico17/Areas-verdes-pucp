@@ -129,3 +129,37 @@ func (r *areaVerdeRepository) CrearSinGeom(ctx context.Context, featureID, nombr
 	}
 	return r.ObtenerFichaPorFeatureID(ctx, featureID)
 }
+
+// Baja marca el área como inactiva. La fila permanece. Si ya estaba inactiva, no duplica el historial.
+func (r *areaVerdeRepository) Baja(ctx context.Context, featureID string, usuarioID *int64) error {
+	featureID = strings.TrimSpace(featureID)
+	if featureID == "" {
+		return domainErrors.ErrEntrada
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var id int64
+		var activo bool
+		err := tx.Raw(`SELECT id, activo FROM areas_verdes WHERE feature_id = $1`, featureID).Row().Scan(&id, &activo)
+		if errors.Is(err, sql.ErrNoRows) {
+			return domainErrors.ErrFichaNoEncontrada
+		}
+		if err != nil {
+			return err
+		}
+		if !activo {
+			return nil
+		}
+		res := tx.Exec(`UPDATE areas_verdes SET activo = FALSE, updated_at = now() WHERE id = $1 AND activo`, id)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected != 1 {
+			return domainErrors.ErrFichaNoEncontrada
+		}
+		return registrarCambioTx(tx, "areas_verdes", featureID, "baja",
+			map[string]any{"feature_id": featureID, "activo": true},
+			map[string]any{"feature_id": featureID, "activo": false},
+			usuarioID,
+		)
+	})
+}

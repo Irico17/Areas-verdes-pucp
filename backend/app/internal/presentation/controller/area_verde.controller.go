@@ -19,6 +19,7 @@ type IAreaVerdeController interface {
 	Listar(*gin.Context)
 	Actualizar(*gin.Context)
 	Crear(*gin.Context)
+	Baja(*gin.Context)
 }
 
 type areaVerdeController struct {
@@ -119,4 +120,29 @@ func (ctrl *areaVerdeController) Crear(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, item)
+}
+
+// Baja godoc
+// @Summary Logical deactivation of a green area
+// @Tags catastro
+// @Produce json
+// @Param id path string true "Feature ID"
+// @Success 200 {object} map[string]any
+// @Failure 404 {object} map[string]string
+// @Router /v1/catastro/areas/{id}/baja [post]
+func (ctrl *areaVerdeController) Baja(c *gin.Context) {
+	var userID *int64
+	if u, ok := middleware.UsuarioEn(c); ok && u.ID > 0 {
+		userID = &u.ID
+	}
+	featureID := c.Param("id")
+	if err := ctrl.uc.Baja(c.Request.Context(), featureID, userID); err != nil {
+		if errors.Is(err, domainErrors.ErrFichaNoEncontrada) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "área no encontrada"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no se pudo dar de baja el área"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"feature_id": featureID, "activo": false})
 }

@@ -1,11 +1,22 @@
 package requests
 
+import "encoding/json"
+
 // CrearZonaSupervisionRequest binds input JSON for creating a supervision zone.
 type CrearZonaSupervisionRequest struct {
 	Codigo  string   `json:"codigo"`
 	Nombre  string   `json:"nombre"`
 	AreaM2  *float64 `json:"area_m2"`
 	GeoJSON string   `json:"geojson"`
+}
+
+// ActualizarZonaSupervisionRequest binds the PWA payload (geom object) and the geojson string used by POST.
+type ActualizarZonaSupervisionRequest struct {
+	Codigo  string          `json:"codigo"`
+	Nombre  string          `json:"nombre"`
+	AreaM2  *float64        `json:"area_m2"`
+	GeoJSON string          `json:"geojson"`
+	Geom    json.RawMessage `json:"geom"`
 }
 
 // CrearCuadrillaRequest binds input JSON for creating a work team.

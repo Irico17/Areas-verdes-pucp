@@ -82,3 +82,47 @@ func TestAreaVerdeRepository_CRUD(t *testing.T) {
 		t.Fatalf("se esperaba 1 cambio en la BD, obtenido: %d", totalCambios)
 	}
 }
+
+func TestAreaVerdeRepository_Baja(t *testing.T) {
+	_, gdb := testutil.MigrarDBTemporal(t, "area_verde_baja")
+	ctx := context.Background()
+	repo := postgres.NewAreaVerdeRepository(gdb)
+
+	if _, err := repo.CrearSinGeom(ctx, "AV-BAJA-01", "Área a dar de baja", "jardín"); err != nil {
+		t.Fatalf("crear: %v", err)
+	}
+	uid := int64(1)
+	if err := repo.Baja(ctx, "AV-BAJA-01", &uid); err != nil {
+		t.Fatalf("baja: %v", err)
+	}
+
+	var activo bool
+	if err := gdb.Raw(`SELECT activo FROM areas_verdes WHERE feature_id = 'AV-BAJA-01'`).Scan(&activo).Error; err != nil {
+		t.Fatalf("leer activo: %v", err)
+	}
+	if activo {
+		t.Fatal("la fila debe seguir existiendo con activo=false")
+	}
+
+	var total int64
+	if err := gdb.Raw(`SELECT count(*) FROM cambios WHERE entidad = 'areas_verdes' AND entidad_id = 'AV-BAJA-01' AND accion = 'baja'`).Scan(&total).Error; err != nil {
+		t.Fatalf("contar cambios: %v", err)
+	}
+	if total != 1 {
+		t.Fatalf("cambios de baja = %d, esperado 1", total)
+	}
+
+	if err := repo.Baja(ctx, "AV-BAJA-01", &uid); err != nil {
+		t.Fatalf("segunda baja: %v", err)
+	}
+	if err := gdb.Raw(`SELECT count(*) FROM cambios WHERE entidad = 'areas_verdes' AND entidad_id = 'AV-BAJA-01' AND accion = 'baja'`).Scan(&total).Error; err != nil {
+		t.Fatalf("recontar cambios: %v", err)
+	}
+	if total != 1 {
+		t.Fatalf("la segunda baja no debe duplicar el historial, obtenido %d", total)
+	}
+
+	if err := repo.Baja(ctx, "AV-NO-EXISTE", nil); err != domainErrors.ErrFichaNoEncontrada {
+		t.Fatalf("esperado ErrFichaNoEncontrada, obtenido %v", err)
+	}
+}

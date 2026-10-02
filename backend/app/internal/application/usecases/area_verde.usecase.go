@@ -80,6 +80,14 @@ func (u *areaVerdeUseCase) CrearSinGeom(ctx context.Context, req dto.CrearAreaSi
 	return fichaEntityToDTO(item), nil
 }
 
+func (u *areaVerdeUseCase) Baja(ctx context.Context, featureID string, usuarioID *int64) error {
+	featureID = strings.TrimSpace(featureID)
+	if featureID == "" {
+		return domainErrors.ErrEntrada
+	}
+	return u.repo.Baja(ctx, featureID, usuarioID)
+}
+
 func fichaEntityToDTO(e *entities.AreaVerdeFicha) *dto.FichaDTO {
 	if e == nil {
 		return nil

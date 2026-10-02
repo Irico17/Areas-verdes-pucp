@@ -34,10 +34,13 @@ func (g *CatastroGroup) Register(router gin.IRouter) {
 	router.GET("/catastro/areas", middleware.RequierePermiso(g.permisos, "consultar"), g.areaVerdeCtrl.Listar)
 	router.POST("/catastro/areas", middleware.RequierePermiso(g.permisos, "registrar"), g.areaVerdeCtrl.Crear)
 	router.PATCH("/catastro/areas/:id", middleware.RequierePermiso(g.permisos, "registrar"), g.areaVerdeCtrl.Actualizar)
+	router.POST("/catastro/areas/:id/baja", middleware.RequierePermiso(g.permisos, "registrar"), g.areaVerdeCtrl.Baja)
 
 	// Catastro maestro (lote 9)
 	router.GET("/catastro/zonas-supervision", middleware.RequierePermiso(g.permisos, "consultar"), g.catastroCtrl.Zonas)
 	router.POST("/catastro/zonas-supervision", middleware.RequierePermiso(g.permisos, "registrar"), g.catastroCtrl.CrearZona)
+	router.PATCH("/catastro/zonas-supervision/:codigo", middleware.RequierePermiso(g.permisos, "registrar"), g.catastroCtrl.ActualizarZona)
+	router.POST("/catastro/zonas-supervision/:codigo/baja", middleware.RequierePermiso(g.permisos, "registrar"), g.catastroCtrl.BajaZona)
 
 	router.GET("/catastro/poligonos", middleware.RequierePermiso(g.permisos, "consultar"), g.catastroCtrl.Poligonos)
 

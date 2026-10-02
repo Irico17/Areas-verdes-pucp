@@ -10,11 +10,13 @@
 - GET /api/v1/openapi.yaml
 
 # ==========================================
-# Rutas que dan 404 en el PWA (plan §2.3, lote 24)
+# Lote 24: baja lógica de áreas y zonas
 # ==========================================
-# admin POST /api/v1/catastro/areas/0/baja 404
-# admin PATCH /api/v1/catastro/zonas-supervision/0 404
-# admin POST /api/v1/catastro/zonas-supervision/0/baja 404
+# El backend nuevo registra POST /catastro/areas/:id/baja,
+# PATCH /catastro/zonas-supervision/:codigo y
+# POST /catastro/zonas-supervision/:codigo/baja (activo=false, historial en cambios).
+# No se comparan contra apps/api: ese binario no las registra.
+# Cobertura: tests de controller, caso de uso y repositorio en backend/app.
 
 # ==========================================
 # Lotes posteriores (comentadas hasta su lote)

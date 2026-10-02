@@ -24,6 +24,7 @@ type fakeAreaVerdeUseCase struct {
 	actualizarErr error
 	crearRes      *dto.FichaDTO
 	crearErr      error
+	bajaErr       error
 }
 
 func (f fakeAreaVerdeUseCase) Fichas(_ context.Context, _ string) ([]dto.FichaDTO, error) {
@@ -41,6 +42,10 @@ func (f fakeAreaVerdeUseCase) ActualizarFicha(_ context.Context, _ string, _ dto
 		return nil, f.actualizarErr
 	}
 	return f.actualizarRes, nil
+}
+
+func (f fakeAreaVerdeUseCase) Baja(_ context.Context, _ string, _ *int64) error {
+	return f.bajaErr
 }
 
 func (f fakeAreaVerdeUseCase) CrearSinGeom(_ context.Context, _ dto.CrearAreaSinGeomDTO, _ *int64) (*dto.FichaDTO, error) {
@@ -177,5 +182,40 @@ func TestAreaVerdeController_Crear(t *testing.T) {
 	rErr.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/v1/catastro/areas", bytes.NewBufferString(bodyJSON)))
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status %d", w.Code)
+	}
+}
+
+func TestAreaVerdeController_Baja(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctrl := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{}, zerolog.Nop())
+	r := gin.New()
+	r.POST("/api/v1/catastro/areas/:id/baja", ctrl.Baja)
+	r.POST("/areas-verdes/v1/catastro/areas/:id/baja", ctrl.Baja)
+
+	for _, path := range []string{
+		"/api/v1/catastro/areas/AV-0001/baja",
+		"/areas-verdes/v1/catastro/areas/AV-0001/baja",
+	} {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(http.MethodPost, path, bytes.NewBufferString(`{}`)))
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s status %d body %s", path, w.Code, w.Body.Bytes())
+		}
+		var body map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			t.Fatal(err)
+		}
+		if body["activo"] != false || body["feature_id"] != "AV-0001" {
+			t.Fatalf("%s body %s", path, w.Body.Bytes())
+		}
+	}
+
+	ctrlMissing := controller.NewAreaVerdeController(fakeAreaVerdeUseCase{bajaErr: domainErrors.ErrFichaNoEncontrada}, zerolog.Nop())
+	rMissing := gin.New()
+	rMissing.POST("/api/v1/catastro/areas/:id/baja", ctrlMissing.Baja)
+	w := httptest.NewRecorder()
+	rMissing.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/v1/catastro/areas/AV-NO/baja", bytes.NewBufferString(`{}`)))
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("esperado 404, obtenido %d", w.Code)
 	}
 }
