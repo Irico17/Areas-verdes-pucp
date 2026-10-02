@@ -97,6 +97,30 @@ func (r *evidenciaRepository) Guardar(ctx context.Context, in entities.GuardarEv
 			}
 		}
 
+		if in.EventoID > 0 {
+			var actEvento string
+			err := tx.Raw(`SELECT actividad_id::text FROM actividad_eventos WHERE id = $1`, in.EventoID).Row().Scan(&actEvento)
+			if errors.Is(err, sql.ErrNoRows) {
+				return domainErrors.InputError{Reason: "el evento no existe"}
+			}
+			if err != nil {
+				return err
+			}
+			if actEvento != in.ActividadID {
+				return domainErrors.InputError{Reason: "el evento no es de esta actividad"}
+			}
+		}
+
+		if in.SolicitudID != "" {
+			var n int
+			if err := tx.Raw(`SELECT count(*) FROM solicitudes WHERE id = $1`, in.SolicitudID).Scan(&n).Error; err != nil {
+				return err
+			}
+			if n != 1 {
+				return domainErrors.InputError{Reason: "la solicitud no existe"}
+			}
+		}
+
 		// 3. Chequeo de idempotencia previo por ID
 		var previo sql.NullString
 		scanErr := tx.Raw(`SELECT sha256 FROM evidencias WHERE id = $1`, in.ID).Row().Scan(&previo)
@@ -119,9 +143,12 @@ func (r *evidenciaRepository) Guardar(ctx context.Context, in entities.GuardarEv
 
 		// 5. Insertar en evidencias
 		res := tx.Exec(`
-			INSERT INTO evidencias (id, actividad_id, orden_id, nombre, mime, bytes, ruta, nota, sha256, lat, lon, exif)
-			VALUES ($1, $2, NULLIF($3, '')::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)`,
-			in.ID, in.ActividadID, in.OrdenID, in.Nombre, in.Mime, in.Bytes, ref, in.Nota, in.Hash, in.Lat, in.Lon, in.Exif,
+			INSERT INTO evidencias (
+			  id, actividad_id, orden_id, solicitud_id, nombre, mime, bytes, ruta, nota, sha256, lat, lon, exif, evento_id
+			) VALUES (
+			  $1, $2, NULLIF($3, '')::uuid, NULLIF($4, '')::uuid, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, NULLIF($14, 0)
+			)`,
+			in.ID, in.ActividadID, in.OrdenID, in.SolicitudID, in.Nombre, in.Mime, in.Bytes, ref, in.Nota, in.Hash, in.Lat, in.Lon, in.Exif, in.EventoID,
 		)
 		if res.Error != nil {
 			if esDuplicado(res.Error) {

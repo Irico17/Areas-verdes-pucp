@@ -105,20 +105,30 @@ type FichaIntervencionDTO struct {
 	CapatazID      string `json:"capataz_id"`
 }
 
+// EvidenciaEventoDTO is a file shown under one timeline event.
+type EvidenciaEventoDTO struct {
+	ID     string `json:"id"`
+	Nombre string `json:"nombre"`
+	Mime   string `json:"mime"`
+}
+
 // EventoTimelineDTO represents an individual event in an activity timeline.
 type EventoTimelineDTO struct {
-	ID          int64   `json:"id"`
-	Tipo        string  `json:"tipo"`
-	Estado      *string `json:"estado,omitempty"`
-	CapatazID   *string `json:"capataz_id,omitempty"`
-	Equipo      *string `json:"equipo,omitempty"`
-	ActorRol    string  `json:"actor_rol,omitempty"`
-	UsuarioID   *int64  `json:"usuario_id,omitempty"`
-	Usuario     string  `json:"usuario,omitempty"`
-	Nombre      string  `json:"usuario_nombre,omitempty"`
-	Nota        string  `json:"nota,omitempty"`
-	UUIDCliente *string `json:"uuid_cliente,omitempty"`
-	CreatedAt   string  `json:"created_at"`
+	ID                int64                `json:"id"`
+	Tipo              string               `json:"tipo"`
+	Estado            *string              `json:"estado,omitempty"`
+	CapatazID         *string              `json:"capataz_id,omitempty"`
+	Equipo            *string              `json:"equipo,omitempty"`
+	CapatazAnterior   *string              `json:"capataz_anterior,omitempty"`
+	CuadrillaAnterior *string              `json:"cuadrilla_anterior,omitempty"`
+	ActorRol          string               `json:"actor_rol,omitempty"`
+	UsuarioID         *int64               `json:"usuario_id,omitempty"`
+	Usuario           string               `json:"usuario,omitempty"`
+	Nombre            string               `json:"usuario_nombre,omitempty"`
+	Nota              string               `json:"nota,omitempty"`
+	UUIDCliente       *string              `json:"uuid_cliente,omitempty"`
+	Evidencias        []EvidenciaEventoDTO `json:"evidencias,omitempty"`
+	CreatedAt         string               `json:"created_at"`
 }
 
 // TimelineResponseDTO represents the full timeline response for an activity.
@@ -183,4 +193,21 @@ type CrearAvanceDTO struct {
 	EjemplarRef   string
 	ActorRol      string
 	CapatazID     string
+	UsuarioID     int64
+}
+
+// RegistrarHitoDTO records a book milestone with the session user, the clock and a text.
+type RegistrarHitoDTO struct {
+	ActividadID string
+	Tipo        string
+	Texto       string
+	ActorRol    string
+	CapatazID   string
+	UsuarioID   int64
+}
+
+// RegistrarHitoResponseDTO is the JSON body of a created milestone.
+type RegistrarHitoResponseDTO struct {
+	ID   int64  `json:"id"`
+	Tipo string `json:"tipo"`
 }

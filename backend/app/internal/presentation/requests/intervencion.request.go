@@ -63,6 +63,12 @@ type FichaIntervencionRequest struct {
 	Comentario     string `json:"comentario"`
 }
 
+// RegistrarHitoRequest is the body of POST /operacion/actividades/:id/hitos.
+type RegistrarHitoRequest struct {
+	Tipo  string `json:"tipo"`
+	Texto string `json:"texto"`
+}
+
 // CrearAvanceRequest represents the payload for POST /operacion/actividades/:id/avances.
 type CrearAvanceRequest struct {
 	ID            string `json:"id"`

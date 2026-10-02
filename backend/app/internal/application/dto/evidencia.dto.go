@@ -39,4 +39,6 @@ type SubirEvidenciaDTO struct {
 	UsuarioID   int64
 	OrdenID     string
 	Contenido   []byte
+	EventoID    int64
+	SolicitudID string
 }

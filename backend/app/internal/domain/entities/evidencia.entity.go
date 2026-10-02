@@ -41,6 +41,8 @@ type GuardarEvidencia struct {
 	Rol         string
 	CapatazID   string
 	UsuarioID   int64
+	EventoID    int64
+	SolicitudID string
 }
 
 // ResultadoEvidencia represents the result of saving an evidence record.

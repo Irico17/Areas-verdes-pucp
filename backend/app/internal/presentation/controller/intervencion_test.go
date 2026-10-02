@@ -103,6 +103,10 @@ func (m *mockIntervencionUC) CrearAvance(ctx context.Context, in dto.CrearAvance
 	return nil
 }
 
+func (m *mockIntervencionUC) RegistrarHito(_ context.Context, in dto.RegistrarHitoDTO) (dto.RegistrarHitoResponseDTO, error) {
+	return dto.RegistrarHitoResponseDTO{ID: 1, Tipo: in.Tipo}, nil
+}
+
 func TestCreateSinCookieEs401(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	ctrl := NewIntervencionController(&mockIntervencionUC{}, zerolog.Nop())

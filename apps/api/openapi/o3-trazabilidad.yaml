@@ -1,0 +1,129 @@
+# Flujo o3-trazabilidad. Paths nuevos.
+# POST /api/v1/evidencias ya está en atencion.yaml. Este flujo le añade,
+# sin duplicar el path, los campos de formulario evento_id y solicitud_id.
+# El GET de esta cadena devuelve capataz_anterior, cuadrilla_anterior y evidencias.
+/api/v1/operacion/actividades/{id}/timeline:
+  get:
+    tags: [operacion]
+    summary: Cadena cronológica de la actividad, con usuario, fecha, texto y evidencias.
+    description: >
+      Cada hito trae el usuario de la sesión, la fecha y el texto.
+      En una reasignación, capataz_anterior es la cuadrilla previa y capataz_id la nueva.
+      evidencias lista los archivos cuyo evento_id es ese hito.
+      No borra eventos ni actividades.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Cadena de la actividad
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actividad_id, eventos]
+              properties:
+                actividad_id:
+                  type: string
+                  format: uuid
+                eventos:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, tipo, created_at]
+                    properties:
+                      id:
+                        type: integer
+                      tipo:
+                        type: string
+                        description: >
+                          creada, asignada, reasignada, estado, cancelada, archivada,
+                          evidencia, inicio, supervision, derivacion, observacion,
+                          conformidad o avance.
+                      capataz_id:
+                        type: string
+                      equipo:
+                        type: string
+                        description: Nombre ficticio de la cuadrilla nueva.
+                      capataz_anterior:
+                        type: string
+                      cuadrilla_anterior:
+                        type: string
+                        description: Nombre ficticio de la cuadrilla anterior.
+                      usuario_nombre:
+                        type: string
+                      nota:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+                      evidencias:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            nombre:
+                              type: string
+                            mime:
+                              type: string
+      "401":
+        description: Sin sesión
+      "404":
+        description: La actividad no existe
+/api/v1/operacion/actividades/{id}/hitos:
+  post:
+    tags: [operacion]
+    summary: Anota un hito del libro con usuario, fecha y texto.
+    description: >
+      Tipos admitidos: inicio, supervision, derivacion, observacion, conformidad.
+      El avance no entra por aquí: lo crea POST .../avances y deja un evento de tipo avance.
+      La baja lógica sigue siendo POST .../archivar, con confirmación en la pantalla.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [tipo, texto]
+            properties:
+              tipo:
+                type: string
+                enum: [inicio, supervision, derivacion, observacion, conformidad]
+              texto:
+                type: string
+                maxLength: 500
+    responses:
+      "201":
+        description: Hito escrito en la cadena
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, tipo]
+              properties:
+                id:
+                  type: integer
+                tipo:
+                  type: string
+      "400":
+        description: Tipo desconocido o texto vacío
+      "401":
+        description: Sin sesión
+      "403":
+        description: El capataz solo anota en sus actividades
+      "404":
+        description: La actividad no existe

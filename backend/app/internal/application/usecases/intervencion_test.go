@@ -96,6 +96,13 @@ func (m *mockIntervencionRepo) CrearAvance(ctx context.Context, in entities.Nuev
 	return nil
 }
 
+func (m *mockIntervencionRepo) RegistrarHito(_ context.Context, in entities.NuevoHito) (int64, error) {
+	if in.Tipo == "" {
+		return 0, nil
+	}
+	return 1, nil
+}
+
 type catalogoSinItems struct{}
 
 func (catalogoSinItems) List(context.Context, string, bool) ([]entities.CatalogoItem, error) {

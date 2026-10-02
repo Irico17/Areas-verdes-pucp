@@ -20,6 +20,7 @@ type IIntervencionRepository interface {
 	Timeline(ctx context.Context, id string) ([]entities.ActividadEvento, error)
 	GuardarFicha(ctx context.Context, in entities.FichaIntervencion) error
 	CrearAvance(ctx context.Context, in entities.NuevoAvance) error
+	RegistrarHito(ctx context.Context, in entities.NuevoHito) (int64, error)
 	One(ctx context.Context, id string) (entities.Feature, error)
 	Taxonomia(ctx context.Context) (entities.TaxonomiaActividad, error)
 	ListarPersonal(ctx context.Context, actividadID string) ([]entities.PersonalLabor, error)
@@ -37,6 +38,7 @@ type IIntervencionUseCase interface {
 	Timeline(ctx context.Context, id string) (dto.TimelineResponseDTO, error)
 	GuardarFicha(ctx context.Context, in dto.FichaIntervencionDTO) error
 	CrearAvance(ctx context.Context, in dto.CrearAvanceDTO) error
+	RegistrarHito(ctx context.Context, in dto.RegistrarHitoDTO) (dto.RegistrarHitoResponseDTO, error)
 	Taxonomia(ctx context.Context) (dto.TaxonomiaActividadDTO, error)
 	ListarPersonal(ctx context.Context, actividadID string) (dto.PersonalLaborResponseDTO, error)
 	RegistrarPersonal(ctx context.Context, in dto.RegistrarPersonalDTO) (dto.PersonalLaborResponseDTO, error)

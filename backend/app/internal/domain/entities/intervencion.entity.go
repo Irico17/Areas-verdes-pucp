@@ -152,4 +152,15 @@ type NuevoAvance struct {
 	EjemplarRef   string
 	ActorRol      string
 	CapatazID     string
+	UsuarioID     int64
+}
+
+// NuevoHito records one book milestone on the activity chain.
+type NuevoHito struct {
+	ActividadID string
+	Tipo        string
+	Texto       string
+	ActorRol    string
+	CapatazID   string
+	UsuarioID   int64
 }

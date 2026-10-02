@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react"
 import { FechaCampo } from "../FechaCampo"
-import { formatFechaHora } from "../fecha"
 import { mostrarEnPanel } from "../ui/desplazar"
 import { Esqueleto } from "../ui/Esqueleto"
 import {
@@ -11,16 +10,16 @@ import {
   TIPOS,
   tipoGrueso,
   etiquetaEstado,
-  etiquetaEvento,
   etiquetaTipo,
   type AltaCampos,
   type Capataz,
   type Evento,
   type TaxonomiaActividad,
 } from "../operacion"
-import { etiquetaRol, type CatalogoItem } from "../producto"
+import type { CatalogoItem } from "../producto"
 import type { Rol } from "../types"
 import { ACTIVIDAD, marcaEjecutor } from "../ui/nomenclatura"
+import { Bitacora } from "./Bitacora"
 import { EvidenciasCampo } from "./EvidenciasCampo"
 import { SelectorLugar } from "./SelectorLugar"
 import { listarZonas } from "./catastro"
@@ -262,21 +261,12 @@ export function Labores(props: Props) {
                 </>
               )}
               <EvidenciasCampo key={props.selected.id} actividadId={props.selected.queued ? "" : props.selected.id} />
-              <h3>{ACTIVIDAD.bitacora}</h3>
-              {props.timelineError && <p className="status error">{props.timelineError}</p>}
-              <ol className="timeline">
-                {props.timeline.map((evento) => (
-                  <li key={evento.id}>
-                    <strong>{etiquetaEvento(evento.tipo)}</strong>
-                    <span>
-                      {evento.estado ? etiquetaEstado(evento.estado) : ""}
-                      {evento.equipo ? ` · ${evento.equipo}` : ""}
-                      {` · ${etiquetaRol(evento.actor_rol)}`}
-                    </span>
-                    <time dateTime={evento.created_at}>{formatFechaHora(evento.created_at)}</time>
-                  </li>
-                ))}
-              </ol>
+              <Bitacora
+                embebida
+                actividadId={props.selected.queued ? "" : props.selected.id}
+                eventos={props.timeline}
+                error={props.timelineError}
+              />
             </>
           )}
         </div>

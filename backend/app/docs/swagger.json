@@ -3357,6 +3357,38 @@
                 }
             }
         },
+        "/v1/operacion/actividades/{id}/hitos": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "Record a book milestone on the activity chain",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Activity UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/v1/operacion/actividades/{id}/avances": {
             "post": {
                 "consumes": [

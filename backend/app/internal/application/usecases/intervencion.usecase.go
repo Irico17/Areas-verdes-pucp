@@ -400,19 +400,26 @@ func (u *intervencionUseCase) Timeline(ctx context.Context, id string) (dto.Time
 	}
 	out.Eventos = make([]dto.EventoTimelineDTO, len(events))
 	for i, ev := range events {
+		evidencias := make([]dto.EvidenciaEventoDTO, len(ev.Evidencias))
+		for j, archivo := range ev.Evidencias {
+			evidencias[j] = dto.EvidenciaEventoDTO{ID: archivo.ID, Nombre: archivo.Nombre, Mime: archivo.Mime}
+		}
 		out.Eventos[i] = dto.EventoTimelineDTO{
-			ID:          ev.ID,
-			Tipo:        ev.Tipo,
-			Estado:      ev.Estado,
-			CapatazID:   ev.CapatazID,
-			Equipo:      ev.Equipo,
-			ActorRol:    ev.ActorRol,
-			UsuarioID:   ev.UsuarioID,
-			Usuario:     ev.Usuario,
-			Nombre:      ev.Nombre,
-			Nota:        ev.Nota,
-			UUIDCliente: ev.UUIDCliente,
-			CreatedAt:   ev.CreatedAt.UTC().Format(time.RFC3339),
+			ID:                ev.ID,
+			Tipo:              ev.Tipo,
+			Estado:            ev.Estado,
+			CapatazID:         ev.CapatazID,
+			Equipo:            ev.Equipo,
+			CapatazAnterior:   ev.CapatazAnterior,
+			CuadrillaAnterior: ev.CuadrillaAnterior,
+			ActorRol:          ev.ActorRol,
+			UsuarioID:         ev.UsuarioID,
+			Usuario:           ev.Usuario,
+			Nombre:            ev.Nombre,
+			Nota:              ev.Nota,
+			UUIDCliente:       ev.UUIDCliente,
+			Evidencias:        evidencias,
+			CreatedAt:         ev.CreatedAt.UTC().Format(time.RFC3339),
 		}
 	}
 	return out, nil
@@ -457,8 +464,47 @@ func (u *intervencionUseCase) CrearAvance(ctx context.Context, in dto.CrearAvanc
 		EjemplarRef:   in.EjemplarRef,
 		ActorRol:      in.ActorRol,
 		CapatazID:     in.CapatazID,
+		UsuarioID:     in.UsuarioID,
 	}
 	return u.repo.CrearAvance(ctx, cmd)
+}
+
+var hitosLibro = map[string]struct{}{
+	"inicio":      {},
+	"supervision": {},
+	"derivacion":  {},
+	"observacion": {},
+	"conformidad": {},
+}
+
+func (u *intervencionUseCase) RegistrarHito(ctx context.Context, in dto.RegistrarHitoDTO) (dto.RegistrarHitoResponseDTO, error) {
+	var zero dto.RegistrarHitoResponseDTO
+	if !uuidRe.MatchString(in.ActividadID) {
+		return zero, domainErrors.InputError{Reason: "id debe ser un UUID"}
+	}
+	tipo := strings.TrimSpace(in.Tipo)
+	if _, ok := hitosLibro[tipo]; !ok {
+		return zero, domainErrors.InputError{Reason: "tipo de hito no reconocido"}
+	}
+	texto := strings.TrimSpace(in.Texto)
+	if texto == "" {
+		return zero, domainErrors.InputError{Reason: "el hito necesita un texto"}
+	}
+	if utf8.RuneCountInString(texto) > 500 {
+		return zero, domainErrors.InputError{Reason: "el texto del hito es demasiado largo"}
+	}
+	id, err := u.repo.RegistrarHito(ctx, entities.NuevoHito{
+		ActividadID: in.ActividadID,
+		Tipo:        tipo,
+		Texto:       texto,
+		ActorRol:    in.ActorRol,
+		CapatazID:   in.CapatazID,
+		UsuarioID:   in.UsuarioID,
+	})
+	if err != nil {
+		return zero, err
+	}
+	return dto.RegistrarHitoResponseDTO{ID: id, Tipo: tipo}, nil
 }
 
 var subtipoRe = regexp.MustCompile(`^[a-z0-9_]{2,40}$`)

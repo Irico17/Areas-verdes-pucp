@@ -3817,6 +3817,27 @@ paths:
       summary: Assign an activity to a capataz team
       tags:
       - operacion
+  /v1/operacion/actividades/{id}/hitos:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Activity UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Record a book milestone on the activity chain
+      tags:
+      - operacion
   /v1/operacion/actividades/{id}/avances:
     post:
       consumes:
