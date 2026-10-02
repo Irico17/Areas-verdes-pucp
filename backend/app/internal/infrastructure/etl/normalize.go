@@ -6,28 +6,13 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 )
 
 // Record es una feature normalizada, lista para data/v1 y para PostGIS.
 // El campo de personas "jefes" no se copia.
-type Record struct {
-	FeatureID    string
-	SourceIndex  int
-	Capa         string
-	Codigo       *string
-	Nombre       *string
-	Uso          *string
-	Clase        *string
-	ProyRiego    *string
-	RiegoAct     *string
-	Referencia   *string
-	Pertenecen   *string
-	PerimetroM   *float64
-	AreaM2       *float64
-	PerimetroRaw json.RawMessage
-	AreaRaw      json.RawMessage
-	Geometry     json.RawMessage
-}
+type Record = entities.CatastroRecord
 
 type rawFC struct {
 	Type     string       `json:"type"`

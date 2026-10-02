@@ -10,19 +10,14 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"gorm.io/gorm"
+
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 )
 
 // InvRecord es un elemento de inventario ya sin HTML ni enlaces externos.
-type InvRecord struct {
-	Capa      string
-	FeatureID string
-	Nombre    string
-	Subtipo   string
-	Detalle   string
-	Lugar     string
-	Foto      string
-	Geometry  json.RawMessage
-}
+type InvRecord = entities.InventarioRecord
 
 type invFeature struct {
 	Properties map[string]any  `json:"properties"`
@@ -127,6 +122,37 @@ func WriteInventario(dir string, capas map[string][]InvRecord) error {
 		}
 	}
 	return nil
+}
+
+// LoadInventario reemplaza solo la tabla inventario si está vacía.
+func LoadInventario(db *gorm.DB, capas map[string][]InvRecord) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		var n int
+		if err := tx.Raw(`SELECT count(*) FROM inventario`).Scan(&n).Error; err != nil {
+			return err
+		}
+		if n > 0 {
+			return fmt.Errorf("LoadInventario: inventario tiene %d fila(s); TRUNCATE las borraría. Usa etl-lote (upsert, sin TRUNCATE) en una base con datos", n)
+		}
+		if err := tx.Exec(`TRUNCATE inventario RESTART IDENTITY`).Error; err != nil {
+			return fmt.Errorf("truncar inventario: %w", err)
+		}
+		for capa, rows := range capas {
+			for _, r := range rows {
+				if len(r.Geometry) == 0 {
+					continue
+				}
+				if err := tx.Exec(`
+					INSERT INTO inventario (capa, feature_id, nombre, subtipo, detalle, lugar, foto, geom)
+					VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''), inventario_geom_4326($8))`,
+					capa, r.FeatureID, r.Nombre, r.Subtipo, r.Detalle, r.Lugar, r.Foto, string(r.Geometry),
+				).Error; err != nil {
+					return fmt.Errorf("inventario %s %s: %w", capa, r.FeatureID, err)
+				}
+			}
+		}
+		return nil
+	})
 }
 
 func readBebederos(rawDir string, fotos map[string]string) ([]InvRecord, error) {

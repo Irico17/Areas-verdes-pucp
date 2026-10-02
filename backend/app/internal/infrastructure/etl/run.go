@@ -8,17 +8,20 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
-// Options controla el ETL raw → v1.
+// Options controla el ETL raw → v1 → PostGIS.
 type Options struct {
 	RawDir   string
 	V1Dir    string
+	DB       *gorm.DB
 	SkipLoad bool
 	Strict   bool
 }
 
-// Report son los conteos exactos escritos.
+// Report son los conteos exactos escritos y, si aplica, cargados.
 type Report struct {
 	Areas      int
 	Zonas      int
@@ -34,7 +37,7 @@ type optionalCapa struct {
 	expect int
 }
 
-// Run normaliza el catastro de raw hacia v1. En este lote (18) solo soporta SkipLoad=true.
+// Run normaliza el catastro y, salvo SkipLoad, lo carga en PostGIS.
 func Run(opt Options) (Report, error) {
 	areas, areasSum, err := readNormalize(opt.RawDir, "areas_verdes.geojson", NormalizeAreas)
 	if err != nil {
@@ -147,7 +150,17 @@ func Run(opt Options) (Report, error) {
 	}
 
 	if !opt.SkipLoad {
-		return Report{}, fmt.Errorf("la carga en base de datos (-skip-load=false) corresponde al lote 19; usa --skip-load")
+		if opt.DB == nil {
+			return Report{}, fmt.Errorf("no hay conexión a Postgres; usa --skip-load o define DATABASE_URL")
+		}
+		if err := opt.DB.Transaction(func(tx *gorm.DB) error {
+			if err := Load(tx, areas, zonas, capas); err != nil {
+				return err
+			}
+			return LoadInventario(tx, inv)
+		}); err != nil {
+			return Report{}, err
+		}
 	}
 
 	return Report{Areas: len(areas), Zonas: len(zonas), Capas: counts, Inventario: invCounts, Manifest: manifest}, nil
@@ -171,7 +184,7 @@ func assertNoPII(zonas []Record) error {
 	for _, z := range zonas {
 		blob := strings.Join([]string{
 			z.FeatureID, str(z.Codigo), str(z.Nombre), str(z.Uso), str(z.ProyRiego),
-			z.RiegoActStr(), z.ReferenciaStr(), string(z.Geometry),
+			str(z.RiegoAct), str(z.Referencia), string(z.Geometry),
 		}, "\n")
 		for _, frag := range PIIFragments {
 			if strings.Contains(blob, frag) {
@@ -180,20 +193,6 @@ func assertNoPII(zonas []Record) error {
 		}
 	}
 	return nil
-}
-
-func (r Record) RiegoActStr() string {
-	if r.RiegoAct == nil {
-		return ""
-	}
-	return *r.RiegoAct
-}
-
-func (r Record) ReferenciaStr() string {
-	if r.Referencia == nil {
-		return ""
-	}
-	return *r.Referencia
 }
 
 func str(p *string) string {

@@ -285,4 +285,8 @@ norte GET /api/v1/auditoria/timeline?entidad=areas_verdes&entidad_id=259
 - GET /api/v1/auditoria/timeline 401
 
 # Lote 19: Importaciones
-# admin GET /api/v1/importaciones/entidades
+admin GET /api/v1/importaciones/entidades
+coordinacion GET /api/v1/importaciones/entidades
+jefatura GET /api/v1/importaciones/entidades
+norte GET /api/v1/importaciones/entidades
+- GET /api/v1/importaciones/entidades 401

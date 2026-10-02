@@ -41,6 +41,10 @@ func RegisterContainer(container *dig.Container) error {
 		usecases.NewReporteUseCase,
 		usecases.NewIAUseCase,
 		usecases.NewLoteUseCase,
+		usecases.NewImportacionUseCase,
+		usecases.NewCargaInicialUseCase,
+		usecases.NewCargaLoteUseCase,
+		usecases.NewSectoresUseCase,
 	}
 
 	for _, provider := range providers {

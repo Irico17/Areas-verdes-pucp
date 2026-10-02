@@ -517,6 +517,29 @@ func (mockLoteRoutesUC) Historial(_ context.Context, _ dto.FiltroAuditoriaDTO) (
 	}, nil
 }
 
+type mockImportacionRoutesUC struct{}
+
+func (mockImportacionRoutesUC) Entidades(_ context.Context) []string {
+	return []string{"areas_verdes", "lugares"}
+}
+
+func (mockImportacionRoutesUC) Previsualizar(_ context.Context, entidad, nombre string, body []byte, usuarioID int64) (*dto.VistaPreviaResponseDTO, error) {
+	return &dto.VistaPreviaResponseDTO{
+		ID:      1,
+		LoteID:  1,
+		Entidad: entidad,
+		Validas: 1,
+	}, nil
+}
+
+func (mockImportacionRoutesUC) Confirmar(_ context.Context, loteID, usuarioID int64) (*dto.ConfirmarImportacionResponseDTO, error) {
+	return &dto.ConfirmarImportacionResponseDTO{
+		LoteID:  loteID,
+		Validas: 1,
+		Escrito: true,
+	}, nil
+}
+
 func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
@@ -566,6 +589,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	reporteCtrl := controller.NewReporteController(mockReporteRoutesUC{}, zerolog.Nop())
 	iaCtrl := controller.NewIAController(mockIARoutesUC{}, zerolog.Nop())
 	auditoriaCtrl := controller.NewAuditoriaController(mockLoteRoutesUC{}, zerolog.Nop())
+	importacionCtrl := controller.NewImportacionController(mockImportacionRoutesUC{}, zerolog.Nop())
 
 	permisosSvc := services.NewPermisosService()
 	limitador := ratelimit.NewMemoriaLimitador(100, time.Minute)
@@ -590,6 +614,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	reporteGrp := groups.NewReporteGroup(reporteCtrl, permisosSvc)
 	iaGrp := groups.NewIAGroup(iaCtrl, permisosSvc)
 	auditoriaGrp := groups.NewAuditoriaGroup(auditoriaCtrl, permisosSvc)
+	importacionGrp := groups.NewImportacionGroup(importacionCtrl, permisosSvc)
 
 	r := routes.NewRouter(routes.RouterParams{
 		Engine:               engine,
@@ -617,6 +642,7 @@ func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 		ReporteGroup:         reporteGrp,
 		IAGroup:              iaGrp,
 		AuditoriaGroup:       auditoriaGrp,
+		ImportacionGroup:     importacionGrp,
 	})
 	r.Setup()
 	return engine
@@ -839,6 +865,13 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 		{http.MethodGet, "/areas-verdes/v1/reportes/labores", 401},
 		{http.MethodPost, "/api/v1/ia/sugerir-tipo", 401},
 		{http.MethodPost, "/areas-verdes/v1/ia/sugerir-tipo", 401},
+		// Importaciones (Lote 19)
+		{http.MethodGet, "/api/v1/importaciones/entidades", 401},
+		{http.MethodGet, "/areas-verdes/v1/importaciones/entidades", 401},
+		{http.MethodPost, "/api/v1/importaciones", 401},
+		{http.MethodPost, "/areas-verdes/v1/importaciones", 401},
+		{http.MethodPost, "/api/v1/importaciones/1/confirmar", 401},
+		{http.MethodPost, "/areas-verdes/v1/importaciones/1/confirmar", 401},
 		{http.MethodGet, "/api/v1/no-existe", 404},
 		{http.MethodGet, "/areas-verdes/v1/no-existe", 404},
 	}
@@ -854,6 +887,10 @@ func TestRutasActualesRespondenIgual(t *testing.T) {
 		}
 		path := want.ruta
 		switch path {
+		case "/api/v1/importaciones/1/confirmar":
+			path = "/api/v1/importaciones/:id/confirmar"
+		case "/areas-verdes/v1/importaciones/1/confirmar":
+			path = "/areas-verdes/v1/importaciones/:id/confirmar"
 		case "/api/v1/catalogos/1/desactivar":
 			path = "/api/v1/catalogos/:id/desactivar"
 		case "/areas-verdes/v1/catalogos/1/desactivar":
@@ -2251,6 +2288,96 @@ func TestRutasAuditoriaELotes_PermisosPorRol(t *testing.T) {
 		if c.body != "" {
 			req.Header.Set("Content-Type", "application/json")
 		}
+		req.AddCookie(&http.Cookie{Name: "cv_sesion", Value: c.token})
+		engine.ServeHTTP(w, req)
+
+		if w.Code != c.statusEsperado {
+			t.Errorf("%s %s (token=%s): esperado status %d, obtenido %d (%s)", c.metodo, c.ruta, c.token, c.statusEsperado, w.Code, w.Body.String())
+		}
+		if c.errorEsperado != "" {
+			var resp map[string]string
+			_ = json.Unmarshal(w.Body.Bytes(), &resp)
+			if resp["error"] != c.errorEsperado {
+				t.Errorf("%s %s (token=%s): error esperado %q, obtenido %q", c.metodo, c.ruta, c.token, c.errorEsperado, resp["error"])
+			}
+		}
+	}
+}
+
+func TestRutasImportaciones_SinAutenticacionRetorna401(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	rutas := []struct {
+		metodo string
+		ruta   string
+	}{
+		{http.MethodGet, "/api/v1/importaciones/entidades"},
+		{http.MethodGet, "/areas-verdes/v1/importaciones/entidades"},
+		{http.MethodPost, "/api/v1/importaciones"},
+		{http.MethodPost, "/areas-verdes/v1/importaciones"},
+		{http.MethodPost, "/api/v1/importaciones/1/confirmar"},
+		{http.MethodPost, "/areas-verdes/v1/importaciones/1/confirmar"},
+	}
+
+	for _, r := range rutas {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(r.metodo, r.ruta, nil)
+		engine.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("%s %s sin auth: esperado 401, obtenido %d", r.metodo, r.ruta, w.Code)
+		}
+		if w.Body.String() != `{"error":"inicie sesión"}` {
+			t.Errorf("%s %s sin auth: cuerpo inesperado %s", r.metodo, r.ruta, w.Body.String())
+		}
+	}
+}
+
+func TestRutasImportaciones_PermisosPorRol(t *testing.T) {
+	engine := setupTestRouter(true)
+
+	casos := []struct {
+		metodo         string
+		ruta           string
+		token          string
+		body           string
+		statusEsperado int
+		errorEsperado  string
+	}{
+		// 1. Capataz: consultar=true -> 200 para GET; validar=false -> 403 para POST
+		{http.MethodGet, "/api/v1/importaciones/entidades", "token-norte", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/importaciones/entidades", "token-norte", "", 200, ""},
+		{http.MethodPost, "/api/v1/importaciones", "token-norte", "", 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/importaciones", "token-norte", "", 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/importaciones/1/confirmar", "token-norte", "", 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/areas-verdes/v1/importaciones/1/confirmar", "token-norte", "", 403, "su rol no tiene ese permiso"},
+
+		// 2. Coordinación: consultar=true -> 200; validar=true -> 200/201
+		{http.MethodGet, "/api/v1/importaciones/entidades", "token-coordinacion", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/importaciones/entidades", "token-coordinacion", "", 200, ""},
+		{http.MethodPost, "/api/v1/importaciones/1/confirmar", "token-coordinacion", "", 201, ""},
+		{http.MethodPost, "/areas-verdes/v1/importaciones/1/confirmar", "token-coordinacion", "", 201, ""},
+
+		// 3. Jefatura: consultar=true -> 200; validar=true -> 200/201
+		{http.MethodGet, "/api/v1/importaciones/entidades", "token-jefatura", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/importaciones/entidades", "token-jefatura", "", 200, ""},
+		{http.MethodPost, "/api/v1/importaciones/1/confirmar", "token-jefatura", "", 201, ""},
+		{http.MethodPost, "/areas-verdes/v1/importaciones/1/confirmar", "token-jefatura", "", 201, ""},
+
+		// 4. Admin: consultar=true -> 200; validar=true -> 200/201
+		{http.MethodGet, "/api/v1/importaciones/entidades", "token-admin", "", 200, ""},
+		{http.MethodGet, "/areas-verdes/v1/importaciones/entidades", "token-admin", "", 200, ""},
+		{http.MethodPost, "/api/v1/importaciones/1/confirmar", "token-admin", "", 201, ""},
+		{http.MethodPost, "/areas-verdes/v1/importaciones/1/confirmar", "token-admin", "", 201, ""},
+	}
+
+	for _, c := range casos {
+		w := httptest.NewRecorder()
+		var body io.Reader
+		if c.body != "" {
+			body = strings.NewReader(c.body)
+		}
+		req := httptest.NewRequest(c.metodo, c.ruta, body)
 		req.AddCookie(&http.Cookie{Name: "cv_sesion", Value: c.token})
 		engine.ServeHTTP(w, req)
 

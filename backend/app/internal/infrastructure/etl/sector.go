@@ -12,6 +12,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
+
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 )
 
 // SectoresValidos son los sectores operativos que puede llevar
@@ -21,23 +25,12 @@ import (
 var SectoresValidos = []string{"cua-valeria", "cua-mateo", "cua-renato", "campo-deportivo", "bosque-humedo"}
 
 // SectorPoligono es una fila de data/v1/zonas_sector.json.
-type SectorPoligono struct {
-	SourceIndex int    `json:"source_index"`
-	FeatureID   string `json:"feature_id"`
-	Sector      string `json:"sector"`
-}
+type SectorPoligono = entities.PoligonoSector
 
 // ArchivoSectores es el contenido de data/v1/zonas_sector.json. No lleva
 // hashes ni ninguna huella de los nombres de origen: solo slugs, índices y
 // conteos.
-type ArchivoSectores struct {
-	Version   int              `json:"version"`
-	Fuente    string           `json:"fuente"`
-	Clave     string           `json:"clave"`
-	Nota      string           `json:"nota"`
-	Conteos   map[string]int   `json:"conteos"`
-	Poligonos []SectorPoligono `json:"poligonos"`
-}
+type ArchivoSectores = entities.ArchivoSectores
 
 // AnonimizarJefes expone anonimizarJefes para cmd/sectores: CompararOrden
 // necesita el mismo cuerpo anonimizado que ya calcula SectoresDeJefes por
@@ -232,6 +225,24 @@ func areaEq(a *float64, b json.Number) bool {
 		return false
 	}
 	return math.Round(*a*1000) == math.Round(bf*1000)
+}
+
+// AplicarSectores completa sector solo donde está NULL, desde
+// poligonos_sector_ref (migración 044). No pisa un sector asignado a mano ni
+// toca polígonos del editor que coincidan por source_index pero no por
+// feature_id (Z-NNNN o PC-NNNN, los prefijos que usan el ETL normal y el de
+// lote). Devuelve las filas tocadas.
+func AplicarSectores(tx *gorm.DB) (int64, error) {
+	res := tx.Exec(`
+		UPDATE poligonos_cuadrilla p
+		SET sector = r.sector, updated_at = now()
+		FROM poligonos_sector_ref r
+		WHERE p.source_index = r.source_index
+		  AND p.sector IS NULL
+		  AND p.feature_id IN (
+		    'Z-' || lpad((r.source_index + 1)::text, 4, '0'),
+		    'PC-' || lpad((r.source_index + 1)::text, 4, '0'))`)
+	return res.RowsAffected, res.Error
 }
 
 // SQLSectores arma los INSERT ... unnest(...) para poligonos_sector_ref, uno

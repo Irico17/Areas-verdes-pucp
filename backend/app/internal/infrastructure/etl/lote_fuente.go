@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	"io"
 	"net/http"
 	"os"
@@ -23,23 +24,12 @@ const (
 	urlTipos    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTakay8F0nlgM_t333fY-rOIG0auZ_vMh4-q0_d0_FJI9kS-bVv03Q0MxxgeX7XV9tz7jjPYJdMGI73/pub?gid=344271829&single=true&output=csv"
 )
 
-type fuentesLote struct {
-	Zonas     []byte
-	Jefes     []byte
-	Lugares   []byte
-	Gviz      []byte
-	Palmeras  []byte
-	Cafetos   []byte
-	Tipos     []byte
-	Monitoreo []byte
-	Poda      []byte
-	Vivero    []byte
-	Origen    map[string]string
-}
+type FuentesLote = entities.FuentesLote
+type fuentesLote = entities.FuentesLote
 
 // ResolverFuentes lee cada fuente en vivo una vez y la deja en data/raw/lote.
 // Si el vivo falla, usa esa copia y, en último caso, el baseline de data/raw.
-func ResolverFuentes(rawDir string, client *http.Client) (fuentesLote, error) {
+func ResolverFuentes(rawDir string, client *http.Client) (FuentesLote, error) {
 	if client == nil {
 		client = &http.Client{Timeout: 45 * time.Second}
 	}

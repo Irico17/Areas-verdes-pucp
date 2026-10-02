@@ -38,6 +38,7 @@ func RegisterContainer(container *dig.Container) error {
 		groups.NewReporteGroup,
 		groups.NewIAGroup,
 		groups.NewAuditoriaGroup,
+		groups.NewImportacionGroup,
 	} {
 		if err := container.Provide(constructor); err != nil {
 			return err
@@ -67,6 +68,7 @@ func RegisterContainer(container *dig.Container) error {
 		controller.NewReporteController,
 		controller.NewIAController,
 		controller.NewAuditoriaController,
+		controller.NewImportacionController,
 	} {
 		if err := container.Provide(constructor); err != nil {
 			return err
