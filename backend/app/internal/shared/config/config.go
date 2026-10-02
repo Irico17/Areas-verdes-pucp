@@ -32,6 +32,9 @@ func resetConfigForTesting() {
 
 // Config contains all application configuration.
 type Config struct {
+	// AppEnv is develop, qa, produccion, or empty when APP_ENV is unset.
+	// Empty keeps the historical defaults (pool 10/4/30 min, Swagger by Gin mode).
+	AppEnv      string
 	Server      ServerConfig
 	Database    DatabaseConfig
 	Seguridad   SeguridadConfig
@@ -46,6 +49,8 @@ type Config struct {
 type ServerConfig struct {
 	Port           string
 	GinMode        string
+	LogLevel       string
+	LogFormat      string
 	TrustedProxies []string
 }
 
@@ -91,7 +96,8 @@ type DatosConfig struct {
 
 // MigracionesConfig contains database migrations path.
 type MigracionesConfig struct {
-	Dir string
+	Dir     string
+	Semilla string
 }
 
 // AccesosConfig contains access seeds and credentials.
@@ -113,14 +119,20 @@ func New() *Config {
 		_ = godotenv.Load(filepath.Join(root, ".env"))
 	}
 
-	ginMode := valueOrDefault("SERVER_GIN_MODE", "release")
+	envName := appEnv()
+	ginMode := ginModeFor(envName)
+	logLevel, logFormat := logProfile(envName, ginMode)
+	openConns, idleConns, lifetime := poolFor(envName)
 
 	rawDir := valueOrDefault("DATA_RAW_DIR", filepath.Join(root, "data", "raw"))
 
 	return &Config{
+		AppEnv: envName,
 		Server: ServerConfig{
 			Port:           serverPort(),
 			GinMode:        ginMode,
+			LogLevel:       logLevel,
+			LogFormat:      logFormat,
 			TrustedProxies: trustedProxies(),
 		},
 		Database: DatabaseConfig{
@@ -132,12 +144,12 @@ func New() *Config {
 			Name:            valueOrDefault("DATABASE_NAME", "areasverdes"),
 			Schema:          valueOrDefault("DATABASE_SCHEMA", "public"),
 			SSLMode:         databaseSSLMode(),
-			MaxOpenConns:    10,
-			MaxIdleConns:    4,
-			ConnMaxLifetime: 30 * time.Minute,
+			MaxOpenConns:    intEnv("DATABASE_MAX_OPEN_CONNS", openConns),
+			MaxIdleConns:    intEnv("DATABASE_MAX_IDLE_CONNS", idleConns),
+			ConnMaxLifetime: connMaxLifetime(lifetime),
 		},
 		Seguridad: SeguridadConfig{
-			CORSOrigins:    origenesCORS(os.Getenv("CAMPUS_CORS_ORIGINS")),
+			CORSOrigins:    origenesCORS(corsRaw(envName)),
 			CookieSecure:   cookieSecure(),
 			CookieSameSite: valueOrDefault("CAMPUS_COOKIE_SAMESITE", "Lax"),
 			LoginMax:       loginMax(),
@@ -156,15 +168,132 @@ func New() *Config {
 			OpenAPIPath:   valueOrDefault("OPENAPI_PATH", filepath.Join(root, "apps", "api", "openapi.yaml")),
 		},
 		Migraciones: MigracionesConfig{
-			Dir: valueOrDefault("MIGRATIONS_DIR", filepath.Join(root, "db", "migrations")),
+			Dir:     valueOrDefault("MIGRATIONS_DIR", filepath.Join(root, "db", "migrations")),
+			Semilla: valueOrDefault("SEED_FILE", filepath.Join(root, "deploy", "seed", "ficticio.sql")),
 		},
 		Accesos: AccesosConfig{
 			DevPassword: os.Getenv("CAMPUS_DEV_PASSWORD"),
 		},
 		Swagger: SwaggerConfig{
-			Enabled: swaggerEnabled(ginMode),
+			Enabled: swaggerEnabled(envName, ginMode),
 			Host:    os.Getenv("SWAGGER_HOST"),
 		},
+	}
+}
+
+// appEnv normalizes APP_ENV. Unset or unknown leaves the historical behavior.
+func appEnv() string {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV"))) {
+	case "develop", "development", "dev":
+		return "develop"
+	case "qa", "staging":
+		return "qa"
+	case "produccion", "producción", "production", "prod":
+		return "produccion"
+	default:
+		return ""
+	}
+}
+
+func ginModeFor(envName string) string {
+	if value := strings.TrimSpace(os.Getenv("SERVER_GIN_MODE")); value != "" {
+		return value
+	}
+	if envName == "develop" {
+		return "debug"
+	}
+	return "release"
+}
+
+func logProfile(envName, ginMode string) (level, format string) {
+	level = strings.ToLower(strings.TrimSpace(os.Getenv("LOG_LEVEL")))
+	format = strings.ToLower(strings.TrimSpace(os.Getenv("LOG_FORMAT")))
+	if level == "" || format == "" {
+		defLevel, defFormat := "info", "json"
+		switch envName {
+		case "develop":
+			defLevel, defFormat = "debug", "console"
+		case "qa", "produccion":
+			defLevel, defFormat = "info", "json"
+		default:
+			if ginMode == "debug" {
+				defLevel, defFormat = "debug", "console"
+			}
+		}
+		if level == "" {
+			level = defLevel
+		}
+		if format == "" {
+			format = defFormat
+		}
+	}
+	switch level {
+	case "debug", "info", "warn", "warning", "error":
+	default:
+		level = "info"
+	}
+	if level == "warning" {
+		level = "warn"
+	}
+	if format != "console" {
+		format = "json"
+	}
+	return level, format
+}
+
+func poolFor(envName string) (open, idle int, lifetime time.Duration) {
+	switch envName {
+	case "develop":
+		return 5, 2, 15 * time.Minute
+	case "qa":
+		return 8, 3, 20 * time.Minute
+	default:
+		// produccion y APP_ENV vacío: el pool histórico (no el 10/100 del equipo).
+		return 10, 4, 30 * time.Minute
+	}
+}
+
+func intEnv(key string, fallback int) int {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback
+	}
+	n := 0
+	for _, r := range raw {
+		if r < '0' || r > '9' {
+			return fallback
+		}
+		n = n*10 + int(r-'0')
+	}
+	if n < 1 {
+		return fallback
+	}
+	return n
+}
+
+func connMaxLifetime(fallback time.Duration) time.Duration {
+	raw := strings.TrimSpace(os.Getenv("DATABASE_CONN_MAX_LIFETIME"))
+	if raw == "" {
+		return fallback
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil || d <= 0 {
+		return fallback
+	}
+	return d
+}
+
+func corsRaw(envName string) string {
+	if raw := strings.TrimSpace(os.Getenv("CAMPUS_CORS_ORIGINS")); raw != "" {
+		return raw
+	}
+	switch envName {
+	case "develop":
+		return "http://127.0.0.1:8088,http://localhost:8088,http://127.0.0.1:4317,http://localhost:4317"
+	case "qa":
+		return "http://127.0.0.1:8188,http://localhost:8188"
+	default:
+		return ""
 	}
 }
 
@@ -255,7 +384,7 @@ func trustedProxies() []string {
 	return out
 }
 
-func swaggerEnabled(ginMode string) bool {
+func swaggerEnabled(envName, ginMode string) bool {
 	raw := strings.ToLower(strings.TrimSpace(os.Getenv("SWAGGER_ENABLED")))
 	if raw != "" {
 		switch raw {
@@ -264,6 +393,12 @@ func swaggerEnabled(ginMode string) bool {
 		case "0", "false", "no":
 			return false
 		}
+	}
+	switch envName {
+	case "develop", "qa":
+		return true
+	case "produccion":
+		return false
 	}
 	return ginMode != "release"
 }

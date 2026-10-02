@@ -8,15 +8,27 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// InitLogger initializes the global logger based on the configured mode.
-func InitLogger(mode string) zerolog.Logger {
-	if mode == "debug" {
+// InitLogger initializes the global logger.
+// level is debug, info, warn or error. format is console or json.
+// develop uses debug/console; qa and produccion use info/json unless overridden.
+func InitLogger(level, format string) zerolog.Logger {
+	switch level {
+	case "debug":
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	case "warn":
+		zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	case "error":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	default:
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+
+	if format == "console" {
 		log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).
 			With().
 			Timestamp().
 			Caller().
 			Logger()
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		return log.Logger
 	}
 
@@ -25,6 +37,5 @@ func InitLogger(mode string) zerolog.Logger {
 		Timestamp().
 		Caller().
 		Logger()
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	return log.Logger
 }

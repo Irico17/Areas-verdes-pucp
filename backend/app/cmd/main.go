@@ -25,7 +25,13 @@ import (
 // @BasePath        /areas-verdes
 func main() {
 	cfg := config.GetConfig()
-	logger.InitLogger(cfg.Server.GinMode)
+	logger.InitLogger(cfg.Server.LogLevel, cfg.Server.LogFormat)
+	log.Info().
+		Str("app_env", cfg.AppEnv).
+		Str("gin_mode", cfg.Server.GinMode).
+		Str("log_level", cfg.Server.LogLevel).
+		Bool("swagger", cfg.Swagger.Enabled).
+		Msg("configuración cargada")
 
 	if cfg.Swagger.Host != "" {
 		docs.SwaggerInfo.Host = cfg.Swagger.Host
