@@ -76,20 +76,6 @@ SEED_FILE="${SEED_FILE:-/opt/campus/seed/ficticio.sql}"
 ETL_LOTE_BIN="${ETL_LOTE_BIN:-/usr/local/bin/etl-lote}"
 export SEED_FILE
 
-aplicar_semilla=0
-case "$SEED_PROFILE" in
-  ficticio) aplicar_semilla=1 ;;
-esac
-case "$norm_env" in
-  develop|qa) aplicar_semilla=1 ;;
-esac
-if [ "$aplicar_semilla" -eq 1 ]; then
-  if ! "$MIGRATE_BIN" -semilla-ficticia; then
-    echo "ERROR: no se pudo aplicar la semilla ficticia. No se borra nada." >&2
-    exit 1
-  fi
-fi
-
 case "$SEED_PROFILE" in
   ficticio)
     touch "$ETL_DONE_FILE"
@@ -108,8 +94,11 @@ case "$SEED_PROFILE" in
         touch "$ETL_DONE_FILE"
       elif [ "$vacio" -eq 10 ]; then
         echo "Catastro incompleto: upsert con etl-lote, sin TRUNCATE"
-        "$ETL_LOTE_BIN"
-        touch "$ETL_DONE_FILE"
+        if "$ETL_LOTE_BIN"; then
+          touch "$ETL_DONE_FILE"
+        else
+          echo "ADVERTENCIA: etl-lote no pudo completar el catastro; la API arranca igual con lo cargado. No se borró nada." >&2
+        fi
       else
         echo "ERROR al verificar si la base necesita ETL (código $vacio)" >&2
         exit "$vacio"
@@ -124,4 +113,20 @@ case "$SEED_PROFILE" in
     exit 1
     ;;
 esac
+# La semilla ficticia va DESPUÉS de la carga: si fuese antes, una base vacía dejaría de estarlo
+# y la carga inicial completa (521 áreas) no correría.
+aplicar_semilla=0
+case "$SEED_PROFILE" in
+  ficticio) aplicar_semilla=1 ;;
+esac
+case "$norm_env" in
+  develop|qa) aplicar_semilla=1 ;;
+esac
+if [ "$aplicar_semilla" -eq 1 ]; then
+  if ! "$MIGRATE_BIN" -semilla-ficticia; then
+    echo "ERROR: no se pudo aplicar la semilla ficticia. No se borra nada." >&2
+    exit 1
+  fi
+fi
+
 exec "$API_BIN"
