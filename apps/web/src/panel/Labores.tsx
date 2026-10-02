@@ -185,7 +185,7 @@ export function Labores(props: Props) {
           </button>
         </p>
       )}
-      {props.notice && (
+      {props.notice && !(totalCola === 0 && props.notice.includes("quedó en la cola")) && (
         <p className={avisoError ? "status error" : "banner"} role="status">
           {props.notice}
         </p>

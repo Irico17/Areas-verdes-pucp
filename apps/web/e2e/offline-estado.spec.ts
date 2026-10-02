@@ -18,8 +18,10 @@ test("al volver la red el cambio de estado sale de la cola sin pulsar el botón"
 
   await context.setOffline(true)
   await detalle.getByRole("button", { name: "Guardar estado" }).click()
-  await expect(page.getByText("en cola").first()).toBeVisible()
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/offline-estado-en-cola.png", fullPage: true })
+  const enCola = page.locator(".marca-cola", { hasText: "en cola" }).first()
+  await expect(enCola).toBeVisible()
+  await enCola.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/offline-estado-en-cola.png" })
 
   const envio = page.waitForRequest((req) => req.method() === "PATCH" && req.url().includes("/estado"))
   await context.setOffline(false)
