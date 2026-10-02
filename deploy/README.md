@@ -22,3 +22,11 @@ Para evitar falsos positivos por escrituras legítimas durante el despliegue, se
 
 Las tablas de auditoría (`cambios`) no sufren escrituras en el smoke ni en el login. Tablas nuevas agregadas por migraciones se reportan sin provocar error.
 
+## Rollback local
+
+`deploy/deploy.sh <ambiente> --local --rollback [TAG]` revierte tanto la imagen de la API como la de la web al estado previo guardado en `deploy/state/` (`<amb>.prev-image` y `<amb>.prev-image-web`). Si se pasa un `TAG` explícito, este aplica a la API y la imagen web se recupera del estado guardado (fallando si no existe).
+
+Durante `deploy.sh <amb> --local` (o `make up ENV=<amb>`), si el smoke test post-despliegue falla, el script ejecuta automáticamente el rollback a las imágenes previas de API y web.
+
+**Las migraciones son solo hacia adelante:** el rollback local no revierte la base de datos ni ejecuta operaciones destructivas (no hay migraciones «down»). La versión restaurada corre sobre el esquema migrado, compatible gracias a que las migraciones son aditivas.
+

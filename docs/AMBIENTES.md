@@ -52,7 +52,13 @@ Rollback local, si el smoke falla y había una imagen anterior de ese ambiente:
 
 ```bash
 bash deploy/deploy.sh develop --local --rollback
+# O indicando un TAG explícito para la API (la imagen web se toma del estado previo):
+bash deploy/deploy.sh develop --local --rollback <tag-api>
 ```
+
+El rollback local revierte tanto la imagen de la API como la de la web (`state/<ambiente>.prev-image` y `state/<ambiente>.prev-image-web`), retagueando ambas y ejecutando `compose up -d --no-build`. Si se pasa un `TAG` explícito a `--rollback`, este aplica a la imagen de la API y la web se recupera del estado guardado (o falla con error si no existe). En `up_local` (`deploy.sh --local` o `make up ENV=...`), si el smoke falla tras levantar los contenedores, se ejecuta este mismo rollback automático a las imágenes previas de API y web.
+
+**Las migraciones son solo hacia adelante:** el rollback revierte los contenedores y sus imágenes de código (API y web), pero **no** revierte la base de datos ni elimina columnas o tablas añadidas por migraciones (no existen migraciones «down»). La imagen anterior corre sobre el esquema de base de datos ya migrado, lo cual es compatible gracias a que todas las migraciones en `db/migrations` son aditivas (columnas nuevas nulas o con `DEFAULT`).
 
 ## Qué datos entran
 

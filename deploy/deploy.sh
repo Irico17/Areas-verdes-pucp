@@ -105,34 +105,56 @@ image_web() {
 
 record_previous() {
   state_dir
-  local current prev_file
+  local current prev_file current_web prev_web_file
   prev_file="$ROOT/deploy/state/${AMBIENTE}.prev-image"
+  prev_web_file="$ROOT/deploy/state/${AMBIENTE}.prev-image-web"
   current="$(docker image inspect "$(image_api)" --format '{{.Id}}' 2>/dev/null || true)"
   if [ -n "$current" ]; then
     printf '%s\n' "$current" >"$prev_file"
     echo "imagen anterior de api: $current"
   fi
+  current_web="$(docker image inspect "$(image_web)" --format '{{.Id}}' 2>/dev/null || true)"
+  if [ -n "$current_web" ]; then
+    printf '%s\n' "$current_web" >"$prev_web_file"
+    echo "imagen anterior de web: $current_web"
+  fi
 }
 
 rollback_local() {
   state_dir
-  local prev_file prev
+  local prev_file prev prev_web_file prev_web
   prev_file="$ROOT/deploy/state/${AMBIENTE}.prev-image"
+  prev_web_file="$ROOT/deploy/state/${AMBIENTE}.prev-image-web"
   prev="${rollback:-}"
   if [ -z "$prev" ] && [ -f "$prev_file" ]; then
     prev="$(cat "$prev_file")"
   fi
   if [ -z "$prev" ]; then
-    echo "no hay imagen anterior para rollback de $AMBIENTE" >&2
+    echo "no hay imagen anterior de api para rollback de $AMBIENTE" >&2
     exit 1
   fi
   if ! docker image inspect "$prev" >/dev/null 2>&1; then
-    echo "no existe la imagen $prev" >&2
+    echo "no existe la imagen de api $prev" >&2
     exit 1
   fi
+
+  prev_web=""
+  if [ -f "$prev_web_file" ]; then
+    prev_web="$(cat "$prev_web_file")"
+  fi
+  if [ -z "$prev_web" ]; then
+    echo "no hay imagen anterior de web para rollback de $AMBIENTE" >&2
+    exit 1
+  fi
+  if ! docker image inspect "$prev_web" >/dev/null 2>&1; then
+    echo "no existe la imagen de web $prev_web" >&2
+    exit 1
+  fi
+
   docker tag "$prev" "$(image_api)"
+  docker tag "$prev_web" "$(image_web)"
   compose up -d --no-build --remove-orphans
-  echo "rollback local de $AMBIENTE a $prev"
+  echo "rollback local de $AMBIENTE a api=$prev web=$prev_web"
   SMOKE_ENV_FILE="$ROOT/deploy/env/${AMBIENTE}.env" bash "$ROOT/deploy/smoke.sh" "$AMBIENTE"
 }
 
@@ -142,7 +164,7 @@ up_local() {
   compose up -d --build --remove-orphans
   if ! SMOKE_ENV_FILE="$ROOT/deploy/env/${AMBIENTE}.env" bash "$ROOT/deploy/smoke.sh" "$AMBIENTE"; then
     echo "smoke falló. Se intenta rollback a la imagen anterior." >&2
-    if [ -f "$ROOT/deploy/state/${AMBIENTE}.prev-image" ]; then
+    if [ -f "$ROOT/deploy/state/${AMBIENTE}.prev-image" ] || [ -f "$ROOT/deploy/state/${AMBIENTE}.prev-image-web" ]; then
       rollback=""
       rollback_local
       exit 1
