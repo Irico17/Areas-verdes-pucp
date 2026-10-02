@@ -1,0 +1,32 @@
+# Override de Compose para despliegue en el propio host (runner self-hosted).
+# Usa imágenes inmutables de GHCR (${API_IMAGE} y ${WEB_IMAGE}),
+# elimina el bloque build y publica db y api estrictamente en 127.0.0.1.
+# Monta los datos en disco mediante bind mounts (${CAMPUS_DATA_DIR}/pg y ${CAMPUS_DATA_DIR}/app)
+# y desactiva los volúmenes nombrados para evitar bases de datos vacías.
+
+name: campus-${APP_ENV}
+
+services:
+  db:
+    ports: !override
+      - "127.0.0.1:${POSTGRES_PORT}:5432"
+    volumes: !override
+      - "${CAMPUS_DATA_DIR}/pg:/var/lib/postgresql/data"
+
+  api:
+    build: !reset null
+    image: ${API_IMAGE}
+    ports: !override
+      - "127.0.0.1:${API_PORT}:8091"
+    volumes: !override
+      - "${CAMPUS_DATA_DIR}/app:/data"
+
+  web:
+    build: !reset null
+    image: ${WEB_IMAGE}
+    ports: !override
+      - "0.0.0.0:${WEB_PORT}:80"
+
+volumes:
+  pg: !reset null
+  data: !reset null
