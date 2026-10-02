@@ -33,7 +33,7 @@ INSERT INTO poligonos_cuadrilla (
   'FICT-Z',
   'Sector Ficticio Norte',
   'jardin',
-  'Cuadrilla ficticia Equipo Norte. Sin personas reales.',
+  'Cuadrilla Norte. Sin personas reales.',
   40,
   100,
   ST_SetSRID(ST_Multi(ST_GeomFromText(

@@ -30,9 +30,9 @@ type seedUser struct {
 }
 
 var semillas = []seedUser{
-	{"norte", "Equipo Norte", "capataz", "cap-norte"},
-	{"sur", "Equipo Sur", "capataz", "cap-sur"},
-	{"riego", "Equipo Riego", "capataz", "cap-riego"},
+	{"norte", "Elsa Quispe", "capataz", "cap-norte"},
+	{"sur", "Iván Paredes", "capataz", "cap-sur"},
+	{"riego", "Nora Beltrán", "capataz", "cap-riego"},
 	{"coordinacion", "Coordinación", "coordinacion", ""},
 	{"jefatura", "Jefatura", "jefatura", ""},
 	{"admin", "Administración", "admin", ""},

@@ -18,9 +18,9 @@ type seedAccount struct {
 }
 
 var semillas = []seedAccount{
-	{"norte", "Equipo Norte", enums.RolCapataz.String(), "cap-norte"},
-	{"sur", "Equipo Sur", enums.RolCapataz.String(), "cap-sur"},
-	{"riego", "Equipo Riego", enums.RolCapataz.String(), "cap-riego"},
+	{"norte", "Elsa Quispe", enums.RolCapataz.String(), "cap-norte"},
+	{"sur", "Iván Paredes", enums.RolCapataz.String(), "cap-sur"},
+	{"riego", "Nora Beltrán", enums.RolCapataz.String(), "cap-riego"},
 	{"coordinacion", "Coordinación", enums.RolCoordinacion.String(), ""},
 	{"jefatura", "Jefatura", enums.RolJefatura.String(), ""},
 	{"admin", "Administración", enums.RolAdmin.String(), ""},
