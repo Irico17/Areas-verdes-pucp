@@ -631,7 +631,21 @@ export default function App() {
       </main>
     )
   }
-  if (!sesion) return <Login onIn={setSesion} />
+  if (!sesion) {
+    return (
+      <Login
+        onIn={(user) => {
+          setSesion(user)
+          if (user.rol === "capataz" && user.capataz_id) {
+            setEquipoId(user.capataz_id)
+            writeEquipo(user.capataz_id)
+          }
+          setModulo(entradaDe(user.rol))
+          setRailOpen(true)
+        }}
+      />
+    )
+  }
 
   const permisos = permisosDeRol(rol)
   const permitidos = modulosPorPermisos(permisos, rol)

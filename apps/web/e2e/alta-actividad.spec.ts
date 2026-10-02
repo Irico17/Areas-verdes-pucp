@@ -13,7 +13,7 @@ test("el alta de una actividad muestra clase, tipo, riesgo y lugar de catálogo"
   const mapa = page.locator(".maplibregl-canvas")
   await mapa.waitFor({ state: "visible" })
   await page.waitForTimeout(800)
-  await mapa.click({ position: { x: 420, y: 280 } })
+  await mapa.click({ position: { x: 72, y: 280 }, force: true })
 
   const alta = page.locator("form.alta-actividad")
   await expect(alta).toBeVisible()

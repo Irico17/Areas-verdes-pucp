@@ -13,7 +13,7 @@ test("la jefatura da de alta una cuenta y la persona cambia su clave", async ({ 
   await page.getByRole("button", { name: "Entrar" }).click()
   await page.getByRole("button", { name: "Administración" }).click()
   await expect(page.getByRole("heading", { name: "Nueva cuenta" })).toBeVisible()
-  await expect(page.getByText("La jefatura de sección administra las cuentas.")).toBeVisible()
+  await expect(page.getByText("Cuentas de VerdePUCP. Las administra la jefatura de sección.")).toBeVisible()
 
   const rol = page.getByLabel("Rol").first()
   await expect(rol.locator("option")).toContainText([

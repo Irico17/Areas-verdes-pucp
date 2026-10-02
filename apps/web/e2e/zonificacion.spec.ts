@@ -7,7 +7,7 @@ test("el mapa dice sectores de capataz y el editor elige el lugar en un select",
   await page.getByRole("button", { name: "Entrar" }).click()
 
   await expect(page.getByRole("status")).toContainText("sectores de capataz")
-  await page.getByRole("button", { name: "Sector de capataz" }).click()
+  await page.getByRole("button", { name: "Sector de capataz", exact: true }).click()
   await expect(page.getByText("Sector de capataz — Valeria Quispe (ficticio)")).toBeVisible()
   const vias = page.getByRole("checkbox", { name: /Vías/ })
   await vias.scrollIntoViewIfNeeded()
@@ -28,7 +28,7 @@ test("el mapa dice sectores de capataz y el editor elige el lugar en un select",
   const sectores = page.getByRole("heading", { name: "Sectores de capataz" })
   await sectores.scrollIntoViewIfNeeded()
   await expect(sectores).toBeVisible()
-  const vacio = page.getByText("sin archivo de cuarteles")
+  const vacio = page.getByRole("complementary", { name: "Panel" }).getByText("sin archivo de cuarteles")
   await vacio.scrollIntoViewIfNeeded()
   await expect(vacio).toBeVisible()
   await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/editor-sectores-capataz.png" })

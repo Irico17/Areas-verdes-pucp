@@ -64,6 +64,15 @@ const CAMPUS_BOUNDS: LngLatBoundsLike = [
   [-77.07795, -12.0644],
 ]
 
+function margenDelControl(contenedor: HTMLElement) {
+  const ancho = contenedor.clientWidth
+  const alto = contenedor.clientHeight
+  if (ancho <= 820) {
+    return { top: Math.round(alto * 0.46), right: 12, bottom: Math.round(alto * 0.34), left: 12 }
+  }
+  return { top: 24, right: 304, bottom: 24, left: 24 }
+}
+
 // En producción el bundle busca ./maplibre-gl-worker.mjs junto al JS con hash
 // y nginx devolvía index.html. El worker y su módulo compartido viven en la raíz.
 setWorkerUrl("/maplibre-gl-worker.mjs")
@@ -589,7 +598,9 @@ export function CampusMap({
     const conteo = conteoCapas(data)
     if (!encuadrado.current && catastroVisible(conteo)) {
       encuadrado.current = true
-      map.fitBounds(CAMPUS_BOUNDS, { padding: 36, duration: 0, maxZoom: 17 })
+      const margen = margenDelControl(map.getContainer())
+      map.setPadding(margen)
+      map.fitBounds(CAMPUS_BOUNDS, { padding: margen, duration: 0, maxZoom: 17 })
     }
     const acts = map.getSource("actividades") as GeoJSONSource | undefined
     acts?.setData(asCollection(activities))

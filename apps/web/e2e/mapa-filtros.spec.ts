@@ -33,11 +33,10 @@ test("el pin abre el detalle sin cambiar de pestaña y a 390 px se ve la lista",
     const coords = feature?.geometry?.coordinates
     if (!mapa || !coords) return null
     const proyectado = mapa.project([coords[0], coords[1]])
-    const rect = host.getBoundingClientRect()
-    return { x: rect.left + proyectado.x, y: rect.top + proyectado.y }
+    return { x: proyectado.x, y: proyectado.y }
   })
   if (!punto) throw new Error("no hay un punto de actividad en el mapa")
-  await page.mouse.click(punto.x, punto.y)
+  await page.locator(".maplibregl-canvas").click({ position: punto, force: true })
 
   await expect(page.locator(".cv-popup-title")).toBeVisible()
   await expect(page.locator("#detalle-actividad")).toBeVisible()
