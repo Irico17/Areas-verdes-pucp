@@ -87,3 +87,6 @@ backend/app/bin/
 # Fotos recuperadas de Drive: caché local, nunca al repo
 data/raw/drive_fotos/*.jpg
 data/raw/drive_fotos/*.jpeg
+
+# Credenciales locales del administrador (nunca versionar)
+CREDENCIALES-LOCAL.md
