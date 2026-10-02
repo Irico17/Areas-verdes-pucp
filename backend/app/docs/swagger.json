@@ -1189,6 +1189,12 @@
                         "description": "Pagination offset",
                         "name": "offset",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Código, nombre común o número de origen",
+                        "name": "q",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1231,6 +1237,83 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/ejemplares/{id}": {
+            "patch": {
+                "description": "Corrige código, especie, salud, coordenadas, lugar y sector de capataz o cuartel. El capataz no edita.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "Update flora specimen",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Specimen ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ActualizarEjemplarRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.EjemplarDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4512,6 +4595,9 @@
                 "codigo": {
                     "type": "string"
                 },
+                "especie_cientifico": {
+                    "type": "string"
+                },
                 "especie_id": {
                     "type": "integer"
                 },
@@ -4523,6 +4609,9 @@
                 },
                 "lon": {
                     "type": "number"
+                },
+                "lugar_nombre": {
+                    "type": "string"
                 },
                 "nombre_comun": {
                     "type": "string"
@@ -4537,6 +4626,15 @@
                     "type": "string"
                 },
                 "salud": {
+                    "type": "string"
+                },
+                "sector_cuartel_clase": {
+                    "type": "string"
+                },
+                "sector_cuartel_id": {
+                    "type": "integer"
+                },
+                "sector_cuartel_nombre": {
                     "type": "string"
                 },
                 "tipo_vegetacion": {
@@ -5774,6 +5872,32 @@
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "requests.ActualizarEjemplarRequest": {
+            "type": "object",
+            "properties": {
+                "codigo": {
+                    "type": "string"
+                },
+                "especie_id": {
+                    "type": "integer"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                },
+                "salud": {
+                    "type": "string"
+                },
+                "sector_cuartel_id": {
+                    "type": "integer"
+                },
+                "ubicacion_lugar_id": {
+                    "type": "integer"
                 }
             }
         },

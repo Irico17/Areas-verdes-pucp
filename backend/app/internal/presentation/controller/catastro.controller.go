@@ -13,6 +13,7 @@ import (
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 	domainErrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/middleware"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/requests"
@@ -33,6 +34,7 @@ type ICatastroController interface {
 	CrearEspecie(*gin.Context)
 	Ejemplares(*gin.Context)
 	CrearEjemplar(*gin.Context)
+	ActualizarEjemplar(*gin.Context)
 	Codigos(*gin.Context)
 	Recodificar(*gin.Context)
 	Fauna(*gin.Context)
@@ -370,11 +372,12 @@ func (ctrl *catastroController) CrearEspecie(c *gin.Context) {
 // @Produce json
 // @Param limit query int false "Pagination limit"
 // @Param offset query int false "Pagination offset"
+// @Param q query string false "Código, nombre común o número de origen"
 // @Success 200 {object} dto.EjemplaresPaginadosDTO
 // @Router /v1/catastro/ejemplares [get]
 func (ctrl *catastroController) Ejemplares(c *gin.Context) {
 	limit, offset := pagina(c.Query("limit"), c.Query("offset"))
-	res, err := ctrl.ejemplarUC.Listar(c.Request.Context(), limit, offset)
+	res, err := ctrl.ejemplarUC.Listar(c.Request.Context(), limit, offset, strings.TrimSpace(c.Query("q")))
 	if err != nil {
 		ctrl.logger.Error().Err(err).Msg("catastro: error al leer ejemplares")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo leer los ejemplares"})
@@ -423,6 +426,71 @@ func (ctrl *catastroController) CrearEjemplar(c *gin.Context) {
 	c.JSON(http.StatusCreated, item)
 }
 
+// ActualizarEjemplar godoc
+// @Summary Update flora specimen
+// @Description Corrige código, especie, salud, coordenadas, lugar y sector de capataz o cuartel. El capataz no edita.
+// @Tags catastro
+// @Accept json
+// @Produce json
+// @Param id path int true "Specimen ID"
+// @Param body body requests.ActualizarEjemplarRequest true "Fields to change"
+// @Success 200 {object} dto.EjemplarDTO
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /v1/catastro/ejemplares/{id} [patch]
+func (ctrl *catastroController) ActualizarEjemplar(c *gin.Context) {
+	if u, ok := middleware.UsuarioEn(c); ok && u.Rol == enums.RolCapataz.String() {
+		c.JSON(http.StatusForbidden, gin.H{"error": domainErrors.ErrSinPermiso.Error()})
+		return
+	}
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id inválido"})
+		return
+	}
+	var body requests.ActualizarEjemplarRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido"})
+		return
+	}
+	var userID *int64
+	if u, ok := middleware.UsuarioEn(c); ok && u.ID > 0 {
+		userID = &u.ID
+	}
+	item, err := ctrl.ejemplarUC.Actualizar(c.Request.Context(), id, dto.ActualizarEjemplarDTO{
+		Codigo:           body.Codigo,
+		TieneCodigo:      body.Presente("codigo"),
+		EspecieID:        body.EspecieID,
+		TieneEspecie:     body.Presente("especie_id"),
+		Salud:            body.Salud,
+		TieneSalud:       body.Presente("salud"),
+		Lat:              body.Lat,
+		Lon:              body.Lon,
+		TieneLat:         body.Presente("lat"),
+		TieneLon:         body.Presente("lon"),
+		UbicacionLugarID: body.UbicacionLugarID,
+		TieneLugar:       body.Presente("ubicacion_lugar_id"),
+		SectorCuartelID:  body.SectorCuartelID,
+		TieneSector:      body.Presente("sector_cuartel_id"),
+	}, userID)
+	if errors.Is(err, domainErrors.ErrNoEncontrado) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "ejemplar no encontrado"})
+		return
+	}
+	if errors.Is(err, domainErrors.ErrEntrada) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no se pudo guardar el ejemplar"})
+		return
+	}
+	if err != nil {
+		ctrl.logger.Error().Err(err).Int64("id", id).Msg("catastro: error al guardar ejemplar")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "no se pudo guardar el ejemplar"})
+		return
+	}
+	c.JSON(http.StatusOK, item)
+}
+
 // Codigos godoc
 // @Summary List code history for specimen
 // @Tags catastro
@@ -468,7 +536,11 @@ func (ctrl *catastroController) Recodificar(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido"})
 		return
 	}
-	item, err := ctrl.ejemplarUC.Recodificar(c.Request.Context(), id, dto.RecodificarDTO{Codigo: body.Codigo})
+	var userID *int64
+	if u, ok := middleware.UsuarioEn(c); ok && u.ID > 0 {
+		userID = &u.ID
+	}
+	item, err := ctrl.ejemplarUC.Recodificar(c.Request.Context(), id, dto.RecodificarDTO{Codigo: body.Codigo}, userID)
 	if errors.Is(err, domainErrors.ErrNoEncontrado) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ejemplar sin código anterior"})
 		return

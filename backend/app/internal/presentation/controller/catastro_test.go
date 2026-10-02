@@ -101,7 +101,7 @@ type mockEjemplarUC struct {
 	err       error
 }
 
-func (m *mockEjemplarUC) Listar(_ context.Context, limit, offset int) (dto.EjemplaresPaginadosDTO, error) {
+func (m *mockEjemplarUC) Listar(_ context.Context, limit, offset int, _ string) (dto.EjemplaresPaginadosDTO, error) {
 	if m.err != nil {
 		return dto.EjemplaresPaginadosDTO{}, m.err
 	}
@@ -120,7 +120,14 @@ func (m *mockEjemplarUC) Crear(_ context.Context, e dto.EjemplarDTO) (dto.Ejempl
 	return e, nil
 }
 
-func (m *mockEjemplarUC) Recodificar(_ context.Context, id int64, req dto.RecodificarDTO) (dto.CodigoHistoricoDTO, error) {
+func (m *mockEjemplarUC) Actualizar(_ context.Context, id int64, req dto.ActualizarEjemplarDTO, _ *int64) (dto.EjemplarDTO, error) {
+	if m.err != nil {
+		return dto.EjemplarDTO{}, m.err
+	}
+	return dto.EjemplarDTO{ID: id, Codigo: "EJ-1", Salud: req.Salud, Activo: true}, nil
+}
+
+func (m *mockEjemplarUC) Recodificar(_ context.Context, id int64, req dto.RecodificarDTO, _ *int64) (dto.CodigoHistoricoDTO, error) {
 	if m.err != nil {
 		return dto.CodigoHistoricoDTO{}, m.err
 	}
