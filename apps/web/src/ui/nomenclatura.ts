@@ -169,6 +169,17 @@ export const ACTIVIDAD = {
   duplicada: "Una actividad en cola ya existía con otro contenido y se descartó.",
   noLeer: "No se pudieron leer las actividades",
   colaLocal: (n: number) => `${n} en cola local.`,
+  avance: "Avance",
+  avanceLede: "Queda en la actividad que ya es de esta cuadrilla.",
+  guardarAvance: "Guardar avance",
+  avanceGuardado: "Avance guardado.",
+  avanceError: "No se pudo guardar el avance.",
+  faltaLugarAvance: "Indique un área o un ejemplar.",
+  area: "Área",
+  areaPlaceholder: "Área ya registrada",
+  ejemplar: "Ejemplar",
+  ejemplarPlaceholder: "Código de ejemplar",
+  fechaAvance: "Fecha",
   servicioMarca: "servicio tercerizado",
   propioMarca: "personal propio",
 } as const
@@ -198,6 +209,7 @@ export const RIEGO = {
   fecha: "Fecha",
   nota: "Nota",
   registrar: "Registrar turno",
+  enCola: "Sin conexión: el turno quedó en cola.",
   sinCuadrilla: "sin cuadrilla",
   vacio: "Todavía no hay turnos registrados.",
   manana: "Mañana",
@@ -236,6 +248,27 @@ export const EVIDENCIA = {
 
 export const PODA = {
   lede: "Registro de poda sobre un ejemplar. El código externo solo se conserva si ya viene como OSG.",
+  enCola: "Sin conexión: la poda quedó en cola.",
+  guardada: "Poda guardada. No se creó un código OSG.",
+  error: "No se pudo guardar la poda.",
+} as const
+
+export const VIVERO = {
+  enCola: "Sin conexión: el registro de vivero quedó en cola.",
+  guardado: "Registro de vivero guardado.",
+  error: "No se pudo guardar el registro de vivero.",
+} as const
+
+export const COLA = {
+  marca: "en cola",
+  local: (n: number) => `${n} en cola local.`,
+  reintentar: "Reintentar envío",
+  conflicto: "Un registro en cola ya existía con otro contenido y se descartó.",
+  avance: "Sin conexión: el avance quedó en cola.",
+  ficha: "Sin conexión: la ficha quedó en cola.",
+  fichaGuardada: "Ficha guardada. El pin del mapa no cambia.",
+  fichaError: "No se pudo guardar la ficha.",
+  sinConexion: "Sin conexión con la API.",
 } as const
 
 export const ADMIN = {

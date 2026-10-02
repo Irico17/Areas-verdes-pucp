@@ -11,16 +11,18 @@ const STORE = "cola-labores"
 const ESTADOS = "cola-estados"
 const CACHE = "cache-labores"
 const EVIDENCIAS = "cola-evidencias"
+const REGISTROS = "cola-registros"
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB, 3)
+    const req = indexedDB.open(DB, 4)
     req.onupgradeneeded = () => {
       const db = req.result
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: "id" })
       if (!db.objectStoreNames.contains(ESTADOS)) db.createObjectStore(ESTADOS, { keyPath: "id" })
       if (!db.objectStoreNames.contains(CACHE)) db.createObjectStore(CACHE, { keyPath: "id" })
       if (!db.objectStoreNames.contains(EVIDENCIAS)) db.createObjectStore(EVIDENCIAS, { keyPath: "id" })
+      if (!db.objectStoreNames.contains(REGISTROS)) db.createObjectStore(REGISTROS, { keyPath: "id" })
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error ?? new Error("IndexedDB no disponible"))
@@ -80,6 +82,79 @@ export async function removeEstado(id: string): Promise<void> {
   const db = await openDb()
   await request(db.transaction(ESTADOS, "readwrite").objectStore(ESTADOS).delete(id))
   db.close()
+}
+
+/** El capataz no crea actividades: la cola de altas no se le ofrece. */
+export function ofreceColaDeAltas(rol: string | undefined): boolean {
+  return rol !== "capataz"
+}
+
+export type TipoRegistro = "avance" | "riego" | "poda" | "vivero" | "ficha"
+
+export type QueuedRegistro = {
+  id: string
+  tipo: TipoRegistro
+  path: string
+  method: "POST" | "PATCH"
+  body: unknown
+  createdAt: string
+}
+
+export type ConflictoCola = { id: string; tipo: TipoRegistro }
+
+export async function listRegistros(): Promise<QueuedRegistro[]> {
+  const db = await openDb()
+  const rows = await request(db.transaction(REGISTROS, "readonly").objectStore(REGISTROS).getAll())
+  db.close()
+  return (rows as QueuedRegistro[]).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+}
+
+export async function encolarRegistro(item: QueuedRegistro): Promise<void> {
+  if (item.tipo === "ficha") {
+    const previos = await listRegistros()
+    for (const previo of previos) {
+      if (previo.tipo === "ficha" && previo.path === item.path && previo.id !== item.id) {
+        await quitarRegistro(previo.id)
+      }
+    }
+  }
+  const db = await openDb()
+  await request(db.transaction(REGISTROS, "readwrite").objectStore(REGISTROS).put(item))
+  db.close()
+}
+
+export async function quitarRegistro(id: string): Promise<void> {
+  const db = await openDb()
+  await request(db.transaction(REGISTROS, "readwrite").objectStore(REGISTROS).delete(id))
+  db.close()
+}
+
+export async function drenarRegistros(
+  items: QueuedRegistro[],
+  post: (item: QueuedRegistro) => Promise<ResultadoEnvio>,
+  quitar: (id: string) => Promise<void>,
+): Promise<{ enviados: string[]; conflictos: ConflictoCola[]; retenidos: string[] }> {
+  const ordenados = [...items].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  const enviados: string[] = []
+  const conflictos: ConflictoCola[] = []
+  const retenidos: string[] = []
+  for (const item of ordenados) {
+    let resultado: ResultadoEnvio
+    try {
+      resultado = await post(item)
+    } catch {
+      resultado = { tipo: "reintento", status: 0 }
+    }
+    if (resultado.tipo === "reintento") {
+      retenidos.push(item.id)
+      if (resultado.status === 0) break
+      continue
+    }
+    await quitar(item.id)
+    if (resultado.tipo === "ok") enviados.push(item.id)
+    else conflictos.push({ id: item.id, tipo: item.tipo })
+  }
+  return { enviados, conflictos, retenidos }
 }
 
 export async function saveLabores(body: unknown): Promise<void> {

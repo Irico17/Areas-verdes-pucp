@@ -3,6 +3,9 @@ import { FechaCampo } from "../FechaCampo"
 import { Esqueleto } from "../ui/Esqueleto"
 import { AREAS, VIVERO_VACIO, validarVivero, type ViveroItem } from "./vivero"
 import { apiUrl } from "../api"
+import { encolarRegistro } from "../offline/queue"
+import { COLA_VACIADA, pendientesDe, rutaVivero, vaciarRegistros, type DetalleCola } from "../offline/registros"
+import { COLA, VIVERO } from "../ui/nomenclatura"
 
 type Props = {
   iniciales?: ViveroItem[]
@@ -17,6 +20,7 @@ export function ViveroPanel(props: Props) {
   const [cargando, setCargando] = useState(!props.iniciales)
   const [form, setForm] = useState<ViveroItem>(VIVERO_VACIO)
   const [aviso, setAviso] = useState("")
+  const [enCola, setEnCola] = useState<string[]>([])
   const catalogo = { subproceso: props.subprocesos ?? [], etapa: props.etapas ?? [] }
   useEffect(() => {
     if (props.iniciales) return
@@ -40,6 +44,29 @@ export function ViveroPanel(props: Props) {
       cancelado = true
     }
   }, [props.iniciales])
+  useEffect(() => {
+    let vivo = true
+    const leer = (conflictos = false) => {
+      void pendientesDe("vivero")
+        .then((filas) => {
+          if (!vivo) return
+          setEnCola(filas.map((fila) => fila.id))
+          if (conflictos) setAviso(COLA.conflicto)
+          else if (filas.length === 0) setAviso((actual) => (actual === VIVERO.enCola ? "" : actual))
+        })
+        .catch(() => {})
+    }
+    leer()
+    const alVolver = (ev: Event) => {
+      const detail = (ev as CustomEvent<DetalleCola>).detail
+      leer(detail?.conflictos?.some((item) => item.tipo === "vivero") ?? false)
+    }
+    window.addEventListener(COLA_VACIADA, alVolver)
+    return () => {
+      vivo = false
+      window.removeEventListener(COLA_VACIADA, alVolver)
+    }
+  }, [])
   const visibles = useMemo(
     () => items.filter((item) => !mes || item.fecha.startsWith(mes)),
     [items, mes],
@@ -55,6 +82,14 @@ export function ViveroPanel(props: Props) {
         Mes
         <input type="month" value={mes} onChange={(event) => setMes(event.target.value)} />
       </label>
+      {enCola.length > 0 && (
+        <p className="hint" role="status">
+          {COLA.local(enCola.length)} <span className="marca-cola">{COLA.marca}</span>{" "}
+          <button type="button" className="link" onClick={() => void vaciarRegistros()}>
+            {COLA.reintentar}
+          </button>
+        </p>
+      )}
       {cargando && <Esqueleto />}
       <ul className="labor-list">
         {!cargando && visibles.length === 0 && <li className="empty">No hay registros de vivero en este mes.</li>}
@@ -63,6 +98,7 @@ export function ViveroPanel(props: Props) {
             <strong>{item.area || "Sin área"}</strong>
             <small>
               {item.fecha || "sin fecha"} · {item.lugar || "sin lugar"} · {item.subproceso || "sin subproceso"}
+              {enCola.includes(item.id) ? ` · ${COLA.marca}` : ""}
             </small>
           </li>
         ))}
@@ -81,32 +117,51 @@ export function ViveroPanel(props: Props) {
             return
           }
           const guardado = { ...form, id: form.id || crypto.randomUUID() }
-          void fetch(apiUrl("/vivero"), {
+          const cuerpo = {
+            id: guardado.id,
+            fecha: guardado.fecha,
+            area: guardado.area,
+            subproceso: guardado.subproceso,
+            etapa: guardado.etapa,
+            descripcion: guardado.descripcion,
+            observaciones: guardado.observaciones,
+            responsables: guardado.responsables,
+            lugar_libre: guardado.lugar,
+          }
+          void fetch(rutaVivero(), {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: guardado.id,
-              fecha: guardado.fecha,
-              area: guardado.area,
-              subproceso: guardado.subproceso,
-              etapa: guardado.etapa,
-              descripcion: guardado.descripcion,
-              observaciones: guardado.observaciones,
-              responsables: guardado.responsables,
-              lugar_libre: guardado.lugar,
-            }),
+            body: JSON.stringify(cuerpo),
           })
             .then((res) => {
-              if (!res.ok) {
-                setAviso("No se pudo guardar el registro de vivero.")
+              if (res.status === 409) {
+                setAviso(COLA.conflicto)
                 return
               }
-              setItems((current) => [...current, guardado])
-              setAviso("Registro de vivero guardado.")
+              if (!res.ok) {
+                setAviso(VIVERO.error)
+                return
+              }
+              setItems((current) => [...current.filter((item) => item.id !== guardado.id), guardado])
+              setEnCola((actual) => actual.filter((id) => id !== guardado.id))
+              setAviso(VIVERO.guardado)
               setForm(VIVERO_VACIO)
             })
-            .catch(() => setAviso("Sin conexión con la API."))
+            .catch(() => {
+              void encolarRegistro({
+                id: guardado.id,
+                tipo: "vivero",
+                path: rutaVivero(),
+                method: "POST",
+                body: cuerpo,
+                createdAt: new Date().toISOString(),
+              }).then(() => {
+                setItems((current) => [...current.filter((item) => item.id !== guardado.id), guardado])
+                setEnCola((actual) => [...actual.filter((id) => id !== guardado.id), guardado.id])
+                setAviso(VIVERO.enCola)
+              })
+            })
         }}
       >
         <label className="field">

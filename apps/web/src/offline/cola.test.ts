@@ -1,6 +1,20 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { clasificarEstado, drenarEvidencias, mensajeReintento, type ColaEvidencias, type QueuedEvidencia } from "./queue.ts"
+import { createElement } from "react"
+import { renderToStaticMarkup } from "react-dom/server"
+import { Labores, type LaborItem } from "../panel/Labores.tsx"
+import { COLA } from "../ui/nomenclatura.ts"
+import { escucharOnline } from "./enganchar.ts"
+import {
+  clasificarEstado,
+  drenarEvidencias,
+  drenarRegistros,
+  mensajeReintento,
+  ofreceColaDeAltas,
+  type ColaEvidencias,
+  type QueuedEvidencia,
+  type QueuedRegistro,
+} from "./queue.ts"
 
 function item(id: string, marca = "a"): QueuedEvidencia {
   return {
@@ -114,4 +128,162 @@ test("401, 403 y 404 no se descartan y esperan el backoff", async () => {
   assert.match(mensajeReintento(404), /aún no está sincronizada/)
   assert.equal(clasificarEstado(409).tipo, "conflicto")
   assert.equal(clasificarEstado(201).tipo, "ok")
+})
+
+function registro(id: string, tipo: QueuedRegistro["tipo"] = "avance"): QueuedRegistro {
+  return {
+    id,
+    tipo,
+    path: "/areas-verdes/v1/riego",
+    method: "POST",
+    body: { id },
+    createdAt: `2026-10-02T10:00:0${id}.000Z`,
+  }
+}
+
+test("un 409 saca el registro, avisa y no lo vuelve a enviar", async () => {
+  const items = [registro("1")]
+  let envios = 0
+  const primero = await drenarRegistros(
+    items,
+    async () => {
+      envios += 1
+      return { tipo: "conflicto" }
+    },
+    async (id) => {
+      const indice = items.findIndex((fila) => fila.id === id)
+      if (indice >= 0) items.splice(indice, 1)
+    },
+  )
+  assert.deepEqual(primero.conflictos, [{ id: "1", tipo: "avance" }])
+  assert.equal(primero.conflictos.length > 0, true)
+  assert.equal(COLA.conflicto.includes("en cola"), true)
+  assert.equal(envios, 1)
+  assert.deepEqual(items, [])
+  await drenarRegistros(
+    items,
+    async () => {
+      envios += 1
+      return { tipo: "ok" }
+    },
+    async () => {},
+  )
+  assert.equal(envios, 1)
+})
+
+test("sin red el registro de campo permanece en la cola", async () => {
+  const items = [registro("2", "riego"), registro("3", "ficha")]
+  const primero = await drenarRegistros(
+    items,
+    async () => ({ tipo: "reintento", status: 0 }),
+    async () => {
+      throw new Error("no debía quitar el registro")
+    },
+  )
+  assert.deepEqual(primero.retenidos, ["2"])
+  assert.equal(items.length, 2)
+  const segundo = await drenarRegistros(
+    items,
+    async () => ({ tipo: "ok" }),
+    async (id) => {
+      const indice = items.findIndex((fila) => fila.id === id)
+      if (indice >= 0) items.splice(indice, 1)
+    },
+  )
+  assert.deepEqual(segundo.enviados, ["2", "3"])
+  assert.deepEqual(items, [])
+})
+
+test("el evento online llama a flush y vacía la cola", async () => {
+  const cola = [registro("4", "avance"), registro("5", "riego")]
+  let flush = 0
+  const destino = new EventTarget()
+  const parar = escucharOnline(destino, async () => {
+    flush += 1
+    await drenarRegistros(
+      cola,
+      async () => ({ tipo: "ok" }),
+      async (id) => {
+        const indice = cola.findIndex((fila) => fila.id === id)
+        if (indice >= 0) cola.splice(indice, 1)
+      },
+    )
+  })
+  destino.dispatchEvent(new Event("online"))
+  await new Promise((resolver) => setTimeout(resolver, 30))
+  assert.equal(flush, 1)
+  assert.deepEqual(cola, [])
+  parar()
+  destino.dispatchEvent(new Event("online"))
+  await new Promise((resolver) => setTimeout(resolver, 30))
+  assert.equal(flush, 1)
+})
+
+const laborCapataz: LaborItem = {
+  id: "1",
+  titulo: "Riego del eje central",
+  tipo: "riego",
+  estado: "pendiente",
+  equipo: "Norte",
+  detalle: "",
+  capatazId: "cap-norte",
+  ejecutor: "propia",
+}
+
+test("al capataz no se le ofrece la cola de altas", () => {
+  assert.equal(ofreceColaDeAltas("capataz"), false)
+  assert.equal(ofreceColaDeAltas("coordinacion"), true)
+  assert.equal(ofreceColaDeAltas("jefatura"), true)
+  const html = renderToStaticMarkup(
+    createElement(Labores, {
+      rol: "capataz",
+      equipos: [],
+      equipoId: "cap-norte",
+      onEquipo: () => {},
+      items: [laborCapataz],
+      estados: {},
+      onToggleEstado: () => {},
+      tipo: "",
+      onTipo: () => {},
+      pinMode: false,
+      onPinMode: () => {},
+      draft: { lon: -77.08, lat: -12.07 },
+      formTipo: "riego",
+      formTitulo: "No debe verse",
+      formDetalle: "",
+      formEquipo: "",
+      onForm: () => {},
+      onCreate: () => {},
+      creating: false,
+      selected: laborCapataz,
+      onSelect: () => {},
+      timeline: [],
+      timelineError: "",
+      estadoNuevo: "pendiente",
+      onEstadoNuevo: () => {},
+      onEstado: () => {},
+      reasignarA: "",
+      onReasignarA: () => {},
+      onReasignar: () => {},
+      onArchivar: () => {},
+      confirmarArchivo: false,
+      notice: "",
+      queueCount: 3,
+      onFlush: () => {},
+      tipos: [{ id: "riego", label: "Riego" }],
+      formEjecutor: "propia",
+      motivos: [],
+      motivo: "",
+      onMotivo: () => {},
+      onSugerir: () => {},
+      sugerencia: "",
+      pista: null,
+      onConfirmarPista: () => {},
+    }),
+  )
+  assert.equal(html.includes("Crear actividad"), false)
+  assert.equal(html.includes("Marcar actividad"), false)
+  assert.equal(html.includes("en cola local"), false)
+  assert.match(html, /Guardar avance/)
+  assert.match(html, /Guardar ficha/)
 })
