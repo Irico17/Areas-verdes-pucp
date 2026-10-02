@@ -1,0 +1,101 @@
+# Flujo o3-riego. Cobertura provisional de RF-26.
+# No es el tablero de indicadores. La fórmula oficial sigue sin acuerdo.
+/api/v1/riego:
+  get:
+    tags: [operacion]
+    summary: Resumen de riego con cobertura provisional del mes
+    description: |
+      Cobertura provisional = sectores de capataz activos con al menos un riego
+      en el mes calendario (America/Lima) / sectores de capataz activos.
+      El porcentaje es entero. `provisional` es siempre true: la jefatura de
+      sección no ha validado la fórmula. No sustituye al tablero de indicadores.
+    responses:
+      "200":
+        description: Registros y cobertura provisional
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [aviso, provisional, cobertura, registros]
+              properties:
+                aviso:
+                  type: string
+                  example: "Cobertura provisional: 50 %. Pendiente de validar con la jefatura de sección."
+                provisional:
+                  type: boolean
+                  enum: [true]
+                cobertura:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  description: Porcentaje entero. 50 significa uno de dos sectores activos regado en el mes.
+                registros:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      sector:
+                        type: string
+                        description: Nombre del catálogo si hay sector_id; si no, el texto ya guardado.
+                      turno:
+                        type: string
+                        enum: [manana, tarde]
+                      fecha:
+                        type: string
+                        format: date
+      "401":
+        description: Sin sesión
+  post:
+    tags: [operacion]
+    summary: Alta de un turno de riego sobre un sector de capataz
+    description: |
+      El sector es el identificador del catálogo de sector de capataz, activo.
+      Un texto libre no se acepta. El nombre que queda en la columna de texto
+      sale del catálogo. Los registros anteriores, sin sector_id, no se reescriben.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [id, sector_id, turno, fecha, zona_supervision_id]
+            properties:
+              id:
+                type: string
+                format: uuid
+              sector_id:
+                type: integer
+                description: Id del sector de capataz activo.
+              sector:
+                type: string
+                description: Se ignora. El nombre guardado sale del catálogo.
+              turno:
+                type: string
+                enum: [manana, tarde]
+              fecha:
+                type: string
+                format: date
+              zona_supervision_id:
+                type: string
+                enum: [Z1, Z2, Z3, Z4]
+              capataz_id:
+                type: string
+              nota:
+                type: string
+              ciclo:
+                type: string
+              superficie_m2:
+                type: number
+                minimum: 0
+    responses:
+      "201":
+        description: Turno registrado
+      "400":
+        description: Sector ajeno al catálogo, zona inexistente o turno inválido
+      "401":
+        description: Sin sesión
+      "403":
+        description: El rol no registra

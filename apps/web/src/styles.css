@@ -326,6 +326,17 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   border-radius: var(--r-control);
   font-size: 13px;
 }
+.riego-cobertura {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  max-width: 62ch;
+  color: var(--tinta);
+  background: color-mix(in srgb, var(--pendiente) 9%, var(--hoja));
+  border: 1px solid color-mix(in srgb, var(--pendiente) 38%, var(--linea));
+  border-radius: var(--r-control);
+  font-size: 15px;
+  line-height: 1.45;
+}
 .foot { color: var(--muted); font-size: 12px; }
 .field { display: flex; flex-direction: column; gap: 4px; margin: 0 0 12px; font-size: 13px; font-weight: 600; }
 .field input, .field select, .field textarea {
