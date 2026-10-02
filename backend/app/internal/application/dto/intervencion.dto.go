@@ -24,6 +24,11 @@ type FiltroIntervencionesDTO struct {
 	ZonaSupervisionID string
 	CuadrillaID       string
 	Origen            string
+	Sector            string
+	Ejecutor          string
+	NivelRiesgo       string
+	Desde             string
+	Hasta             string
 	SoloAbiertas      bool
 }
 

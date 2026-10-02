@@ -1,0 +1,85 @@
+# Flujo o3-mapa-filtros. El GET de actividades ya existía: aquí quedan los filtros de oficina.
+# El path se movió desde operacion.yaml para no repetirlo en el contrato unido.
+/api/v1/operacion/actividades:
+  get:
+    tags: [operacion]
+    summary: Actividades como FeatureCollection (Point EPSG:4326)
+    description: >
+      Por defecto abiertas=1 deja fuera cerradas, canceladas y archivadas.
+      historico=1 o abiertas=0 las incluye. El rol capataz no usa cuadrilla_id:
+      el servidor limita a la cuadrilla de la sesión.
+    parameters:
+      - in: query
+        name: rol
+        schema: { type: string, enum: [jefatura, coordinacion, capataz, admin] }
+      - in: query
+        name: capataz_id
+        schema: { type: string }
+        description: Lo fija la sesión cuando el rol es capataz.
+      - in: query
+        name: abiertas
+        schema: { type: string, default: "1" }
+        description: 1 excluye cerradas y canceladas. 0 es el histórico.
+      - in: query
+        name: historico
+        schema: { type: string, enum: ["0", "1"] }
+        description: 1 equivale a abiertas=0.
+      - in: query
+        name: estado
+        schema: { type: string }
+      - in: query
+        name: tipo
+        schema: { type: string }
+      - in: query
+        name: cuadrilla_id
+        schema: { type: string }
+        description: Oficina. El capataz no puede pedir otra cuadrilla.
+      - in: query
+        name: sector
+        schema: { type: string }
+        description: Sector de capataz. El punto de la actividad cae dentro del polígono.
+      - in: query
+        name: ejecutor
+        schema: { type: string, enum: [propia, tercerizada] }
+      - in: query
+        name: origen
+        schema: { type: string }
+      - in: query
+        name: nivel_riesgo
+        schema: { type: string }
+      - in: query
+        name: desde
+        schema: { type: string, format: date }
+        description: fecha_programada inclusive.
+      - in: query
+        name: hasta
+        schema: { type: string, format: date }
+        description: fecha_programada inclusive.
+      - in: query
+        name: zona_supervision_id
+        schema: { type: string }
+    responses:
+      "200":
+        description: FeatureCollection. Con abiertas=1 no incluye estado cerrada ni cancelada.
+        content:
+          application/geo+json:
+            schema:
+              $ref: "#/components/schemas/FeatureCollection"
+      "400":
+        description: Filtro inválido
+      "401":
+        description: Sin sesión
+  post:
+    tags: [operacion]
+    summary: Crear actividad desde un pin. El UUID del cliente es idempotente.
+    responses:
+      "201":
+        description: Creada
+      "200":
+        description: El mismo UUID ya existía con el mismo contenido
+      "401":
+        description: Sin cookie de sesión
+      "403":
+        description: La sesión no tiene el permiso validar
+      "409":
+        description: UUID repetido con otro contenido

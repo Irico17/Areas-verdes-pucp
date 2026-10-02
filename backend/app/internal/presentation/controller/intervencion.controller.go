@@ -122,13 +122,22 @@ func (ctrl *intervencionController) List(c *gin.Context) {
 		return
 	}
 
+	soloAbiertas := c.DefaultQuery("abiertas", "1") != "0"
+	if c.Query("historico") == "1" {
+		soloAbiertas = false
+	}
 	q := dto.FiltroIntervencionesDTO{
 		Estado:            c.Query("estado"),
 		Tipo:              c.Query("tipo"),
 		ZonaSupervisionID: c.Query("zona_supervision_id"),
 		CuadrillaID:       c.Query("cuadrilla_id"),
 		Origen:            c.Query("origen"),
-		SoloAbiertas:      c.DefaultQuery("abiertas", "1") != "0",
+		Sector:            c.Query("sector"),
+		Ejecutor:          c.Query("ejecutor"),
+		NivelRiesgo:       c.Query("nivel_riesgo"),
+		Desde:             c.Query("desde"),
+		Hasta:             c.Query("hasta"),
+		SoloAbiertas:      soloAbiertas,
 	}
 
 	if u.Rol == usecases.RolCapataz {

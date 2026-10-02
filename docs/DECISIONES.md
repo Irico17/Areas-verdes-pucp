@@ -157,3 +157,20 @@ Registro de decisiones del scaffold `campus-verde`. Zona horaria de referencia: 
 - El corte en la EC2 (backup, snapshot, conteos, tag de rollback) lo ejecuta una persona con `docs/RUNBOOK-CORTE-PRODUCCION.md`. Este ADR no lo autoriza por sí solo.
 
 **Consecuencias:** Un volumen nuevo de Postgres queda vacío hasta que corre `migrate`. No se crea el núcleo del equipo al lado de nuestras tablas.
+
+---
+
+## ADR-014 — Mapa base OSM; la ortofoto espera el archivo del cliente
+
+**Fecha:** 2026-10-02
+
+**Contexto:** RF-29 y RNF-11 piden una vista aérea del campus y dejan el proveedor del mapa base por definir. La observación del backlog pide dejar escrita la decisión. En `data/raw` no hay ortofoto ni servicio de imágenes aéreas del cliente. La aplicación ya dibuja el campus con MapLibre.
+
+**Decisión:**
+
+- El mapa base es OpenStreetMap, servido como teselas raster en MapLibre. No se agrega Street View.
+- No se simula una ortofoto ni se publica una imagen aérea inventada.
+- La ortofoto queda pendiente del archivo que entregue el cliente. Cuando exista, se incorpora como capa, sin reemplazar esta decisión por una URL ficticia.
+- Si las teselas no cargan o no hay red, la vista de actividades pasa a lista y la pantalla dice por qué. No hay caché de teselas en esta entrega.
+
+**Consecuencias:** El plano cumple el desplazamiento, el zoom y la atribución de OpenStreetMap. La vista aérea del texto de RF-29-CA1 sigue abierta hasta que llegue el archivo.

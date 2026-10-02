@@ -30,7 +30,8 @@ import { activarDibujo, type ModoDibujo } from "./draw"
 import { INVENTARIO } from "../inventario"
 import { etiquetaEstado, etiquetaTipo } from "../operacion"
 import { EMPTY, LAYERS, type FeatureCollection, type LayerId } from "../types"
-import { ACTIVIDAD } from "../ui/nomenclatura"
+import { ACTIVIDAD, etiquetaClase } from "../ui/nomenclatura"
+import { TRAZO_CLASE, pintarIcono } from "./trazosClase"
 import { apiUrl } from "../api"
 
 const CATASTRO_FILLS = ["areas-fill", "zonas-fill"]
@@ -53,6 +54,7 @@ type Props = {
   onSelectCatastro: (hit: { layer: string; props: Record<string, unknown> } | null) => void
   onSelectActividad: (id: string | null) => void
   onPin: (lon: number, lat: number) => void
+  onSinPlano?: (motivo: "teselas") => void
   modoDibujo?: ModoDibujo | null
 }
 
@@ -126,6 +128,7 @@ export function CampusMap({
   onSelectCatastro,
   onSelectActividad,
   onPin,
+  onSinPlano,
   relieve,
   edificios,
   showEdificios,
@@ -145,6 +148,7 @@ export function CampusMap({
   const onCatastro = useRef(onSelectCatastro)
   const onActividad = useRef(onSelectActividad)
   const onPinRef = useRef(onPin)
+  const onSinPlanoRef = useRef(onSinPlano)
   const inventoryRef = useRef(inventory)
   const inventoryOnRef = useRef(inventoryOn)
   const dibujoRef = useRef(modoDibujo)
@@ -160,8 +164,9 @@ export function CampusMap({
     onCatastro.current = onSelectCatastro
     onActividad.current = onSelectActividad
     onPinRef.current = onPin
+    onSinPlanoRef.current = onSinPlano
     sectoresRef.current = sectores
-  }, [pinMode, modoDibujo, inventory, inventoryOn, onSelectCatastro, onSelectActividad, onPin, sectores])
+  }, [pinMode, modoDibujo, inventory, inventoryOn, onSelectCatastro, onSelectActividad, onPin, onSinPlano, sectores])
 
   useEffect(() => {
     if (!host.current || mapRef.current) return
@@ -185,6 +190,13 @@ export function CampusMap({
     })
     map.addControl(new NavigationControl({ showCompass: true, visualizePitch: false }), "bottom-right")
     map.addControl(new ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left")
+    map.on("error", (event) => {
+      const fallo = event.error
+      const mensaje = fallo instanceof Error ? fallo.message : String(fallo ?? "")
+      if (/tile\.openstreetmap\.org|openstreetmap/i.test(mensaje)) {
+        onSinPlanoRef.current?.("teselas")
+      }
+    })
     map.on("load", () => {
       const alturaExtrusion = [
         "interpolate",
@@ -307,16 +319,20 @@ export function CampusMap({
         type: "circle",
         source: "actividades",
         paint: {
-          "circle-radius": 13,
+          "circle-radius": 16,
           "circle-stroke-width": 2,
           "circle-stroke-color": "#f7faf6",
           "circle-color": [
             "match",
             ["get", "estado"],
+            "sin_estado",
+            "#8d8478",
             "pendiente",
             "#8a6410",
             "en_proceso",
-            "#308046",
+            "#1a5c44",
+            "ejecutado",
+            "#2f6f4e",
             "bloqueada",
             "#8c3832",
             "cerrada",
@@ -327,30 +343,56 @@ export function CampusMap({
           ],
         },
       })
+      for (const [id, trazo] of Object.entries(TRAZO_CLASE)) {
+        const nombre = `clase-${id}`
+        if (!map.hasImage(nombre)) map.addImage(nombre, pintarIcono(trazo), { pixelRatio: 2 })
+      }
       map.addLayer({
         id: "actividades-marca",
         type: "symbol",
         source: "actividades",
         layout: {
-          "text-field": [
+          "icon-image": [
             "match",
-            ["get", "tipo"],
-            "riego",
-            "R",
+            ["coalesce", ["get", "clase"], ""],
+            "habilitacion",
+            "clase-habilitacion",
+            "rehabilitacion",
+            "clase-rehabilitacion",
+            "mantenimiento",
+            "clase-mantenimiento",
             "poda",
-            "P",
-            "limpieza",
-            "L",
-            "incidencia",
-            "I",
-            "inspeccion",
-            "V",
-            "·",
+            "clase-poda",
+            "propagacion",
+            "clase-propagacion",
+            "riego",
+            "clase-riego",
+            "residuos",
+            "clase-residuos",
+            "fitosanitario",
+            "clase-fitosanitario",
+            "inspeccion_monitoreo",
+            "clase-inspeccion_monitoreo",
+            [
+              "match",
+              ["get", "tipo"],
+              "riego",
+              "clase-riego",
+              "poda",
+              "clase-poda",
+              "limpieza",
+              "clase-mantenimiento",
+              "incidencia",
+              "clase-fitosanitario",
+              "inspeccion",
+              "clase-inspeccion_monitoreo",
+              "clase-generica",
+            ],
           ],
-          "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
-          "text-size": 11,
+          "icon-size": 0.85,
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
         },
-        paint: { "text-color": "#f6f3ec" },
       })
       const fills = LAYERS.map((layer) => `${layer.id}-fill`)
       const invFills = INVENTARIO.filter((layer) => layer.kind === "polygon").map((layer) => `inv-${layer.id}-fill`)
@@ -416,10 +458,11 @@ export function CampusMap({
           const id = String(props.id ?? acts[0].id ?? "")
           onActividad.current(id || null)
           onCatastro.current(null)
+          const claseVisible = etiquetaClase(String(props.clase ?? "")) || etiquetaTipo(String(props.tipo ?? ""))
           const popup = new Popup({ closeButton: true, maxWidth: "280px", className: "cv-popup" })
             .setLngLat(event.lngLat)
             .setHTML(
-              `<p class="cv-popup-kicker">${escapeHtml(etiquetaTipo(String(props.tipo ?? "")))} · ${escapeHtml(etiquetaEstado(String(props.estado ?? "")))}</p>
+              `<p class="cv-popup-kicker">${escapeHtml(claseVisible)} · ${escapeHtml(etiquetaEstado(String(props.estado ?? "")))}</p>
                <p class="cv-popup-title">${escapeHtml(props.titulo || ACTIVIDAD.sinTitulo)}</p>
                <p class="cv-popup-meta">${escapeHtml(props.equipo || ACTIVIDAD.sinCuadrilla)}</p>`,
             )
@@ -489,7 +532,10 @@ export function CampusMap({
       map.resize()
     })
     mapRef.current = map
+    const ancla = host.current as (HTMLDivElement & { mapa?: Map }) | null
+    if (ancla) ancla.mapa = map
     return () => {
+      if (ancla) delete ancla.mapa
       setReady(false)
       markerRef.current?.remove()
       map.remove()
