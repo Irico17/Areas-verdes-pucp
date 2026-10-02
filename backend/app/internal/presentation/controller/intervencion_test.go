@@ -84,6 +84,18 @@ func (m *mockIntervencionUC) GuardarFicha(ctx context.Context, in dto.FichaInter
 	return nil
 }
 
+func (m *mockIntervencionUC) Taxonomia(context.Context) (dto.TaxonomiaActividadDTO, error) {
+	return dto.TaxonomiaActividadDTO{}, nil
+}
+
+func (m *mockIntervencionUC) ListarPersonal(context.Context, string) (dto.PersonalLaborResponseDTO, error) {
+	return dto.PersonalLaborResponseDTO{Personal: []dto.PersonalLaborDTO{}}, nil
+}
+
+func (m *mockIntervencionUC) RegistrarPersonal(context.Context, dto.RegistrarPersonalDTO) (dto.PersonalLaborResponseDTO, error) {
+	return dto.PersonalLaborResponseDTO{Personal: []dto.PersonalLaborDTO{}}, nil
+}
+
 func (m *mockIntervencionUC) CrearAvance(ctx context.Context, in dto.CrearAvanceDTO) error {
 	if m.crearAvanceFunc != nil {
 		return m.crearAvanceFunc(ctx, in)
@@ -102,6 +114,47 @@ func TestCreateSinCookieEs401(t *testing.T) {
 	ctrl.Create(c)
 	if w.Code != 401 {
 		t.Fatalf("código %d cuerpo %s", w.Code, w.Body.String())
+	}
+}
+
+func TestCreateMapeaCamposDelAlta(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	var got dto.CrearIntervencionDTO
+	ctrl := NewIntervencionController(&mockIntervencionUC{
+		createFunc: func(_ context.Context, in dto.CrearIntervencionDTO) (dto.CrearIntervencionResponseDTO, error) {
+			got = in
+			return dto.CrearIntervencionResponseDTO{Creada: true, Feature: entities.Feature{ID: in.ID}}, nil
+		},
+	}, zerolog.Nop())
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("usuario", dto.UsuarioSesionDTO{ID: 7, Rol: "coordinacion", Usuario: "coordinacion"})
+	body := `{
+		"id":"11111111-1111-4111-8111-111111111111",
+		"tipo":"riego","titulo":"Riego","lon":-77.08,"lat":-12.07,
+		"origen":"interna","codigo_externo":"CENT-2026-0001","unidad_solicitante":"Oficina de campus",
+		"nivel_riesgo":"alto","fecha_programada":"2026-10-15","cantidad":4,
+		"clase":"riego","subtipo":"riego_manual","personal":["Elsa Mamani"],
+		"lugar_id":"12","zona_supervision_id":"Z1",
+		"campo_desconocido":"no se guarda"
+	}`
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/operacion/actividades", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	ctrl.Create(c)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("código %d cuerpo %s", w.Code, w.Body.String())
+	}
+	if got.Origen != "interna" || got.CodigoExterno != "CENT-2026-0001" || got.UnidadSolicitante != "Oficina de campus" {
+		t.Fatalf("texto %+v", got)
+	}
+	if got.NivelRiesgo != "alto" || got.FechaProgramada != "2026-10-15" || got.Cantidad == nil || *got.Cantidad != 4 {
+		t.Fatalf("pedido %+v", got)
+	}
+	if got.Clase != "riego" || got.Subtipo != "riego_manual" || len(got.Personal) != 1 || got.Personal[0] != "Elsa Mamani" {
+		t.Fatalf("taxonomía %+v", got)
+	}
+	if got.LugarID != "12" || got.ZonaSupervisionID != "Z1" || got.UsuarioID != 7 {
+		t.Fatalf("lugar %+v", got)
 	}
 }
 

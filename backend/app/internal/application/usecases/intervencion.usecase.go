@@ -5,6 +5,7 @@ import (
 	"context"
 	"math"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -46,6 +47,14 @@ func puedeAsignar(rol string) bool {
 	return rol == RolJefatura || rol == RolCoordinacion || rol == RolAdmin
 }
 
+func origenDe(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return "interna"
+	}
+	return v
+}
+
 func ejecutorDe(v string) string {
 	if strings.TrimSpace(v) == string(enums.EjecutorTercerizada) {
 		return string(enums.EjecutorTercerizada)
@@ -69,6 +78,17 @@ type SavedPayload struct {
 	Lat               float64
 	Ejecutor          string
 	CreatedAt         time.Time
+	Origen            string
+	CodigoExterno     string
+	UnidadSolicitante string
+	NivelRiesgo       string
+	FechaProgramada   string
+	Cantidad          *float64
+	Subtipo           string
+	Clase             string
+	Personal          []string
+	LugarID           string
+	ZonaSupervisionID string
 }
 
 // SamePayload compares an incoming creation payload with the existing saved row for idempotency.
@@ -81,7 +101,47 @@ func SamePayload(saved SavedPayload, in entities.NuevaIntervencion) bool {
 		saved.ZonaFeatureID == strings.TrimSpace(in.ZonaFeatureID) &&
 		ejecutorDe(saved.Ejecutor) == ejecutorDe(in.Ejecutor) &&
 		math.Abs(saved.Lon-in.Lon) < 1e-5 &&
-		math.Abs(saved.Lat-in.Lat) < 1e-5
+		math.Abs(saved.Lat-in.Lat) < 1e-5 &&
+		origenDe(saved.Origen) == origenDe(in.Origen) &&
+		saved.CodigoExterno == strings.TrimSpace(in.CodigoExterno) &&
+		saved.UnidadSolicitante == strings.TrimSpace(in.UnidadSolicitante) &&
+		saved.NivelRiesgo == strings.TrimSpace(in.NivelRiesgo) &&
+		saved.FechaProgramada == strings.TrimSpace(in.FechaProgramada) &&
+		mismaCantidad(saved.Cantidad, in.Cantidad) &&
+		saved.Subtipo == strings.TrimSpace(in.Subtipo) &&
+		saved.Clase == strings.TrimSpace(in.Clase) &&
+		saved.LugarID == strings.TrimSpace(in.LugarID) &&
+		saved.ZonaSupervisionID == strings.TrimSpace(in.ZonaSupervisionID) &&
+		mismosNombres(saved.Personal, in.Personal)
+}
+
+func mismaCantidad(a, b *float64) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return math.Abs(*a-*b) < 1e-6
+}
+
+func mismosNombres(a, b []string) bool {
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+	if len(a) != len(b) {
+		return false
+	}
+	aa := append([]string(nil), a...)
+	bb := append([]string(nil), b...)
+	sort.Strings(aa)
+	sort.Strings(bb)
+	for i := range aa {
+		if aa[i] != bb[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // PuedeCerrar validates requirements for closing a labor.
@@ -176,6 +236,9 @@ func (u *intervencionUseCase) CrearActividad(ctx context.Context, in dto.CrearIn
 	if !sinPunto && (in.Lon < MinLon || in.Lon > MaxLon || in.Lat < MinLat || in.Lat > MaxLat) {
 		return zero, domainErrors.InputError{Reason: "el punto queda fuera del campus"}
 	}
+	if err := validarAlta(ctx, u.catalogos, in); err != nil {
+		return zero, err
+	}
 
 	cmd := entities.NuevaIntervencion{
 		ID:                in.ID,
@@ -190,8 +253,19 @@ func (u *intervencionUseCase) CrearActividad(ctx context.Context, in dto.CrearIn
 		ActorRol:          in.ActorRol,
 		Ejecutor:          in.Ejecutor,
 		UsuarioID:         in.UsuarioID,
-		LugarID:           in.LugarID,
-		ZonaSupervisionID: in.ZonaSupervisionID,
+		LugarID:           strings.TrimSpace(in.LugarID),
+		ZonaSupervisionID: strings.TrimSpace(in.ZonaSupervisionID),
+		Origen:            strings.TrimSpace(in.Origen),
+		CodigoExterno:     strings.TrimSpace(in.CodigoExterno),
+		UnidadSolicitante: strings.TrimSpace(in.UnidadSolicitante),
+		NivelRiesgo:       strings.TrimSpace(in.NivelRiesgo),
+		FechaProgramada:   strings.TrimSpace(in.FechaProgramada),
+		Cantidad:          in.Cantidad,
+		Subtipo:           strings.TrimSpace(in.Subtipo),
+		Clase:             strings.TrimSpace(in.Clase),
+		Personal:          nombresPersonal(in.Personal),
+		LugarLibre:        strings.TrimSpace(in.LugarLibre),
+		LugarTexto:        strings.TrimSpace(in.LugarTexto),
 	}
 	feat, created, err := u.repo.Create(ctx, cmd)
 	if err != nil {
@@ -385,4 +459,191 @@ func (u *intervencionUseCase) CrearAvance(ctx context.Context, in dto.CrearAvanc
 		CapatazID:     in.CapatazID,
 	}
 	return u.repo.CrearAvance(ctx, cmd)
+}
+
+var subtipoRe = regexp.MustCompile(`^[a-z0-9_]{2,40}$`)
+
+func validarAlta(ctx context.Context, catalogos contracts.ICatalogoRepository, in dto.CrearIntervencionDTO) error {
+	if strings.TrimSpace(in.LugarLibre) != "" || strings.TrimSpace(in.LugarTexto) != "" {
+		return domainErrors.InputError{Reason: "el lugar no se escribe a mano; elija uno del catálogo"}
+	}
+	if v := strings.TrimSpace(in.Origen); v != "" {
+		if !slugRe.MatchString(v) {
+			return domainErrors.InputError{Reason: "origen no reconocido"}
+		}
+		ok, err := catalogos.Activo(ctx, "fuente", v)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return domainErrors.InputError{Reason: "origen no está en el catálogo activo"}
+		}
+	}
+	if v := strings.TrimSpace(in.NivelRiesgo); v != "" {
+		if !slugRe.MatchString(v) {
+			return domainErrors.InputError{Reason: "nivel_riesgo no reconocido"}
+		}
+		ok, err := catalogos.Activo(ctx, "nivel_riesgo", v)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return domainErrors.InputError{Reason: "nivel_riesgo no está en el catálogo activo"}
+		}
+	}
+	clase := strings.TrimSpace(in.Clase)
+	subtipo := strings.TrimSpace(in.Subtipo)
+	if subtipo != "" && clase == "" {
+		return domainErrors.InputError{Reason: "el tipo de actividad exige su clase"}
+	}
+	if clase != "" {
+		if !slugRe.MatchString(clase) {
+			return domainErrors.InputError{Reason: "clase no reconocida"}
+		}
+		ok, err := catalogos.Activo(ctx, "clase_actividad", clase)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return domainErrors.InputError{Reason: "clase no está en el catálogo activo"}
+		}
+	}
+	if subtipo != "" && !subtipoRe.MatchString(subtipo) {
+		return domainErrors.InputError{Reason: "tipo de actividad no reconocido"}
+	}
+	if subtipo != "" {
+		ok, err := catalogos.Activo(ctx, "subtipo_actividad", subtipo)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return domainErrors.InputError{Reason: "el tipo de actividad no está en el catálogo activo"}
+		}
+	}
+	if fecha := strings.TrimSpace(in.FechaProgramada); fecha != "" {
+		if _, err := time.Parse("2006-01-02", fecha); err != nil {
+			return domainErrors.InputError{Reason: "fecha_programada debe ser aaaa-mm-dd"}
+		}
+	}
+	if in.Cantidad != nil && (*in.Cantidad < 0 || *in.Cantidad > 1000000) {
+		return domainErrors.InputError{Reason: "cantidad debe estar entre 0 y 1000000"}
+	}
+	if utf8.RuneCountInString(strings.TrimSpace(in.CodigoExterno)) > 80 {
+		return domainErrors.InputError{Reason: "codigo_externo admite hasta 80 caracteres"}
+	}
+	if utf8.RuneCountInString(strings.TrimSpace(in.UnidadSolicitante)) > 160 {
+		return domainErrors.InputError{Reason: "unidad_solicitante admite hasta 160 caracteres"}
+	}
+	for _, nombre := range in.Personal {
+		n := utf8.RuneCountInString(strings.TrimSpace(nombre))
+		if n < 2 || n > 80 {
+			return domainErrors.InputError{Reason: "el personal debe ser un nombre ficticio del catálogo"}
+		}
+	}
+	return nil
+}
+
+func nombresPersonal(nombres []string) []string {
+	if len(nombres) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(nombres))
+	vistos := map[string]struct{}{}
+	for _, nombre := range nombres {
+		limpio := strings.TrimSpace(nombre)
+		clave := strings.ToLower(limpio)
+		if limpio == "" {
+			continue
+		}
+		if _, ok := vistos[clave]; ok {
+			continue
+		}
+		vistos[clave] = struct{}{}
+		out = append(out, limpio)
+	}
+	return out
+}
+
+func (u *intervencionUseCase) Taxonomia(ctx context.Context) (dto.TaxonomiaActividadDTO, error) {
+	row, err := u.repo.Taxonomia(ctx)
+	if err != nil {
+		return dto.TaxonomiaActividadDTO{}, err
+	}
+	out := dto.TaxonomiaActividadDTO{
+		Clases:   make([]dto.ClaseActividadDTO, 0, len(row.Clases)),
+		Riesgos:  make([]dto.OpcionCatalogoDTO, 0, len(row.Riesgos)),
+		Origenes: make([]dto.OpcionCatalogoDTO, 0, len(row.Origenes)),
+		Personal: make([]dto.PersonalFicticioDTO, 0, len(row.Personal)),
+	}
+	for _, clase := range row.Clases {
+		item := dto.ClaseActividadDTO{
+			Codigo: clase.Codigo,
+			Nombre: clase.Nombre,
+			Tipos:  make([]dto.OpcionCatalogoDTO, 0, len(clase.Tipos)),
+		}
+		for _, tipo := range clase.Tipos {
+			item.Tipos = append(item.Tipos, dto.OpcionCatalogoDTO{Codigo: tipo.Codigo, Nombre: tipo.Nombre})
+		}
+		out.Clases = append(out.Clases, item)
+	}
+	for _, riesgo := range row.Riesgos {
+		out.Riesgos = append(out.Riesgos, dto.OpcionCatalogoDTO{Codigo: riesgo.Codigo, Nombre: riesgo.Nombre})
+	}
+	for _, origen := range row.Origenes {
+		out.Origenes = append(out.Origenes, dto.OpcionCatalogoDTO{Codigo: origen.Codigo, Nombre: origen.Nombre})
+	}
+	for _, persona := range row.Personal {
+		out.Personal = append(out.Personal, dto.PersonalFicticioDTO{ID: persona.ID, NombreFicticio: persona.NombreFicticio})
+	}
+	return out, nil
+}
+
+func (u *intervencionUseCase) ListarPersonal(ctx context.Context, actividadID string) (dto.PersonalLaborResponseDTO, error) {
+	if !uuidRe.MatchString(actividadID) {
+		return dto.PersonalLaborResponseDTO{}, domainErrors.InputError{Reason: "id debe ser un UUID"}
+	}
+	rows, err := u.repo.ListarPersonal(ctx, actividadID)
+	if err != nil {
+		return dto.PersonalLaborResponseDTO{}, err
+	}
+	return personalDTO(rows), nil
+}
+
+func (u *intervencionUseCase) RegistrarPersonal(ctx context.Context, in dto.RegistrarPersonalDTO) (dto.PersonalLaborResponseDTO, error) {
+	if !puedeAsignar(in.ActorRol) {
+		if in.ActorRol == RolCapataz {
+			return dto.PersonalLaborResponseDTO{}, domainErrors.ErrOperacionProhibido
+		}
+		return dto.PersonalLaborResponseDTO{}, domainErrors.InputError{Reason: "actor_rol debe ser jefatura, coordinacion o admin"}
+	}
+	if !uuidRe.MatchString(in.ActividadID) {
+		return dto.PersonalLaborResponseDTO{}, domainErrors.InputError{Reason: "id debe ser un UUID"}
+	}
+	nombres := nombresPersonal(in.Nombres)
+	if len(nombres) == 0 {
+		return dto.PersonalLaborResponseDTO{}, domainErrors.InputError{Reason: "indique al menos un nombre ficticio"}
+	}
+	for _, nombre := range nombres {
+		n := utf8.RuneCountInString(nombre)
+		if n < 2 || n > 80 {
+			return dto.PersonalLaborResponseDTO{}, domainErrors.InputError{Reason: "el personal debe ser un nombre ficticio del catálogo"}
+		}
+	}
+	rows, err := u.repo.RegistrarPersonal(ctx, in.ActividadID, nombres)
+	if err != nil {
+		return dto.PersonalLaborResponseDTO{}, err
+	}
+	return personalDTO(rows), nil
+}
+
+func personalDTO(rows []entities.PersonalLabor) dto.PersonalLaborResponseDTO {
+	out := dto.PersonalLaborResponseDTO{Personal: make([]dto.PersonalLaborDTO, 0, len(rows))}
+	for _, row := range rows {
+		out.Personal = append(out.Personal, dto.PersonalLaborDTO{
+			ID:             row.ID,
+			NombreFicticio: row.NombreFicticio,
+			RolCampo:       row.RolCampo,
+		})
+	}
+	return out
 }

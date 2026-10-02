@@ -36,8 +36,20 @@ func ScanFeature(rows Scanner) (entities.Feature, error) {
 		created, updated                  time.Time
 		ejecutor                          string
 		geom                              sql.NullString
+		origen                            string
+		codigo, unidad, riesgo, fecha     sql.NullString
+		cantidad                          sql.NullFloat64
+		subtipo, clase, personalJSON      sql.NullString
 	)
-	if err := rows.Scan(&id, &tipo, &estado, &titulo, &detalle, &area, &zona, &capataz, &equipo, &archivada, &created, &updated, &ejecutor, &geom); err != nil {
+	if err := rows.Scan(
+		&id, &tipo, &estado, &titulo, &detalle, &area, &zona, &capataz, &equipo,
+		&archivada, &created, &updated, &ejecutor, &geom,
+		&origen, &codigo, &unidad, &riesgo, &fecha, &cantidad, &subtipo, &clase, &personalJSON,
+	); err != nil {
+		return entities.Feature{}, err
+	}
+	personal, err := personalDeJSON(personalJSON)
+	if err != nil {
 		return entities.Feature{}, err
 	}
 	props := entities.ActividadProperties{
@@ -51,6 +63,15 @@ func ScanFeature(rows Scanner) (entities.Feature, error) {
 		AssignedCapatazID: NullString(capataz),
 		Equipo:            NullString(equipo),
 		Ejecutor:          ejecutor,
+		Origen:            origen,
+		CodigoExterno:     NullString(codigo),
+		UnidadSolicitante: NullString(unidad),
+		NivelRiesgo:       NullString(riesgo),
+		FechaProgramada:   NullString(fecha),
+		Cantidad:          nullFloat(cantidad),
+		Subtipo:           NullString(subtipo),
+		Clase:             NullString(clase),
+		Personal:          personal,
 		Archivada:         archivada,
 		CreatedAt:         created.UTC().Format(time.RFC3339),
 		UpdatedAt:         updated.UTC().Format(time.RFC3339),
@@ -68,6 +89,28 @@ func ScanFeature(rows Scanner) (entities.Feature, error) {
 		Geometry:   raw,
 		Properties: props,
 	}, nil
+}
+
+func nullFloat(v sql.NullFloat64) *float64 {
+	if !v.Valid {
+		return nil
+	}
+	n := v.Float64
+	return &n
+}
+
+func personalDeJSON(v sql.NullString) ([]string, error) {
+	if !v.Valid || strings.TrimSpace(v.String) == "" || v.String == "[]" || v.String == "null" {
+		return nil, nil
+	}
+	var names []string
+	if err := json.Unmarshal([]byte(v.String), &names); err != nil {
+		return nil, err
+	}
+	if len(names) == 0 {
+		return nil, nil
+	}
+	return names, nil
 }
 
 // NullString converts sql.NullString to *string.

@@ -29,6 +29,9 @@ type IIntervencionController interface {
 	Timeline(*gin.Context)
 	Ficha(*gin.Context)
 	CrearAvance(*gin.Context)
+	Taxonomia(*gin.Context)
+	ListarPersonal(*gin.Context)
+	RegistrarPersonal(*gin.Context)
 }
 
 type intervencionController struct {
@@ -176,6 +179,19 @@ func (ctrl *intervencionController) Create(c *gin.Context) {
 		ActorRol:          u.Rol,
 		Ejecutor:          body.Ejecutor,
 		UsuarioID:         u.ID,
+		LugarID:           body.LugarID,
+		LugarLibre:        body.LugarLibre,
+		LugarTexto:        body.Lugar,
+		ZonaSupervisionID: body.ZonaSupervisionID,
+		Origen:            body.Origen,
+		CodigoExterno:     body.CodigoExterno,
+		UnidadSolicitante: body.UnidadSolicitante,
+		NivelRiesgo:       body.NivelRiesgo,
+		FechaProgramada:   body.FechaProgramada,
+		Cantidad:          body.Cantidad,
+		Subtipo:           body.Subtipo,
+		Clase:             body.Clase,
+		Personal:          body.Personal,
 	}
 
 	res, err := ctrl.uc.CrearActividad(c.Request.Context(), in)
@@ -387,4 +403,76 @@ func (ctrl *intervencionController) CrearAvance(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"id": body.ID})
+}
+
+// Taxonomia godoc
+// @Summary Activity class, type, risk and fictional staff catalogs
+// @Tags operacion
+// @Produce json
+// @Success 200 {object} dto.TaxonomiaActividadDTO
+// @Router /v1/operacion/taxonomia-actividad [get]
+func (ctrl *intervencionController) Taxonomia(c *gin.Context) {
+	if _, ok := middleware.UsuarioEn(c); !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "inicie sesión"})
+		return
+	}
+	out, err := ctrl.uc.Taxonomia(c.Request.Context())
+	if err != nil {
+		writeOperacionErr(c, &ctrl.logger, err)
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+// ListarPersonal godoc
+// @Summary List fictional staff assigned to an activity
+// @Tags operacion
+// @Produce json
+// @Success 200 {object} dto.PersonalLaborResponseDTO
+// @Router /v1/operacion/actividades/{id}/personal [get]
+func (ctrl *intervencionController) ListarPersonal(c *gin.Context) {
+	if _, ok := middleware.UsuarioEn(c); !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "inicie sesión"})
+		return
+	}
+	out, err := ctrl.uc.ListarPersonal(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		writeOperacionErr(c, &ctrl.logger, err)
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+// RegistrarPersonal godoc
+// @Summary Assign fictional staff to an activity without creating accounts
+// @Tags operacion
+// @Accept json
+// @Produce json
+// @Success 201 {object} dto.PersonalLaborResponseDTO
+// @Router /v1/operacion/actividades/{id}/personal [post]
+func (ctrl *intervencionController) RegistrarPersonal(c *gin.Context) {
+	u, ok := middleware.UsuarioEn(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "inicie sesión"})
+		return
+	}
+	var body requests.RegistrarPersonalRequest
+	if err := c.ShouldBindJSON(&body); err != nil && !errors.Is(err, io.EOF) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON inválido"})
+		return
+	}
+	nombres := body.Nombres
+	if strings.TrimSpace(body.NombreFicticio) != "" {
+		nombres = append(nombres, body.NombreFicticio)
+	}
+	out, err := ctrl.uc.RegistrarPersonal(c.Request.Context(), dto.RegistrarPersonalDTO{
+		ActividadID: c.Param("id"),
+		Nombres:     nombres,
+		ActorRol:    u.Rol,
+	})
+	if err != nil {
+		writeOperacionErr(c, &ctrl.logger, err)
+		return
+	}
+	c.JSON(http.StatusCreated, out)
 }

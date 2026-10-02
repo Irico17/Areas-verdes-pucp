@@ -29,20 +29,31 @@ type FiltroIntervencionesDTO struct {
 
 // CrearIntervencionDTO contains input parameters to create an activity.
 type CrearIntervencionDTO struct {
-	ID                string  `json:"id"`
-	Tipo              string  `json:"tipo"`
-	Titulo            string  `json:"titulo"`
-	Detalle           string  `json:"detalle"`
-	Lon               float64 `json:"lon"`
-	Lat               float64 `json:"lat"`
-	AreaFeatureID     string  `json:"area_feature_id"`
-	ZonaFeatureID     string  `json:"zona_feature_id"`
-	AssignedCapatazID string  `json:"assigned_capataz_id"`
-	ActorRol          string  `json:"actor_rol"`
-	Ejecutor          string  `json:"ejecutor"`
-	UsuarioID         int64   `json:"usuario_id"`
-	LugarID           string  `json:"lugar_id"`
-	ZonaSupervisionID string  `json:"zona_supervision_id"`
+	ID                string   `json:"id"`
+	Tipo              string   `json:"tipo"`
+	Titulo            string   `json:"titulo"`
+	Detalle           string   `json:"detalle"`
+	Lon               float64  `json:"lon"`
+	Lat               float64  `json:"lat"`
+	AreaFeatureID     string   `json:"area_feature_id"`
+	ZonaFeatureID     string   `json:"zona_feature_id"`
+	AssignedCapatazID string   `json:"assigned_capataz_id"`
+	ActorRol          string   `json:"actor_rol"`
+	Ejecutor          string   `json:"ejecutor"`
+	UsuarioID         int64    `json:"usuario_id"`
+	LugarID           string   `json:"lugar_id"`
+	ZonaSupervisionID string   `json:"zona_supervision_id"`
+	Origen            string   `json:"origen"`
+	CodigoExterno     string   `json:"codigo_externo"`
+	UnidadSolicitante string   `json:"unidad_solicitante"`
+	NivelRiesgo       string   `json:"nivel_riesgo"`
+	FechaProgramada   string   `json:"fecha_programada"`
+	Cantidad          *float64 `json:"cantidad"`
+	Subtipo           string   `json:"subtipo"`
+	Clase             string   `json:"clase"`
+	Personal          []string `json:"personal"`
+	LugarLibre        string   `json:"lugar_libre"`
+	LugarTexto        string   `json:"lugar"`
 }
 
 // CrearIntervencionResponseDTO represents the response for creating an activity.
@@ -114,6 +125,52 @@ type EventoTimelineDTO struct {
 type TimelineResponseDTO struct {
 	ActividadID string              `json:"actividad_id"`
 	Eventos     []EventoTimelineDTO `json:"eventos"`
+}
+
+// OpcionCatalogoDTO is a catalog code with its visible name.
+type OpcionCatalogoDTO struct {
+	Codigo string `json:"codigo"`
+	Nombre string `json:"nombre"`
+}
+
+// ClaseActividadDTO is the first level of the activity taxonomy and its types.
+type ClaseActividadDTO struct {
+	Codigo string              `json:"codigo"`
+	Nombre string              `json:"nombre"`
+	Tipos  []OpcionCatalogoDTO `json:"tipos"`
+}
+
+// PersonalFicticioDTO is a fictional name offered when creating an activity.
+type PersonalFicticioDTO struct {
+	ID             string `json:"id"`
+	NombreFicticio string `json:"nombre_ficticio"`
+}
+
+// TaxonomiaActividadDTO is the catalog payload for the create form.
+type TaxonomiaActividadDTO struct {
+	Clases   []ClaseActividadDTO   `json:"clases"`
+	Riesgos  []OpcionCatalogoDTO   `json:"riesgos"`
+	Origenes []OpcionCatalogoDTO   `json:"origenes"`
+	Personal []PersonalFicticioDTO `json:"personal"`
+}
+
+// PersonalLaborDTO is a fictional participant stored on an activity.
+type PersonalLaborDTO struct {
+	ID             string `json:"id"`
+	NombreFicticio string `json:"nombre_ficticio"`
+	RolCampo       string `json:"rol_campo"`
+}
+
+// PersonalLaborResponseDTO lists the fictional participants of an activity.
+type PersonalLaborResponseDTO struct {
+	Personal []PersonalLaborDTO `json:"personal"`
+}
+
+// RegistrarPersonalDTO adds fictional names to an activity. It does not create accounts.
+type RegistrarPersonalDTO struct {
+	ActividadID string
+	Nombres     []string
+	ActorRol    string
 }
 
 // CrearAvanceDTO contains input parameters for recording progress on an activity.

@@ -156,6 +156,17 @@ definitions:
           $ref: '#/definitions/dto.CatalogoItemDTO'
         type: array
     type: object
+  dto.ClaseActividadDTO:
+    properties:
+      codigo:
+        type: string
+      nombre:
+        type: string
+      tipos:
+        items:
+          $ref: '#/definitions/dto.OpcionCatalogoDTO'
+        type: array
+    type: object
   dto.CodigoHistoricoDTO:
     properties:
       codigo_anterior:
@@ -609,6 +620,13 @@ definitions:
       nombre:
         type: string
     type: object
+  dto.OpcionCatalogoDTO:
+    properties:
+      codigo:
+        type: string
+      nombre:
+        type: string
+    type: object
   dto.OrdenDTO:
     properties:
       actividad_id:
@@ -643,6 +661,29 @@ definitions:
         type: string
       rol:
         type: string
+    type: object
+  dto.PersonalFicticioDTO:
+    properties:
+      id:
+        type: string
+      nombre_ficticio:
+        type: string
+    type: object
+  dto.PersonalLaborDTO:
+    properties:
+      id:
+        type: string
+      nombre_ficticio:
+        type: string
+      rol_campo:
+        type: string
+    type: object
+  dto.PersonalLaborResponseDTO:
+    properties:
+      personal:
+        items:
+          $ref: '#/definitions/dto.PersonalLaborDTO'
+        type: array
     type: object
   dto.PodaDTO:
     properties:
@@ -1007,6 +1048,25 @@ definitions:
         type: string
       vidrio:
         type: integer
+    type: object
+  dto.TaxonomiaActividadDTO:
+    properties:
+      clases:
+        items:
+          $ref: '#/definitions/dto.ClaseActividadDTO'
+        type: array
+      origenes:
+        items:
+          $ref: '#/definitions/dto.OpcionCatalogoDTO'
+        type: array
+      personal:
+        items:
+          $ref: '#/definitions/dto.PersonalFicticioDTO'
+        type: array
+      riesgos:
+        items:
+          $ref: '#/definitions/dto.OpcionCatalogoDTO'
+        type: array
     type: object
   dto.TimelineResponseDTO:
     properties:
@@ -3719,6 +3779,31 @@ paths:
       summary: Update activity metadata from desktop form
       tags:
       - operacion
+  /v1/operacion/actividades/{id}/personal:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PersonalLaborResponseDTO'
+      summary: List fictional staff assigned to an activity
+      tags:
+      - operacion
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.PersonalLaborResponseDTO'
+      summary: Assign fictional staff to an activity without creating accounts
+      tags:
+      - operacion
   /v1/operacion/actividades/{id}/timeline:
     get:
       produces:
@@ -3741,6 +3826,18 @@ paths:
           schema:
             $ref: '#/definitions/dto.CapatacesResponseDTO'
       summary: List active capataces
+      tags:
+      - operacion
+  /v1/operacion/taxonomia-actividad:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TaxonomiaActividadDTO'
+      summary: Activity class, type, risk and fictional staff catalogs
       tags:
       - operacion
   /v1/ordenes:

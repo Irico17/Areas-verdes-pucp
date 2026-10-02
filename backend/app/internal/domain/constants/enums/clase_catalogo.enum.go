@@ -34,6 +34,11 @@ const (
 	ClaseCuartel ClaseCatalogo = "cuartel"
 	// ClaseSectorCapataz represents the 'sector_capataz' catalog class.
 	ClaseSectorCapataz ClaseCatalogo = "sector_capataz"
+	// ClaseNivelRiesgo represents the 'nivel_riesgo' catalog class.
+	// Medio is not seeded. A later catalog row does not need a CHECK migration.
+	ClaseNivelRiesgo ClaseCatalogo = "nivel_riesgo"
+	// ClaseSubtipoActividad is the second level of an activity class.
+	ClaseSubtipoActividad ClaseCatalogo = "subtipo_actividad"
 )
 
 // String returns the string representation of the catalog class.
@@ -59,6 +64,8 @@ func ClasesCatalogoValidas() []string {
 		string(ClaseSede),
 		string(ClaseCuartel),
 		string(ClaseSectorCapataz),
+		string(ClaseNivelRiesgo),
+		string(ClaseSubtipoActividad),
 	}
 }
 

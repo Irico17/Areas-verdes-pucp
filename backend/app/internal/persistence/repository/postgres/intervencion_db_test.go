@@ -203,3 +203,112 @@ func TestIntervencionRepository_MutacionesYEventos(t *testing.T) {
 		t.Fatalf("error al archivar: %v", err)
 	}
 }
+
+func TestAltaPersisteCamposYRechazaLoQueNoEstaEnCatalogo(t *testing.T) {
+	_, gdb := testutil.MigrarDBTemporal(t, "alta_rf30")
+	repo := NewIntervencionRepository(gdb)
+	ctx := context.Background()
+	id := "12345678-1111-4111-8111-111111111111"
+	cantidad := 4.0
+	in := entities.NuevaIntervencion{
+		ID:                id,
+		Tipo:              "riego",
+		Titulo:            "Riego del eje",
+		Detalle:           "Turno de la mañana",
+		Lon:               -77.08,
+		Lat:               -12.07,
+		ActorRol:          "coordinacion",
+		Ejecutor:          "propia",
+		Origen:            "interna",
+		CodigoExterno:     "CENT-2026-0001",
+		UnidadSolicitante: "Oficina de campus",
+		NivelRiesgo:       "alto",
+		FechaProgramada:   "2026-10-15",
+		Cantidad:          &cantidad,
+		Clase:             "riego",
+		Subtipo:           "riego_manual",
+		Personal:          []string{"Elsa Mamani", "Marco Huamán"},
+	}
+	feat, created, err := repo.Create(ctx, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !created {
+		t.Fatal("debía crear")
+	}
+	props := feat.Properties.(entities.ActividadProperties)
+	if props.Origen != "interna" || props.CodigoExterno == nil || *props.CodigoExterno != "CENT-2026-0001" {
+		t.Fatalf("origen %+v", props)
+	}
+	if props.UnidadSolicitante == nil || *props.UnidadSolicitante != "Oficina de campus" {
+		t.Fatalf("unidad %+v", props.UnidadSolicitante)
+	}
+	if props.NivelRiesgo == nil || *props.NivelRiesgo != "alto" || props.FechaProgramada == nil || *props.FechaProgramada != "2026-10-15" {
+		t.Fatalf("pedido %+v", props)
+	}
+	if props.Cantidad == nil || *props.Cantidad != 4 || props.Subtipo == nil || *props.Subtipo != "riego_manual" || props.Clase == nil || *props.Clase != "riego" {
+		t.Fatalf("taxonomía %+v", props)
+	}
+	if len(props.Personal) != 2 {
+		t.Fatalf("personal %+v", props.Personal)
+	}
+
+	otra, created, err := repo.Create(ctx, in)
+	if err != nil || created || otra.ID != id {
+		t.Fatalf("reintento created=%v err=%v", created, err)
+	}
+
+	medio := in
+	medio.ID = "12345678-2222-4222-8222-222222222222"
+	medio.NivelRiesgo = "medio"
+	if _, _, err := repo.Create(ctx, medio); err == nil {
+		t.Fatal("medio no está en el catálogo")
+	}
+	libre := in
+	libre.ID = "12345678-3333-4333-8333-333333333333"
+	libre.NivelRiesgo = "bajo"
+	libre.LugarTexto = "un jardín nuevo"
+	if _, _, err := repo.Create(ctx, libre); err == nil {
+		t.Fatal("aceptó un lugar libre")
+	}
+	ajeno := in
+	ajeno.ID = "12345678-4444-4444-8444-444444444444"
+	ajeno.NivelRiesgo = "bajo"
+	ajeno.Subtipo = "poda_formacion"
+	if _, _, err := repo.Create(ctx, ajeno); err == nil {
+		t.Fatal("aceptó un tipo de otra clase")
+	}
+
+	tax, err := repo.Taxonomia(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, riesgo := range tax.Riesgos {
+		if riesgo.Codigo == "medio" {
+			t.Fatal("el catálogo ofrece medio")
+		}
+	}
+	if len(tax.Riesgos) != 2 || len(tax.Personal) != 6 {
+		t.Fatalf("taxonomía riesgos=%d personal=%d", len(tax.Riesgos), len(tax.Personal))
+	}
+	var riego bool
+	for _, clase := range tax.Clases {
+		if clase.Codigo == "riego" && len(clase.Tipos) == 4 {
+			riego = true
+		}
+		if clase.Codigo == "fitosanitario" && len(clase.Tipos) != 0 {
+			t.Fatal("fitosanitario no trae tipos en la hoja")
+		}
+	}
+	if !riego {
+		t.Fatal("falta la clase riego con sus tipos")
+	}
+
+	filas, err := repo.RegistrarPersonal(ctx, id, []string{"Pedro Salas"})
+	if err != nil || len(filas) != 3 {
+		t.Fatalf("personal %d err=%v", len(filas), err)
+	}
+	if _, err := repo.RegistrarPersonal(ctx, id, []string{"Alguien Real"}); err == nil {
+		t.Fatal("aceptó un nombre que no es ficticio")
+	}
+}

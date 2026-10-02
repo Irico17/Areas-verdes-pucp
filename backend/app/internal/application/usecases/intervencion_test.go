@@ -110,6 +110,18 @@ func (catalogoSinItems) Renombrar(context.Context, int64, string, int64) (*entit
 	return nil, nil
 }
 
+func (m *mockIntervencionRepo) Taxonomia(context.Context) (entities.TaxonomiaActividad, error) {
+	return entities.TaxonomiaActividad{}, nil
+}
+
+func (m *mockIntervencionRepo) ListarPersonal(context.Context, string) ([]entities.PersonalLabor, error) {
+	return nil, nil
+}
+
+func (m *mockIntervencionRepo) RegistrarPersonal(context.Context, string, []string) ([]entities.PersonalLabor, error) {
+	return nil, nil
+}
+
 func (m *mockIntervencionRepo) One(ctx context.Context, id string) (entities.Feature, error) {
 	if m.oneFunc != nil {
 		return m.oneFunc(ctx, id)
@@ -190,6 +202,98 @@ func TestPuedeCerrarTercerizada(t *testing.T) {
 	}
 	if PuedeCerrar(string(enums.EjecutorPropia), false, true) != nil {
 		t.Fatal("la propia con ejecución sí cierra")
+	}
+}
+
+type catalogoMapa struct {
+	ok map[string]bool
+}
+
+func (c catalogoMapa) List(context.Context, string, bool) ([]entities.CatalogoItem, error) {
+	return nil, nil
+}
+func (c catalogoMapa) Activo(_ context.Context, clase, codigo string) (bool, error) {
+	return c.ok[clase+"/"+codigo], nil
+}
+func (c catalogoMapa) Create(context.Context, string, string, string) (*entities.CatalogoItem, error) {
+	return nil, nil
+}
+func (c catalogoMapa) Deactivate(context.Context, int64, int64) error { return nil }
+func (c catalogoMapa) Renombrar(context.Context, int64, string, int64) (*entities.CatalogoItem, error) {
+	return nil, nil
+}
+
+func TestAltaRechazaRiesgoFueraDeCatalogoYLugarLibre(t *testing.T) {
+	catalogo := catalogoMapa{ok: map[string]bool{
+		"nivel_riesgo/bajo": true,
+		"nivel_riesgo/alto": true,
+	}}
+	uc := NewIntervencionUseCase(&mockIntervencionRepo{}, catalogo)
+	base := dto.CrearIntervencionDTO{
+		ActorRol: "coordinacion",
+		ID:       "11111111-1111-4111-8111-111111111111",
+		Tipo:     "riego",
+		Titulo:   "Riego",
+		Lon:      -77.08,
+		Lat:      -12.07,
+	}
+	medio := base
+	medio.NivelRiesgo = "medio"
+	if _, err := uc.CrearActividad(context.Background(), medio); err == nil {
+		t.Fatal("medio no está en el catálogo")
+	}
+	libre := base
+	libre.LugarTexto = "jardín inventado"
+	if _, err := uc.CrearActividad(context.Background(), libre); err == nil {
+		t.Fatal("el lugar libre no se acepta")
+	}
+}
+
+func TestAltaEntregaLosCamposAlRepositorio(t *testing.T) {
+	var got entities.NuevaIntervencion
+	repo := &mockIntervencionRepo{
+		createFunc: func(_ context.Context, in entities.NuevaIntervencion) (entities.Feature, bool, error) {
+			got = in
+			return entities.Feature{ID: in.ID}, true, nil
+		},
+	}
+	catalogo := catalogoMapa{ok: map[string]bool{
+		"fuente/interna":                 true,
+		"nivel_riesgo/alto":              true,
+		"clase_actividad/riego":          true,
+		"subtipo_actividad/riego_manual": true,
+	}}
+	cantidad := 4.0
+	uc := NewIntervencionUseCase(repo, catalogo)
+	_, err := uc.CrearActividad(context.Background(), dto.CrearIntervencionDTO{
+		ActorRol:          "coordinacion",
+		ID:                "11111111-1111-4111-8111-111111111111",
+		Tipo:              "riego",
+		Titulo:            "Riego del eje",
+		Lon:               -77.08,
+		Lat:               -12.07,
+		Origen:            "interna",
+		CodigoExterno:     "CENT-2026-0001",
+		UnidadSolicitante: "Oficina de campus",
+		NivelRiesgo:       "alto",
+		FechaProgramada:   "2026-10-15",
+		Cantidad:          &cantidad,
+		Clase:             "riego",
+		Subtipo:           "riego_manual",
+		Personal:          []string{"Elsa Mamani"},
+		LugarID:           "12",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Origen != "interna" || got.CodigoExterno != "CENT-2026-0001" || got.UnidadSolicitante != "Oficina de campus" {
+		t.Fatalf("texto %+v", got)
+	}
+	if got.NivelRiesgo != "alto" || got.FechaProgramada != "2026-10-15" || got.Cantidad == nil || *got.Cantidad != 4 {
+		t.Fatalf("pedido %+v", got)
+	}
+	if got.Clase != "riego" || got.Subtipo != "riego_manual" || len(got.Personal) != 1 {
+		t.Fatalf("taxonomía %+v", got)
 	}
 }
 

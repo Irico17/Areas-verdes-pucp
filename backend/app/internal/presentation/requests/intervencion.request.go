@@ -3,17 +3,36 @@ package requests
 
 // CrearIntervencionRequest represents the payload for POST /operacion/actividades.
 type CrearIntervencionRequest struct {
-	ID                string  `json:"id"`
-	Tipo              string  `json:"tipo"`
-	Titulo            string  `json:"titulo"`
-	Detalle           string  `json:"detalle"`
-	Lon               float64 `json:"lon"`
-	Lat               float64 `json:"lat"`
-	AreaFeatureID     string  `json:"area_feature_id"`
-	ZonaFeatureID     string  `json:"zona_feature_id"`
-	AssignedCapatazID string  `json:"assigned_capataz_id"`
-	ActorRol          string  `json:"actor_rol"`
-	Ejecutor          string  `json:"ejecutor"`
+	ID                string   `json:"id"`
+	Tipo              string   `json:"tipo"`
+	Titulo            string   `json:"titulo"`
+	Detalle           string   `json:"detalle"`
+	Lon               float64  `json:"lon"`
+	Lat               float64  `json:"lat"`
+	AreaFeatureID     string   `json:"area_feature_id"`
+	ZonaFeatureID     string   `json:"zona_feature_id"`
+	AssignedCapatazID string   `json:"assigned_capataz_id"`
+	ActorRol          string   `json:"actor_rol"`
+	Ejecutor          string   `json:"ejecutor"`
+	LugarID           string   `json:"lugar_id"`
+	LugarLibre        string   `json:"lugar_libre"`
+	Lugar             string   `json:"lugar"`
+	ZonaSupervisionID string   `json:"zona_supervision_id"`
+	Origen            string   `json:"origen"`
+	CodigoExterno     string   `json:"codigo_externo"`
+	UnidadSolicitante string   `json:"unidad_solicitante"`
+	NivelRiesgo       string   `json:"nivel_riesgo"`
+	FechaProgramada   string   `json:"fecha_programada"`
+	Cantidad          *float64 `json:"cantidad"`
+	Subtipo           string   `json:"subtipo"`
+	Clase             string   `json:"clase"`
+	Personal          []string `json:"personal"`
+}
+
+// RegistrarPersonalRequest adds fictional names to an existing activity.
+type RegistrarPersonalRequest struct {
+	NombreFicticio string   `json:"nombre_ficticio"`
+	Nombres        []string `json:"nombres"`
 }
 
 // AsignarIntervencionRequest represents the payload for PATCH /operacion/actividades/:id/asignacion.

@@ -3350,6 +3350,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/operacion/actividades/{id}/personal": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "List fictional staff assigned to an activity",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PersonalLaborResponseDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "Assign fictional staff to an activity without creating accounts",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PersonalLaborResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/operacion/actividades/{id}/timeline": {
             "get": {
                 "produces": [
@@ -3383,6 +3422,25 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.CapatacesResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/operacion/taxonomia-actividad": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "Activity class, type, risk and fictional staff catalogs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TaxonomiaActividadDTO"
                         }
                     }
                 }
@@ -4774,6 +4832,23 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ClaseActividadDTO": {
+            "type": "object",
+            "properties": {
+                "codigo": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "tipos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.OpcionCatalogoDTO"
+                    }
+                }
+            }
+        },
         "dto.CodigoHistoricoDTO": {
             "type": "object",
             "properties": {
@@ -5472,6 +5547,17 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.OpcionCatalogoDTO": {
+            "type": "object",
+            "properties": {
+                "codigo": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.OrdenDTO": {
             "type": "object",
             "properties": {
@@ -5523,6 +5609,42 @@ const docTemplate = `{
                 },
                 "rol": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.PersonalFicticioDTO": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "nombre_ficticio": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PersonalLaborDTO": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "nombre_ficticio": {
+                    "type": "string"
+                },
+                "rol_campo": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PersonalLaborResponseDTO": {
+            "type": "object",
+            "properties": {
+                "personal": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PersonalLaborDTO"
+                    }
                 }
             }
         },
@@ -6080,6 +6202,35 @@ const docTemplate = `{
                 },
                 "vidrio": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.TaxonomiaActividadDTO": {
+            "type": "object",
+            "properties": {
+                "clases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ClaseActividadDTO"
+                    }
+                },
+                "origenes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.OpcionCatalogoDTO"
+                    }
+                },
+                "personal": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PersonalFicticioDTO"
+                    }
+                },
+                "riesgos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.OpcionCatalogoDTO"
+                    }
                 }
             }
         },

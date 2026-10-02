@@ -416,6 +416,18 @@ func (mockOperacionRoutesUC) CrearAvance(_ context.Context, _ dto.CrearAvanceDTO
 	return nil
 }
 
+func (mockOperacionRoutesUC) Taxonomia(context.Context) (dto.TaxonomiaActividadDTO, error) {
+	return dto.TaxonomiaActividadDTO{}, nil
+}
+
+func (mockOperacionRoutesUC) ListarPersonal(context.Context, string) (dto.PersonalLaborResponseDTO, error) {
+	return dto.PersonalLaborResponseDTO{Personal: []dto.PersonalLaborDTO{}}, nil
+}
+
+func (mockOperacionRoutesUC) RegistrarPersonal(context.Context, dto.RegistrarPersonalDTO) (dto.PersonalLaborResponseDTO, error) {
+	return dto.PersonalLaborResponseDTO{Personal: []dto.PersonalLaborDTO{}}, nil
+}
+
 type mockSolicitudRoutesUC struct{}
 
 func (mockSolicitudRoutesUC) Listar(_ context.Context) (*dto.SolicitudesResponseDTO, error) {
@@ -1811,6 +1823,12 @@ func TestRutasOperacion_SinAutenticacionRetorna401(t *testing.T) {
 		{http.MethodPatch, "/areas-verdes/v1/operacion/actividades/1/ficha"},
 		{http.MethodPost, "/api/v1/operacion/actividades/1/avances"},
 		{http.MethodPost, "/areas-verdes/v1/operacion/actividades/1/avances"},
+		{http.MethodGet, "/api/v1/operacion/taxonomia-actividad"},
+		{http.MethodGet, "/areas-verdes/v1/operacion/taxonomia-actividad"},
+		{http.MethodGet, "/api/v1/operacion/actividades/1/personal"},
+		{http.MethodGet, "/areas-verdes/v1/operacion/actividades/1/personal"},
+		{http.MethodPost, "/api/v1/operacion/actividades/1/personal"},
+		{http.MethodPost, "/areas-verdes/v1/operacion/actividades/1/personal"},
 	}
 
 	for _, r := range rutas {
@@ -1854,6 +1872,8 @@ func TestRutasOperacion_PermisosPorRol(t *testing.T) {
 		// Capataz no puede crear, asignar ni archivar (requieren validar)
 		{http.MethodPost, "/api/v1/operacion/actividades", "token-norte", `{"id":"11111111-1111-4111-8111-111111111111","tipo":"riego","titulo":"Riego"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/areas-verdes/v1/operacion/actividades", "token-norte", `{"id":"11111111-1111-4111-8111-111111111111","tipo":"riego","titulo":"Riego"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/personal", "token-norte", `{"nombre_ficticio":"Elsa Mamani"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodGet, "/api/v1/operacion/taxonomia-actividad", "token-norte", "", 200, ""},
 		{http.MethodPatch, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/asignacion", "token-norte", `{"capataz_id":"cap-sur"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/archivar", "token-norte", `{"motivo":"duplicada"}`, 403, "su rol no tiene ese permiso"},
 
@@ -1865,6 +1885,8 @@ func TestRutasOperacion_PermisosPorRol(t *testing.T) {
 		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/archivar", "token-coordinacion", `{"motivo":"duplicada"}`, 200, ""},
 		{http.MethodPatch, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/ficha", "token-coordinacion", `{"comentario":"test"}`, 200, ""},
 		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/avances", "token-coordinacion", `{"id":"22222222-2222-4222-8222-222222222222","fecha":"2026-09-28","area_feature_id":"AV-0001"}`, 201, ""},
+		{http.MethodPost, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/personal", "token-coordinacion", `{"nombre_ficticio":"Elsa Mamani"}`, 201, ""},
+		{http.MethodGet, "/api/v1/operacion/actividades/11111111-1111-4111-8111-111111111111/personal", "token-coordinacion", "", 200, ""},
 
 		// Admin: todos los permisos
 		{http.MethodGet, "/api/v1/operacion/actividades", "token-admin", "", 200, ""},

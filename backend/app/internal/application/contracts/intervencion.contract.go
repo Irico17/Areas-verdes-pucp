@@ -21,6 +21,9 @@ type IIntervencionRepository interface {
 	GuardarFicha(ctx context.Context, in entities.FichaIntervencion) error
 	CrearAvance(ctx context.Context, in entities.NuevoAvance) error
 	One(ctx context.Context, id string) (entities.Feature, error)
+	Taxonomia(ctx context.Context) (entities.TaxonomiaActividad, error)
+	ListarPersonal(ctx context.Context, actividadID string) ([]entities.PersonalLabor, error)
+	RegistrarPersonal(ctx context.Context, actividadID string, nombres []string) ([]entities.PersonalLabor, error)
 }
 
 // IIntervencionUseCase defines business operations for interventions, lifecycle, and progress.
@@ -34,4 +37,7 @@ type IIntervencionUseCase interface {
 	Timeline(ctx context.Context, id string) (dto.TimelineResponseDTO, error)
 	GuardarFicha(ctx context.Context, in dto.FichaIntervencionDTO) error
 	CrearAvance(ctx context.Context, in dto.CrearAvanceDTO) error
+	Taxonomia(ctx context.Context) (dto.TaxonomiaActividadDTO, error)
+	ListarPersonal(ctx context.Context, actividadID string) (dto.PersonalLaborResponseDTO, error)
+	RegistrarPersonal(ctx context.Context, in dto.RegistrarPersonalDTO) (dto.PersonalLaborResponseDTO, error)
 }

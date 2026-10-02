@@ -28,7 +28,19 @@ SELECT a.id::text, a.tipo, a.estado, a.titulo, a.detalle,
             FROM lugares l WHERE l.id = a.lugar_id),
          (SELECT ST_AsGeoJSON(ST_PointOnSurface(z.geom), 6)
             FROM zonas_supervision z WHERE z.id = a.zona_supervision_id)
-       )
+       ),
+       COALESCE(a.origen, 'interna'),
+       a.codigo_externo,
+       a.unidad_solicitante,
+       a.nivel_riesgo,
+       to_char(a.fecha_programada, 'YYYY-MM-DD'),
+       a.cantidad::float8,
+       a.subtipo,
+       a.clase_codigo,
+       COALESCE((
+         SELECT json_agg(p.nombre_ficticio ORDER BY p.nombre_ficticio)::text
+         FROM personal_labor p WHERE p.actividad_id = a.id
+       ), '[]')
 FROM actividades a
 LEFT JOIN capataces c ON c.id = a.assigned_capataz_id
 `
@@ -154,22 +166,40 @@ func (r *intervencionRepository) Create(ctx context.Context, in entities.NuevaIn
 		if nTipo != 1 {
 			return domainErrors.InputError{Reason: "tipo no está en el catálogo activo"}
 		}
+		if err := validarAltaCatalogo(tx, in); err != nil {
+			return err
+		}
 		sinPunto := strings.TrimSpace(in.LugarID) != "" || strings.TrimSpace(in.ZonaSupervisionID) != ""
+		var cantidad any
+		if in.Cantidad != nil {
+			cantidad = *in.Cantidad
+		}
 		if err := tx.Exec(`
 			INSERT INTO actividades (
 			  id, tipo, estado, titulo, detalle, area_feature_id, zona_feature_id,
-			  assigned_capataz_id, geom, ejecutor, lugar_id, zona_supervision_id
+			  assigned_capataz_id, geom, ejecutor, lugar_id, zona_supervision_id,
+			  origen, codigo_externo, unidad_solicitante, nivel_riesgo, fecha_programada,
+			  cantidad, subtipo, clase_codigo
 			) VALUES (
 			  $1, $2, 'pendiente', $3, $4, NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''),
 			  CASE WHEN $11 THEN NULL ELSE ST_SetSRID(ST_MakePoint($8, $9), 4326) END,
 			  $10,
 			  (CASE WHEN $12 ~ '^[0-9]+$' THEN $12 END)::bigint,
-			  (SELECT id FROM zonas_supervision WHERE codigo = NULLIF($13, '') LIMIT 1)
+			  (SELECT id FROM zonas_supervision WHERE codigo = NULLIF($13, '') LIMIT 1),
+			  COALESCE(NULLIF($14, ''), 'interna'),
+			  NULLIF($15, ''), NULLIF($16, ''), NULLIF($17, ''), NULLIF($18, '')::date,
+			  $19, NULLIF($20, ''), NULLIF($21, '')
 			)`,
 			in.ID, in.Tipo, in.Titulo, in.Detalle, in.AreaFeatureID, in.ZonaFeatureID,
 			in.AssignedCapatazID, in.Lon, in.Lat, in.Ejecutor, sinPunto && in.Lon == 0 && in.Lat == 0,
 			strings.TrimSpace(in.LugarID), strings.TrimSpace(in.ZonaSupervisionID),
+			strings.TrimSpace(in.Origen), strings.TrimSpace(in.CodigoExterno), strings.TrimSpace(in.UnidadSolicitante),
+			strings.TrimSpace(in.NivelRiesgo), strings.TrimSpace(in.FechaProgramada), cantidad,
+			strings.TrimSpace(in.Subtipo), strings.TrimSpace(in.Clase),
 		).Error; err != nil {
+			return err
+		}
+		if err := insertarPersonal(tx, in.ID, in.Personal); err != nil {
 			return err
 		}
 		if err := insertEventoDB(tx, in.ID, "creada", "pendiente", in.AssignedCapatazID, in.ActorRol, "Alta desde el mapa", in.UsuarioID); err != nil {
@@ -503,11 +533,20 @@ func lockActividadDB(tx *gorm.DB, id string) (lockedActividad, error) {
 func loadSavedActividad(tx *gorm.DB, id string) (usecases.SavedPayload, bool, error) {
 	var saved usecases.SavedPayload
 	var cap, area, zona sql.NullString
+	var cantidad sql.NullFloat64
+	var origen, codigo, unidad, riesgo, fecha, subtipo, clase, lugar, zonaCod, personal string
 	err := tx.Raw(`
 		SELECT tipo, titulo, detalle, assigned_capataz_id, area_feature_id, zona_feature_id,
-		       COALESCE(ST_X(geom), 0), COALESCE(ST_Y(geom), 0), created_at, COALESCE(ejecutor, 'propia')
+		       COALESCE(ST_X(geom), 0), COALESCE(ST_Y(geom), 0), created_at, COALESCE(ejecutor, 'propia'),
+		       COALESCE(origen, 'interna'), COALESCE(codigo_externo, ''), COALESCE(unidad_solicitante, ''),
+		       COALESCE(nivel_riesgo, ''), COALESCE(to_char(fecha_programada, 'YYYY-MM-DD'), ''),
+		       cantidad::float8, COALESCE(subtipo, ''), COALESCE(clase_codigo, ''),
+		       COALESCE(lugar_id::text, ''),
+		       COALESCE((SELECT z.codigo FROM zonas_supervision z WHERE z.id = actividades.zona_supervision_id), ''),
+		       COALESCE((SELECT string_agg(p.nombre_ficticio, '|' ORDER BY p.nombre_ficticio) FROM personal_labor p WHERE p.actividad_id = actividades.id), '')
 		FROM actividades WHERE id = $1`, id).Row().Scan(
 		&saved.Tipo, &saved.Titulo, &saved.Detalle, &cap, &area, &zona, &saved.Lon, &saved.Lat, &saved.CreatedAt, &saved.Ejecutor,
+		&origen, &codigo, &unidad, &riesgo, &fecha, &cantidad, &subtipo, &clase, &lugar, &zonaCod, &personal,
 	)
 	if err == sql.ErrNoRows {
 		return usecases.SavedPayload{}, false, nil
@@ -523,6 +562,22 @@ func loadSavedActividad(tx *gorm.DB, id string) (usecases.SavedPayload, bool, er
 	}
 	if zona.Valid {
 		saved.ZonaFeatureID = zona.String
+	}
+	saved.Origen = origen
+	saved.CodigoExterno = codigo
+	saved.UnidadSolicitante = unidad
+	saved.NivelRiesgo = riesgo
+	saved.FechaProgramada = fecha
+	if cantidad.Valid {
+		n := cantidad.Float64
+		saved.Cantidad = &n
+	}
+	saved.Subtipo = subtipo
+	saved.Clase = clase
+	saved.LugarID = lugar
+	saved.ZonaSupervisionID = zonaCod
+	if personal != "" {
+		saved.Personal = strings.Split(personal, "|")
 	}
 	return saved, true, nil
 }

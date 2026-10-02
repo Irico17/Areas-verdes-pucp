@@ -1,0 +1,63 @@
+# Flujo o2-alta-actividad. Paths nuevos. El POST de actividades ya está en operacion.yaml.
+/api/v1/operacion/taxonomia-actividad:
+  get:
+    tags: [operacion]
+    summary: Clase, tipo, riesgo, origen y personal ficticio para el alta.
+    description: >
+      El riesgo ofrece solo los ítems activos del catálogo. Hoy son bajo y alto.
+      Medio no se siembra. Agregarlo es un ítem de catálogo, sin migración de CHECK.
+    responses:
+      "200":
+        description: Catálogos del alta
+      "401":
+        description: Sin sesión
+/api/v1/operacion/actividades/{id}/personal:
+  get:
+    tags: [operacion]
+    summary: Personal ficticio ya asignado a la actividad. No son cuentas.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Nombres ficticios
+      "401":
+        description: Sin sesión
+      "404":
+        description: La actividad no existe
+  post:
+    tags: [operacion]
+    summary: Asigna nombres ficticios. No crea cuentas.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              nombre_ficticio:
+                type: string
+              nombres:
+                type: array
+                items:
+                  type: string
+    responses:
+      "201":
+        description: Personal guardado
+      "400":
+        description: El nombre no está en el catálogo ficticio
+      "401":
+        description: Sin sesión
+      "403":
+        description: El capataz no crea ni asigna personal en el alta
