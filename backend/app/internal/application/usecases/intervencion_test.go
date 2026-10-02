@@ -18,6 +18,7 @@ type mockIntervencionRepo struct {
 	createFunc       func(ctx context.Context, in entities.NuevaIntervencion) (entities.Feature, bool, error)
 	assignFunc       func(ctx context.Context, in entities.AsignarIntervencion) (entities.Feature, error)
 	setEstadoFunc    func(ctx context.Context, in entities.CambiarEstadoIntervencion) (entities.Feature, error)
+	estadoActualFunc func(ctx context.Context, id string) (string, error)
 	archiveFunc      func(ctx context.Context, in entities.ArchivarIntervencion) error
 	timelineFunc     func(ctx context.Context, id string) ([]entities.ActividadEvento, error)
 	guardarFichaFunc func(ctx context.Context, in entities.FichaIntervencion) error
@@ -60,6 +61,13 @@ func (m *mockIntervencionRepo) SetEstado(ctx context.Context, in entities.Cambia
 	return entities.Feature{ID: in.ID}, nil
 }
 
+func (m *mockIntervencionRepo) EstadoActual(ctx context.Context, id string) (string, error) {
+	if m.estadoActualFunc != nil {
+		return m.estadoActualFunc(ctx, id)
+	}
+	return "pendiente", nil
+}
+
 func (m *mockIntervencionRepo) Archive(ctx context.Context, in entities.ArchivarIntervencion) error {
 	if m.archiveFunc != nil {
 		return m.archiveFunc(ctx, in)
@@ -88,6 +96,20 @@ func (m *mockIntervencionRepo) CrearAvance(ctx context.Context, in entities.Nuev
 	return nil
 }
 
+type catalogoSinItems struct{}
+
+func (catalogoSinItems) List(context.Context, string, bool) ([]entities.CatalogoItem, error) {
+	return nil, nil
+}
+func (catalogoSinItems) Activo(context.Context, string, string) (bool, error) { return false, nil }
+func (catalogoSinItems) Create(context.Context, string, string, string) (*entities.CatalogoItem, error) {
+	return nil, nil
+}
+func (catalogoSinItems) Deactivate(context.Context, int64, int64) error { return nil }
+func (catalogoSinItems) Renombrar(context.Context, int64, string, int64) (*entities.CatalogoItem, error) {
+	return nil, nil
+}
+
 func (m *mockIntervencionRepo) One(ctx context.Context, id string) (entities.Feature, error) {
 	if m.oneFunc != nil {
 		return m.oneFunc(ctx, id)
@@ -96,7 +118,7 @@ func (m *mockIntervencionRepo) One(ctx context.Context, id string) (entities.Fea
 }
 
 func TestValidateCreateCapatazProhibido(t *testing.T) {
-	uc := NewIntervencionUseCase(&mockIntervencionRepo{})
+	uc := NewIntervencionUseCase(&mockIntervencionRepo{}, catalogoSinItems{})
 	_, err := uc.CrearActividad(context.Background(), dto.CrearIntervencionDTO{
 		ActorRol: "capataz",
 		ID:       "11111111-1111-4111-8111-111111111111",
@@ -111,7 +133,7 @@ func TestValidateCreateCapatazProhibido(t *testing.T) {
 }
 
 func TestValidateQueryCapatazSinEquipo(t *testing.T) {
-	uc := NewIntervencionUseCase(&mockIntervencionRepo{})
+	uc := NewIntervencionUseCase(&mockIntervencionRepo{}, catalogoSinItems{})
 	_, err := uc.ListarActividades(context.Background(), dto.FiltroIntervencionesDTO{
 		Rol:          "capataz",
 		SoloAbiertas: true,
@@ -149,7 +171,7 @@ func TestSamePayload(t *testing.T) {
 
 func TestAltaPorLugarSinPin(t *testing.T) {
 	repo := &mockIntervencionRepo{}
-	uc := NewIntervencionUseCase(repo)
+	uc := NewIntervencionUseCase(repo, catalogoSinItems{})
 	_, err := uc.CrearActividad(context.Background(), dto.CrearIntervencionDTO{
 		ActorRol: "coordinacion",
 		ID:       "11111111-1111-4111-8111-111111111111",
@@ -172,7 +194,7 @@ func TestPuedeCerrarTercerizada(t *testing.T) {
 }
 
 func TestPuntoFuera(t *testing.T) {
-	uc := NewIntervencionUseCase(&mockIntervencionRepo{})
+	uc := NewIntervencionUseCase(&mockIntervencionRepo{}, catalogoSinItems{})
 	_, err := uc.CrearActividad(context.Background(), dto.CrearIntervencionDTO{
 		ActorRol: "coordinacion",
 		ID:       "11111111-1111-4111-8111-111111111111",
@@ -195,7 +217,7 @@ func TestListarCapataces(t *testing.T) {
 			}, nil
 		},
 	}
-	uc := NewIntervencionUseCase(repo)
+	uc := NewIntervencionUseCase(repo, catalogoSinItems{})
 	res, err := uc.ListarCapataces(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -206,7 +228,7 @@ func TestListarCapataces(t *testing.T) {
 }
 
 func TestAsignarActividadValidacion(t *testing.T) {
-	uc := NewIntervencionUseCase(&mockIntervencionRepo{})
+	uc := NewIntervencionUseCase(&mockIntervencionRepo{}, catalogoSinItems{})
 	// Capataz actor cannot assign
 	_, err := uc.AsignarActividad(context.Background(), dto.AsignarIntervencionDTO{
 		ID:        "11111111-1111-4111-8111-111111111111",
@@ -230,7 +252,7 @@ func TestAsignarActividadValidacion(t *testing.T) {
 }
 
 func TestCambiarEstadoValidacion(t *testing.T) {
-	uc := NewIntervencionUseCase(&mockIntervencionRepo{})
+	uc := NewIntervencionUseCase(&mockIntervencionRepo{}, catalogoSinItems{})
 	// Capataz cannot close or cancel
 	for _, st := range []string{"cerrada", "cancelada"} {
 		_, err := uc.CambiarEstado(context.Background(), dto.CambiarEstadoDTO{
@@ -258,8 +280,85 @@ func TestCambiarEstadoValidacion(t *testing.T) {
 	}
 }
 
+type catalogoEstadosFijos struct{}
+
+func (catalogoEstadosFijos) List(context.Context, string, bool) ([]entities.CatalogoItem, error) {
+	return []entities.CatalogoItem{
+		{Codigo: "pendiente", Nombre: "Por iniciar", Activo: true},
+		{Codigo: "en_proceso", Nombre: "En proceso", Activo: true},
+		{Codigo: "ejecutado", Nombre: "Ejecutado", Activo: true},
+		{Codigo: "cerrada", Nombre: "Cerrado", Activo: true},
+		{Codigo: "bloqueada", Nombre: "Bloqueada", Activo: false},
+	}, nil
+}
+func (catalogoEstadosFijos) Activo(context.Context, string, string) (bool, error) {
+	return false, nil
+}
+func (catalogoEstadosFijos) Create(context.Context, string, string, string) (*entities.CatalogoItem, error) {
+	return nil, nil
+}
+func (catalogoEstadosFijos) Deactivate(context.Context, int64, int64) error { return nil }
+func (catalogoEstadosFijos) Renombrar(context.Context, int64, string, int64) (*entities.CatalogoItem, error) {
+	return nil, nil
+}
+
+func TestCambiarEstadoContraCatalogo(t *testing.T) {
+	id := "11111111-1111-4111-8111-111111111111"
+	catalogo := catalogoEstadosFijos{}
+
+	t.Run("desconocido", func(t *testing.T) {
+		uc := NewIntervencionUseCase(&mockIntervencionRepo{}, catalogo)
+		_, err := uc.CambiarEstado(context.Background(), dto.CambiarEstadoDTO{
+			ID: id, Estado: "inventado", ActorRol: "coordinacion",
+		})
+		var input domainErrors.InputError
+		if !errors.As(err, &input) || input.Reason != "el estado no está activo en el catálogo" {
+			t.Fatalf("se esperaba 400 de catálogo, obtuve %v", err)
+		}
+	})
+
+	t.Run("no salta el cierre desde por iniciar", func(t *testing.T) {
+		uc := NewIntervencionUseCase(&mockIntervencionRepo{
+			estadoActualFunc: func(context.Context, string) (string, error) { return "pendiente", nil },
+		}, catalogo)
+		_, err := uc.CambiarEstado(context.Background(), dto.CambiarEstadoDTO{
+			ID: id, Estado: "cerrada", ActorRol: "coordinacion",
+		})
+		var input domainErrors.InputError
+		if !errors.As(err, &input) || input.Reason != "esa transición de estado no está permitida" {
+			t.Fatalf("se esperaba transición rechazada, obtuve %v", err)
+		}
+	})
+
+	t.Run("catalogo y transicion", func(t *testing.T) {
+		uc := NewIntervencionUseCase(&mockIntervencionRepo{
+			estadoActualFunc: func(context.Context, string) (string, error) { return "en_proceso", nil },
+			setEstadoFunc: func(_ context.Context, in entities.CambiarEstadoIntervencion) (entities.Feature, error) {
+				return entities.Feature{
+					Type: "Feature",
+					ID:   in.ID,
+					Properties: entities.ActividadProperties{
+						ID:     in.ID,
+						Estado: in.Estado,
+					},
+				}, nil
+			},
+		}, catalogo)
+		feat, err := uc.CambiarEstado(context.Background(), dto.CambiarEstadoDTO{
+			ID: id, Estado: "ejecutado", ActorRol: "coordinacion",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		props, ok := feat.Properties.(entities.ActividadProperties)
+		if !ok || props.EstadoEtiqueta != "Ejecutado" || props.Estado != "ejecutado" {
+			t.Fatalf("se esperaba etiqueta Ejecutado, obtuve %+v", feat.Properties)
+		}
+	})
+}
+
 func TestArchivarValidacion(t *testing.T) {
-	uc := NewIntervencionUseCase(&mockIntervencionRepo{})
+	uc := NewIntervencionUseCase(&mockIntervencionRepo{}, catalogoSinItems{})
 	// Capataz cannot archive
 	_, err := uc.ArchivarActividad(context.Background(), dto.ArchivarIntervencionDTO{
 		ID:       "11111111-1111-4111-8111-111111111111",
@@ -284,7 +383,7 @@ func TestArchivarValidacion(t *testing.T) {
 }
 
 func TestTimelineValidacion(t *testing.T) {
-	uc := NewIntervencionUseCase(&mockIntervencionRepo{})
+	uc := NewIntervencionUseCase(&mockIntervencionRepo{}, catalogoSinItems{})
 	// Invalid UUID fails
 	_, err := uc.Timeline(context.Background(), "no-uuid")
 	var input domainErrors.InputError
@@ -294,7 +393,7 @@ func TestTimelineValidacion(t *testing.T) {
 }
 
 func TestGuardarFichaValidacion(t *testing.T) {
-	uc := NewIntervencionUseCase(&mockIntervencionRepo{})
+	uc := NewIntervencionUseCase(&mockIntervencionRepo{}, catalogoSinItems{})
 	// Invalid UUID fails
 	err := uc.GuardarFicha(context.Background(), dto.FichaIntervencionDTO{
 		ID: "no-uuid",
@@ -316,7 +415,7 @@ func TestGuardarFichaValidacion(t *testing.T) {
 }
 
 func TestCrearAvanceValidacion(t *testing.T) {
-	uc := NewIntervencionUseCase(&mockIntervencionRepo{})
+	uc := NewIntervencionUseCase(&mockIntervencionRepo{}, catalogoSinItems{})
 	// Invalid UUID fails
 	err := uc.CrearAvance(context.Background(), dto.CrearAvanceDTO{
 		ActividadID:   "no-uuid",
@@ -377,7 +476,7 @@ func TestTimelineMapeo(t *testing.T) {
 			}, nil
 		},
 	}
-	uc := NewIntervencionUseCase(repo)
+	uc := NewIntervencionUseCase(repo, catalogoSinItems{})
 	res, err := uc.Timeline(context.Background(), "11111111-1111-4111-8111-111111111111")
 	if err != nil {
 		t.Fatalf("error inesperado en Timeline: %v", err)

@@ -13,6 +13,7 @@ type ActividadProperties struct {
 	AssignedCapatazID *string `json:"assigned_capataz_id,omitempty"`
 	Equipo            *string `json:"equipo,omitempty"`
 	Ejecutor          string  `json:"ejecutor,omitempty"`
+	EstadoEtiqueta    string  `json:"estado_etiqueta,omitempty"`
 	Archivada         bool    `json:"archivada"`
 	CreatedAt         string  `json:"created_at"`
 	UpdatedAt         string  `json:"updated_at"`

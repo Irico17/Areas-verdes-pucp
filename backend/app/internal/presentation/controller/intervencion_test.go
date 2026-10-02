@@ -419,6 +419,50 @@ func TestCapatazFichaYAvancesPermisos(t *testing.T) {
 	}
 }
 
+func TestEstadoCatalogoHTTP(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctrl := NewIntervencionController(&mockIntervencionUC{
+		setEstadoFunc: func(_ context.Context, in dto.CambiarEstadoDTO) (entities.Feature, error) {
+			if in.Estado != "ejecutado" {
+				return entities.Feature{}, domainErrors.InputError{Reason: "el estado no está activo en el catálogo"}
+			}
+			return entities.Feature{
+				Type: "Feature",
+				ID:   in.ID,
+				Properties: entities.ActividadProperties{
+					Estado:         "ejecutado",
+					EstadoEtiqueta: "Ejecutado",
+				},
+			}, nil
+		},
+	}, zerolog.Nop())
+	id := "22222222-2222-4222-8222-222222222222"
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("usuario", dto.UsuarioSesionDTO{Rol: "coordinacion", Usuario: "coord", ID: 4})
+	c.Params = gin.Params{{Key: "id", Value: id}}
+	c.Request = httptest.NewRequest(http.MethodPatch, "/areas-verdes/v1/operacion/actividades/"+id+"/estado",
+		strings.NewReader(`{"estado":"inventado"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	ctrl.Estado(c)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("estado fuera de catálogo: esperado 400, obtuve %d %s", w.Code, w.Body.String())
+	}
+
+	w = httptest.NewRecorder()
+	c, _ = gin.CreateTestContext(w)
+	c.Set("usuario", dto.UsuarioSesionDTO{Rol: "coordinacion", Usuario: "coord", ID: 4})
+	c.Params = gin.Params{{Key: "id", Value: id}}
+	c.Request = httptest.NewRequest(http.MethodPatch, "/areas-verdes/v1/operacion/actividades/"+id+"/estado",
+		strings.NewReader(`{"estado":"ejecutado"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	ctrl.Estado(c)
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "Ejecutado") {
+		t.Fatalf("con el ítem creado: esperado 200 y etiqueta Ejecutado, obtuve %d %s", w.Code, w.Body.String())
+	}
+}
+
 func init() {
 	_ = bytes.NewBuffer(nil)
 }
