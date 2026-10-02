@@ -4,27 +4,19 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strings"
 
 	"gorm.io/gorm"
 )
 
 var reSemillaDestructiva = regexp.MustCompile(`(?i)\b(?:DROP\s+TABLE|DROP\s+COLUMN|TRUNCATE|DELETE\s+FROM)\b`)
 
-// AplicarSemillaFicticia inserts the fictional develop/qa seed only when the
-// cadastre tables are empty. It never deletes or updates loaded rows.
+// AplicarSemillaFicticia inserts fictional campus polygons. Each statement is
+// INSERT ... ON CONFLICT DO NOTHING, so rows already loaded (ETL or a previous
+// seed) stay as they are. It never deletes or updates.
 func AplicarSemillaFicticia(gdb *gorm.DB, path string) error {
 	sqlDB, err := gdb.DB()
 	if err != nil {
 		return err
-	}
-	necesita, conDatos, err := ComprobarNecesitaETL(sqlDB)
-	if err != nil {
-		return err
-	}
-	if !necesita {
-		fmt.Printf("BD con datos (%s): no se aplica la semilla ficticia\n", strings.Join(conDatos, ", "))
-		return nil
 	}
 
 	body, err := os.ReadFile(path)
@@ -53,7 +45,7 @@ func AplicarSemillaFicticia(gdb *gorm.DB, path string) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	fmt.Printf("semilla ficticia aplicada (%d sentencias) desde %s\n", len(stmts), path)
+	fmt.Printf("semilla ficticia aditiva aplicada (%d sentencias) desde %s\n", len(stmts), path)
 	return nil
 }
 

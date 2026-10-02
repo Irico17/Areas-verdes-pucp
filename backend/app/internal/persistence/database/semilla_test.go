@@ -3,6 +3,7 @@ package database
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -16,8 +17,14 @@ func TestSemillaFicticiaNoBorraDatos(t *testing.T) {
 		t.Fatal(err)
 	}
 	stmts := splitSQL(string(body))
-	if len(stmts) < 2 {
-		t.Fatalf("se esperaban al menos 2 INSERT, hay %d", len(stmts))
+	if len(stmts) < 4 {
+		t.Fatalf("se esperaban al menos 4 INSERT, hay %d", len(stmts))
+	}
+	texto := string(body)
+	for _, id := range []string{"AV-FICT-0101", "AV-FICT-0106", "Z-FICT-0101", "bosque-humedo", "cua-valeria"} {
+		if !strings.Contains(texto, id) {
+			t.Fatalf("la semilla no incluye %s", id)
+		}
 	}
 	for _, stmt := range stmts {
 		if len(stmt) < 6 || stmt[:6] != "INSERT" {
