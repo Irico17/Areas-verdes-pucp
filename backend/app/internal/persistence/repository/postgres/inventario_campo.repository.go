@@ -461,6 +461,38 @@ func (r *inventarioCampoRepository) GuardarReserva(ctx context.Context, res enti
 	return &res, nil
 }
 
+// IntervaloReservaFusionado arma el intervalo que quedaría tras el PATCH.
+// Si el JSON no trae hora_inicio u hora_fin, se conserva la hora ya guardada.
+// ok es false cuando el resultado queda vacío o invertido (fin no posterior al inicio).
+func IntervaloReservaFusionado(traeInicio, traeFin bool, cuerpoInicio, cuerpoFin, guardadoInicio, guardadoFin string) (inicio, fin string, ok bool) {
+	inicio = strings.TrimSpace(cuerpoInicio)
+	fin = strings.TrimSpace(cuerpoFin)
+	if !traeInicio {
+		inicio = strings.TrimSpace(guardadoInicio)
+	}
+	if !traeFin {
+		fin = strings.TrimSpace(guardadoFin)
+	}
+	ok = inicio != "" && fin != "" && fin > inicio
+	return inicio, fin, ok
+}
+
+func (r *inventarioCampoRepository) horasReservaActiva(ctx context.Context, id int64) (string, string, error) {
+	sqlDB, err := r.db.DB()
+	if err != nil {
+		return "", "", err
+	}
+	var inicio, fin string
+	err = sqlDB.QueryRowContext(ctx, `
+		SELECT to_char(hora_inicio, 'HH24:MI'), to_char(hora_fin, 'HH24:MI')
+		FROM reservas_jardin
+		WHERE id = $1 AND activo`, id).Scan(&inicio, &fin)
+	if err != nil {
+		return "", "", err
+	}
+	return inicio, fin, nil
+}
+
 func (r *inventarioCampoRepository) ActualizarReserva(ctx context.Context, id int64, res entities.ReservaJardin, rawJSON []byte) (*entities.ReservaJardin, error) {
 	claves, docJSON, err := ClavesPatch(rawJSON)
 	if err != nil {
@@ -480,8 +512,21 @@ func (r *inventarioCampoRepository) ActualizarReserva(ctx context.Context, id in
 		}
 	}
 	if claves["hora_fin"] || claves["hora_inicio"] || claves["fecha"] || claves["evento"] {
-		if (claves["hora_fin"] || claves["hora_inicio"]) && res.HoraFin <= res.HoraInicio {
-			return nil, domainErrors.ErrReservaInvalida
+		if claves["hora_fin"] || claves["hora_inicio"] {
+			guardadoInicio, guardadoFin := "", ""
+			if !claves["hora_inicio"] || !claves["hora_fin"] {
+				guardadoInicio, guardadoFin, err = r.horasReservaActiva(ctx, id)
+				if err != nil {
+					return nil, err
+				}
+			}
+			if _, _, ok := IntervaloReservaFusionado(
+				claves["hora_inicio"], claves["hora_fin"],
+				res.HoraInicio, res.HoraFin,
+				guardadoInicio, guardadoFin,
+			); !ok {
+				return nil, domainErrors.ErrReservaInvalida
+			}
 		}
 		if claves["fecha"] && res.Fecha == "" {
 			return nil, domainErrors.ErrReservaInvalida
