@@ -1072,7 +1072,7 @@ fieldset { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
 
 * { scrollbar-color: var(--linea) transparent; }
 
-.alta-actividad {
+:is(.alta-actividad, .solicitud-alta, .orden-alta) {
   margin: 0 0 16px;
   padding: 12px 12px 4px;
   border: 1px dashed var(--linea-fuerte);
@@ -1094,14 +1094,14 @@ fieldset { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
   font-weight: 500;
   color: var(--marino);
 }
-.alta-actividad fieldset {
+:is(.alta-actividad, .solicitud-alta) fieldset {
   margin: 0 0 12px;
   padding: 8px 10px 2px;
   border: 1px solid var(--linea);
   border-radius: var(--r-control);
   background: var(--hoja);
 }
-.alta-actividad legend {
+:is(.alta-actividad, .solicitud-alta) legend {
   padding: 0 6px;
   font-family: Newsreader, Georgia, serif;
   font-size: 15px;
@@ -1135,6 +1135,20 @@ fieldset { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
   align-items: center;
   min-height: 32px;
   font-weight: 500;
+}
+.solicitud-punto { font-variant-numeric: tabular-nums; }
+.solicitud-evidencias {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.solicitud-evidencias li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--linea);
+  font-size: 13px;
 }
 @media (max-width: 720px) {
   .alta-par { grid-template-columns: 1fr; }
