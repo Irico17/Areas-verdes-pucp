@@ -4,11 +4,8 @@ import { formatFechaHora } from "../fecha"
 import { mostrarEnPanel } from "../ui/desplazar"
 import { Esqueleto } from "../ui/Esqueleto"
 import {
-  ABIERTOS,
-  ESTADOS,
   estadosPermitidos,
   fetchTaxonomiaActividad,
-  TIPOS,
   tipoGrueso,
   etiquetaEstado,
   etiquetaEvento,
@@ -16,11 +13,14 @@ import {
   type AltaCampos,
   type Capataz,
   type Evento,
+  type FiltroActividades,
   type TaxonomiaActividad,
 } from "../operacion"
 import { etiquetaRol, type CatalogoItem } from "../producto"
 import type { Rol } from "../types"
-import { ACTIVIDAD, marcaEjecutor } from "../ui/nomenclatura"
+import { IconoClase } from "../map/iconoClase"
+import { ACTIVIDAD, VISTA_ACTIVIDAD, marcaEjecutor } from "../ui/nomenclatura"
+import { FiltrosActividad } from "./FiltrosActividad"
 import { EvidenciasCampo } from "./EvidenciasCampo"
 import { SelectorLugar } from "./SelectorLugar"
 import { listarZonas } from "./catastro"
@@ -36,6 +36,7 @@ export type LaborItem = {
   detalle: string
   capatazId: string
   ejecutor?: string
+  clase?: string
   queued?: boolean
 }
 
@@ -46,10 +47,9 @@ type Props = {
   equipoId: string
   onEquipo: (id: string) => void
   items: LaborItem[]
-  estados: Record<string, boolean>
-  onToggleEstado: (id: string) => void
-  tipo: string
-  onTipo: (id: string) => void
+  filtro?: FiltroActividades
+  onFiltro?: (filtro: FiltroActividades) => void
+  presentacion?: "completa" | "detalle"
   pinMode: boolean
   onPinMode: (on: boolean) => void
   draft: { lon: number; lat: number } | null
@@ -91,119 +91,14 @@ type Props = {
 
 export function Labores(props: Props) {
   const puedeAsignar = props.rol !== "capataz"
-  const [equipoVista, setEquipoVista] = useState("")
-  const visibles = props.items.filter((item) => !equipoVista || item.capatazId === equipoVista)
   const avisoError = /no se|sin conexión|error/i.test(props.notice)
   const detalleRef = useRef<HTMLDivElement>(null)
   const elegida = props.selected?.id
   useEffect(() => {
     if (elegida) mostrarEnPanel(detalleRef.current, "inicio")
   }, [elegida])
-  return (
-    <section className="block">
-      <h2>{ACTIVIDAD.titulo}</h2>
-      <p className="lede">{ACTIVIDAD.lede}</p>
-      {props.rol === "capataz" && <p className="hint">{ACTIVIDAD.soloCuadrilla}</p>}
-      {puedeAsignar && (
-        <label className="field">
-          {ACTIVIDAD.cuadrilla}
-          <select value={equipoVista} onChange={(event) => setEquipoVista(event.target.value)}>
-            <option value="">{ACTIVIDAD.todas}</option>
-            {props.equipos.map((equipo) => (
-              <option key={equipo.id} value={equipo.id}>
-                {equipo.equipo}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <div className="checks">
-        {ESTADOS.filter((estado) => (ABIERTOS as readonly string[]).includes(estado.id)).map((estado) => (
-          <label key={estado.id}>
-            <input
-              type="checkbox"
-              checked={props.estados[estado.id] !== false}
-              onChange={() => props.onToggleEstado(estado.id)}
-            />
-            <i style={{ background: estado.color }} />
-            {estado.label}
-          </label>
-        ))}
-      </div>
-      <label className="field">
-        {ACTIVIDAD.tipo}
-        <select value={props.tipo} onChange={(event) => props.onTipo(event.target.value)}>
-          <option value="">{ACTIVIDAD.todosTipos}</option>
-          {props.tipos.map((tipo) => (
-            <option key={tipo.id} value={tipo.id}>
-              {tipo.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      {puedeAsignar && (
-        <button type="button" className={props.pinMode ? "primary sheet-action on" : "primary sheet-action"} onClick={() => props.onPinMode(!props.pinMode)}>
-          {props.pinMode ? ACTIVIDAD.cancelarMarca : ACTIVIDAD.marcar}
-        </button>
-      )}
-      {props.pinMode && !props.draft && <p className="hint">{ACTIVIDAD.ubicar}</p>}
-      {props.draft && puedeAsignar && (
-        <AltaActividad
-          draft={props.draft}
-          formTipo={props.formTipo}
-          formTitulo={props.formTitulo}
-          formDetalle={props.formDetalle}
-          formEquipo={props.formEquipo}
-          formEjecutor={props.formEjecutor}
-          equipos={props.equipos}
-          onForm={props.onForm}
-          onCreate={props.onCreate}
-          creating={props.creating}
-          onSugerir={props.onSugerir}
-          sugerencia={props.sugerencia}
-          pista={props.pista}
-          onConfirmarPista={props.onConfirmarPista}
-          taxonomia={props.taxonomia}
-          lugares={props.lugares}
-          zonas={props.zonas}
-        />
-      )}
-      {props.queueCount > 0 && (
-        <p className="hint">
-          {ACTIVIDAD.colaLocal(props.queueCount)}{" "}
-          <button type="button" className="link" onClick={props.onFlush}>
-            {ACTIVIDAD.reintentar}
-          </button>
-        </p>
-      )}
-      {props.notice && (
-        <p className={avisoError ? "status error" : "banner"} role="status">
-          {props.notice}
-        </p>
-      )}
-      {props.cargando && <Esqueleto />}
-      <ul className="labor-list">
-        {!props.cargando && visibles.length === 0 && <li className="empty">{ACTIVIDAD.vacio}</li>}
-        {visibles.map((item) => (
-          <li key={item.id}>
-            <button type="button" className={props.selected?.id === item.id ? "labor on" : "labor"} onClick={() => props.onSelect(item.id)}>
-              <span className="marca" data-estado={item.estado}>
-                {TIPOS.find((tipo) => tipo.id === item.tipo)?.marca ?? "·"}
-              </span>
-              <span>
-                <strong>{item.titulo}</strong>
-                <small>
-                  {etiquetaTipo(item.tipo)} · {etiquetaEstado(item.estado)} · {item.equipo || ACTIVIDAD.sinCuadrilla}
-                  {item.ejecutor === "tercerizada" ? ` · ${marcaEjecutor(item.ejecutor)}` : ""}
-                  {item.queued ? " · pendiente de envío" : ""}
-                </small>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      {props.selected && (
-        <div className="detail" ref={detalleRef}>
+  const detalle = props.selected ? (
+        <div className="detail" id="detalle-actividad" ref={detalleRef}>
           <h3>{props.selected.titulo}</h3>
           <p className="meta">
             {etiquetaTipo(props.selected.tipo)} · {etiquetaEstado(props.selected.estado)} · {props.selected.equipo || ACTIVIDAD.sinCuadrilla}
@@ -280,7 +175,84 @@ export function Labores(props: Props) {
             </>
           )}
         </div>
+  ) : null
+  if (props.presentacion === "detalle") {
+    if (!detalle) return null
+    return (
+      <section className="block">
+        <h2>{VISTA_ACTIVIDAD.detalle}</h2>
+        {detalle}
+      </section>
+    )
+  }
+  return (
+    <section className="block">
+      <h2>{ACTIVIDAD.titulo}</h2>
+      <p className="lede">{ACTIVIDAD.lede}</p>
+      {props.rol === "capataz" && <p className="hint">{ACTIVIDAD.soloCuadrilla}</p>}
+      <FiltrosActividad rol={props.rol} valor={props.filtro} onChange={props.onFiltro} tipos={props.tipos} />
+      {puedeAsignar && (
+        <button type="button" className={props.pinMode ? "primary sheet-action on" : "primary sheet-action"} onClick={() => props.onPinMode(!props.pinMode)}>
+          {props.pinMode ? ACTIVIDAD.cancelarMarca : ACTIVIDAD.marcar}
+        </button>
       )}
+      {props.pinMode && !props.draft && <p className="hint">{ACTIVIDAD.ubicar}</p>}
+      {props.draft && puedeAsignar && (
+        <AltaActividad
+          draft={props.draft}
+          formTipo={props.formTipo}
+          formTitulo={props.formTitulo}
+          formDetalle={props.formDetalle}
+          formEquipo={props.formEquipo}
+          formEjecutor={props.formEjecutor}
+          equipos={props.equipos}
+          onForm={props.onForm}
+          onCreate={props.onCreate}
+          creating={props.creating}
+          onSugerir={props.onSugerir}
+          sugerencia={props.sugerencia}
+          pista={props.pista}
+          onConfirmarPista={props.onConfirmarPista}
+          taxonomia={props.taxonomia}
+          lugares={props.lugares}
+          zonas={props.zonas}
+        />
+      )}
+      {props.queueCount > 0 && (
+        <p className="hint">
+          {ACTIVIDAD.colaLocal(props.queueCount)}{" "}
+          <button type="button" className="link" onClick={props.onFlush}>
+            {ACTIVIDAD.reintentar}
+          </button>
+        </p>
+      )}
+      {props.notice && (
+        <p className={avisoError ? "status error" : "banner"} role="status">
+          {props.notice}
+        </p>
+      )}
+      {props.cargando && <Esqueleto />}
+      <ul className="labor-list">
+        {!props.cargando && props.items.length === 0 && <li className="empty">{ACTIVIDAD.vacio}</li>}
+        {props.items.map((item) => (
+          <li key={item.id}>
+            <button type="button" className={props.selected?.id === item.id ? "labor on" : "labor"} onClick={() => props.onSelect(item.id)}>
+              <span className="marca" data-estado={item.estado}>
+                <IconoClase clase={item.clase} tipo={item.tipo} />
+              </span>
+              <span>
+                <strong>{item.titulo}</strong>
+                <small>
+                  {etiquetaTipo(item.tipo)} · {etiquetaEstado(item.estado)} · {item.equipo || ACTIVIDAD.sinCuadrilla}
+                  {item.ejecutor === "tercerizada" ? ` · ${marcaEjecutor(item.ejecutor)}` : ""}
+                  {item.queued ? " · pendiente de envío" : ""}
+                </small>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {detalle}
     </section>
   )
 }

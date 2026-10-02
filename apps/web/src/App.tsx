@@ -3,6 +3,7 @@ import { apiUrl, fetchCollection } from "./api"
 import { INVENTARIO } from "./inventario"
 import { CampusMap } from "./map/CampusMap"
 import { seleccionarActividad } from "./map/seleccionActividad"
+import { ConmutadorVista, ListaActividades, type MotivoPlano, type Vista } from "./map/VistaActividades"
 import type { ModoDibujo } from "./map/draw"
 import { MapBoundary } from "./map/MapBoundary"
 import { useEngancharCola } from "./offline/enganchar"
@@ -14,7 +15,9 @@ import {
   cambiarEstado,
   crearActividad,
   type AltaCampos,
+  FILTRO_ACTIVIDADES,
   fetchActividades,
+  type FiltroActividades,
   fetchCapataces,
   fetchTimeline,
   lonLat,
@@ -68,6 +71,7 @@ function toItem(feature: GeoFeature, queued = false): LaborItem | null {
     detalle: prop(feature, "detalle"),
     capatazId: prop(feature, "assigned_capataz_id"),
     ejecutor: prop(feature, "ejecutor"),
+    clase: prop(feature, "clase"),
     queued,
   }
 }
@@ -84,6 +88,7 @@ function queuedFeature(item: QueuedLabor): GeoFeature {
       titulo: item.body.titulo,
       detalle: item.body.detalle,
       assigned_capataz_id: item.body.assigned_capataz_id,
+      clase: item.body.clase ?? "",
       equipo: "",
     },
   }
@@ -109,8 +114,11 @@ export default function App() {
   const [activityError, setActivityError] = useState("")
   const [queue, setQueue] = useState<QueuedLabor[]>([])
   const [laboresListas, setLaboresListas] = useState(false)
-  const [estados, setEstados] = useState<Record<string, boolean>>({ pendiente: true, en_proceso: true, bloqueada: true })
-  const [tipoFiltro, setTipoFiltro] = useState("")
+  const [filtro, setFiltro] = useState<FiltroActividades>(FILTRO_ACTIVIDADES)
+  const [vista, setVista] = useState<Vista>("mapa")
+  const [planoForzado, setPlanoForzado] = useState<MotivoPlano>(() =>
+    navigator.onLine === false ? "red" : null,
+  )
   const [railOpen, setRailOpen] = useState(() => !window.matchMedia(MQ_MOVIL).matches)
   const [picked, setPicked] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -143,7 +151,7 @@ export default function App() {
   const reloadActivities = useCallback(async () => {
     if (!sesion) return
     try {
-      const fc = await fetchActividades(rol, equipoId)
+      const fc = await fetchActividades(rol, equipoId, filtro)
       setActivities(fc)
       void saveLabores(fc)
       setActivityError("")
@@ -157,7 +165,7 @@ export default function App() {
         setActivityError(message)
       }
     }
-  }, [sesion, rol, equipoId])
+  }, [sesion, rol, equipoId, filtro])
 
   const reloadQueue = useCallback(async () => {
     try {
@@ -286,7 +294,7 @@ export default function App() {
   useEffect(() => {
     if (!sesion) return
     let cancelled = false
-    fetchActividades(rol, equipoId)
+    fetchActividades(rol, equipoId, filtro)
       .then((fc) => {
         if (cancelled) return
         setActivities(fc)
@@ -309,7 +317,18 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [sesion, rol, equipoId])
+  }, [sesion, rol, equipoId, filtro])
+
+  useEffect(() => {
+    const caer = () => setPlanoForzado("red")
+    const volver = () => setPlanoForzado((actual) => (actual === "red" ? null : actual))
+    window.addEventListener("offline", caer)
+    window.addEventListener("online", volver)
+    return () => {
+      window.removeEventListener("offline", caer)
+      window.removeEventListener("online", volver)
+    }
+  }, [])
 
   useEngancharCola(sesion, flush)
 
@@ -367,11 +386,13 @@ export default function App() {
       .map((item) => toItem(queuedFeature(item), true))
       .filter((item): item is LaborItem => item != null)
     return [...local, ...fromApi].filter((item) => {
-      if (estados[item.estado] === false) return false
-      if (tipoFiltro && item.tipo !== tipoFiltro) return false
+      if (filtro.estado && item.estado !== filtro.estado) return false
+      if (filtro.tipo && item.tipo !== filtro.tipo && item.clase !== filtro.tipo) return false
+      if (filtro.ejecutor && item.ejecutor !== filtro.ejecutor) return false
+      if (rol !== "capataz" && filtro.cuadrillaId && item.capatazId !== filtro.cuadrillaId) return false
       return true
     })
-  }, [activities, queue, estados, tipoFiltro, rol, equipoId])
+  }, [activities, queue, filtro, rol, equipoId])
 
   const mapActivities = useMemo<FeatureCollection>(() => {
     const ids = new Set(items.map((item) => item.id))
@@ -682,6 +703,48 @@ export default function App() {
           </p>
         }
       >
+        {selected && moduloActivo !== "labores" && (
+          <Labores
+            presentacion="detalle"
+            rol={rol}
+            equipos={equipos}
+            equipoId={equipoId}
+            onEquipo={() => {}}
+            items={items}
+            pinMode={false}
+            onPinMode={() => {}}
+            draft={null}
+            formTipo={formTipo}
+            formTitulo=""
+            formDetalle=""
+            formEquipo={formEquipo}
+            onForm={() => {}}
+            onCreate={() => {}}
+            creating={false}
+            selected={selected}
+            onSelect={choose}
+            timeline={timelineVisible}
+            timelineError={timelineErrorVisible}
+            estadoNuevo={estadoNuevo}
+            onEstadoNuevo={setEstadoNuevo}
+            onEstado={() => void onEstado()}
+            reasignarA={reasignarA}
+            onReasignarA={setReasignarA}
+            onReasignar={() => void onReasignar()}
+            onArchivar={() => void onArchivar()}
+            confirmarArchivo={confirmarArchivo}
+            notice=""
+            queueCount={0}
+            onFlush={() => {}}
+            tipos={tipos}
+            formEjecutor={formEjecutor}
+            motivos={motivos}
+            motivo={motivo}
+            onMotivo={setMotivo}
+            onSugerir={() => {}}
+            sugerencia=""
+          />
+        )}
         {moduloActivo === "mapa" && (
           <section className="block">
             <h2>{MAPA.capas}</h2>
@@ -775,10 +838,8 @@ export default function App() {
                 setSelectedId(null)
               }}
               items={items}
-              estados={estados}
-              onToggleEstado={(id) => setEstados((current) => ({ ...current, [id]: current[id] === false }))}
-              tipo={tipoFiltro}
-              onTipo={setTipoFiltro}
+              filtro={filtro}
+              onFiltro={setFiltro}
               pinMode={pinMode}
               onPinMode={(on) => {
                 setPinMode(on)
@@ -854,6 +915,21 @@ export default function App() {
         {moduloActivo === "admin" && <AdminPanel />}
       </BottomSheet>
       <div className="stage" ref={stageRef}>
+        <ConmutadorVista
+          vista={planoForzado ? "lista" : vista}
+          motivo={planoForzado}
+          onVista={setVista}
+        />
+        {(planoForzado || vista === "lista") && (
+          <ListaActividades
+            items={items}
+            selectedId={selectedId}
+            onSelect={(id) => {
+              choose(id)
+              setRailOpen(true)
+            }}
+          />
+        )}
         <MapBoundary>
           <CampusMap
             data={dataMapa}
@@ -870,6 +946,7 @@ export default function App() {
             inventoryOn={inventoryOn}
             sectores={sectoresCat}
             ocultas={ocultas[colorPor]}
+            onSinPlano={() => setPlanoForzado((actual) => (actual === "red" ? actual : "teselas"))}
             onSelectCatastro={(hit) => setPicked(hit ? `${hit.layer}: ${String(hit.props.nombre || hit.props.feature_id || "polígono")}` : null)}
             onSelectActividad={(id) =>
               seleccionarActividad(id, {

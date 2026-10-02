@@ -255,15 +255,50 @@ async function send(path: string, method: string, body?: unknown): Promise<Respo
   return res
 }
 
-export function actividadesPath(rol: Rol, capatazId: string): string {
-  const q = new URLSearchParams({ rol, abiertas: "1" })
+export type FiltroActividades = {
+  estado: string
+  tipo: string
+  cuadrillaId: string
+  sector: string
+  ejecutor: string
+  origen: string
+  nivelRiesgo: string
+  desde: string
+  hasta: string
+  historico: boolean
+}
+
+export const FILTRO_ACTIVIDADES: FiltroActividades = {
+  estado: "",
+  tipo: "",
+  cuadrillaId: "",
+  sector: "",
+  ejecutor: "",
+  origen: "",
+  nivelRiesgo: "",
+  desde: "",
+  hasta: "",
+  historico: false,
+}
+
+export function actividadesPath(rol: Rol, capatazId: string, filtro: FiltroActividades = FILTRO_ACTIVIDADES): string {
+  const q = new URLSearchParams({ rol, abiertas: filtro.historico ? "0" : "1" })
   if (rol === "capataz") q.set("capataz_id", capatazId)
+  if (filtro.estado) q.set("estado", filtro.estado)
+  if (filtro.tipo) q.set("tipo", filtro.tipo)
+  if (filtro.cuadrillaId && rol !== "capataz") q.set("cuadrilla_id", filtro.cuadrillaId)
+  if (filtro.sector) q.set("sector", filtro.sector)
+  if (filtro.ejecutor) q.set("ejecutor", filtro.ejecutor)
+  if (filtro.origen) q.set("origen", filtro.origen)
+  if (filtro.nivelRiesgo) q.set("nivel_riesgo", filtro.nivelRiesgo)
+  if (filtro.desde) q.set("desde", filtro.desde)
+  if (filtro.hasta) q.set("hasta", filtro.hasta)
   return apiUrl(`/operacion/actividades?${q.toString()}`)
 }
 
-export async function fetchActividades(rol: Rol, capatazId: string): Promise<FeatureCollection> {
+export async function fetchActividades(rol: Rol, capatazId: string, filtro: FiltroActividades = FILTRO_ACTIVIDADES): Promise<FeatureCollection> {
   await sincronizarEstados()
-  return fetchCollection(actividadesPath(rol, capatazId))
+  return fetchCollection(actividadesPath(rol, capatazId, filtro))
 }
 
 export async function fetchCapataces(): Promise<Capataz[]> {

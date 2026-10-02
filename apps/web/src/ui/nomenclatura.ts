@@ -100,7 +100,17 @@ export const SECTOR_CAPATAZ = {
 
 export const ACTIVIDAD = {
   titulo: "Actividades",
-  lede: "Puntos abiertos. El color es el estado y la letra, el tipo.",
+  lede: "Puntos abiertos. El color es el estado y el icono, la clase de actividad.",
+  filtros: "Filtros",
+  cualquierEstado: "Cualquier estado",
+  cualquierTipo: "Cualquier tipo",
+  cualquierSector: "Cualquier sector de capataz",
+  cualquierEjecutor: "Cualquier ejecutor",
+  cualquierOrigen: "Cualquier origen",
+  cualquierRiesgo: "Cualquier nivel de riesgo",
+  desde: "Desde",
+  hasta: "Hasta",
+  historico: "Incluir cerradas",
   soloCuadrilla: "Solo ve las actividades de su cuadrilla.",
   cuadrilla: "Cuadrilla",
   todas: "Todas las cuadrillas",
@@ -171,6 +181,44 @@ export const ACTIVIDAD = {
   colaLocal: (n: number) => `${n} en cola local.`,
   servicioMarca: "servicio tercerizado",
   propioMarca: "personal propio",
+} as const
+
+export const CLASE_ACTIVIDAD = {
+  habilitacion: "Habilitación de jardines",
+  rehabilitacion: "Rehabilitación y rediseño de jardines",
+  mantenimiento: "Mantenimiento de jardines",
+  poda: "Poda",
+  propagacion: "Propagación y plantación",
+  riego: "Riego",
+  residuos: "Manejo de residuos vegetales",
+  fitosanitario: "Manejo fitosanitario",
+  inspeccion_monitoreo: "Inspección y monitoreo",
+} as const
+
+export function etiquetaClase(clase: string): string {
+  const tabla = CLASE_ACTIVIDAD as Record<string, string>
+  return tabla[clase] ?? ""
+}
+
+export const CUADRILLA_DEMO = {
+  "cap-norte": "Cuadrilla Norte",
+  "cap-sur": "Cuadrilla Sur",
+  "cap-riego": "Cuadrilla Riego",
+} as const
+
+export function etiquetaCuadrilla(id: string, nombreApi: string): string {
+  const tabla = CUADRILLA_DEMO as Record<string, string>
+  return tabla[id] ?? nombreApi
+}
+
+export const VISTA_ACTIVIDAD = {
+  mapa: "Mapa",
+  lista: "Lista",
+  grupo: "Vista de actividades",
+  sinRed: "Sin red. La lista queda a la vista porque el mapa no puede cargar.",
+  sinTeselas: "Sin teselas. La lista queda a la vista porque el plano no cargó.",
+  detalle: "Detalle de la actividad",
+  vacio: "No hay actividades con este filtro.",
 } as const
 
 export const MAPA = {
