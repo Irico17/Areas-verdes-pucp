@@ -584,6 +584,43 @@ func (mockImportacionRoutesUC) Confirmar(_ context.Context, loteID, usuarioID in
 	}, nil
 }
 
+type mockZonificacionRoutesUC struct{}
+
+func (mockZonificacionRoutesUC) ListarSectores(context.Context, bool) (*dto.SectorListDTO, error) {
+	return &dto.SectorListDTO{Sectores: []dto.SectorCapatazDTO{}}, nil
+}
+func (mockZonificacionRoutesUC) CrearSector(context.Context, dto.CrearSectorDTO) (dto.SectorCapatazDTO, error) {
+	return dto.SectorCapatazDTO{ID: 1, Codigo: "sector-prueba", Nombre: "Sector de prueba", Color: "#3f73b0", Activo: true}, nil
+}
+func (mockZonificacionRoutesUC) ActualizarSector(context.Context, dto.ActualizarSectorDTO) (dto.SectorCapatazDTO, error) {
+	return dto.SectorCapatazDTO{ID: 1, Codigo: "sector-prueba", Nombre: "Sector de prueba", Color: "#3f73b0", Activo: true}, nil
+}
+func (mockZonificacionRoutesUC) DesactivarSector(context.Context, string, int64) error { return nil }
+func (mockZonificacionRoutesUC) ImportarSectores(context.Context, []dto.CrearSectorDTO, int64) (dto.ImportacionSectorDTO, error) {
+	return dto.ImportacionSectorDTO{}, nil
+}
+func (mockZonificacionRoutesUC) ListarLugares(context.Context) ([]dto.LugarCatalogoDTO, error) {
+	return []dto.LugarCatalogoDTO{}, nil
+}
+func (mockZonificacionRoutesUC) ResolverLugar(context.Context, dto.ResolverLugarDTO) (dto.LugarResueltoDTO, error) {
+	return dto.LugarResueltoDTO{}, nil
+}
+func (mockZonificacionRoutesUC) Vias(context.Context) ([]byte, error) {
+	return []byte(`{"type":"FeatureCollection","name":"vias","features":[]}`), nil
+}
+func (mockZonificacionRoutesUC) ImportarVias(context.Context, []byte, int64) (dto.ImportacionViaDTO, error) {
+	return dto.ImportacionViaDTO{}, nil
+}
+func (mockZonificacionRoutesUC) Cuarteles(context.Context) ([]byte, error) {
+	return []byte(`{"type":"FeatureCollection","name":"cuarteles","aviso":"sin archivo de cuarteles","features":[]}`), nil
+}
+func (mockZonificacionRoutesUC) Edificios(context.Context) ([]dto.EdificioRefDTO, error) {
+	return []dto.EdificioRefDTO{}, nil
+}
+func (mockZonificacionRoutesUC) CrearReferente(context.Context, dto.CrearReferenteDTO) (dto.ReferenteDTO, error) {
+	return dto.ReferenteDTO{}, nil
+}
+
 func setupTestRouter(swaggerEnabled bool) *gin.Engine {
 	return setupTestRouterWithEnv(swaggerEnabled, "")
 }
@@ -639,6 +676,7 @@ func setupTestRouterWithEnv(swaggerEnabled bool, appEnv string) *gin.Engine {
 	iaCtrl := controller.NewIAController(mockIARoutesUC{}, zerolog.Nop())
 	auditoriaCtrl := controller.NewAuditoriaController(mockLoteRoutesUC{}, zerolog.Nop())
 	importacionCtrl := controller.NewImportacionController(mockImportacionRoutesUC{}, zerolog.Nop())
+	zonificacionCtrl := controller.NewZonificacionController(mockZonificacionRoutesUC{}, zerolog.Nop())
 
 	permisosSvc := services.NewPermisosMemoria()
 	limitador := ratelimit.NewMemoriaLimitador(100, time.Minute)
@@ -664,6 +702,7 @@ func setupTestRouterWithEnv(swaggerEnabled bool, appEnv string) *gin.Engine {
 	iaGrp := groups.NewIAGroup(iaCtrl, permisosSvc)
 	auditoriaGrp := groups.NewAuditoriaGroup(auditoriaCtrl, permisosSvc)
 	importacionGrp := groups.NewImportacionGroup(importacionCtrl, permisosSvc)
+	zonificacionGrp := groups.NewZonificacionGroup(zonificacionCtrl, permisosSvc)
 
 	r := routes.NewRouter(routes.RouterParams{
 		Engine:               engine,
@@ -692,6 +731,7 @@ func setupTestRouterWithEnv(swaggerEnabled bool, appEnv string) *gin.Engine {
 		IAGroup:              iaGrp,
 		AuditoriaGroup:       auditoriaGrp,
 		ImportacionGroup:     importacionGrp,
+		ZonificacionGroup:    zonificacionGrp,
 	})
 	r.Setup()
 	return engine

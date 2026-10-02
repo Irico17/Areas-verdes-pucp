@@ -505,6 +505,20 @@ definitions:
       nota:
         type: string
     type: object
+  dto.ImportacionSectorDTO:
+    properties:
+      actualizados:
+        type: integer
+      creados:
+        type: integer
+    type: object
+  dto.ImportacionViaDTO:
+    properties:
+      actualizadas:
+        type: integer
+      creadas:
+        type: integer
+    type: object
   dto.ImportarLoteResponseDTO:
     properties:
       filas:
@@ -585,6 +599,15 @@ definitions:
         type: string
       zona_supervision_id:
         type: integer
+    type: object
+  dto.LugarResueltoDTO:
+    properties:
+      lugar_id:
+        type: integer
+      lugar_libre:
+        type: string
+      nombre:
+        type: string
     type: object
   dto.OrdenDTO:
     properties:
@@ -707,6 +730,17 @@ definitions:
         type: string
       motivo:
         type: string
+    type: object
+  dto.ReferenteDTO:
+    properties:
+      creado:
+        type: boolean
+      edificio_id:
+        type: string
+      id:
+        type: integer
+      lugar_id:
+        type: integer
     type: object
   dto.ReporteResponseDTO:
     properties:
@@ -852,6 +886,26 @@ definitions:
         type: string
       nombre:
         type: string
+    type: object
+  dto.SectorCapatazDTO:
+    properties:
+      activo:
+        type: boolean
+      codigo:
+        type: string
+      color:
+        type: string
+      id:
+        type: integer
+      nombre:
+        type: string
+    type: object
+  dto.SectorListDTO:
+    properties:
+      sectores:
+        items:
+          $ref: '#/definitions/dto.SectorCapatazDTO'
+        type: array
     type: object
   dto.SolicitudDTO:
     properties:
@@ -1105,6 +1159,15 @@ definitions:
       activo:
         type: boolean
     type: object
+  requests.ActualizarSectorRequest:
+    properties:
+      activo:
+        type: boolean
+      color:
+        type: string
+      nombre:
+        type: string
+    type: object
   requests.ActualizarUsuarioRequest:
     properties:
       activo:
@@ -1221,6 +1284,13 @@ definitions:
       referencia:
         type: string
     type: object
+  requests.CrearReferenteRequest:
+    properties:
+      edificio_id:
+        type: string
+      lugar_id:
+        type: integer
+    type: object
   requests.CrearRiegoRequest:
     properties:
       capataz_id:
@@ -1245,6 +1315,15 @@ definitions:
   requests.CrearRolRequest:
     properties:
       codigo:
+        type: string
+      nombre:
+        type: string
+    type: object
+  requests.CrearSectorRequest:
+    properties:
+      codigo:
+        type: string
+      color:
         type: string
       nombre:
         type: string
@@ -1399,6 +1478,13 @@ definitions:
       subproceso:
         type: string
     type: object
+  requests.ImportarSectoresRequest:
+    properties:
+      sectores:
+        items:
+          $ref: '#/definitions/requests.CrearSectorRequest'
+        type: array
+    type: object
   requests.LoginRequest:
     properties:
       clave:
@@ -1422,6 +1508,15 @@ definitions:
     type: object
   requests.RenombrarCatalogoRequest:
     properties:
+      nombre:
+        type: string
+    type: object
+  requests.ResolverLugarRequest:
+    properties:
+      lugar_id:
+        type: integer
+      lugar_libre:
+        type: string
       nombre:
         type: string
     type: object
@@ -4127,4 +4222,272 @@ paths:
       summary: Archive a nursery activity record
       tags:
       - vivero
+  /v1/zonificacion/cuarteles:
+    get:
+      description: Solo lectura. Sin shape responde el aviso y ninguna geometría.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Cuarteles históricos
+      tags:
+      - zonificacion
+  /v1/zonificacion/edificios:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Ids de edificio para elegir un referente
+      tags:
+      - zonificacion
+  /v1/zonificacion/lugares:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Lugares del catálogo
+      tags:
+      - zonificacion
+  /v1/zonificacion/lugares/resolver:
+    post:
+      consumes:
+      - application/json
+      description: Un nombre que no existe no se inserta. lugar_libre solo se lee.
+      parameters:
+      - description: Lugar
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.ResolverLugarRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LugarResueltoDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Resolver un lugar del catálogo
+      tags:
+      - zonificacion
+  /v1/zonificacion/referentes:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Par lugar y edificio
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearReferenteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ReferenteDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Guardar un edificio como referente, por id
+      tags:
+      - zonificacion
+  /v1/zonificacion/sectores:
+    get:
+      description: El color del mapa sale de este catálogo
+      parameters:
+      - description: 1 para solo activos
+        in: query
+        name: activos
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SectorListDTO'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Listar sectores de capataz
+      tags:
+      - zonificacion
+    post:
+      consumes:
+      - application/json
+      description: Crea el sector. Un código repetido responde 409 y no duplica la
+        fila.
+      parameters:
+      - description: Sector
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearSectorRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.SectorCapatazDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Alta de un sector de capataz
+      tags:
+      - zonificacion
+  /v1/zonificacion/sectores/{codigo}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Código
+        in: path
+        name: codigo
+        required: true
+        type: string
+      - description: Cambios
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.ActualizarSectorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SectorCapatazDTO'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Corregir nombre, color o vigencia de un sector de capataz
+      tags:
+      - zonificacion
+  /v1/zonificacion/sectores/{codigo}/desactivar:
+    post:
+      description: Baja lógica. No existe una ruta que borre la fila.
+      parameters:
+      - description: Código
+        in: path
+        name: codigo
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Desactivar un sector de capataz
+      tags:
+      - zonificacion
+  /v1/zonificacion/sectores/importar:
+    post:
+      consumes:
+      - application/json
+      description: Un código que ya existe se actualiza. No se inserta una segunda
+        fila.
+      parameters:
+      - description: Filas
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.ImportarSectoresRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ImportacionSectorDTO'
+      summary: Importar sectores de capataz
+      tags:
+      - zonificacion
+  /v1/zonificacion/vias:
+    get:
+      description: Vacía hasta que se importe un GeoJSON. No inventa filas.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Capa de vías
+      tags:
+      - zonificacion
+  /v1/zonificacion/vias/importar:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ImportacionViaDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Importar vías desde GeoJSON
+      tags:
+      - zonificacion
 swagger: "2.0"

@@ -35,6 +35,8 @@ var EntidadesImportables = []string{
 	"jardines_reserva",
 	"reservas",
 	"puntos_pucp",
+	"sectores_capataz",
+	"vias",
 }
 
 // ErrEntidad es una entidad fuera del mapa de datos.
@@ -471,6 +473,66 @@ func leerEntidad(entidad, nombre string, body []byte, lugares map[string]string)
 			vista.AvisoOmitidas = "columnas omitidas por datos personales"
 		}
 		persistir = func(tx *gorm.DB, loteID int64) error { return guardarPuntos(tx, rows, loteID) }
+	case "sectores_capataz":
+		rows, rech, err := leerSectoresImport(arch.CSV, arch.Geo)
+		if err != nil {
+			return cargaLista{}, err
+		}
+		vista = llenar(vista, len(rows), rech, rows)
+		persistir = func(tx *gorm.DB, loteID int64) error {
+			for _, s := range rows {
+				var id int64
+				err := tx.Raw(`
+					INSERT INTO sectores_capataz (codigo, nombre, color, activo)
+					VALUES ($1, $2, $3, TRUE)
+					ON CONFLICT (codigo) DO UPDATE SET
+					  nombre = EXCLUDED.nombre,
+					  color = EXCLUDED.color,
+					  activo = TRUE,
+					  updated_at = now()
+					RETURNING id`, s.Codigo, s.Nombre, s.Color).Row().Scan(&id)
+				if err != nil {
+					return err
+				}
+				despues, _ := json.Marshal(map[string]any{"codigo": s.Codigo, "nombre": s.Nombre, "color": s.Color})
+				if err := auditar(tx, "sectores_capataz", fmt.Sprintf("%d", id), nil, despues, loteID); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	case "vias":
+		rows, rech, err := leerViasImport(arch.Geo)
+		if err != nil {
+			return cargaLista{}, err
+		}
+		vista = llenar(vista, len(rows), rech, rows)
+		persistir = func(tx *gorm.DB, loteID int64) error {
+			for _, v := range rows {
+				var id int64
+				err := tx.Raw(`
+					INSERT INTO vias (feature_id, nombre, geom, origen_ref, activo)
+					VALUES (
+					  $1, NULLIF($2, ''),
+					  ST_Multi(ST_Force2D(ST_SetSRID(ST_GeomFromGeoJSON($3), 4326))),
+					  $1, TRUE
+					)
+					ON CONFLICT (feature_id) DO UPDATE SET
+					  nombre = EXCLUDED.nombre,
+					  geom = EXCLUDED.geom,
+					  activo = TRUE,
+					  updated_at = now()
+					RETURNING id`, v.FeatureID, v.Nombre, v.GeoJSON).Row().Scan(&id)
+				if err != nil {
+					return err
+				}
+				despues, _ := json.Marshal(map[string]any{"feature_id": v.FeatureID, "nombre": v.Nombre})
+				if err := auditar(tx, "vias", fmt.Sprintf("%d", id), nil, despues, loteID); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
 	default:
 		return cargaLista{}, fmt.Errorf("%w: %s", ErrEntidad, entidad)
 	}

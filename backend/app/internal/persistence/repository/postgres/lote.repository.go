@@ -379,6 +379,8 @@ var bajaPorActivo = map[string]struct{ tabla, col string }{
 	"veredas_riesgo":         {"veredas_riesgo", "feature_id"},
 	"xerofiticas":            {"xerofiticas", "feature_id"},
 	"jardines_reserva":       {"jardines_reserva", "feature_id"},
+	"sectores_capataz":       {"sectores_capataz", "id::text"},
+	"vias":                   {"vias", "id::text"},
 }
 
 func aplicarCatalogo(tx *gorm.DB, id, accion string, s entities.SnapAuditoria) error {
