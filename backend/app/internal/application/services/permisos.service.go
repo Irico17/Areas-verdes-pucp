@@ -2,40 +2,47 @@
 package services
 
 import (
+	"context"
+
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/constants/enums"
 )
 
-// MatrizPermisos defines the seed permission matrix for roles and default actions.
-// In this phase (batches 1-6), enforcement runs against this in-memory matrix for strict
-// parity with the legacy API; reading dynamically from the database is deferred to
-// post-cutover per migration plan §9 lote 6.
-// Note: jefatura includes 'evidencias' per current apps/api specification.
+// MatrizPermisos is the seed written by Ensure with ON CONFLICT DO NOTHING.
+// Permite reads the permisos table and roles.activo on every call, so an edit
+// applies without restarting the process. Startup never deletes rows.
 var MatrizPermisos = map[string][]string{
 	enums.RolCapataz.String():      {"consultar", "registrar"},
 	enums.RolCoordinacion.String(): {"consultar", "registrar", "validar", "solicitudes", "reportes"},
-	enums.RolJefatura.String():     {"consultar", "validar", "reportes", "solicitudes", "evidencias"},
-	enums.RolAdmin.String():        {"consultar", "registrar", "validar", "reportes", "catalogos", "solicitudes"},
+	enums.RolJefatura.String():     {"consultar", "validar", "reportes", "solicitudes", "evidencias", "usuarios"},
+	enums.RolAdmin.String():        {"consultar", "registrar", "validar", "reportes", "catalogos", "solicitudes", "usuarios"},
 }
 
-type permisosService struct{}
+type permisosService struct {
+	repo contracts.IPermisoRepository
+}
 
-// NewPermisosService creates an in-memory permissions checking service.
-func NewPermisosService() contracts.IPermisosService {
-	return &permisosService{}
+// NewPermisosService checks permissions against the repository on each call.
+func NewPermisosService(repo contracts.IPermisoRepository) contracts.IPermisosService {
+	return &permisosService{repo: repo}
+}
+
+// NewPermisosMemoria serves the seed matrix in memory. Route tests use it.
+func NewPermisosMemoria() contracts.IPermisosService {
+	return NewPermisosService(NuevaMemoriaPermisos(MatrizPermisos))
 }
 
 func (s *permisosService) Permite(rol, accion string) bool {
-	acciones, ok := MatrizPermisos[rol]
-	if !ok {
+	if s == nil || s.repo == nil {
 		return false
 	}
-	for _, a := range acciones {
-		if a == accion {
-			return true
-		}
+	ctx := context.Background()
+	activo, err := s.repo.RolActivo(ctx, rol)
+	if err != nil || !activo {
+		return false
 	}
-	return false
+	ok, err := s.repo.Concedido(ctx, rol, accion)
+	return err == nil && ok
 }
 
 func (s *permisosService) Matriz() map[string][]string {

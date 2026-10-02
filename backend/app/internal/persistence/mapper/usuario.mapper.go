@@ -20,14 +20,16 @@ func UsuarioToEntity(m *models.UsuarioModel) *entities.Usuario {
 		rolNombre = *m.RolNombre
 	}
 	return &entities.Usuario{
-		ID:           m.ID,
-		Usuario:      m.Usuario,
-		Nombre:       m.Nombre,
-		Rol:          m.Rol,
-		RolNombre:    rolNombre,
-		CapatazID:    capataz,
-		PasswordHash: m.PasswordHash,
-		Activo:       m.Activo,
+		ID:                  m.ID,
+		Usuario:             m.Usuario,
+		Nombre:              m.Nombre,
+		Rol:                 m.Rol,
+		RolNombre:           rolNombre,
+		CapatazID:           capataz,
+		PasswordHash:        m.PasswordHash,
+		Activo:              m.Activo,
+		DebeCambiarPassword: m.DebeCambiarPassword,
+		RolActivo:           m.RolActivo,
 	}
 }
 
@@ -41,12 +43,13 @@ func UsuarioToModel(e *entities.Usuario) *models.UsuarioModel {
 		capataz = &e.CapatazID
 	}
 	return &models.UsuarioModel{
-		ID:           e.ID,
-		Usuario:      e.Usuario,
-		Nombre:       e.Nombre,
-		Rol:          e.Rol,
-		CapatazID:    capataz,
-		PasswordHash: e.PasswordHash,
-		Activo:       e.Activo,
+		ID:                  e.ID,
+		Usuario:             e.Usuario,
+		Nombre:              e.Nombre,
+		Rol:                 e.Rol,
+		CapatazID:           capataz,
+		PasswordHash:        e.PasswordHash,
+		Activo:              e.Activo,
+		DebeCambiarPassword: e.DebeCambiarPassword,
 	}
 }

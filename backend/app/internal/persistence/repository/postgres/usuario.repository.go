@@ -29,11 +29,13 @@ func (r *usuarioRepository) dbWithCtx(ctx context.Context) *gorm.DB {
 func (r *usuarioRepository) ObtenerPorUsuario(ctx context.Context, usuario string) (*entities.Usuario, error) {
 	var m models.UsuarioModel
 	err := r.dbWithCtx(ctx).Raw(`
-		SELECT u.id, u.usuario, u.nombre, u.rol, r.nombre AS rol_nombre, u.capataz_id, u.password_hash, u.activo
+		SELECT u.id, u.usuario, u.nombre, u.rol, r.nombre AS rol_nombre, u.capataz_id, u.password_hash, u.activo,
+		       COALESCE(r.activo, false), u.debe_cambiar_password
 		FROM usuarios u
 		LEFT JOIN roles r ON r.codigo = u.rol
 		WHERE u.usuario = $1`, strings.TrimSpace(usuario)).Row().Scan(
 		&m.ID, &m.Usuario, &m.Nombre, &m.Rol, &m.RolNombre, &m.CapatazID, &m.PasswordHash, &m.Activo,
+		&m.RolActivo, &m.DebeCambiarPassword,
 	)
 	if err != nil {
 		return nil, err
@@ -44,7 +46,8 @@ func (r *usuarioRepository) ObtenerPorUsuario(ctx context.Context, usuario strin
 func (r *usuarioRepository) Listar(ctx context.Context) ([]entities.Usuario, error) {
 	var rows []models.UsuarioModel
 	err := r.dbWithCtx(ctx).Raw(`
-		SELECT u.id, u.usuario, u.nombre, u.rol, COALESCE(r.nombre, u.rol) AS rol_nombre, COALESCE(u.capataz_id, '') AS capataz_id
+		SELECT u.id, u.usuario, u.nombre, u.rol, COALESCE(r.nombre, u.rol) AS rol_nombre,
+		       COALESCE(u.capataz_id, '') AS capataz_id, u.activo, u.debe_cambiar_password
 		FROM usuarios u
 		LEFT JOIN roles r ON r.codigo = u.rol
 		ORDER BY u.rol, u.usuario`).Scan(&rows).Error
@@ -71,8 +74,23 @@ func (r *usuarioRepository) ExistePorUsuario(ctx context.Context, usuario string
 func (r *usuarioRepository) Crear(ctx context.Context, usuario *entities.Usuario) error {
 	m := mapper.UsuarioToModel(usuario)
 	return r.dbWithCtx(ctx).Exec(`
-		INSERT INTO usuarios (usuario, nombre, rol, capataz_id, password_hash)
-		VALUES ($1, $2, $3, NULLIF($4, ''), $5)`,
-		m.Usuario, m.Nombre, m.Rol, m.CapatazID, m.PasswordHash,
+		INSERT INTO usuarios (usuario, nombre, rol, capataz_id, password_hash, activo, debe_cambiar_password)
+		VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6, $7)`,
+		m.Usuario, m.Nombre, m.Rol, m.CapatazID, m.PasswordHash, m.Activo, m.DebeCambiarPassword,
+	).Error
+}
+
+func (r *usuarioRepository) Actualizar(ctx context.Context, usuario *entities.Usuario) error {
+	m := mapper.UsuarioToModel(usuario)
+	return r.dbWithCtx(ctx).Exec(`
+		UPDATE usuarios
+		SET nombre = $1,
+		    rol = $2,
+		    capataz_id = NULLIF($3, ''),
+		    password_hash = $4,
+		    activo = $5,
+		    debe_cambiar_password = $6
+		WHERE usuario = $7`,
+		m.Nombre, m.Rol, m.CapatazID, m.PasswordHash, m.Activo, m.DebeCambiarPassword, m.Usuario,
 	).Error
 }

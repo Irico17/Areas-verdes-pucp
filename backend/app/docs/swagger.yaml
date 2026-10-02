@@ -204,6 +204,25 @@ definitions:
       turno:
         type: string
     type: object
+  dto.CuentaDTO:
+    properties:
+      activo:
+        type: boolean
+      capataz_id:
+        type: string
+      debe_cambiar_password:
+        type: boolean
+      id:
+        type: integer
+      nombre:
+        type: string
+      rol:
+        type: string
+      rol_nombre:
+        type: string
+      usuario:
+        type: string
+    type: object
   dto.DesactivarCatalogoResponseDTO:
     properties:
       activo:
@@ -823,6 +842,15 @@ definitions:
           $ref: '#/definitions/dto.RiegoDTO'
         type: array
     type: object
+  dto.RolDTO:
+    properties:
+      activo:
+        type: boolean
+      codigo:
+        type: string
+      nombre:
+        type: string
+    type: object
   dto.SolicitudDTO:
     properties:
       actividad_id:
@@ -933,21 +961,6 @@ definitions:
           $ref: '#/definitions/dto.EventoTimelineDTO'
         type: array
     type: object
-  dto.UsuarioSesionDTO:
-    properties:
-      capataz_id:
-        type: string
-      id:
-        type: integer
-      nombre:
-        type: string
-      rol:
-        type: string
-      rol_nombre:
-        type: string
-      usuario:
-        type: string
-    type: object
   dto.UsuariosResponseDTO:
     properties:
       aviso:
@@ -956,9 +969,13 @@ definitions:
         items:
           $ref: '#/definitions/dto.PermisoDTO'
         type: array
+      roles:
+        items:
+          $ref: '#/definitions/dto.RolDTO'
+        type: array
       usuarios:
         items:
-          $ref: '#/definitions/dto.UsuarioSesionDTO'
+          $ref: '#/definitions/dto.CuentaDTO'
         type: array
     type: object
   dto.VistaPreviaResponseDTO:
@@ -1072,6 +1089,33 @@ definitions:
       uso:
         type: string
     type: object
+  requests.ActualizarPermisoRequest:
+    properties:
+      accion:
+        type: string
+      concedido:
+        type: boolean
+      rol:
+        type: string
+    type: object
+  requests.ActualizarRolRequest:
+    properties:
+      activo:
+        type: boolean
+    type: object
+  requests.ActualizarUsuarioRequest:
+    properties:
+      activo:
+        type: boolean
+      capataz_id:
+        type: string
+      clave:
+        type: string
+      nombre:
+        type: string
+      rol:
+        type: string
+    type: object
   requests.ActualizarZonaSupervisionRequest:
     properties:
       area_m2:
@@ -1083,6 +1127,13 @@ definitions:
       geom:
         type: object
       nombre:
+        type: string
+    type: object
+  requests.CambiarClaveRequest:
+    properties:
+      clave_actual:
+        type: string
+      clave_nueva:
         type: string
     type: object
   requests.CrearAreaSinGeomRequest:
@@ -1189,6 +1240,13 @@ definitions:
       zona_supervision_id:
         type: string
     type: object
+  requests.CrearRolRequest:
+    properties:
+      codigo:
+        type: string
+      nombre:
+        type: string
+    type: object
   requests.CrearSolicitudRequest:
     properties:
       actividad_id:
@@ -1208,6 +1266,19 @@ definitions:
       prioridad:
         type: string
       titulo:
+        type: string
+    type: object
+  requests.CrearUsuarioRequest:
+    properties:
+      capataz_id:
+        type: string
+      clave:
+        type: string
+      nombre:
+        type: string
+      rol:
+        type: string
+      usuario:
         type: string
     type: object
   requests.CrearZonaSupervisionRequest:
@@ -1382,9 +1453,128 @@ paths:
       summary: API index
       tags:
       - meta
+  /v1/accesos/permisos:
+    patch:
+      consumes:
+      - application/json
+      description: Concede o retira una acción. Permite lo lee sin reiniciar.
+      parameters:
+      - description: Celda de la matriz
+        in: body
+        name: cuerpo
+        required: true
+        schema:
+          $ref: '#/definitions/requests.ActualizarPermisoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: acción inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Actualizar un permiso
+      tags:
+      - Accesos
+  /v1/accesos/roles:
+    post:
+      consumes:
+      - application/json
+      description: Crea un rol sin renombrar los códigos existentes
+      parameters:
+      - description: Código y nombre
+        in: body
+        name: cuerpo
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearRolRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: rol creado
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: código inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: el rol ya existe
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Alta de rol
+      tags:
+      - Accesos
+  /v1/accesos/roles/{codigo}:
+    patch:
+      consumes:
+      - application/json
+      description: Un rol inactivo no inicia sesión. No renombra el código.
+      parameters:
+      - description: Código del rol
+        in: path
+        name: codigo
+        required: true
+        type: string
+      - description: Activo
+        in: body
+        name: cuerpo
+        required: true
+        schema:
+          $ref: '#/definitions/requests.ActualizarRolRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: JSON inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Activar o desactivar un rol
+      tags:
+      - Accesos
   /v1/accesos/usuarios:
     get:
-      description: Devuelve la lista de cuentas locales y permisos (solo admin)
+      description: Devuelve cuentas, roles y la matriz. Jefatura de sección y administrador
+        del sistema.
       produces:
       - application/json
       responses:
@@ -1393,7 +1583,7 @@ paths:
           schema:
             $ref: '#/definitions/dto.UsuariosResponseDTO'
         "403":
-          description: solo administración ve las cuentas
+          description: su rol no tiene ese permiso
           schema:
             additionalProperties:
               type: string
@@ -1404,13 +1594,93 @@ paths:
             additionalProperties:
               type: string
             type: object
-        "503":
-          description: base de datos no disponible
+      summary: Listar cuentas y permisos
+      tags:
+      - Accesos
+    post:
+      consumes:
+      - application/json
+      description: Crea una cuenta con clave propia y debe_cambiar_password
+      parameters:
+      - description: Cuenta nueva
+        in: body
+        name: cuerpo
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearUsuarioRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: cuenta creada
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: datos inválidos
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Listar cuentas y permisos
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: usuario ya existe
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Alta de cuenta
+      tags:
+      - Accesos
+  /v1/accesos/usuarios/{usuario}:
+    patch:
+      consumes:
+      - application/json
+      description: Cambia nombre, rol, activo o clave. La baja es lógica.
+      parameters:
+      - description: Usuario
+        in: path
+        name: usuario
+        required: true
+        type: string
+      - description: Campos a cambiar
+        in: body
+        name: cuerpo
+        required: true
+        schema:
+          $ref: '#/definitions/requests.ActualizarUsuarioRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: cuenta actualizada
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: datos inválidos
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: no existe esa cuenta
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Actualizar cuenta
       tags:
       - Accesos
   /v1/auditoria/cambios:
@@ -3616,6 +3886,41 @@ paths:
       summary: Iniciar sesión
       tags:
       - Sesion
+  /v1/sesion/clave:
+    post:
+      consumes:
+      - application/json
+      description: La persona reemplaza su clave y limpia debe_cambiar_password
+      parameters:
+      - description: Clave actual y nueva
+        in: body
+        name: cuerpo
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CambiarClaveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: clave actualizada
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: clave inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: sin sesión o clave incorrecta
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cambiar la clave propia
+      tags:
+      - Accesos
   /v1/solicitudes:
     get:
       produces:

@@ -24,11 +24,10 @@ func TestEnsureConservaFilasExtraYEsIdempotente(t *testing.T) {
 	sesionRepo := postgres.NewSesionRepository(gdb)
 	hasher := seguridad.NewBcryptHasher()
 	tx := database.NewTransaccion(gdb)
-	permisosSvc := services.NewPermisosService()
+	permisosSvc := services.NewPermisosService(permisoRepo)
 
 	semillaUC := usecases.NewSemillaAccesosUseCase(tx, usuarioRepo, permisoRepo, permisosSvc, hasher)
 	sesionUC := usecases.NewSesionUseCase(sesionRepo, usuarioRepo, hasher)
-	usuarioUC := usecases.NewUsuarioUseCase(usuarioRepo, permisoRepo)
 	ctx := context.Background()
 
 	// 1. Insertamos un permiso extra
@@ -94,13 +93,12 @@ func TestEnsureConservaFilasExtraYEsIdempotente(t *testing.T) {
 		t.Fatalf("Resolver rol_nombre esperado 'Jefatura de sección', obtuve %q", uTok.RolNombre)
 	}
 
-	// Verificamos ListarUsuarios
-	res, err := usuarioUC.ListarUsuarios(ctx)
+	usuarios, err := usuarioRepo.Listar(ctx)
 	if err != nil {
-		t.Fatalf("ListarUsuarios falló: %v", err)
+		t.Fatalf("Listar falló: %v", err)
 	}
 	encontrado := false
-	for _, usr := range res.Usuarios {
+	for _, usr := range usuarios {
 		if usr.Usuario == "coordinacion" {
 			encontrado = true
 			if usr.RolNombre != "Ingeniería / Coordinación" {
@@ -122,7 +120,7 @@ func TestUsuariosRolForeignKeyYCatalogoRoles(t *testing.T) {
 	permisoRepo := postgres.NewPermisoRepository(gdb)
 	hasher := seguridad.NewBcryptHasher()
 
-	semillaUC := usecases.NewSemillaAccesosUseCase(database.NewTransaccion(gdb), usuarioRepo, permisoRepo, services.NewPermisosService(), hasher)
+	semillaUC := usecases.NewSemillaAccesosUseCase(database.NewTransaccion(gdb), usuarioRepo, permisoRepo, services.NewPermisosService(permisoRepo), hasher)
 	if err := semillaUC.Ensure(ctx, "pando-local"); err != nil {
 		t.Fatalf("Ensure falló: %v", err)
 	}

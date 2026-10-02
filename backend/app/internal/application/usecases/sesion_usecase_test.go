@@ -40,6 +40,11 @@ func (f *fakeUsuarioRepo) Crear(_ context.Context, u *entities.Usuario) error {
 	return nil
 }
 
+func (f *fakeUsuarioRepo) Actualizar(_ context.Context, u *entities.Usuario) error {
+	f.usuarios[u.Usuario] = u
+	return nil
+}
+
 type fakeSesionRepo struct {
 	sesiones      map[string]*entities.Sesion
 	usuariosByTok map[string]*entities.Usuario
@@ -97,6 +102,7 @@ func TestSesionUseCase_Login(t *testing.T) {
 				RolNombre:    "Administrador",
 				PasswordHash: "hash_pando-local",
 				Activo:       true,
+				RolActivo:    true,
 			},
 			"inactivo": {
 				ID:           2,
@@ -105,6 +111,7 @@ func TestSesionUseCase_Login(t *testing.T) {
 				Rol:          "capataz",
 				PasswordHash: "hash_pando-local",
 				Activo:       false,
+				RolActivo:    true,
 			},
 		},
 	}

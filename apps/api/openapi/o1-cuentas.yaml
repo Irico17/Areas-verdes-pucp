@@ -1,0 +1,76 @@
+# Flujo o1-cuentas. Alta, baja lógica, rol, clave y matriz de permisos.
+# No reordena paths de otros fragmentos.
+/api/v1/accesos/usuarios:
+  get:
+    tags: [sistema]
+    summary: Cuentas, roles y permisos. Jefatura de sección y administrador del sistema.
+    responses:
+      "200":
+        description: Listado sin la clave
+      "403":
+        description: El rol no administra cuentas
+  post:
+    tags: [sistema]
+    summary: Alta con clave propia y debe_cambiar_password
+    responses:
+      "201":
+        description: Cuenta creada
+      "403":
+        description: El rol no administra cuentas
+/api/v1/accesos/usuarios/{usuario}:
+  patch:
+    tags: [sistema]
+    summary: Cambia nombre, rol, activo o clave. La baja es lógica.
+    parameters:
+      - name: usuario
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Cuenta actualizada
+      "403":
+        description: El rol no administra cuentas
+/api/v1/accesos/permisos:
+  patch:
+    tags: [sistema]
+    summary: Concede o retira una acción. Queda en cambios y Permite lo lee sin reiniciar.
+    responses:
+      "200":
+        description: Matriz actualizada
+      "403":
+        description: El rol no administra cuentas
+/api/v1/accesos/roles:
+  post:
+    tags: [sistema]
+    summary: Alta de un rol. No renombra los códigos existentes.
+    responses:
+      "201":
+        description: Rol creado
+      "403":
+        description: El rol no administra cuentas
+/api/v1/accesos/roles/{codigo}:
+  patch:
+    tags: [sistema]
+    summary: Activa o desactiva un rol. Un rol inactivo no inicia sesión.
+    parameters:
+      - name: codigo
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Rol actualizado
+      "403":
+        description: El rol no administra cuentas
+/api/v1/sesion/clave:
+  post:
+    tags: [sistema]
+    summary: La persona cambia su propia clave. Limpia debe_cambiar_password.
+    responses:
+      "200":
+        description: Clave actualizada
+      "401":
+        description: Sesión o clave actual incorrecta

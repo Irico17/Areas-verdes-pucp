@@ -6,9 +6,27 @@ export type Usuario = {
   id: number
   usuario: string
   nombre: string
-  rol: "capataz" | "coordinacion" | "jefatura" | "admin"
+  rol: "capataz" | "coordinacion" | "jefatura" | "admin" | string
   capataz_id?: string
   rol_nombre?: string
+  activo?: boolean
+  debe_cambiar_password?: boolean
+}
+
+export type Cuenta = Usuario & {
+  activo: boolean
+  debe_cambiar_password: boolean
+}
+
+export type RolCuenta = {
+  codigo: string
+  nombre: string
+  activo: boolean
+}
+
+export type PermisoCuenta = {
+  rol: string
+  accion: string
 }
 
 export function etiquetaRol(rol: string, rolNombre?: string): string {
@@ -183,12 +201,18 @@ async function send(path: string, method: string, body?: unknown): Promise<Respo
   return res
 }
 
-export async function fetchSesion(): Promise<Usuario | null> {
+export async function leerSesion(): Promise<Usuario | null> {
   const res = await fetch(apiUrl("/sesion"), { credentials: "include" })
   if (res.status === 401) return null
   if (!res.ok) throw new ApiError(res.status, "No se pudo leer la sesión")
   const body = (await res.json()) as { usuario: Usuario }
   return body.usuario
+}
+
+export async function fetchSesion(): Promise<Usuario | null> {
+  const user = await leerSesion()
+  if (user?.debe_cambiar_password) return null
+  return user
 }
 
 export async function entrar(usuario: string, clave: string): Promise<Usuario> {
@@ -329,14 +353,56 @@ export async function sugerirTipo(titulo: string): Promise<SugerenciaTipo> {
 
 export async function fetchCuentas(): Promise<{
   aviso: string
-  usuarios: Usuario[]
-  permisos: { rol: string; accion: string }[]
+  usuarios: Cuenta[]
+  permisos: PermisoCuenta[]
+  roles: RolCuenta[]
 }> {
   const res = await send(apiUrl("/accesos/usuarios"), "GET")
   const body = (await res.json()) as {
     aviso?: string
-    usuarios?: Usuario[]
-    permisos?: { rol: string; accion: string }[]
+    usuarios?: Cuenta[]
+    permisos?: PermisoCuenta[]
+    roles?: RolCuenta[]
   }
-  return { aviso: body.aviso ?? "", usuarios: body.usuarios ?? [], permisos: body.permisos ?? [] }
+  return {
+    aviso: body.aviso ?? "",
+    usuarios: body.usuarios ?? [],
+    permisos: body.permisos ?? [],
+    roles: body.roles ?? [],
+  }
+}
+
+export async function crearCuenta(body: {
+  usuario: string
+  nombre: string
+  rol: string
+  clave: string
+  capataz_id?: string
+}): Promise<void> {
+  await send(apiUrl("/accesos/usuarios"), "POST", body)
+}
+
+export async function actualizarCuenta(
+  usuario: string,
+  body: { nombre?: string; rol?: string; activo?: boolean; clave?: string; capataz_id?: string },
+): Promise<void> {
+  await send(apiUrl(`/accesos/usuarios/${encodeURIComponent(usuario)}`), "PATCH", body)
+}
+
+export async function cambiarClavePropia(claveActual: string, claveNueva: string): Promise<Usuario> {
+  const res = await send(apiUrl("/sesion/clave"), "POST", { clave_actual: claveActual, clave_nueva: claveNueva })
+  const body = (await res.json()) as { usuario: Usuario }
+  return body.usuario
+}
+
+export async function actualizarPermiso(rol: string, accion: string, concedido: boolean): Promise<void> {
+  await send(apiUrl("/accesos/permisos"), "PATCH", { rol, accion, concedido })
+}
+
+export async function crearRol(codigo: string, nombre: string): Promise<void> {
+  await send(apiUrl("/accesos/roles"), "POST", { codigo, nombre })
+}
+
+export async function actualizarRol(codigo: string, activo: boolean): Promise<void> {
+  await send(apiUrl(`/accesos/roles/${encodeURIComponent(codigo)}`), "PATCH", { activo })
 }

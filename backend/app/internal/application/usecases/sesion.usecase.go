@@ -43,7 +43,7 @@ func (uc *sesionUseCase) Login(ctx context.Context, usuario, clave string) (stri
 	}
 
 	u, err := uc.usuarioRepo.ObtenerPorUsuario(ctx, usuario)
-	if err != nil || u == nil || !u.Activo {
+	if err != nil || u == nil || !u.Activo || !u.RolActivo {
 		_ = uc.hasher.Compare(dummyHash, clave)
 		return "", nil, domainErrors.ErrCredencialesInvalidas
 	}
@@ -68,14 +68,7 @@ func (uc *sesionUseCase) Login(ctx context.Context, usuario, clave string) (stri
 		return "", nil, err
 	}
 
-	return token, &dto.UsuarioSesionDTO{
-		ID:        u.ID,
-		Usuario:   u.Usuario,
-		Nombre:    u.Nombre,
-		Rol:       u.Rol,
-		RolNombre: u.RolNombre,
-		CapatazID: u.CapatazID,
-	}, nil
+	return token, sesionDesdeUsuario(u), nil
 }
 
 func (uc *sesionUseCase) Resolver(ctx context.Context, token string) (*dto.UsuarioSesionDTO, error) {
@@ -92,14 +85,19 @@ func (uc *sesionUseCase) Resolver(ctx context.Context, token string) (*dto.Usuar
 		return nil, domainErrors.ErrSinSesion
 	}
 
+	return sesionDesdeUsuario(u), nil
+}
+
+func sesionDesdeUsuario(u *entities.Usuario) *dto.UsuarioSesionDTO {
 	return &dto.UsuarioSesionDTO{
-		ID:        u.ID,
-		Usuario:   u.Usuario,
-		Nombre:    u.Nombre,
-		Rol:       u.Rol,
-		RolNombre: u.RolNombre,
-		CapatazID: u.CapatazID,
-	}, nil
+		ID:                  u.ID,
+		Usuario:             u.Usuario,
+		Nombre:              u.Nombre,
+		Rol:                 u.Rol,
+		RolNombre:           u.RolNombre,
+		CapatazID:           u.CapatazID,
+		DebeCambiarPassword: u.DebeCambiarPassword,
+	}
 }
 
 func (uc *sesionUseCase) Logout(ctx context.Context, token string) {

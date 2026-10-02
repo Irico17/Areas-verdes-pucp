@@ -19,4 +19,10 @@ func NewAccesosGroup(controller controller.IUsuarioController) *AccesosGroup {
 // Register registers accesos routes on a router.
 func (g *AccesosGroup) Register(router gin.IRouter) {
 	router.GET("/accesos/usuarios", g.controller.Listar)
+	router.POST("/accesos/usuarios", g.controller.Crear)
+	router.PATCH("/accesos/usuarios/:usuario", g.controller.Actualizar)
+	router.PATCH("/accesos/permisos", g.controller.ActualizarPermiso)
+	router.POST("/accesos/roles", g.controller.CrearRol)
+	router.PATCH("/accesos/roles/:codigo", g.controller.ActualizarRol)
+	router.POST("/sesion/clave", g.controller.CambiarClavePropia)
 }

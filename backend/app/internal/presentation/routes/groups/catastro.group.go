@@ -51,7 +51,8 @@ func (g *CatastroGroup) Register(router gin.IRouter) {
 	router.POST("/catastro/lugares", middleware.RequierePermiso(g.permisos, "registrar"), g.catastroCtrl.CrearLugar)
 
 	router.GET("/catastro/especies", middleware.RequierePermiso(g.permisos, "consultar"), g.catastroCtrl.Especies)
-	router.POST("/catastro/especies", middleware.RequierePermiso(g.permisos, "registrar"), g.catastroCtrl.CrearEspecie)
+	// El alta de especies usa catalogos, no registrar: el capataz sigue registrando en campo.
+	router.POST("/catastro/especies", middleware.RequierePermiso(g.permisos, "catalogos"), g.catastroCtrl.CrearEspecie)
 
 	router.GET("/catastro/ejemplares", middleware.RequierePermiso(g.permisos, "consultar"), g.catastroCtrl.Ejemplares)
 	router.POST("/catastro/ejemplares", middleware.RequierePermiso(g.permisos, "registrar"), g.catastroCtrl.CrearEjemplar)
