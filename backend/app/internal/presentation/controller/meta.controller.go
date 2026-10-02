@@ -94,21 +94,43 @@ func NewMetaController(contrato contracts.IContratoOpenAPI, logger zerolog.Logge
 	return &metaController{contrato: contrato, logger: logger}
 }
 
+// IndexResponse represents the API index response.
+type IndexResponse struct {
+	Servicio string  `json:"servicio"`
+	Version  string  `json:"version"`
+	CRS      string  `json:"crs"`
+	Rutas    []Route `json:"rutas"`
+}
+
 // Index serves the API index with routes and service details.
+// @Summary API index
+// @Description Returns the service information and public routes index
+// @Tags meta
+// @Produce json
+// @Success 200 {object} IndexResponse
+// @Router /v1 [get]
 func (c *metaController) Index(ctx *gin.Context) {
 	rutas := RutasV1
 	if len(ctx.Request.URL.Path) >= 13 && ctx.Request.URL.Path[:13] == "/areas-verdes" {
 		rutas = RutasAreasVerdesV1
 	}
-	ctx.JSON(http.StatusOK, gin.H{
-		"servicio": "campus-verde-api",
-		"version":  "v1",
-		"crs":      "EPSG:4326",
-		"rutas":    rutas,
+	ctx.JSON(http.StatusOK, IndexResponse{
+		Servicio: "campus-verde-api",
+		Version:  "v1",
+		CRS:      "EPSG:4326",
+		Rutas:    rutas,
 	})
 }
 
 // OpenAPI serves the merged openapi.yaml contract.
+// @Summary Legacy OpenAPI YAML contract
+// @Description Returns the merged OpenAPI YAML specification
+// @Tags meta
+// @Produce application/yaml
+// @Success 200 {string} string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /v1/openapi.yaml [get]
 func (c *metaController) OpenAPI(ctx *gin.Context) {
 	body, err := c.contrato.ObtenerContrato()
 	if err != nil {

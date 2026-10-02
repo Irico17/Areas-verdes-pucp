@@ -23,6 +23,1674 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/v1": {
+            "get": {
+                "description": "Returns the service information and public routes index",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "meta"
+                ],
+                "summary": "API index",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controller.IndexResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/accesos/usuarios": {
+            "get": {
+                "description": "Devuelve la lista de cuentas locales y permisos (solo admin)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Accesos"
+                ],
+                "summary": "Listar cuentas y permisos",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.UsuariosResponseDTO"
+                        }
+                    },
+                    "403": {
+                        "description": "solo administración ve las cuentas",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "no se pudieron leer las cuentas",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "base de datos no disponible",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/auditoria/cambios": {
+            "get": {
+                "description": "Devuelve el listado de cambios filtrable por zona, origen y fechas",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auditoria"
+                ],
+                "summary": "Historial filtrable de cambios",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Entidad",
+                        "name": "entidad",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID de entidad",
+                        "name": "entidad_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Zona",
+                        "name": "zona",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Origen",
+                        "name": "origen",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fecha desde",
+                        "name": "desde",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fecha hasta",
+                        "name": "hasta",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.HistorialAuditoriaResponseDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "error de fecha",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "inicie sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "no se pudo completar la auditoría",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/auditoria/ediciones": {
+            "post": {
+                "description": "Registra un cambio manual posterior al lote",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auditoria"
+                ],
+                "summary": "Registrar edición auditada",
+                "parameters": [
+                    {
+                        "description": "Datos de la edición",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.EditarAuditoriaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.EditarAuditoriaResponseDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "JSON inválido o validación",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "inicie sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "no se pudo completar la auditoría",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/auditoria/timeline": {
+            "get": {
+                "description": "Devuelve los cambios de una fila con usuario de sesión",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auditoria"
+                ],
+                "summary": "Timeline de cambios de una fila",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Entidad",
+                        "name": "entidad",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID de entidad",
+                        "name": "entidad_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.HistorialAuditoriaResponseDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "entidad y entidad_id son obligatorios",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "inicie sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "no se pudo completar la auditoría",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catalogos": {
+            "get": {
+                "description": "Devuelve ítems de catálogo con filtro opcional por clase y solo activos",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catálogos"
+                ],
+                "summary": "Listar ítems de catálogo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Clase de catálogo",
+                        "name": "clase",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Solo activos si es 1",
+                        "name": "activos",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CatalogoListResponseDTO"
+                        }
+                    },
+                    "401": {
+                        "description": "inicie sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "no se pudo leer el catálogo",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "base de datos no disponible",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Crea un ítem nuevo o actualiza/reactiva uno existente (requiere permiso catalogos)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catálogos"
+                ],
+                "summary": "Crear o reactivar un ítem de catálogo",
+                "parameters": [
+                    {
+                        "description": "Datos del ítem",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearCatalogoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CatalogoItemDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "error de validación o JSON inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "inicie sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "no se pudo guardar el ítem",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "base de datos no disponible",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catalogos/{id}/desactivar": {
+            "post": {
+                "description": "Realiza una baja lógica cambiando activo=false sin borrar la fila",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catálogos"
+                ],
+                "summary": "Desactivar un ítem de catálogo (baja lógica)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID del ítem",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.DesactivarCatalogoResponseDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "id inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "inicie sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "no existe ese ítem",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "no se pudo desactivar",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "base de datos no disponible",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/areas": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List green area metadata fichas",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.FichaDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "Create green area without GPS geometry",
+                "parameters": [
+                    {
+                        "description": "New area",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearAreaSinGeomRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.FichaDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/areas/{id}": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "Update green area metadata ficha",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Feature ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated ficha",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ActualizarFichaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.FichaDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/cuadrillas": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List work teams",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.CuadrillaDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "Create work team",
+                "parameters": [
+                    {
+                        "description": "Work team data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearCuadrillaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CuadrillaDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/ejemplares": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List flora specimens with pagination",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pagination limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Pagination offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.EjemplaresPaginadosDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "Create flora specimen",
+                "parameters": [
+                    {
+                        "description": "Specimen data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearEjemplarRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.EjemplarDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/ejemplares/{id}/codigos": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List code history for specimen",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Specimen ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.CodigoHistoricoDTO"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "Recodify specimen",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Specimen ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New code",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.RecodificarRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CodigoHistoricoDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/especies": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List botanical species",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.EspecieDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "Create botanical species",
+                "parameters": [
+                    {
+                        "description": "Species data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearEspecieRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.EspecieDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/fauna": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List fauna reference layer",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.CapaFichaDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/jardines-reserva": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List jardines de reserva reference layer",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.CapaFichaDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/lugares": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List campus locations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.LugarDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "Create campus location",
+                "parameters": [
+                    {
+                        "description": "Place data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearLugarRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.LugarDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/playas": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List playas reference layer",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.CapaFichaDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/poligonos": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List work team sector polygons",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.PoligonoCuadrillaDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/puertas": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List puertas reference layer",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.CapaFichaDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/veredas": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List veredas de riesgo reference layer",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.CapaFichaDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/xerofiticas": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List xerofiticas reference layer",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.CapaFichaDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/catastro/zonas-supervision": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "List supervision zones",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/dto.ZonaSupervisionDTO"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catastro"
+                ],
+                "summary": "Create supervision zone",
+                "parameters": [
+                    {
+                        "description": "Supervision zone data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearZonaSupervisionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ZonaSupervisionDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/evidencias": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "evidencias"
+                ],
+                "summary": "List evidence attachments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by activity UUID",
+                        "name": "actividad_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListarEvidenciasResponseDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "evidencias"
+                ],
+                "summary": "Upload an evidence attachment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Evidence UUID",
+                        "name": "id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Activity UUID",
+                        "name": "actividad_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order UUID",
+                        "name": "orden_id",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Note",
+                        "name": "nota",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expected SHA256",
+                        "name": "sha256",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Latitude",
+                        "name": "lat",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Longitude",
+                        "name": "lon",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "EXIF JSON",
+                        "name": "exif",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "File to upload",
+                        "name": "archivo",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.SubirEvidenciaResponseDTO"
+                        }
+                    },
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.SubirEvidenciaResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/evidencias/{id}/archivo": {
+            "get": {
+                "tags": [
+                    "evidencias"
+                ],
+                "summary": "Download an evidence file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Evidence UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/v1/geo/areas": {
+            "get": {
+                "produces": [
+                    "application/geo+json"
+                ],
+                "tags": [
+                    "geo"
+                ],
+                "summary": "Cadastral green area polygons",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FeatureCollection"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/geo/capas": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "geo"
+                ],
+                "summary": "List available auxiliary layers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CapasIndexDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/geo/capas/{capa}": {
+            "get": {
+                "produces": [
+                    "application/geo+json"
+                ],
+                "tags": [
+                    "geo"
+                ],
+                "summary": "Auxiliary reference layer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Layer name",
+                        "name": "capa",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FeatureCollection"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/geo/edificios": {
+            "get": {
+                "produces": [
+                    "application/geo+json"
+                ],
+                "tags": [
+                    "geo"
+                ],
+                "summary": "Campus buildings extract",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FeatureCollection"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/geo/inventario": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "geo"
+                ],
+                "summary": "Inventory overlay layers catalogue and loaded counts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.IndiceInventarioDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/geo/inventario/fotos/{name}": {
+            "get": {
+                "produces": [
+                    "image/jpeg"
+                ],
+                "tags": [
+                    "geo"
+                ],
+                "summary": "Serve local inventory JPEG photograph",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Photo file name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/geo/inventario/{capa}": {
+            "get": {
+                "produces": [
+                    "application/geo+json"
+                ],
+                "tags": [
+                    "geo"
+                ],
+                "summary": "Inventory overlay layer features",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Layer name",
+                        "name": "capa",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FeatureCollection"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CapaDesconocidaErrorDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/geo/reservas-mock": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "geo"
+                ],
+                "summary": "Mock reservations schedule without external spreadsheet references",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReservasMockResponseDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/geo/resumen": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "geo"
+                ],
+                "summary": "Summary counts of cadastral data",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ResumenDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/geo/zonas": {
+            "get": {
+                "produces": [
+                    "application/geo+json"
+                ],
+                "tags": [
+                    "geo"
+                ],
+                "summary": "Cadastral zones polygons",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FeatureCollection"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/health": {
             "get": {
                 "description": "Verify the health state of the API service",
@@ -42,16 +1710,3902 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/ia/sugerir-tipo": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ia"
+                ],
+                "summary": "Suggest activity type based on title keywords",
+                "parameters": [
+                    {
+                        "description": "Title payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.SugerirTipoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.SugerenciaIADTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/importaciones": {
+            "post": {
+                "description": "Sube un archivo CSV/GeoJSON/JSON y genera una vista previa persistida en lote",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "importaciones"
+                ],
+                "summary": "Vista previa de importación",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nombre de la entidad",
+                        "name": "entidad",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Archivo a importar",
+                        "name": "archivo",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.VistaPreviaResponseDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "falta el archivo o entidad no importable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "inicie sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "no se pudo guardar la vista previa",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/importaciones/entidades": {
+            "get": {
+                "description": "Devuelve la lista de entidades importables del mapa de datos",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "importaciones"
+                ],
+                "summary": "Entidades importables",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.EntidadesImportablesResponseDTO"
+                        }
+                    },
+                    "401": {
+                        "description": "inicie sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/importaciones/{id}/confirmar": {
+            "post": {
+                "description": "Confirma un lote de importación en estado vista previa y escribe las filas",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "importaciones"
+                ],
+                "summary": "Confirmar importación",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID del lote",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ConfirmarImportacionResponseDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "lote inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "inicie sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "lote no encontrado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "el lote no está en vista previa",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "ninguna fila válida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "no se pudo importar",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/bebederos": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "List drinking fountains",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListarBebederosResponseDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Create or upsert a drinking fountain",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.BebederoDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/bebederos/{id}": {
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Soft delete a drinking fountain",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.BajaResponseDTO"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Partially update a drinking fountain",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.BebederoDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/capas/{capa}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "List records from an editable layer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Layer name",
+                        "name": "capa",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListarFichasCapaResponseDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Create or upsert a record in an editable layer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Layer name",
+                        "name": "capa",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.FichaCapaDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/capas/{capa}/{id}": {
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Soft delete a record in an editable layer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Layer name",
+                        "name": "capa",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.BajaResponseDTO"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Partially update a record in an editable layer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Layer name",
+                        "name": "capa",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.FichaCapaDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/export/{capa}": {
+            "get": {
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Export an editable layer as CSV",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Layer name",
+                        "name": "capa",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/formato/puntos": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Parse and validate puntos PUCP CSV file",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.FormatoPuntosResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/puntos": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "List campus points of interest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListarPuntosResponseDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Create or upsert a campus point of interest",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PuntoDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/puntos/{id}": {
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Soft delete a campus point of interest",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.BajaResponseDTO"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Partially update a campus point of interest",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PuntoDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/reservas": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "List garden reservations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date",
+                        "name": "desde",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date",
+                        "name": "hasta",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListarReservasResponseDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Create a garden reservation",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReservaDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/reservas/{id}": {
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Soft delete a garden reservation",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.BajaResponseDTO"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Partially update a garden reservation",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReservaDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/tachos": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "List waste bins",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ListarTachosResponseDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Create or upsert a waste bin",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TachoDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/tachos.csv": {
+            "get": {
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Export waste bins as CSV",
+                "responses": {
+                    "200": {
+                        "description": "CSV",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/inventario/tachos/{id}": {
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Soft delete a waste bin",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.BajaResponseDTO"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "inventario"
+                ],
+                "summary": "Partially update a waste bin",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TachoDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/lotes": {
+            "post": {
+                "description": "Importa filas en un lote reversible con usuario de sesión",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auditoria"
+                ],
+                "summary": "Importar lote reversible",
+                "parameters": [
+                    {
+                        "description": "Lote a importar",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.LoteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ImportarLoteResponseDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "JSON inválido o validación de filas",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "inicie sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "no se pudo completar la auditoría",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/lotes/{id}/revertir": {
+            "post": {
+                "description": "Revierte un lote de importación si no hay filas editadas después o si se confirma",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auditoria"
+                ],
+                "summary": "Revertir lote",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID del lote",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Confirmar si hay filas posteriores",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/requests.RevertirLoteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReporteReversionDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "lote inválido o ya revertido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "inicie sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "su rol no tiene ese permiso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "lote no encontrado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "hay filas editadas después del lote",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "no se pudo completar la auditoría",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/openapi.yaml": {
+            "get": {
+                "description": "Returns the merged OpenAPI YAML specification",
+                "produces": [
+                    "application/yaml"
+                ],
+                "tags": [
+                    "meta"
+                ],
+                "summary": "Legacy OpenAPI YAML contract",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/operacion/actividades": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "List activities as GeoJSON FeatureCollection",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entities.FeatureCollection"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "Create an activity from map pin or reference",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CrearIntervencionResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/operacion/actividades/{id}/archivar": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "Soft-delete/archive an activity with reason",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ArchivarIntervencionResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/operacion/actividades/{id}/asignacion": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "Assign an activity to a capataz team",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/operacion/actividades/{id}/avances": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "Record progress log entry for an activity",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/operacion/actividades/{id}/estado": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "Update the state of an activity",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/operacion/actividades/{id}/ficha": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "Update activity metadata from desktop form",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/operacion/actividades/{id}/timeline": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "Retrieve the full event timeline of an activity",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TimelineResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/operacion/capataces": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operacion"
+                ],
+                "summary": "List active capataces",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CapatacesResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordenes": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "atencion"
+                ],
+                "summary": "List work orders",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.OrdenesResponseDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "atencion"
+                ],
+                "summary": "Create a work order",
+                "parameters": [
+                    {
+                        "description": "Work order payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearOrdenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.OrdenDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ordenes/{id}": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "atencion"
+                ],
+                "summary": "Edit a work order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Work order UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Work order edit payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.EditarOrdenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.EditarOrdenResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/podas": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "poda"
+                ],
+                "summary": "List poda records",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PodasResponseDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "poda"
+                ],
+                "summary": "Create a poda record",
+                "parameters": [
+                    {
+                        "description": "Poda payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.GuardarPodaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PodaDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/podas/{id}": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "poda"
+                ],
+                "summary": "Edit a poda record",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Poda UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Poda edit payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.GuardarPodaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PodaDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/podas/{id}/archivar": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "poda"
+                ],
+                "summary": "Archive a poda record",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Poda UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/reportes/labores": {
+            "get": {
+                "produces": [
+                    "application/json",
+                    "text/csv",
+                    "application/vnd.ms-excel"
+                ],
+                "tags": [
+                    "reportes"
+                ],
+                "summary": "Generate or export activity reports",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "estado",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "desde",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "hasta",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by zone",
+                        "name": "zona",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by cuadrilla",
+                        "name": "cuadrilla",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by origin",
+                        "name": "origen",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Export format (csv or xls)",
+                        "name": "formato",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReporteResponseDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/riego": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "atencion"
+                ],
+                "summary": "List irrigation shift logs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.RiegoResponseDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "atencion"
+                ],
+                "summary": "Create an irrigation log entry",
+                "parameters": [
+                    {
+                        "description": "Irrigation payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearRiegoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CrearRiegoResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/sesion": {
+            "get": {
+                "description": "Devuelve los datos del usuario asociado a la sesión activa",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sesion"
+                ],
+                "summary": "Obtener sesión actual",
+                "responses": {
+                    "200": {
+                        "description": "usuario de la sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "sin sesión",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Autentica usuario y establece cookie de sesión cv_sesion",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sesion"
+                ],
+                "summary": "Iniciar sesión",
+                "parameters": [
+                    {
+                        "description": "Credenciales de usuario",
+                        "name": "credenciales",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "usuario autenticado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "JSON inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "usuario o clave incorrectos",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "base de datos no disponible",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Invalida el token en el servidor y limpia la cookie de sesión",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sesion"
+                ],
+                "summary": "Cerrar sesión",
+                "responses": {
+                    "200": {
+                        "description": "ok: true",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/solicitudes": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "atencion"
+                ],
+                "summary": "List service requests",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.SolicitudesResponseDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "atencion"
+                ],
+                "summary": "Create a service request",
+                "parameters": [
+                    {
+                        "description": "Solicitud payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CrearSolicitudRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.SolicitudDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/solicitudes/{id}": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "atencion"
+                ],
+                "summary": "Edit a service request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Solicitud UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Solicitud edit payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.EditarSolicitudRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.SolicitudDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/vivero": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vivero"
+                ],
+                "summary": "List nursery activity records",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by month (YYYY-MM)",
+                        "name": "mes",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ViveroResponseDTO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vivero"
+                ],
+                "summary": "Create a nursery activity record",
+                "parameters": [
+                    {
+                        "description": "Vivero payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.GuardarViveroRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ViveroDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/vivero/{id}": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vivero"
+                ],
+                "summary": "Edit a nursery activity record",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vivero UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Vivero edit payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.GuardarViveroRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ViveroDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/vivero/{id}/archivar": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vivero"
+                ],
+                "summary": "Archive a nursery activity record",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vivero UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
         "controller.HealthResponse": {
             "type": "object",
             "properties": {
+                "database": {
+                    "type": "string"
+                },
+                "postgis": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 },
                 "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "controller.IndexResponse": {
+            "type": "object",
+            "properties": {
+                "crs": {
+                    "type": "string"
+                },
+                "rutas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/controller.Route"
+                    }
+                },
+                "servicio": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "controller.Route": {
+            "type": "object",
+            "properties": {
+                "descripcion": {
+                    "type": "string"
+                },
+                "metodo": {
+                    "type": "string"
+                },
+                "ruta": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ArchivarIntervencionResponseDTO": {
+            "type": "object",
+            "properties": {
+                "archivada": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.BajaResponseDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "dto.BebederoDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "estado": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                },
+                "sede": {
+                    "type": "string"
+                },
+                "subtipo": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CapaCountDTO": {
+            "type": "object",
+            "properties": {
+                "capa": {
+                    "type": "string"
+                },
+                "features": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.CapaDesconocidaErrorDTO": {
+            "type": "object",
+            "properties": {
+                "capas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CapaFichaDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "clase": {
+                    "type": "string"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "feature_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "nota": {
+                    "type": "string"
+                },
+                "pertenecen": {
+                    "type": "string"
+                },
+                "riego": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CapasIndexDTO": {
+            "type": "object",
+            "properties": {
+                "capas_conocidas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "cargadas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.CapaCountDTO"
+                    }
+                }
+            }
+        },
+        "dto.CapatacesResponseDTO": {
+            "type": "object",
+            "properties": {
+                "capataces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.CapatazDTO"
+                    }
+                }
+            }
+        },
+        "dto.CapatazDTO": {
+            "type": "object",
+            "properties": {
+                "equipo": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "turno": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CatalogoItemDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "clase": {
+                    "type": "string"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "orden": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.CatalogoListResponseDTO": {
+            "type": "object",
+            "properties": {
+                "clases": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.CatalogoItemDTO"
+                    }
+                }
+            }
+        },
+        "dto.CodigoHistoricoDTO": {
+            "type": "object",
+            "properties": {
+                "codigo_anterior": {
+                    "type": "string"
+                },
+                "codigo_nuevo": {
+                    "type": "string"
+                },
+                "ejemplar_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.ConfirmarImportacionResponseDTO": {
+            "type": "object",
+            "properties": {
+                "escrito": {
+                    "type": "boolean"
+                },
+                "lote_id": {
+                    "type": "integer"
+                },
+                "validas": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.ConteoReporteDTO": {
+            "type": "object",
+            "properties": {
+                "estado": {
+                    "type": "string"
+                },
+                "n": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.CrearIntervencionResponseDTO": {
+            "type": "object",
+            "properties": {
+                "creada": {
+                    "type": "boolean"
+                },
+                "feature": {
+                    "$ref": "#/definitions/entities.Feature"
+                }
+            }
+        },
+        "dto.CrearRiegoResponseDTO": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CuadrillaDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nombre_ficticio": {
+                    "type": "string"
+                },
+                "turno": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.DesactivarCatalogoResponseDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.EditarAuditoriaResponseDTO": {
+            "type": "object",
+            "properties": {
+                "editada": {
+                    "type": "boolean"
+                },
+                "entidad_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.EditarOrdenResponseDTO": {
+            "type": "object",
+            "properties": {
+                "aviso": {
+                    "type": "string"
+                },
+                "orden": {
+                    "$ref": "#/definitions/dto.OrdenDTO"
+                }
+            }
+        },
+        "dto.EjemplarDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "cantidad": {
+                    "type": "integer"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "especie_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                },
+                "nombre_comun": {
+                    "type": "string"
+                },
+                "numero_origen": {
+                    "type": "integer"
+                },
+                "observacion_fen_2026": {
+                    "type": "string"
+                },
+                "referencia": {
+                    "type": "string"
+                },
+                "salud": {
+                    "type": "string"
+                },
+                "tipo_vegetacion": {
+                    "type": "string"
+                },
+                "ubicacion_lugar_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.EjemplaresPaginadosDTO": {
+            "type": "object",
+            "properties": {
+                "ejemplares": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.EjemplarDTO"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.EntidadesImportablesResponseDTO": {
+            "type": "object",
+            "properties": {
+                "entidades": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "dto.ErrorFilaDTO": {
+            "type": "object",
+            "properties": {
+                "campo": {
+                    "type": "string"
+                },
+                "fila": {
+                    "type": "integer"
+                },
+                "motivo": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.EspecieDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nombre_cientifico": {
+                    "type": "string"
+                },
+                "nombre_comun": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.EventoAuditoriaDTO": {
+            "type": "object",
+            "properties": {
+                "accion": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "entidad": {
+                    "type": "string"
+                },
+                "entidad_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lote_id": {
+                    "type": "integer"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "usuario": {
+                    "type": "string"
+                },
+                "usuario_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.EventoTimelineDTO": {
+            "type": "object",
+            "properties": {
+                "actor_rol": {
+                    "type": "string"
+                },
+                "capataz_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "equipo": {
+                    "type": "string"
+                },
+                "estado": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nota": {
+                    "type": "string"
+                },
+                "tipo": {
+                    "type": "string"
+                },
+                "usuario": {
+                    "type": "string"
+                },
+                "usuario_id": {
+                    "type": "integer"
+                },
+                "usuario_nombre": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.EvidenciaDTO": {
+            "type": "object",
+            "properties": {
+                "actividad_id": {
+                    "type": "string"
+                },
+                "bytes": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mime": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "nota": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ExcluidaDTO": {
+            "type": "object",
+            "properties": {
+                "entidad_id": {
+                    "type": "string"
+                },
+                "motivo": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.FichaCapaDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "area_m2": {
+                    "type": "number"
+                },
+                "clase": {
+                    "type": "string"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "feature_id": {
+                    "type": "string"
+                },
+                "geojson": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "nota": {
+                    "type": "string"
+                },
+                "perimetro_m": {
+                    "type": "number"
+                },
+                "pertenecen": {
+                    "type": "string"
+                },
+                "riego": {
+                    "type": "string"
+                },
+                "uso": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.FichaDTO": {
+            "type": "object",
+            "properties": {
+                "area_m2": {
+                    "type": "number"
+                },
+                "con_geometria": {
+                    "type": "boolean"
+                },
+                "feature_id": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "referencia": {
+                    "type": "string"
+                },
+                "riego_act": {
+                    "type": "string"
+                },
+                "uso": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.FilaReporteDTO": {
+            "type": "object",
+            "properties": {
+                "clase": {
+                    "type": "string"
+                },
+                "codigo_externo": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "cuadrilla": {
+                    "type": "string"
+                },
+                "ejecutor": {
+                    "type": "string"
+                },
+                "equipo": {
+                    "type": "string"
+                },
+                "estado": {
+                    "type": "string"
+                },
+                "fecha_atencion": {
+                    "type": "string"
+                },
+                "fecha_solicitud": {
+                    "type": "string"
+                },
+                "fuente": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lugar": {
+                    "type": "string"
+                },
+                "tipo": {
+                    "type": "string"
+                },
+                "titulo": {
+                    "type": "string"
+                },
+                "zona": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.FormatoPuntosResponseDTO": {
+            "type": "object",
+            "properties": {
+                "columnas_omitidas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "filas": {
+                    "type": "integer"
+                },
+                "nota": {
+                    "type": "string"
+                },
+                "rechazados": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.RechazoDTO"
+                    }
+                }
+            }
+        },
+        "dto.HistorialAuditoriaResponseDTO": {
+            "type": "object",
+            "properties": {
+                "eventos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.EventoAuditoriaDTO"
+                    }
+                }
+            }
+        },
+        "dto.HuecoIndicadorDTO": {
+            "type": "object",
+            "properties": {
+                "clave": {
+                    "type": "string"
+                },
+                "estado": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "nota": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ImportarLoteResponseDTO": {
+            "type": "object",
+            "properties": {
+                "filas": {
+                    "type": "integer"
+                },
+                "lote_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.IndiceInventarioDTO": {
+            "type": "object",
+            "properties": {
+                "capas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "cargadas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.CapaCountDTO"
+                    }
+                }
+            }
+        },
+        "dto.ListarBebederosResponseDTO": {
+            "type": "object",
+            "properties": {
+                "bebederos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.BebederoDTO"
+                    }
+                }
+            }
+        },
+        "dto.ListarEvidenciasResponseDTO": {
+            "type": "object",
+            "properties": {
+                "evidencias": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.EvidenciaDTO"
+                    }
+                }
+            }
+        },
+        "dto.ListarFichasCapaResponseDTO": {
+            "type": "object",
+            "properties": {
+                "filas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.FichaCapaDTO"
+                    }
+                }
+            }
+        },
+        "dto.ListarPuntosResponseDTO": {
+            "type": "object",
+            "properties": {
+                "puntos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PuntoDTO"
+                    }
+                }
+            }
+        },
+        "dto.ListarReservasResponseDTO": {
+            "type": "object",
+            "properties": {
+                "aviso": {
+                    "type": "string"
+                },
+                "origen": {
+                    "type": "string"
+                },
+                "reservas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ReservaDTO"
+                    }
+                }
+            }
+        },
+        "dto.ListarTachosResponseDTO": {
+            "type": "object",
+            "properties": {
+                "tachos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.TachoDTO"
+                    }
+                }
+            }
+        },
+        "dto.LugarDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "nombre_norm": {
+                    "type": "string"
+                },
+                "zona_supervision_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.OrdenDTO": {
+            "type": "object",
+            "properties": {
+                "actividad_id": {
+                    "type": "string"
+                },
+                "conformidad": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "empresa": {
+                    "type": "string"
+                },
+                "estado": {
+                    "type": "string"
+                },
+                "frecuencia": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "referencia": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.OrdenesResponseDTO": {
+            "type": "object",
+            "properties": {
+                "aviso": {
+                    "type": "string"
+                },
+                "ordenes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.OrdenDTO"
+                    }
+                }
+            }
+        },
+        "dto.PermisoDTO": {
+            "type": "object",
+            "properties": {
+                "accion": {
+                    "type": "string"
+                },
+                "rol": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PodaDTO": {
+            "type": "object",
+            "properties": {
+                "cantidad_ejecutada": {
+                    "type": "number"
+                },
+                "cantidad_pedida": {
+                    "type": "number"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "codigo_externo": {
+                    "type": "string"
+                },
+                "comentario": {
+                    "type": "string"
+                },
+                "fecha_ejecucion": {
+                    "type": "string"
+                },
+                "fecha_reporte": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nombre_cientifico": {
+                    "type": "string"
+                },
+                "nombre_comun": {
+                    "type": "string"
+                },
+                "personal": {
+                    "type": "string"
+                },
+                "prioridad": {
+                    "type": "string"
+                },
+                "tipo": {
+                    "type": "string"
+                },
+                "tipo_actividad": {
+                    "type": "string"
+                },
+                "ubicacion": {
+                    "type": "string"
+                },
+                "unidad": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PodasResponseDTO": {
+            "type": "object",
+            "properties": {
+                "podas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PodaDTO"
+                    }
+                }
+            }
+        },
+        "dto.PoligonoCuadrillaDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "con_geometria": {
+                    "type": "boolean"
+                },
+                "cuadrilla_id": {
+                    "type": "string"
+                },
+                "feature_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "zona_supervision_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.PuntoDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                },
+                "titulo": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.RechazoDTO": {
+            "type": "object",
+            "properties": {
+                "campo": {
+                    "type": "string"
+                },
+                "fila": {
+                    "type": "integer"
+                },
+                "fuente": {
+                    "type": "string"
+                },
+                "motivo": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ReporteResponseDTO": {
+            "type": "object",
+            "properties": {
+                "aviso": {
+                    "type": "string"
+                },
+                "filas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.FilaReporteDTO"
+                    }
+                },
+                "pendientes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.HuecoIndicadorDTO"
+                    }
+                },
+                "por_estado": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ConteoReporteDTO"
+                    }
+                }
+            }
+        },
+        "dto.ReporteReversionDTO": {
+            "type": "object",
+            "properties": {
+                "excluidas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ExcluidaDTO"
+                    }
+                },
+                "lote_id": {
+                    "type": "integer"
+                },
+                "revertidas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "dto.ReservaDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "estado": {
+                    "type": "string"
+                },
+                "evento": {
+                    "type": "string"
+                },
+                "fecha": {
+                    "type": "string"
+                },
+                "hora_fin": {
+                    "type": "string"
+                },
+                "hora_inicio": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "jardin_id": {
+                    "type": "integer"
+                },
+                "origen": {
+                    "type": "string"
+                },
+                "unidad": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ReservaItemDTO": {
+            "type": "object",
+            "properties": {
+                "estado": {
+                    "type": "string"
+                },
+                "evento": {
+                    "type": "string"
+                },
+                "fake": {
+                    "type": "boolean"
+                },
+                "fecha": {
+                    "type": "string"
+                },
+                "hora": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "jardin": {
+                    "type": "string"
+                },
+                "jardin_codigo": {
+                    "type": "string"
+                },
+                "notas": {
+                    "type": "string"
+                },
+                "unidad_responsable": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ReservasMockResponseDTO": {
+            "type": "object",
+            "properties": {
+                "aviso": {
+                    "type": "string"
+                },
+                "fake": {
+                    "type": "boolean"
+                },
+                "reservas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ReservaItemDTO"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.ResumenDTO": {
+            "type": "object",
+            "properties": {
+                "areas": {
+                    "type": "integer"
+                },
+                "areas_con_geometria": {
+                    "type": "integer"
+                },
+                "capas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.CapaCountDTO"
+                    }
+                },
+                "crs": {
+                    "type": "string"
+                },
+                "zonas": {
+                    "type": "integer"
+                },
+                "zonas_con_geometria": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.RiegoDTO": {
+            "type": "object",
+            "properties": {
+                "capataz_id": {
+                    "type": "string"
+                },
+                "ciclo": {
+                    "type": "string"
+                },
+                "equipo": {
+                    "type": "string"
+                },
+                "fecha": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nota": {
+                    "type": "string"
+                },
+                "sector": {
+                    "type": "string"
+                },
+                "turno": {
+                    "type": "string"
+                },
+                "zona_supervision_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.RiegoResponseDTO": {
+            "type": "object",
+            "properties": {
+                "aviso": {
+                    "type": "string"
+                },
+                "registros": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.RiegoDTO"
+                    }
+                }
+            }
+        },
+        "dto.SolicitudDTO": {
+            "type": "object",
+            "properties": {
+                "actividad_id": {
+                    "type": "string"
+                },
+                "cantidad": {
+                    "type": "integer"
+                },
+                "codigo_externo": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "detalle": {
+                    "type": "string"
+                },
+                "estado": {
+                    "type": "string"
+                },
+                "fuente": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lugar": {
+                    "type": "string"
+                },
+                "prioridad": {
+                    "type": "string"
+                },
+                "titulo": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.SolicitudesResponseDTO": {
+            "type": "object",
+            "properties": {
+                "solicitudes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.SolicitudDTO"
+                    }
+                }
+            }
+        },
+        "dto.SubirEvidenciaResponseDTO": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "idempotente": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "dto.SugerenciaIADTO": {
+            "type": "object",
+            "properties": {
+                "codigo": {
+                    "type": "string"
+                },
+                "confianza": {
+                    "type": "string"
+                },
+                "etiqueta": {
+                    "type": "string"
+                },
+                "explicacion": {
+                    "type": "string"
+                },
+                "requiere_humano": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "dto.TachoDTO": {
+            "type": "object",
+            "properties": {
+                "accion": {
+                    "type": "string"
+                },
+                "activo": {
+                    "type": "boolean"
+                },
+                "aniquem": {
+                    "type": "integer"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "espacios": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "intermedios_metal": {
+                    "type": "integer"
+                },
+                "intermedios_plastico": {
+                    "type": "integer"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                },
+                "lugar": {
+                    "type": "string"
+                },
+                "metales": {
+                    "type": "integer"
+                },
+                "no_aprovechables": {
+                    "type": "integer"
+                },
+                "nota": {
+                    "type": "string"
+                },
+                "papel_carton": {
+                    "type": "integer"
+                },
+                "peligrosos": {
+                    "type": "integer"
+                },
+                "pilas": {
+                    "type": "integer"
+                },
+                "plastico": {
+                    "type": "integer"
+                },
+                "raee": {
+                    "type": "integer"
+                },
+                "recomendaciones": {
+                    "type": "string"
+                },
+                "tacho_actual": {
+                    "type": "string"
+                },
+                "tacho_nuevo": {
+                    "type": "string"
+                },
+                "vidrio": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.TimelineResponseDTO": {
+            "type": "object",
+            "properties": {
+                "actividad_id": {
+                    "type": "string"
+                },
+                "eventos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.EventoTimelineDTO"
+                    }
+                }
+            }
+        },
+        "dto.UsuarioSesionDTO": {
+            "type": "object",
+            "properties": {
+                "capataz_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "rol": {
+                    "type": "string"
+                },
+                "rol_nombre": {
+                    "type": "string"
+                },
+                "usuario": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.UsuariosResponseDTO": {
+            "type": "object",
+            "properties": {
+                "aviso": {
+                    "type": "string"
+                },
+                "permisos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PermisoDTO"
+                    }
+                },
+                "usuarios": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.UsuarioSesionDTO"
+                    }
+                }
+            }
+        },
+        "dto.VistaPreviaResponseDTO": {
+            "type": "object",
+            "properties": {
+                "aviso_omitidas": {
+                    "type": "string"
+                },
+                "avisos": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "columnas_omitidas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "entidad": {
+                    "type": "string"
+                },
+                "errores": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ErrorFilaDTO"
+                    }
+                },
+                "escrito": {
+                    "type": "boolean"
+                },
+                "filas": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "formato": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lote_id": {
+                    "type": "integer"
+                },
+                "validas": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.ViveroDTO": {
+            "type": "object",
+            "properties": {
+                "area": {
+                    "type": "string"
+                },
+                "descripcion": {
+                    "type": "string"
+                },
+                "etapa": {
+                    "type": "string"
+                },
+                "fecha": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lugar_id": {
+                    "type": "string"
+                },
+                "lugar_libre": {
+                    "type": "string"
+                },
+                "observaciones": {
+                    "type": "string"
+                },
+                "responsables": {
+                    "type": "string"
+                },
+                "subproceso": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ViveroResponseDTO": {
+            "type": "object",
+            "properties": {
+                "registros": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ViveroDTO"
+                    }
+                }
+            }
+        },
+        "dto.ZonaSupervisionDTO": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "area_m2": {
+                    "type": "number"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "con_geometria": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nombre": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.Feature": {
+            "type": "object",
+            "properties": {
+                "geometry": {
+                    "type": "object"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "properties": {},
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "entities.FeatureCollection": {
+            "type": "object",
+            "properties": {
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entities.Feature"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.ActualizarFichaRequest": {
+            "type": "object",
+            "properties": {
+                "nombre": {
+                    "type": "string"
+                },
+                "referencia": {
+                    "type": "string"
+                },
+                "riego_act": {
+                    "type": "string"
+                },
+                "uso": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.CrearAreaSinGeomRequest": {
+            "type": "object",
+            "properties": {
+                "feature_id": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "uso": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.CrearCatalogoRequest": {
+            "type": "object",
+            "properties": {
+                "clase": {
+                    "type": "string"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.CrearCuadrillaRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "nombre_ficticio": {
+                    "type": "string"
+                },
+                "turno": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.CrearEjemplarRequest": {
+            "type": "object",
+            "properties": {
+                "cantidad": {
+                    "type": "integer"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "especie_id": {
+                    "type": "integer"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                },
+                "nombre_comun": {
+                    "type": "string"
+                },
+                "numero_origen": {
+                    "type": "integer"
+                },
+                "observacion_fen_2026": {
+                    "type": "string"
+                },
+                "referencia": {
+                    "type": "string"
+                },
+                "tipo_vegetacion": {
+                    "type": "string"
+                },
+                "ubicacion_lugar_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "requests.CrearEspecieRequest": {
+            "type": "object",
+            "properties": {
+                "nombre_cientifico": {
+                    "type": "string"
+                },
+                "nombre_comun": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.CrearLugarRequest": {
+            "type": "object",
+            "properties": {
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "zona_supervision_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "requests.CrearOrdenRequest": {
+            "type": "object",
+            "properties": {
+                "actividad_id": {
+                    "type": "string"
+                },
+                "empresa": {
+                    "type": "string"
+                },
+                "frecuencia": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "referencia": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.CrearRiegoRequest": {
+            "type": "object",
+            "properties": {
+                "capataz_id": {
+                    "type": "string"
+                },
+                "ciclo": {
+                    "type": "string"
+                },
+                "fecha": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nota": {
+                    "type": "string"
+                },
+                "sector": {
+                    "type": "string"
+                },
+                "superficie_m2": {
+                    "type": "number"
+                },
+                "turno": {
+                    "type": "string"
+                },
+                "zona_supervision_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.CrearSolicitudRequest": {
+            "type": "object",
+            "properties": {
+                "actividad_id": {
+                    "type": "string"
+                },
+                "cantidad": {
+                    "type": "integer"
+                },
+                "codigo_externo": {
+                    "type": "string"
+                },
+                "detalle": {
+                    "type": "string"
+                },
+                "fuente": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lugar": {
+                    "type": "string"
+                },
+                "prioridad": {
+                    "type": "string"
+                },
+                "titulo": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.CrearZonaSupervisionRequest": {
+            "type": "object",
+            "properties": {
+                "area_m2": {
+                    "type": "number"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "geojson": {
+                    "type": "string"
+                },
+                "nombre": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.EditarAuditoriaRequest": {
+            "type": "object",
+            "properties": {
+                "despues": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "entidad": {
+                    "type": "string"
+                },
+                "entidad_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.EditarOrdenRequest": {
+            "type": "object",
+            "properties": {
+                "conformidad": {
+                    "type": "string"
+                },
+                "estado": {
+                    "type": "string"
+                },
+                "periodo_fin": {
+                    "type": "string"
+                },
+                "periodo_inicio": {
+                    "type": "string"
+                },
+                "reporte_proveedor": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.EditarSolicitudRequest": {
+            "type": "object",
+            "properties": {
+                "codigo_externo": {
+                    "type": "string"
+                },
+                "detalle": {
+                    "type": "string"
+                },
+                "lugar": {
+                    "type": "string"
+                },
+                "prioridad": {
+                    "type": "string"
+                },
+                "titulo": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.FilaLoteRequest": {
+            "type": "object",
+            "properties": {
+                "accion": {
+                    "type": "string"
+                },
+                "antes": {
+                    "type": "object"
+                },
+                "despues": {
+                    "type": "object"
+                },
+                "entidad_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.GuardarPodaRequest": {
+            "type": "object",
+            "properties": {
+                "cantidad_ejecutada": {
+                    "type": "number"
+                },
+                "cantidad_pedida": {
+                    "type": "number"
+                },
+                "codigo": {
+                    "type": "string"
+                },
+                "codigo_externo": {
+                    "type": "string"
+                },
+                "comentario": {
+                    "type": "string"
+                },
+                "fecha_ejecucion": {
+                    "type": "string"
+                },
+                "fecha_reporte": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nombre_cientifico": {
+                    "type": "string"
+                },
+                "nombre_comun": {
+                    "type": "string"
+                },
+                "personal": {
+                    "type": "string"
+                },
+                "prioridad": {
+                    "type": "string"
+                },
+                "tipo": {
+                    "type": "string"
+                },
+                "tipo_actividad": {
+                    "type": "string"
+                },
+                "ubicacion": {
+                    "type": "string"
+                },
+                "unidad": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.GuardarViveroRequest": {
+            "type": "object",
+            "properties": {
+                "area": {
+                    "type": "string"
+                },
+                "descripcion": {
+                    "type": "string"
+                },
+                "etapa": {
+                    "type": "string"
+                },
+                "fecha": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lugar_id": {
+                    "type": "string"
+                },
+                "lugar_libre": {
+                    "type": "string"
+                },
+                "observaciones": {
+                    "type": "string"
+                },
+                "responsables": {
+                    "type": "string"
+                },
+                "subproceso": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "clave": {
+                    "type": "string"
+                },
+                "usuario": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.LoteRequest": {
+            "type": "object",
+            "properties": {
+                "entidad": {
+                    "type": "string"
+                },
+                "filas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/requests.FilaLoteRequest"
+                    }
+                }
+            }
+        },
+        "requests.RecodificarRequest": {
+            "type": "object",
+            "properties": {
+                "codigo_nuevo": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.RevertirLoteRequest": {
+            "type": "object",
+            "properties": {
+                "confirmar": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "requests.SugerirTipoRequest": {
+            "type": "object",
+            "properties": {
+                "titulo": {
                     "type": "string"
                 }
             }
@@ -62,7 +5616,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0.0",
-	Host:             "localhost:8080",
+	Host:             "",
 	BasePath:         "/areas-verdes",
 	Schemes:          []string{},
 	Title:            "Areas Verdes API $SWAGGER_ENV",

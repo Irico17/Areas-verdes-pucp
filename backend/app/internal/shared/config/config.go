@@ -102,6 +102,7 @@ type AccesosConfig struct {
 // SwaggerConfig contains Swagger documentation settings.
 type SwaggerConfig struct {
 	Enabled bool
+	Host    string
 }
 
 // New builds configuration from the process environment with local defaults.
@@ -162,6 +163,7 @@ func New() *Config {
 		},
 		Swagger: SwaggerConfig{
 			Enabled: swaggerEnabled(ginMode),
+			Host:    os.Getenv("SWAGGER_HOST"),
 		},
 	}
 }

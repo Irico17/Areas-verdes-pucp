@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/cmd/ioc"
-	_ "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/docs"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/docs"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/presentation/routes"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/config"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/logger"
@@ -22,11 +22,14 @@ import (
 // @contact.email   support@example.com (update)
 // @license.name    Proprietary
 // @license.url     https://example.com
-// @host            localhost:8080
 // @BasePath        /areas-verdes
 func main() {
 	cfg := config.GetConfig()
 	logger.InitLogger(cfg.Server.GinMode)
+
+	if cfg.Swagger.Host != "" {
+		docs.SwaggerInfo.Host = cfg.Swagger.Host
+	}
 
 	container, err := ioc.BuildContainer()
 	if err != nil {

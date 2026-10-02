@@ -2,12 +2,1342 @@ basePath: /areas-verdes
 definitions:
   controller.HealthResponse:
     properties:
+      database:
+        type: string
+      postgis:
+        type: string
       status:
         type: string
       timestamp:
         type: string
     type: object
-host: localhost:8080
+  controller.IndexResponse:
+    properties:
+      crs:
+        type: string
+      rutas:
+        items:
+          $ref: '#/definitions/controller.Route'
+        type: array
+      servicio:
+        type: string
+      version:
+        type: string
+    type: object
+  controller.Route:
+    properties:
+      descripcion:
+        type: string
+      metodo:
+        type: string
+      ruta:
+        type: string
+    type: object
+  dto.ArchivarIntervencionResponseDTO:
+    properties:
+      archivada:
+        type: boolean
+      id:
+        type: string
+    type: object
+  dto.BajaResponseDTO:
+    properties:
+      activo:
+        type: boolean
+    type: object
+  dto.BebederoDTO:
+    properties:
+      activo:
+        type: boolean
+      codigo:
+        type: string
+      estado:
+        type: string
+      id:
+        type: integer
+      lat:
+        type: number
+      lon:
+        type: number
+      sede:
+        type: string
+      subtipo:
+        type: string
+    type: object
+  dto.CapaCountDTO:
+    properties:
+      capa:
+        type: string
+      features:
+        type: integer
+    type: object
+  dto.CapaDesconocidaErrorDTO:
+    properties:
+      capas:
+        items:
+          type: string
+        type: array
+      error:
+        type: string
+    type: object
+  dto.CapaFichaDTO:
+    properties:
+      activo:
+        type: boolean
+      clase:
+        type: string
+      codigo:
+        type: string
+      feature_id:
+        type: string
+      id:
+        type: integer
+      nombre:
+        type: string
+      nota:
+        type: string
+      pertenecen:
+        type: string
+      riego:
+        type: string
+    type: object
+  dto.CapasIndexDTO:
+    properties:
+      capas_conocidas:
+        items:
+          type: string
+        type: array
+      cargadas:
+        items:
+          $ref: '#/definitions/dto.CapaCountDTO'
+        type: array
+    type: object
+  dto.CapatacesResponseDTO:
+    properties:
+      capataces:
+        items:
+          $ref: '#/definitions/dto.CapatazDTO'
+        type: array
+    type: object
+  dto.CapatazDTO:
+    properties:
+      equipo:
+        type: string
+      id:
+        type: string
+      turno:
+        type: string
+    type: object
+  dto.CatalogoItemDTO:
+    properties:
+      activo:
+        type: boolean
+      clase:
+        type: string
+      codigo:
+        type: string
+      id:
+        type: integer
+      nombre:
+        type: string
+      orden:
+        type: integer
+    type: object
+  dto.CatalogoListResponseDTO:
+    properties:
+      clases:
+        items:
+          type: string
+        type: array
+      items:
+        items:
+          $ref: '#/definitions/dto.CatalogoItemDTO'
+        type: array
+    type: object
+  dto.CodigoHistoricoDTO:
+    properties:
+      codigo_anterior:
+        type: string
+      codigo_nuevo:
+        type: string
+      ejemplar_id:
+        type: integer
+      id:
+        type: integer
+    type: object
+  dto.ConfirmarImportacionResponseDTO:
+    properties:
+      escrito:
+        type: boolean
+      lote_id:
+        type: integer
+      validas:
+        type: integer
+    type: object
+  dto.ConteoReporteDTO:
+    properties:
+      estado:
+        type: string
+      "n":
+        type: integer
+    type: object
+  dto.CrearIntervencionResponseDTO:
+    properties:
+      creada:
+        type: boolean
+      feature:
+        $ref: '#/definitions/entities.Feature'
+    type: object
+  dto.CrearRiegoResponseDTO:
+    properties:
+      id:
+        type: string
+    type: object
+  dto.CuadrillaDTO:
+    properties:
+      activo:
+        type: boolean
+      id:
+        type: string
+      nombre_ficticio:
+        type: string
+      turno:
+        type: string
+    type: object
+  dto.DesactivarCatalogoResponseDTO:
+    properties:
+      activo:
+        type: boolean
+      id:
+        type: integer
+    type: object
+  dto.EditarAuditoriaResponseDTO:
+    properties:
+      editada:
+        type: boolean
+      entidad_id:
+        type: string
+    type: object
+  dto.EditarOrdenResponseDTO:
+    properties:
+      aviso:
+        type: string
+      orden:
+        $ref: '#/definitions/dto.OrdenDTO'
+    type: object
+  dto.EjemplarDTO:
+    properties:
+      activo:
+        type: boolean
+      cantidad:
+        type: integer
+      codigo:
+        type: string
+      especie_id:
+        type: integer
+      id:
+        type: integer
+      lat:
+        type: number
+      lon:
+        type: number
+      nombre_comun:
+        type: string
+      numero_origen:
+        type: integer
+      observacion_fen_2026:
+        type: string
+      referencia:
+        type: string
+      salud:
+        type: string
+      tipo_vegetacion:
+        type: string
+      ubicacion_lugar_id:
+        type: integer
+    type: object
+  dto.EjemplaresPaginadosDTO:
+    properties:
+      ejemplares:
+        items:
+          $ref: '#/definitions/dto.EjemplarDTO'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  dto.EntidadesImportablesResponseDTO:
+    properties:
+      entidades:
+        items:
+          type: string
+        type: array
+    type: object
+  dto.ErrorFilaDTO:
+    properties:
+      campo:
+        type: string
+      fila:
+        type: integer
+      motivo:
+        type: string
+    type: object
+  dto.EspecieDTO:
+    properties:
+      activo:
+        type: boolean
+      id:
+        type: integer
+      nombre_cientifico:
+        type: string
+      nombre_comun:
+        type: string
+    type: object
+  dto.EventoAuditoriaDTO:
+    properties:
+      accion:
+        type: string
+      created_at:
+        type: string
+      entidad:
+        type: string
+      entidad_id:
+        type: string
+      id:
+        type: integer
+      lote_id:
+        type: integer
+      nombre:
+        type: string
+      usuario:
+        type: string
+      usuario_id:
+        type: integer
+    type: object
+  dto.EventoTimelineDTO:
+    properties:
+      actor_rol:
+        type: string
+      capataz_id:
+        type: string
+      created_at:
+        type: string
+      equipo:
+        type: string
+      estado:
+        type: string
+      id:
+        type: integer
+      nota:
+        type: string
+      tipo:
+        type: string
+      usuario:
+        type: string
+      usuario_id:
+        type: integer
+      usuario_nombre:
+        type: string
+    type: object
+  dto.EvidenciaDTO:
+    properties:
+      actividad_id:
+        type: string
+      bytes:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: string
+      mime:
+        type: string
+      nombre:
+        type: string
+      nota:
+        type: string
+    type: object
+  dto.ExcluidaDTO:
+    properties:
+      entidad_id:
+        type: string
+      motivo:
+        type: string
+    type: object
+  dto.FichaCapaDTO:
+    properties:
+      activo:
+        type: boolean
+      area_m2:
+        type: number
+      clase:
+        type: string
+      codigo:
+        type: string
+      feature_id:
+        type: string
+      geojson:
+        type: string
+      id:
+        type: integer
+      nombre:
+        type: string
+      nota:
+        type: string
+      perimetro_m:
+        type: number
+      pertenecen:
+        type: string
+      riego:
+        type: string
+      uso:
+        type: string
+    type: object
+  dto.FichaDTO:
+    properties:
+      area_m2:
+        type: number
+      con_geometria:
+        type: boolean
+      feature_id:
+        type: string
+      nombre:
+        type: string
+      referencia:
+        type: string
+      riego_act:
+        type: string
+      uso:
+        type: string
+    type: object
+  dto.FilaReporteDTO:
+    properties:
+      clase:
+        type: string
+      codigo_externo:
+        type: string
+      created_at:
+        type: string
+      cuadrilla:
+        type: string
+      ejecutor:
+        type: string
+      equipo:
+        type: string
+      estado:
+        type: string
+      fecha_atencion:
+        type: string
+      fecha_solicitud:
+        type: string
+      fuente:
+        type: string
+      id:
+        type: string
+      lugar:
+        type: string
+      tipo:
+        type: string
+      titulo:
+        type: string
+      zona:
+        type: string
+    type: object
+  dto.FormatoPuntosResponseDTO:
+    properties:
+      columnas_omitidas:
+        items:
+          type: string
+        type: array
+      filas:
+        type: integer
+      nota:
+        type: string
+      rechazados:
+        items:
+          $ref: '#/definitions/dto.RechazoDTO'
+        type: array
+    type: object
+  dto.HistorialAuditoriaResponseDTO:
+    properties:
+      eventos:
+        items:
+          $ref: '#/definitions/dto.EventoAuditoriaDTO'
+        type: array
+    type: object
+  dto.HuecoIndicadorDTO:
+    properties:
+      clave:
+        type: string
+      estado:
+        type: string
+      nombre:
+        type: string
+      nota:
+        type: string
+    type: object
+  dto.ImportarLoteResponseDTO:
+    properties:
+      filas:
+        type: integer
+      lote_id:
+        type: integer
+    type: object
+  dto.IndiceInventarioDTO:
+    properties:
+      capas:
+        items:
+          type: string
+        type: array
+      cargadas:
+        items:
+          $ref: '#/definitions/dto.CapaCountDTO'
+        type: array
+    type: object
+  dto.ListarBebederosResponseDTO:
+    properties:
+      bebederos:
+        items:
+          $ref: '#/definitions/dto.BebederoDTO'
+        type: array
+    type: object
+  dto.ListarEvidenciasResponseDTO:
+    properties:
+      evidencias:
+        items:
+          $ref: '#/definitions/dto.EvidenciaDTO'
+        type: array
+    type: object
+  dto.ListarFichasCapaResponseDTO:
+    properties:
+      filas:
+        items:
+          $ref: '#/definitions/dto.FichaCapaDTO'
+        type: array
+    type: object
+  dto.ListarPuntosResponseDTO:
+    properties:
+      puntos:
+        items:
+          $ref: '#/definitions/dto.PuntoDTO'
+        type: array
+    type: object
+  dto.ListarReservasResponseDTO:
+    properties:
+      aviso:
+        type: string
+      origen:
+        type: string
+      reservas:
+        items:
+          $ref: '#/definitions/dto.ReservaDTO'
+        type: array
+    type: object
+  dto.ListarTachosResponseDTO:
+    properties:
+      tachos:
+        items:
+          $ref: '#/definitions/dto.TachoDTO'
+        type: array
+    type: object
+  dto.LugarDTO:
+    properties:
+      activo:
+        type: boolean
+      id:
+        type: integer
+      lat:
+        type: number
+      lon:
+        type: number
+      nombre:
+        type: string
+      nombre_norm:
+        type: string
+      zona_supervision_id:
+        type: integer
+    type: object
+  dto.OrdenDTO:
+    properties:
+      actividad_id:
+        type: string
+      conformidad:
+        type: string
+      created_at:
+        type: string
+      empresa:
+        type: string
+      estado:
+        type: string
+      frecuencia:
+        type: string
+      id:
+        type: string
+      referencia:
+        type: string
+    type: object
+  dto.OrdenesResponseDTO:
+    properties:
+      aviso:
+        type: string
+      ordenes:
+        items:
+          $ref: '#/definitions/dto.OrdenDTO'
+        type: array
+    type: object
+  dto.PermisoDTO:
+    properties:
+      accion:
+        type: string
+      rol:
+        type: string
+    type: object
+  dto.PodaDTO:
+    properties:
+      cantidad_ejecutada:
+        type: number
+      cantidad_pedida:
+        type: number
+      codigo:
+        type: string
+      codigo_externo:
+        type: string
+      comentario:
+        type: string
+      fecha_ejecucion:
+        type: string
+      fecha_reporte:
+        type: string
+      id:
+        type: string
+      nombre_cientifico:
+        type: string
+      nombre_comun:
+        type: string
+      personal:
+        type: string
+      prioridad:
+        type: string
+      tipo:
+        type: string
+      tipo_actividad:
+        type: string
+      ubicacion:
+        type: string
+      unidad:
+        type: string
+    type: object
+  dto.PodasResponseDTO:
+    properties:
+      podas:
+        items:
+          $ref: '#/definitions/dto.PodaDTO'
+        type: array
+    type: object
+  dto.PoligonoCuadrillaDTO:
+    properties:
+      activo:
+        type: boolean
+      codigo:
+        type: string
+      con_geometria:
+        type: boolean
+      cuadrilla_id:
+        type: string
+      feature_id:
+        type: string
+      id:
+        type: integer
+      nombre:
+        type: string
+      zona_supervision_id:
+        type: integer
+    type: object
+  dto.PuntoDTO:
+    properties:
+      activo:
+        type: boolean
+      id:
+        type: integer
+      lat:
+        type: number
+      lon:
+        type: number
+      titulo:
+        type: string
+      url:
+        type: string
+    type: object
+  dto.RechazoDTO:
+    properties:
+      campo:
+        type: string
+      fila:
+        type: integer
+      fuente:
+        type: string
+      motivo:
+        type: string
+    type: object
+  dto.ReporteResponseDTO:
+    properties:
+      aviso:
+        type: string
+      filas:
+        items:
+          $ref: '#/definitions/dto.FilaReporteDTO'
+        type: array
+      pendientes:
+        items:
+          $ref: '#/definitions/dto.HuecoIndicadorDTO'
+        type: array
+      por_estado:
+        items:
+          $ref: '#/definitions/dto.ConteoReporteDTO'
+        type: array
+    type: object
+  dto.ReporteReversionDTO:
+    properties:
+      excluidas:
+        items:
+          $ref: '#/definitions/dto.ExcluidaDTO'
+        type: array
+      lote_id:
+        type: integer
+      revertidas:
+        items:
+          type: string
+        type: array
+    type: object
+  dto.ReservaDTO:
+    properties:
+      activo:
+        type: boolean
+      estado:
+        type: string
+      evento:
+        type: string
+      fecha:
+        type: string
+      hora_fin:
+        type: string
+      hora_inicio:
+        type: string
+      id:
+        type: integer
+      jardin_id:
+        type: integer
+      origen:
+        type: string
+      unidad:
+        type: string
+    type: object
+  dto.ReservaItemDTO:
+    properties:
+      estado:
+        type: string
+      evento:
+        type: string
+      fake:
+        type: boolean
+      fecha:
+        type: string
+      hora:
+        type: string
+      id:
+        type: string
+      jardin:
+        type: string
+      jardin_codigo:
+        type: string
+      notas:
+        type: string
+      unidad_responsable:
+        type: string
+    type: object
+  dto.ReservasMockResponseDTO:
+    properties:
+      aviso:
+        type: string
+      fake:
+        type: boolean
+      reservas:
+        items:
+          $ref: '#/definitions/dto.ReservaItemDTO'
+        type: array
+      total:
+        type: integer
+    type: object
+  dto.ResumenDTO:
+    properties:
+      areas:
+        type: integer
+      areas_con_geometria:
+        type: integer
+      capas:
+        items:
+          $ref: '#/definitions/dto.CapaCountDTO'
+        type: array
+      crs:
+        type: string
+      zonas:
+        type: integer
+      zonas_con_geometria:
+        type: integer
+    type: object
+  dto.RiegoDTO:
+    properties:
+      capataz_id:
+        type: string
+      ciclo:
+        type: string
+      equipo:
+        type: string
+      fecha:
+        type: string
+      id:
+        type: string
+      nota:
+        type: string
+      sector:
+        type: string
+      turno:
+        type: string
+      zona_supervision_id:
+        type: string
+    type: object
+  dto.RiegoResponseDTO:
+    properties:
+      aviso:
+        type: string
+      registros:
+        items:
+          $ref: '#/definitions/dto.RiegoDTO'
+        type: array
+    type: object
+  dto.SolicitudDTO:
+    properties:
+      actividad_id:
+        type: string
+      cantidad:
+        type: integer
+      codigo_externo:
+        type: string
+      created_at:
+        type: string
+      detalle:
+        type: string
+      estado:
+        type: string
+      fuente:
+        type: string
+      id:
+        type: string
+      lugar:
+        type: string
+      prioridad:
+        type: string
+      titulo:
+        type: string
+    type: object
+  dto.SolicitudesResponseDTO:
+    properties:
+      solicitudes:
+        items:
+          $ref: '#/definitions/dto.SolicitudDTO'
+        type: array
+    type: object
+  dto.SubirEvidenciaResponseDTO:
+    properties:
+      id:
+        type: string
+      idempotente:
+        type: boolean
+    type: object
+  dto.SugerenciaIADTO:
+    properties:
+      codigo:
+        type: string
+      confianza:
+        type: string
+      etiqueta:
+        type: string
+      explicacion:
+        type: string
+      requiere_humano:
+        type: boolean
+    type: object
+  dto.TachoDTO:
+    properties:
+      accion:
+        type: string
+      activo:
+        type: boolean
+      aniquem:
+        type: integer
+      codigo:
+        type: string
+      espacios:
+        type: string
+      id:
+        type: integer
+      intermedios_metal:
+        type: integer
+      intermedios_plastico:
+        type: integer
+      lat:
+        type: number
+      lon:
+        type: number
+      lugar:
+        type: string
+      metales:
+        type: integer
+      no_aprovechables:
+        type: integer
+      nota:
+        type: string
+      papel_carton:
+        type: integer
+      peligrosos:
+        type: integer
+      pilas:
+        type: integer
+      plastico:
+        type: integer
+      raee:
+        type: integer
+      recomendaciones:
+        type: string
+      tacho_actual:
+        type: string
+      tacho_nuevo:
+        type: string
+      vidrio:
+        type: integer
+    type: object
+  dto.TimelineResponseDTO:
+    properties:
+      actividad_id:
+        type: string
+      eventos:
+        items:
+          $ref: '#/definitions/dto.EventoTimelineDTO'
+        type: array
+    type: object
+  dto.UsuarioSesionDTO:
+    properties:
+      capataz_id:
+        type: string
+      id:
+        type: integer
+      nombre:
+        type: string
+      rol:
+        type: string
+      rol_nombre:
+        type: string
+      usuario:
+        type: string
+    type: object
+  dto.UsuariosResponseDTO:
+    properties:
+      aviso:
+        type: string
+      permisos:
+        items:
+          $ref: '#/definitions/dto.PermisoDTO'
+        type: array
+      usuarios:
+        items:
+          $ref: '#/definitions/dto.UsuarioSesionDTO'
+        type: array
+    type: object
+  dto.VistaPreviaResponseDTO:
+    properties:
+      aviso_omitidas:
+        type: string
+      avisos:
+        items:
+          type: string
+        type: array
+      columnas_omitidas:
+        items:
+          type: string
+        type: array
+      entidad:
+        type: string
+      errores:
+        items:
+          $ref: '#/definitions/dto.ErrorFilaDTO'
+        type: array
+      escrito:
+        type: boolean
+      filas:
+        items:
+          additionalProperties: {}
+          type: object
+        type: array
+      formato:
+        type: string
+      id:
+        type: integer
+      lote_id:
+        type: integer
+      validas:
+        type: integer
+    type: object
+  dto.ViveroDTO:
+    properties:
+      area:
+        type: string
+      descripcion:
+        type: string
+      etapa:
+        type: string
+      fecha:
+        type: string
+      id:
+        type: string
+      lugar_id:
+        type: string
+      lugar_libre:
+        type: string
+      observaciones:
+        type: string
+      responsables:
+        type: string
+      subproceso:
+        type: string
+    type: object
+  dto.ViveroResponseDTO:
+    properties:
+      registros:
+        items:
+          $ref: '#/definitions/dto.ViveroDTO'
+        type: array
+    type: object
+  dto.ZonaSupervisionDTO:
+    properties:
+      activo:
+        type: boolean
+      area_m2:
+        type: number
+      codigo:
+        type: string
+      con_geometria:
+        type: boolean
+      id:
+        type: integer
+      nombre:
+        type: string
+    type: object
+  entities.Feature:
+    properties:
+      geometry:
+        type: object
+      id:
+        type: string
+      properties: {}
+      type:
+        type: string
+    type: object
+  entities.FeatureCollection:
+    properties:
+      features:
+        items:
+          $ref: '#/definitions/entities.Feature'
+        type: array
+      name:
+        type: string
+      type:
+        type: string
+    type: object
+  requests.ActualizarFichaRequest:
+    properties:
+      nombre:
+        type: string
+      referencia:
+        type: string
+      riego_act:
+        type: string
+      uso:
+        type: string
+    type: object
+  requests.CrearAreaSinGeomRequest:
+    properties:
+      feature_id:
+        type: string
+      nombre:
+        type: string
+      uso:
+        type: string
+    type: object
+  requests.CrearCatalogoRequest:
+    properties:
+      clase:
+        type: string
+      codigo:
+        type: string
+      nombre:
+        type: string
+    type: object
+  requests.CrearCuadrillaRequest:
+    properties:
+      id:
+        type: string
+      nombre_ficticio:
+        type: string
+      turno:
+        type: string
+    type: object
+  requests.CrearEjemplarRequest:
+    properties:
+      cantidad:
+        type: integer
+      codigo:
+        type: string
+      especie_id:
+        type: integer
+      lat:
+        type: number
+      lon:
+        type: number
+      nombre_comun:
+        type: string
+      numero_origen:
+        type: integer
+      observacion_fen_2026:
+        type: string
+      referencia:
+        type: string
+      tipo_vegetacion:
+        type: string
+      ubicacion_lugar_id:
+        type: integer
+    type: object
+  requests.CrearEspecieRequest:
+    properties:
+      nombre_cientifico:
+        type: string
+      nombre_comun:
+        type: string
+    type: object
+  requests.CrearLugarRequest:
+    properties:
+      lat:
+        type: number
+      lon:
+        type: number
+      nombre:
+        type: string
+      zona_supervision_id:
+        type: integer
+    type: object
+  requests.CrearOrdenRequest:
+    properties:
+      actividad_id:
+        type: string
+      empresa:
+        type: string
+      frecuencia:
+        type: string
+      id:
+        type: string
+      referencia:
+        type: string
+    type: object
+  requests.CrearRiegoRequest:
+    properties:
+      capataz_id:
+        type: string
+      ciclo:
+        type: string
+      fecha:
+        type: string
+      id:
+        type: string
+      nota:
+        type: string
+      sector:
+        type: string
+      superficie_m2:
+        type: number
+      turno:
+        type: string
+      zona_supervision_id:
+        type: string
+    type: object
+  requests.CrearSolicitudRequest:
+    properties:
+      actividad_id:
+        type: string
+      cantidad:
+        type: integer
+      codigo_externo:
+        type: string
+      detalle:
+        type: string
+      fuente:
+        type: string
+      id:
+        type: string
+      lugar:
+        type: string
+      prioridad:
+        type: string
+      titulo:
+        type: string
+    type: object
+  requests.CrearZonaSupervisionRequest:
+    properties:
+      area_m2:
+        type: number
+      codigo:
+        type: string
+      geojson:
+        type: string
+      nombre:
+        type: string
+    type: object
+  requests.EditarAuditoriaRequest:
+    properties:
+      despues:
+        additionalProperties: {}
+        type: object
+      entidad:
+        type: string
+      entidad_id:
+        type: string
+    type: object
+  requests.EditarOrdenRequest:
+    properties:
+      conformidad:
+        type: string
+      estado:
+        type: string
+      periodo_fin:
+        type: string
+      periodo_inicio:
+        type: string
+      reporte_proveedor:
+        type: string
+    type: object
+  requests.EditarSolicitudRequest:
+    properties:
+      codigo_externo:
+        type: string
+      detalle:
+        type: string
+      lugar:
+        type: string
+      prioridad:
+        type: string
+      titulo:
+        type: string
+    type: object
+  requests.FilaLoteRequest:
+    properties:
+      accion:
+        type: string
+      antes:
+        type: object
+      despues:
+        type: object
+      entidad_id:
+        type: string
+    type: object
+  requests.GuardarPodaRequest:
+    properties:
+      cantidad_ejecutada:
+        type: number
+      cantidad_pedida:
+        type: number
+      codigo:
+        type: string
+      codigo_externo:
+        type: string
+      comentario:
+        type: string
+      fecha_ejecucion:
+        type: string
+      fecha_reporte:
+        type: string
+      id:
+        type: string
+      nombre_cientifico:
+        type: string
+      nombre_comun:
+        type: string
+      personal:
+        type: string
+      prioridad:
+        type: string
+      tipo:
+        type: string
+      tipo_actividad:
+        type: string
+      ubicacion:
+        type: string
+      unidad:
+        type: string
+    type: object
+  requests.GuardarViveroRequest:
+    properties:
+      area:
+        type: string
+      descripcion:
+        type: string
+      etapa:
+        type: string
+      fecha:
+        type: string
+      id:
+        type: string
+      lugar_id:
+        type: string
+      lugar_libre:
+        type: string
+      observaciones:
+        type: string
+      responsables:
+        type: string
+      subproceso:
+        type: string
+    type: object
+  requests.LoginRequest:
+    properties:
+      clave:
+        type: string
+      usuario:
+        type: string
+    type: object
+  requests.LoteRequest:
+    properties:
+      entidad:
+        type: string
+      filas:
+        items:
+          $ref: '#/definitions/requests.FilaLoteRequest'
+        type: array
+    type: object
+  requests.RecodificarRequest:
+    properties:
+      codigo_nuevo:
+        type: string
+    type: object
+  requests.RevertirLoteRequest:
+    properties:
+      confirmar:
+        type: boolean
+    type: object
+  requests.SugerirTipoRequest:
+    properties:
+      titulo:
+        type: string
+    type: object
 info:
   contact:
     email: support@example.com (update)
@@ -20,6 +1350,1094 @@ info:
   title: Areas Verdes API $SWAGGER_ENV
   version: 1.0.0
 paths:
+  /v1:
+    get:
+      description: Returns the service information and public routes index
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.IndexResponse'
+      summary: API index
+      tags:
+      - meta
+  /v1/accesos/usuarios:
+    get:
+      description: Devuelve la lista de cuentas locales y permisos (solo admin)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UsuariosResponseDTO'
+        "403":
+          description: solo administración ve las cuentas
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: no se pudieron leer las cuentas
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: base de datos no disponible
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Listar cuentas y permisos
+      tags:
+      - Accesos
+  /v1/auditoria/cambios:
+    get:
+      description: Devuelve el listado de cambios filtrable por zona, origen y fechas
+      parameters:
+      - description: Entidad
+        in: query
+        name: entidad
+        type: string
+      - description: ID de entidad
+        in: query
+        name: entidad_id
+        type: string
+      - description: Zona
+        in: query
+        name: zona
+        type: string
+      - description: Origen
+        in: query
+        name: origen
+        type: string
+      - description: Fecha desde
+        in: query
+        name: desde
+        type: string
+      - description: Fecha hasta
+        in: query
+        name: hasta
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.HistorialAuditoriaResponseDTO'
+        "400":
+          description: error de fecha
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: inicie sesión
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: no se pudo completar la auditoría
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Historial filtrable de cambios
+      tags:
+      - auditoria
+  /v1/auditoria/ediciones:
+    post:
+      consumes:
+      - application/json
+      description: Registra un cambio manual posterior al lote
+      parameters:
+      - description: Datos de la edición
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.EditarAuditoriaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.EditarAuditoriaResponseDTO'
+        "400":
+          description: JSON inválido o validación
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: inicie sesión
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: no se pudo completar la auditoría
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Registrar edición auditada
+      tags:
+      - auditoria
+  /v1/auditoria/timeline:
+    get:
+      description: Devuelve los cambios de una fila con usuario de sesión
+      parameters:
+      - description: Entidad
+        in: query
+        name: entidad
+        required: true
+        type: string
+      - description: ID de entidad
+        in: query
+        name: entidad_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.HistorialAuditoriaResponseDTO'
+        "400":
+          description: entidad y entidad_id son obligatorios
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: inicie sesión
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: no se pudo completar la auditoría
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Timeline de cambios de una fila
+      tags:
+      - auditoria
+  /v1/catalogos:
+    get:
+      description: Devuelve ítems de catálogo con filtro opcional por clase y solo
+        activos
+      parameters:
+      - description: Clase de catálogo
+        in: query
+        name: clase
+        type: string
+      - description: Solo activos si es 1
+        in: query
+        name: activos
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CatalogoListResponseDTO'
+        "401":
+          description: inicie sesión
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: no se pudo leer el catálogo
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: base de datos no disponible
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Listar ítems de catálogo
+      tags:
+      - Catálogos
+    post:
+      consumes:
+      - application/json
+      description: Crea un ítem nuevo o actualiza/reactiva uno existente (requiere
+        permiso catalogos)
+      parameters:
+      - description: Datos del ítem
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearCatalogoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CatalogoItemDTO'
+        "400":
+          description: error de validación o JSON inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: inicie sesión
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: no se pudo guardar el ítem
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: base de datos no disponible
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Crear o reactivar un ítem de catálogo
+      tags:
+      - Catálogos
+  /v1/catalogos/{id}/desactivar:
+    post:
+      description: Realiza una baja lógica cambiando activo=false sin borrar la fila
+      parameters:
+      - description: ID del ítem
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.DesactivarCatalogoResponseDTO'
+        "400":
+          description: id inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: inicie sesión
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: no existe ese ítem
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: no se pudo desactivar
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: base de datos no disponible
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Desactivar un ítem de catálogo (baja lógica)
+      tags:
+      - Catálogos
+  /v1/catastro/areas:
+    get:
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.FichaDTO'
+              type: array
+            type: object
+      summary: List green area metadata fichas
+      tags:
+      - catastro
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: New area
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearAreaSinGeomRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.FichaDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create green area without GPS geometry
+      tags:
+      - catastro
+  /v1/catastro/areas/{id}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Feature ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated ficha
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.ActualizarFichaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.FichaDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update green area metadata ficha
+      tags:
+      - catastro
+  /v1/catastro/cuadrillas:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.CuadrillaDTO'
+              type: array
+            type: object
+      summary: List work teams
+      tags:
+      - catastro
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Work team data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearCuadrillaRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CuadrillaDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create work team
+      tags:
+      - catastro
+  /v1/catastro/ejemplares:
+    get:
+      parameters:
+      - description: Pagination limit
+        in: query
+        name: limit
+        type: integer
+      - description: Pagination offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.EjemplaresPaginadosDTO'
+      summary: List flora specimens with pagination
+      tags:
+      - catastro
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Specimen data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearEjemplarRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.EjemplarDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create flora specimen
+      tags:
+      - catastro
+  /v1/catastro/ejemplares/{id}/codigos:
+    get:
+      parameters:
+      - description: Specimen ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.CodigoHistoricoDTO'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List code history for specimen
+      tags:
+      - catastro
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Specimen ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.RecodificarRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CodigoHistoricoDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Recodify specimen
+      tags:
+      - catastro
+  /v1/catastro/especies:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.EspecieDTO'
+              type: array
+            type: object
+      summary: List botanical species
+      tags:
+      - catastro
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Species data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearEspecieRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.EspecieDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create botanical species
+      tags:
+      - catastro
+  /v1/catastro/fauna:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.CapaFichaDTO'
+              type: array
+            type: object
+      summary: List fauna reference layer
+      tags:
+      - catastro
+  /v1/catastro/jardines-reserva:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.CapaFichaDTO'
+              type: array
+            type: object
+      summary: List jardines de reserva reference layer
+      tags:
+      - catastro
+  /v1/catastro/lugares:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.LugarDTO'
+              type: array
+            type: object
+      summary: List campus locations
+      tags:
+      - catastro
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Place data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearLugarRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.LugarDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create campus location
+      tags:
+      - catastro
+  /v1/catastro/playas:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.CapaFichaDTO'
+              type: array
+            type: object
+      summary: List playas reference layer
+      tags:
+      - catastro
+  /v1/catastro/poligonos:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.PoligonoCuadrillaDTO'
+              type: array
+            type: object
+      summary: List work team sector polygons
+      tags:
+      - catastro
+  /v1/catastro/puertas:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.CapaFichaDTO'
+              type: array
+            type: object
+      summary: List puertas reference layer
+      tags:
+      - catastro
+  /v1/catastro/veredas:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.CapaFichaDTO'
+              type: array
+            type: object
+      summary: List veredas de riesgo reference layer
+      tags:
+      - catastro
+  /v1/catastro/xerofiticas:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.CapaFichaDTO'
+              type: array
+            type: object
+      summary: List xerofiticas reference layer
+      tags:
+      - catastro
+  /v1/catastro/zonas-supervision:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/dto.ZonaSupervisionDTO'
+              type: array
+            type: object
+      summary: List supervision zones
+      tags:
+      - catastro
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Supervision zone data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearZonaSupervisionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ZonaSupervisionDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create supervision zone
+      tags:
+      - catastro
+  /v1/evidencias:
+    get:
+      parameters:
+      - description: Filter by activity UUID
+        in: query
+        name: actividad_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ListarEvidenciasResponseDTO'
+      summary: List evidence attachments
+      tags:
+      - evidencias
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Evidence UUID
+        in: formData
+        name: id
+        required: true
+        type: string
+      - description: Activity UUID
+        in: formData
+        name: actividad_id
+        required: true
+        type: string
+      - description: Order UUID
+        in: formData
+        name: orden_id
+        type: string
+      - description: Note
+        in: formData
+        name: nota
+        type: string
+      - description: Expected SHA256
+        in: formData
+        name: sha256
+        type: string
+      - description: Latitude
+        in: formData
+        name: lat
+        type: string
+      - description: Longitude
+        in: formData
+        name: lon
+        type: string
+      - description: EXIF JSON
+        in: formData
+        name: exif
+        type: string
+      - description: File to upload
+        in: formData
+        name: archivo
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SubirEvidenciaResponseDTO'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.SubirEvidenciaResponseDTO'
+      summary: Upload an evidence attachment
+      tags:
+      - evidencias
+  /v1/evidencias/{id}/archivo:
+    get:
+      parameters:
+      - description: Evidence UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      summary: Download an evidence file
+      tags:
+      - evidencias
+  /v1/geo/areas:
+    get:
+      produces:
+      - application/geo+json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.FeatureCollection'
+      summary: Cadastral green area polygons
+      tags:
+      - geo
+  /v1/geo/capas:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CapasIndexDTO'
+      summary: List available auxiliary layers
+      tags:
+      - geo
+  /v1/geo/capas/{capa}:
+    get:
+      parameters:
+      - description: Layer name
+        in: path
+        name: capa
+        required: true
+        type: string
+      produces:
+      - application/geo+json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.FeatureCollection'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Auxiliary reference layer
+      tags:
+      - geo
+  /v1/geo/edificios:
+    get:
+      produces:
+      - application/geo+json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.FeatureCollection'
+      summary: Campus buildings extract
+      tags:
+      - geo
+  /v1/geo/inventario:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.IndiceInventarioDTO'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Inventory overlay layers catalogue and loaded counts
+      tags:
+      - geo
+  /v1/geo/inventario/{capa}:
+    get:
+      parameters:
+      - description: Layer name
+        in: path
+        name: capa
+        required: true
+        type: string
+      produces:
+      - application/geo+json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.FeatureCollection'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.CapaDesconocidaErrorDTO'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Inventory overlay layer features
+      tags:
+      - geo
+  /v1/geo/inventario/fotos/{name}:
+    get:
+      parameters:
+      - description: Photo file name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - image/jpeg
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Serve local inventory JPEG photograph
+      tags:
+      - geo
+  /v1/geo/reservas-mock:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReservasMockResponseDTO'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Mock reservations schedule without external spreadsheet references
+      tags:
+      - geo
+  /v1/geo/resumen:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ResumenDTO'
+      summary: Summary counts of cadastral data
+      tags:
+      - geo
+  /v1/geo/zonas:
+    get:
+      produces:
+      - application/geo+json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.FeatureCollection'
+      summary: Cadastral zones polygons
+      tags:
+      - geo
   /v1/health:
     get:
       description: Verify the health state of the API service
@@ -33,4 +2451,1204 @@ paths:
       summary: Health check
       tags:
       - health
+  /v1/ia/sugerir-tipo:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Title payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.SugerirTipoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SugerenciaIADTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Suggest activity type based on title keywords
+      tags:
+      - ia
+  /v1/importaciones:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Sube un archivo CSV/GeoJSON/JSON y genera una vista previa persistida
+        en lote
+      parameters:
+      - description: Nombre de la entidad
+        in: query
+        name: entidad
+        required: true
+        type: string
+      - description: Archivo a importar
+        in: formData
+        name: archivo
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.VistaPreviaResponseDTO'
+        "400":
+          description: falta el archivo o entidad no importable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: inicie sesión
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: no se pudo guardar la vista previa
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Vista previa de importación
+      tags:
+      - importaciones
+  /v1/importaciones/{id}/confirmar:
+    post:
+      description: Confirma un lote de importación en estado vista previa y escribe
+        las filas
+      parameters:
+      - description: ID del lote
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ConfirmarImportacionResponseDTO'
+        "400":
+          description: lote inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: inicie sesión
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: lote no encontrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: el lote no está en vista previa
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: ninguna fila válida
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: no se pudo importar
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Confirmar importación
+      tags:
+      - importaciones
+  /v1/importaciones/entidades:
+    get:
+      description: Devuelve la lista de entidades importables del mapa de datos
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.EntidadesImportablesResponseDTO'
+        "401":
+          description: inicie sesión
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Entidades importables
+      tags:
+      - importaciones
+  /v1/inventario/bebederos:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ListarBebederosResponseDTO'
+      summary: List drinking fountains
+      tags:
+      - inventario
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.BebederoDTO'
+      summary: Create or upsert a drinking fountain
+      tags:
+      - inventario
+  /v1/inventario/bebederos/{id}:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BajaResponseDTO'
+      summary: Soft delete a drinking fountain
+      tags:
+      - inventario
+    patch:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BebederoDTO'
+      summary: Partially update a drinking fountain
+      tags:
+      - inventario
+  /v1/inventario/capas/{capa}:
+    get:
+      parameters:
+      - description: Layer name
+        in: path
+        name: capa
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ListarFichasCapaResponseDTO'
+      summary: List records from an editable layer
+      tags:
+      - inventario
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Layer name
+        in: path
+        name: capa
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.FichaCapaDTO'
+      summary: Create or upsert a record in an editable layer
+      tags:
+      - inventario
+  /v1/inventario/capas/{capa}/{id}:
+    delete:
+      parameters:
+      - description: Layer name
+        in: path
+        name: capa
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BajaResponseDTO'
+      summary: Soft delete a record in an editable layer
+      tags:
+      - inventario
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Layer name
+        in: path
+        name: capa
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.FichaCapaDTO'
+      summary: Partially update a record in an editable layer
+      tags:
+      - inventario
+  /v1/inventario/export/{capa}:
+    get:
+      parameters:
+      - description: Layer name
+        in: path
+        name: capa
+        required: true
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: CSV
+          schema:
+            type: string
+      summary: Export an editable layer as CSV
+      tags:
+      - inventario
+  /v1/inventario/formato/puntos:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.FormatoPuntosResponseDTO'
+      summary: Parse and validate puntos PUCP CSV file
+      tags:
+      - inventario
+  /v1/inventario/puntos:
+    get:
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ListarPuntosResponseDTO'
+      summary: List campus points of interest
+      tags:
+      - inventario
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.PuntoDTO'
+      summary: Create or upsert a campus point of interest
+      tags:
+      - inventario
+  /v1/inventario/puntos/{id}:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BajaResponseDTO'
+      summary: Soft delete a campus point of interest
+      tags:
+      - inventario
+    patch:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PuntoDTO'
+      summary: Partially update a campus point of interest
+      tags:
+      - inventario
+  /v1/inventario/reservas:
+    get:
+      parameters:
+      - description: Start date
+        in: query
+        name: desde
+        type: string
+      - description: End date
+        in: query
+        name: hasta
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ListarReservasResponseDTO'
+      summary: List garden reservations
+      tags:
+      - inventario
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ReservaDTO'
+      summary: Create a garden reservation
+      tags:
+      - inventario
+  /v1/inventario/reservas/{id}:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BajaResponseDTO'
+      summary: Soft delete a garden reservation
+      tags:
+      - inventario
+    patch:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReservaDTO'
+      summary: Partially update a garden reservation
+      tags:
+      - inventario
+  /v1/inventario/tachos:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ListarTachosResponseDTO'
+      summary: List waste bins
+      tags:
+      - inventario
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.TachoDTO'
+      summary: Create or upsert a waste bin
+      tags:
+      - inventario
+  /v1/inventario/tachos.csv:
+    get:
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: CSV
+          schema:
+            type: string
+      summary: Export waste bins as CSV
+      tags:
+      - inventario
+  /v1/inventario/tachos/{id}:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BajaResponseDTO'
+      summary: Soft delete a waste bin
+      tags:
+      - inventario
+    patch:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TachoDTO'
+      summary: Partially update a waste bin
+      tags:
+      - inventario
+  /v1/lotes:
+    post:
+      consumes:
+      - application/json
+      description: Importa filas en un lote reversible con usuario de sesión
+      parameters:
+      - description: Lote a importar
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/requests.LoteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ImportarLoteResponseDTO'
+        "400":
+          description: JSON inválido o validación de filas
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: inicie sesión
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: no se pudo completar la auditoría
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Importar lote reversible
+      tags:
+      - auditoria
+  /v1/lotes/{id}/revertir:
+    post:
+      consumes:
+      - application/json
+      description: Revierte un lote de importación si no hay filas editadas después
+        o si se confirma
+      parameters:
+      - description: ID del lote
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Confirmar si hay filas posteriores
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/requests.RevertirLoteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReporteReversionDTO'
+        "400":
+          description: lote inválido o ya revertido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: inicie sesión
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: su rol no tiene ese permiso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: lote no encontrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: hay filas editadas después del lote
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: no se pudo completar la auditoría
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Revertir lote
+      tags:
+      - auditoria
+  /v1/openapi.yaml:
+    get:
+      description: Returns the merged OpenAPI YAML specification
+      produces:
+      - application/yaml
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Legacy OpenAPI YAML contract
+      tags:
+      - meta
+  /v1/operacion/actividades:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entities.FeatureCollection'
+      summary: List activities as GeoJSON FeatureCollection
+      tags:
+      - operacion
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CrearIntervencionResponseDTO'
+      summary: Create an activity from map pin or reference
+      tags:
+      - operacion
+  /v1/operacion/actividades/{id}/archivar:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ArchivarIntervencionResponseDTO'
+      summary: Soft-delete/archive an activity with reason
+      tags:
+      - operacion
+  /v1/operacion/actividades/{id}/asignacion:
+    patch:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Assign an activity to a capataz team
+      tags:
+      - operacion
+  /v1/operacion/actividades/{id}/avances:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Record progress log entry for an activity
+      tags:
+      - operacion
+  /v1/operacion/actividades/{id}/estado:
+    patch:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update the state of an activity
+      tags:
+      - operacion
+  /v1/operacion/actividades/{id}/ficha:
+    patch:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update activity metadata from desktop form
+      tags:
+      - operacion
+  /v1/operacion/actividades/{id}/timeline:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TimelineResponseDTO'
+      summary: Retrieve the full event timeline of an activity
+      tags:
+      - operacion
+  /v1/operacion/capataces:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CapatacesResponseDTO'
+      summary: List active capataces
+      tags:
+      - operacion
+  /v1/ordenes:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OrdenesResponseDTO'
+      summary: List work orders
+      tags:
+      - atencion
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Work order payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearOrdenRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.OrdenDTO'
+      summary: Create a work order
+      tags:
+      - atencion
+  /v1/ordenes/{id}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Work order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Work order edit payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.EditarOrdenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.EditarOrdenResponseDTO'
+      summary: Edit a work order
+      tags:
+      - atencion
+  /v1/podas:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PodasResponseDTO'
+      summary: List poda records
+      tags:
+      - poda
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Poda payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.GuardarPodaRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.PodaDTO'
+      summary: Create a poda record
+      tags:
+      - poda
+  /v1/podas/{id}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Poda UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Poda edit payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.GuardarPodaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PodaDTO'
+      summary: Edit a poda record
+      tags:
+      - poda
+  /v1/podas/{id}/archivar:
+    post:
+      parameters:
+      - description: Poda UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      summary: Archive a poda record
+      tags:
+      - poda
+  /v1/reportes/labores:
+    get:
+      parameters:
+      - description: Filter by status
+        in: query
+        name: estado
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: desde
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: hasta
+        type: string
+      - description: Filter by zone
+        in: query
+        name: zona
+        type: string
+      - description: Filter by cuadrilla
+        in: query
+        name: cuadrilla
+        type: string
+      - description: Filter by origin
+        in: query
+        name: origen
+        type: string
+      - description: Export format (csv or xls)
+        in: query
+        name: formato
+        type: string
+      produces:
+      - application/json
+      - text/csv
+      - application/vnd.ms-excel
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReporteResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Generate or export activity reports
+      tags:
+      - reportes
+  /v1/riego:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RiegoResponseDTO'
+      summary: List irrigation shift logs
+      tags:
+      - atencion
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Irrigation payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearRiegoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CrearRiegoResponseDTO'
+      summary: Create an irrigation log entry
+      tags:
+      - atencion
+  /v1/sesion:
+    delete:
+      description: Invalida el token en el servidor y limpia la cookie de sesión
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'ok: true'
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      summary: Cerrar sesión
+      tags:
+      - Sesion
+    get:
+      description: Devuelve los datos del usuario asociado a la sesión activa
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: usuario de la sesión
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: sin sesión
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Obtener sesión actual
+      tags:
+      - Sesion
+    post:
+      consumes:
+      - application/json
+      description: Autentica usuario y establece cookie de sesión cv_sesion
+      parameters:
+      - description: Credenciales de usuario
+        in: body
+        name: credenciales
+        required: true
+        schema:
+          $ref: '#/definitions/requests.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: usuario autenticado
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: JSON inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: usuario o clave incorrectos
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: base de datos no disponible
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Iniciar sesión
+      tags:
+      - Sesion
+  /v1/solicitudes:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SolicitudesResponseDTO'
+      summary: List service requests
+      tags:
+      - atencion
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Solicitud payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.CrearSolicitudRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.SolicitudDTO'
+      summary: Create a service request
+      tags:
+      - atencion
+  /v1/solicitudes/{id}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Solicitud UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Solicitud edit payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.EditarSolicitudRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SolicitudDTO'
+      summary: Edit a service request
+      tags:
+      - atencion
+  /v1/vivero:
+    get:
+      parameters:
+      - description: Filter by month (YYYY-MM)
+        in: query
+        name: mes
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ViveroResponseDTO'
+      summary: List nursery activity records
+      tags:
+      - vivero
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Vivero payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.GuardarViveroRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ViveroDTO'
+      summary: Create a nursery activity record
+      tags:
+      - vivero
+  /v1/vivero/{id}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Vivero UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Vivero edit payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.GuardarViveroRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ViveroDTO'
+      summary: Edit a nursery activity record
+      tags:
+      - vivero
+  /v1/vivero/{id}/archivar:
+    post:
+      parameters:
+      - description: Vivero UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      summary: Archive a nursery activity record
+      tags:
+      - vivero
 swagger: "2.0"
