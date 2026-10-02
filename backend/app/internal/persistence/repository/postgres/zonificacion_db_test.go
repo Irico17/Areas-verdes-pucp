@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	apperrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/persistence/repository/postgres"
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/shared/testutil"
@@ -20,7 +20,7 @@ func TestZonificacionRepositorio_SectorLugarViaCuartel(t *testing.T) {
 	ctx := context.Background()
 	repo := postgres.NewZonificacionRepository(gdb)
 
-	item, err := repo.CrearSector(ctx, dto.CrearSectorDTO{
+	item, err := repo.CrearSector(ctx, entities.NuevoSectorCapataz{
 		Codigo: "sector-lago", Nombre: "Sector lago (ficticio)", Color: "#3f73b0", UsuarioID: 0,
 	})
 	if err != nil {
@@ -29,7 +29,7 @@ func TestZonificacionRepositorio_SectorLugarViaCuartel(t *testing.T) {
 	if item.ID == 0 || !item.Activo {
 		t.Fatalf("sector %+v", item)
 	}
-	_, err = repo.CrearSector(ctx, dto.CrearSectorDTO{
+	_, err = repo.CrearSector(ctx, entities.NuevoSectorCapataz{
 		Codigo: "sector-lago", Nombre: "Otro", Color: "#3f73b0",
 	})
 	if !errors.Is(err, apperrors.ErrSectorDuplicado) {
@@ -50,7 +50,7 @@ func TestZonificacionRepositorio_SectorLugarViaCuartel(t *testing.T) {
 		t.Fatalf("cambios de alta %d", cambios)
 	}
 
-	imp, err := repo.ImportarSectores(ctx, []dto.CrearSectorDTO{{
+	imp, err := repo.ImportarSectores(ctx, []entities.NuevoSectorCapataz{{
 		Codigo: "sector-lago", Nombre: "Sector lago corregido", Color: "#6b5596",
 	}}, 0)
 	if err != nil {
@@ -96,7 +96,7 @@ func TestZonificacionRepositorio_SectorLugarViaCuartel(t *testing.T) {
 		t.Fatalf("vías inventadas: %s", vias)
 	}
 	linea := `{"type":"LineString","coordinates":[[-77.0800,-12.0700],[-77.0790,-12.0695]]}`
-	escrito, err := repo.ImportarVias(ctx, []dto.ViaAltaDTO{{
+	escrito, err := repo.ImportarVias(ctx, []entities.ViaAlta{{
 		FeatureID: "via-prueba", Nombre: "Sendero de prueba", GeoJSON: linea,
 	}}, 0)
 	if err != nil {
@@ -105,7 +105,7 @@ func TestZonificacionRepositorio_SectorLugarViaCuartel(t *testing.T) {
 	if escrito.Creadas != 1 {
 		t.Fatalf("vías %+v", escrito)
 	}
-	otra, err := repo.ImportarVias(ctx, []dto.ViaAltaDTO{{
+	otra, err := repo.ImportarVias(ctx, []entities.ViaAlta{{
 		FeatureID: "via-prueba", Nombre: "Sendero de prueba", GeoJSON: linea,
 	}}, 0)
 	if err != nil {

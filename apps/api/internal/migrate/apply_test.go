@@ -280,8 +280,8 @@ func assertEsquema(t *testing.T, name string) {
 		)`).Error; err != nil {
 		t.Fatalf("%s: INSERT en zonas sin sector debería seguir funcionando: %v", name, err)
 	}
-	if err := gdb.Exec(`UPDATE poligonos_cuadrilla SET sector = 'otro' WHERE feature_id = 'Z-9101'`).Error; err == nil {
-		t.Fatalf("%s: el CHECK debería rechazar un sector fuera de la lista", name)
+	if err := gdb.Exec(`UPDATE poligonos_cuadrilla SET sector = 'otro' WHERE feature_id = 'Z-9101'`).Error; err != nil {
+		t.Fatalf("%s: 060 retiró el CHECK, un sector nuevo debería guardarse: %v", name, err)
 	}
 	if err := gdb.Exec(`UPDATE poligonos_cuadrilla SET sector = 'cua-valeria' WHERE feature_id = 'Z-9101'`).Error; err != nil {
 		t.Fatalf("%s: el CHECK debería aceptar un sector válido: %v", name, err)

@@ -9,16 +9,18 @@ import (
 
 // IEjemplarRepository defines data access for individual flora specimens.
 type IEjemplarRepository interface {
-	Listar(ctx context.Context, limit, offset int) ([]entities.Ejemplar, int, error)
+	Listar(ctx context.Context, limit, offset int, q string) ([]entities.Ejemplar, int, error)
 	Crear(ctx context.Context, e entities.Ejemplar) (entities.Ejemplar, error)
-	Recodificar(ctx context.Context, ejemplarID int64, codigoNuevo string) (entities.CodigoHistorico, error)
+	Actualizar(ctx context.Context, id int64, p entities.ParcheEjemplar, usuarioID *int64) (entities.Ejemplar, error)
+	Recodificar(ctx context.Context, ejemplarID int64, codigoNuevo string, usuarioID *int64) (entities.CodigoHistorico, error)
 	ListarCodigos(ctx context.Context, ejemplarID int64) ([]entities.CodigoHistorico, error)
 }
 
 // IEjemplarUseCase defines business logic for individual flora specimens.
 type IEjemplarUseCase interface {
-	Listar(ctx context.Context, limit, offset int) (dto.EjemplaresPaginadosDTO, error)
+	Listar(ctx context.Context, limit, offset int, q string) (dto.EjemplaresPaginadosDTO, error)
 	Crear(ctx context.Context, e dto.EjemplarDTO) (dto.EjemplarDTO, error)
-	Recodificar(ctx context.Context, ejemplarID int64, req dto.RecodificarDTO) (dto.CodigoHistoricoDTO, error)
+	Actualizar(ctx context.Context, id int64, req dto.ActualizarEjemplarDTO, usuarioID *int64) (dto.EjemplarDTO, error)
+	Recodificar(ctx context.Context, ejemplarID int64, req dto.RecodificarDTO, usuarioID *int64) (dto.CodigoHistoricoDTO, error)
 	ListarCodigos(ctx context.Context, ejemplarID int64) ([]dto.CodigoHistoricoDTO, error)
 }

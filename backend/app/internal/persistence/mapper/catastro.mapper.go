@@ -89,21 +89,39 @@ func EjemplarModelToEntity(m *models.EjemplarModel) *entities.Ejemplar {
 	if m.ObservacionFen2026 != nil {
 		obs = *m.ObservacionFen2026
 	}
+	var sectorNombre, sectorClase, cientifico, lugar string
+	if m.SectorCuartelNombre != nil {
+		sectorNombre = *m.SectorCuartelNombre
+	}
+	if m.SectorCuartelClase != nil {
+		sectorClase = *m.SectorCuartelClase
+	}
+	if m.EspecieCientifico != nil {
+		cientifico = *m.EspecieCientifico
+	}
+	if m.LugarNombre != nil {
+		lugar = *m.LugarNombre
+	}
 	return &entities.Ejemplar{
-		ID:                 m.ID,
-		NumeroOrigen:       m.NumeroOrigen,
-		Codigo:             codigo,
-		EspecieID:          m.EspecieID,
-		NombreComun:        comun,
-		TipoVegetacion:     tipoVeg,
-		Cantidad:           m.Cantidad,
-		UbicacionLugarID:   m.UbicacionLugarID,
-		Referencia:         ref,
-		Lat:                m.Lat,
-		Lon:                m.Lon,
-		ObservacionFen2026: obs,
-		Salud:              m.Salud,
-		Activo:             m.Activo,
+		ID:                  m.ID,
+		NumeroOrigen:        m.NumeroOrigen,
+		Codigo:              codigo,
+		EspecieID:           m.EspecieID,
+		NombreComun:         comun,
+		TipoVegetacion:      tipoVeg,
+		Cantidad:            m.Cantidad,
+		UbicacionLugarID:    m.UbicacionLugarID,
+		Referencia:          ref,
+		Lat:                 m.Lat,
+		Lon:                 m.Lon,
+		ObservacionFen2026:  obs,
+		Salud:               m.Salud,
+		SectorCuartelID:     m.SectorCuartelID,
+		SectorCuartelNombre: sectorNombre,
+		SectorCuartelClase:  sectorClase,
+		EspecieCientifico:   cientifico,
+		LugarNombre:         lugar,
+		Activo:              m.Activo,
 	}
 }
 

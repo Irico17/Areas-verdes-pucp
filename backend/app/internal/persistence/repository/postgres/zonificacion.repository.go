@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/contracts"
-	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/dto"
+	"github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
 	apperrors "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/errors"
 )
 
@@ -23,7 +23,7 @@ func NewZonificacionRepository(db *gorm.DB) contracts.IZonificacionRepository {
 	return &zonificacionRepository{db: db}
 }
 
-func (r *zonificacionRepository) ListarSectores(ctx context.Context, soloActivos bool) ([]dto.SectorCapatazDTO, error) {
+func (r *zonificacionRepository) ListarSectores(ctx context.Context, soloActivos bool) ([]entities.SectorCapataz, error) {
 	rows, err := r.db.WithContext(ctx).Raw(`
 		SELECT id, codigo, nombre, color, activo
 		FROM sectores_capataz
@@ -33,9 +33,9 @@ func (r *zonificacionRepository) ListarSectores(ctx context.Context, soloActivos
 		return nil, err
 	}
 	defer rows.Close()
-	out := []dto.SectorCapatazDTO{}
+	out := []entities.SectorCapataz{}
 	for rows.Next() {
-		var item dto.SectorCapatazDTO
+		var item entities.SectorCapataz
 		if err := rows.Scan(&item.ID, &item.Codigo, &item.Nombre, &item.Color, &item.Activo); err != nil {
 			return nil, err
 		}
@@ -44,8 +44,8 @@ func (r *zonificacionRepository) ListarSectores(ctx context.Context, soloActivos
 	return out, rows.Err()
 }
 
-func (r *zonificacionRepository) CrearSector(ctx context.Context, in dto.CrearSectorDTO) (dto.SectorCapatazDTO, error) {
-	var item dto.SectorCapatazDTO
+func (r *zonificacionRepository) CrearSector(ctx context.Context, in entities.NuevoSectorCapataz) (entities.SectorCapataz, error) {
+	var item entities.SectorCapataz
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var id int64
 		err := tx.Raw(`SELECT id FROM sectores_capataz WHERE codigo = $1`, in.Codigo).Row().Scan(&id)
@@ -68,8 +68,8 @@ func (r *zonificacionRepository) CrearSector(ctx context.Context, in dto.CrearSe
 	return item, err
 }
 
-func (r *zonificacionRepository) ActualizarSector(ctx context.Context, in dto.ActualizarSectorDTO) (dto.SectorCapatazDTO, error) {
-	var item dto.SectorCapatazDTO
+func (r *zonificacionRepository) ActualizarSector(ctx context.Context, in entities.CambioSectorCapataz) (entities.SectorCapataz, error) {
+	var item entities.SectorCapataz
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		prev, ok, err := leerSector(tx, in.Codigo)
 		if err != nil {
@@ -126,8 +126,8 @@ func (r *zonificacionRepository) DesactivarSector(ctx context.Context, codigo st
 	})
 }
 
-func (r *zonificacionRepository) ImportarSectores(ctx context.Context, filas []dto.CrearSectorDTO, usuarioID int64) (dto.ImportacionSectorDTO, error) {
-	var res dto.ImportacionSectorDTO
+func (r *zonificacionRepository) ImportarSectores(ctx context.Context, filas []entities.NuevoSectorCapataz, usuarioID int64) (entities.ResumenImportacionSector, error) {
+	var res entities.ResumenImportacionSector
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, fila := range filas {
 			prev, ok, err := leerSector(tx, fila.Codigo)
@@ -142,7 +142,7 @@ func (r *zonificacionRepository) ImportarSectores(ctx context.Context, filas []d
 					RETURNING id`, fila.Codigo, fila.Nombre, fila.Color).Row().Scan(&id); err != nil {
 					return err
 				}
-				item := dto.SectorCapatazDTO{ID: id, Codigo: fila.Codigo, Nombre: fila.Nombre, Color: fila.Color, Activo: true}
+				item := entities.SectorCapataz{ID: id, Codigo: fila.Codigo, Nombre: fila.Nombre, Color: fila.Color, Activo: true}
 				if err := registrarCambioTx(tx, "sectores_capataz", itoa(id), "importacion", nil, snapshotSector(item), usuarioOpcional(usuarioID)); err != nil {
 					return err
 				}
@@ -152,7 +152,7 @@ func (r *zonificacionRepository) ImportarSectores(ctx context.Context, filas []d
 			if prev.Nombre == fila.Nombre && prev.Color == fila.Color && prev.Activo {
 				continue
 			}
-			var item dto.SectorCapatazDTO
+			var item entities.SectorCapataz
 			if err := tx.Raw(`
 				UPDATE sectores_capataz
 				SET nombre = $2, color = $3, activo = TRUE, updated_at = now()
@@ -172,16 +172,16 @@ func (r *zonificacionRepository) ImportarSectores(ctx context.Context, filas []d
 	return res, err
 }
 
-func (r *zonificacionRepository) ListarLugares(ctx context.Context) ([]dto.LugarCatalogoDTO, error) {
+func (r *zonificacionRepository) ListarLugares(ctx context.Context) ([]entities.LugarCatalogo, error) {
 	rows, err := r.db.WithContext(ctx).Raw(`
 		SELECT id, nombre FROM lugares WHERE activo = TRUE ORDER BY nombre_norm`).Rows()
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	out := []dto.LugarCatalogoDTO{}
+	out := []entities.LugarCatalogo{}
 	for rows.Next() {
-		var item dto.LugarCatalogoDTO
+		var item entities.LugarCatalogo
 		if err := rows.Scan(&item.ID, &item.Nombre); err != nil {
 			return nil, err
 		}
@@ -190,28 +190,28 @@ func (r *zonificacionRepository) ListarLugares(ctx context.Context) ([]dto.Lugar
 	return out, rows.Err()
 }
 
-func (r *zonificacionRepository) LugarPorID(ctx context.Context, id int64) (dto.LugarCatalogoDTO, bool, error) {
-	var item dto.LugarCatalogoDTO
+func (r *zonificacionRepository) LugarPorID(ctx context.Context, id int64) (entities.LugarCatalogo, bool, error) {
+	var item entities.LugarCatalogo
 	err := r.db.WithContext(ctx).Raw(`
 		SELECT id, nombre FROM lugares WHERE id = $1 AND activo = TRUE`, id).Row().Scan(&item.ID, &item.Nombre)
 	if errors.Is(err, sql.ErrNoRows) {
-		return dto.LugarCatalogoDTO{}, false, nil
+		return entities.LugarCatalogo{}, false, nil
 	}
 	if err != nil {
-		return dto.LugarCatalogoDTO{}, false, err
+		return entities.LugarCatalogo{}, false, err
 	}
 	return item, true, nil
 }
 
-func (r *zonificacionRepository) LugarPorNorm(ctx context.Context, nombreNorm string) (dto.LugarCatalogoDTO, bool, error) {
-	var item dto.LugarCatalogoDTO
+func (r *zonificacionRepository) LugarPorNorm(ctx context.Context, nombreNorm string) (entities.LugarCatalogo, bool, error) {
+	var item entities.LugarCatalogo
 	err := r.db.WithContext(ctx).Raw(`
 		SELECT id, nombre FROM lugares WHERE nombre_norm = $1 AND activo = TRUE`, nombreNorm).Row().Scan(&item.ID, &item.Nombre)
 	if errors.Is(err, sql.ErrNoRows) {
-		return dto.LugarCatalogoDTO{}, false, nil
+		return entities.LugarCatalogo{}, false, nil
 	}
 	if err != nil {
-		return dto.LugarCatalogoDTO{}, false, err
+		return entities.LugarCatalogo{}, false, err
 	}
 	return item, true, nil
 }
@@ -245,8 +245,8 @@ func (r *zonificacionRepository) ViasGeoJSON(ctx context.Context) ([]byte, error
 	return []byte(body), nil
 }
 
-func (r *zonificacionRepository) ImportarVias(ctx context.Context, filas []dto.ViaAltaDTO, usuarioID int64) (dto.ImportacionViaDTO, error) {
-	var res dto.ImportacionViaDTO
+func (r *zonificacionRepository) ImportarVias(ctx context.Context, filas []entities.ViaAlta, usuarioID int64) (entities.ResumenImportacionVia, error) {
+	var res entities.ResumenImportacionVia
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, fila := range filas {
 			var id int64
@@ -349,8 +349,8 @@ func (r *zonificacionRepository) CuartelesGeoJSON(ctx context.Context) ([]byte, 
 	return json.Marshal(payload)
 }
 
-func (r *zonificacionRepository) CrearReferente(ctx context.Context, in dto.CrearReferenteDTO) (dto.ReferenteDTO, error) {
-	var item dto.ReferenteDTO
+func (r *zonificacionRepository) CrearReferente(ctx context.Context, in entities.NuevoReferenteEdificio) (entities.ReferenteEdificio, error) {
+	var item entities.ReferenteEdificio
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Raw(`
 			SELECT id, lugar_id, edificio_id
@@ -380,22 +380,22 @@ func (r *zonificacionRepository) CrearReferente(ctx context.Context, in dto.Crea
 	return item, err
 }
 
-func leerSector(tx *gorm.DB, codigo string) (dto.SectorCapatazDTO, bool, error) {
-	var item dto.SectorCapatazDTO
+func leerSector(tx *gorm.DB, codigo string) (entities.SectorCapataz, bool, error) {
+	var item entities.SectorCapataz
 	err := tx.Raw(`
 		SELECT id, codigo, nombre, color, activo
 		FROM sectores_capataz WHERE codigo = $1`, codigo).Row().Scan(
 		&item.ID, &item.Codigo, &item.Nombre, &item.Color, &item.Activo)
 	if errors.Is(err, sql.ErrNoRows) {
-		return dto.SectorCapatazDTO{}, false, nil
+		return entities.SectorCapataz{}, false, nil
 	}
 	if err != nil {
-		return dto.SectorCapatazDTO{}, false, err
+		return entities.SectorCapataz{}, false, err
 	}
 	return item, true, nil
 }
 
-func snapshotSector(item dto.SectorCapatazDTO) map[string]any {
+func snapshotSector(item entities.SectorCapataz) map[string]any {
 	return map[string]any{
 		"codigo": item.Codigo,
 		"nombre": item.Nombre,

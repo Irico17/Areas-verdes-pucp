@@ -1,0 +1,57 @@
+# Frente: o2-ejemplares
+# PATCH de la ficha. No repite GET ni POST de /catastro/ejemplares.
+/api/v1/catastro/ejemplares/{id}:
+  patch:
+    tags: [catastro]
+    summary: Corrige código, especie, salud, coordenadas, lugar y sector o cuartel
+    description: |
+      Cada clave ausente se deja como está. `null` vacía especie, salud, coordenadas, lugar o sector.
+      Si el código cambia, el anterior queda en `codigos_historicos` y la edición en `cambios`.
+      Exige el permiso `registrar`. El rol capataz responde 403.
+    operationId: actualizarEjemplar
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              codigo:
+                type: string
+              especie_id:
+                type: integer
+                nullable: true
+              salud:
+                type: string
+                nullable: true
+                description: bueno, regular, deteriorado, o null si todavía no hay dato.
+              lat:
+                type: number
+                nullable: true
+              lon:
+                type: number
+                nullable: true
+              ubicacion_lugar_id:
+                type: integer
+                nullable: true
+              sector_cuartel_id:
+                type: integer
+                nullable: true
+                description: Id de catálogo con clase sector_capataz o cuartel. No es texto libre.
+    responses:
+      "200":
+        description: Ficha actualizada
+      "400":
+        description: Salud, coordenada, especie, lugar o sector inválidos
+      "401":
+        description: Sin sesión
+      "403":
+        description: Capataz, o rol sin permiso registrar
+      "404":
+        description: Ejemplar inexistente

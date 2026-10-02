@@ -56,6 +56,7 @@ func (g *CatastroGroup) Register(router gin.IRouter) {
 
 	router.GET("/catastro/ejemplares", middleware.RequierePermiso(g.permisos, "consultar"), g.catastroCtrl.Ejemplares)
 	router.POST("/catastro/ejemplares", middleware.RequierePermiso(g.permisos, "registrar"), g.catastroCtrl.CrearEjemplar)
+	router.PATCH("/catastro/ejemplares/:id", middleware.RequierePermiso(g.permisos, "registrar"), g.catastroCtrl.ActualizarEjemplar)
 	router.GET("/catastro/ejemplares/:id/codigos", middleware.RequierePermiso(g.permisos, "consultar"), g.catastroCtrl.Codigos)
 	router.POST("/catastro/ejemplares/:id/codigos", middleware.RequierePermiso(g.permisos, "registrar"), g.catastroCtrl.Recodificar)
 

@@ -81,7 +81,7 @@ func TestCatastroRepositories_DB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creando ejemplar: %v", err)
 	}
-	hist, err := ejRepo.Recodificar(ctx, ej.ID, "AV-100")
+	hist, err := ejRepo.Recodificar(ctx, ej.ID, "AV-100", nil)
 	if err != nil {
 		t.Fatalf("error recodificando: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestCatastroRepositories_DB(t *testing.T) {
 	}
 
 	// Listar ejemplares
-	ejemplares, total, err := ejRepo.Listar(ctx, 10, 0)
+	ejemplares, total, err := ejRepo.Listar(ctx, 10, 0, "")
 	if err != nil || total == 0 || len(ejemplares) == 0 {
 		t.Fatalf("error listando ejemplares: %v (total=%d)", err, total)
 	}

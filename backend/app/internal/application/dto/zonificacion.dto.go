@@ -1,13 +1,9 @@
 package dto
 
+import "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/domain/entities"
+
 // SectorCapatazDTO is one row of the capataz sector catalog.
-type SectorCapatazDTO struct {
-	ID     int64  `json:"id"`
-	Codigo string `json:"codigo"`
-	Nombre string `json:"nombre"`
-	Color  string `json:"color"`
-	Activo bool   `json:"activo"`
-}
+type SectorCapatazDTO = entities.SectorCapataz
 
 // SectorListDTO lists capataz sectors.
 type SectorListDTO struct {
@@ -15,33 +11,16 @@ type SectorListDTO struct {
 }
 
 // CrearSectorDTO is the payload for a new sector.
-type CrearSectorDTO struct {
-	Codigo    string `json:"codigo"`
-	Nombre    string `json:"nombre"`
-	Color     string `json:"color"`
-	UsuarioID int64  `json:"-"`
-}
+type CrearSectorDTO = entities.NuevoSectorCapataz
 
 // ActualizarSectorDTO corrects name, color or the active flag.
-type ActualizarSectorDTO struct {
-	Codigo    string `json:"codigo"`
-	Nombre    string `json:"nombre"`
-	Color     string `json:"color"`
-	Activo    *bool  `json:"activo,omitempty"`
-	UsuarioID int64  `json:"-"`
-}
+type ActualizarSectorDTO = entities.CambioSectorCapataz
 
 // ImportacionSectorDTO reports an import that does not duplicate codes.
-type ImportacionSectorDTO struct {
-	Creados      int `json:"creados"`
-	Actualizados int `json:"actualizados"`
-}
+type ImportacionSectorDTO = entities.ResumenImportacionSector
 
 // LugarCatalogoDTO is a place already stored. It is never created from free text.
-type LugarCatalogoDTO struct {
-	ID     int64  `json:"id"`
-	Nombre string `json:"nombre"`
-}
+type LugarCatalogoDTO = entities.LugarCatalogo
 
 // ResolverLugarDTO asks to resolve a catalog id or a name. LugarLibre is read-only.
 type ResolverLugarDTO struct {
@@ -58,10 +37,7 @@ type LugarResueltoDTO struct {
 }
 
 // ImportacionViaDTO reports how many road features were written.
-type ImportacionViaDTO struct {
-	Creadas      int `json:"creadas"`
-	Actualizadas int `json:"actualizadas"`
-}
+type ImportacionViaDTO = entities.ResumenImportacionVia
 
 // EdificioRefDTO is a building chosen by id.
 type EdificioRefDTO struct {
@@ -70,23 +46,10 @@ type EdificioRefDTO struct {
 }
 
 // CrearReferenteDTO pairs a catalog place with a building id.
-type CrearReferenteDTO struct {
-	LugarID    int64  `json:"lugar_id"`
-	EdificioID string `json:"edificio_id"`
-	UsuarioID  int64  `json:"-"`
-}
+type CrearReferenteDTO = entities.NuevoReferenteEdificio
 
 // ReferenteDTO is the stored pair.
-type ReferenteDTO struct {
-	ID         int64  `json:"id"`
-	LugarID    int64  `json:"lugar_id"`
-	EdificioID string `json:"edificio_id"`
-	Creado     bool   `json:"creado"`
-}
+type ReferenteDTO = entities.ReferenteEdificio
 
 // ViaAltaDTO is one line ready to persist.
-type ViaAltaDTO struct {
-	FeatureID string
-	Nombre    string
-	GeoJSON   string
-}
+type ViaAltaDTO = entities.ViaAlta

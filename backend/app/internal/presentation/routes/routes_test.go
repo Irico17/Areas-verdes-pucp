@@ -232,7 +232,7 @@ func (mockEspecieRoutesUC) Crear(_ context.Context, req dto.CrearEspecieDTO) (dt
 
 type mockEjemplarRoutesUC struct{}
 
-func (mockEjemplarRoutesUC) Listar(_ context.Context, limit, offset int) (dto.EjemplaresPaginadosDTO, error) {
+func (mockEjemplarRoutesUC) Listar(_ context.Context, limit, offset int, _ string) (dto.EjemplaresPaginadosDTO, error) {
 	return dto.EjemplaresPaginadosDTO{
 		Ejemplares: []dto.EjemplarDTO{{ID: 1, Codigo: "EJ-1", Activo: true}},
 		Total:      1,
@@ -247,7 +247,11 @@ func (mockEjemplarRoutesUC) Crear(_ context.Context, req dto.EjemplarDTO) (dto.E
 	return req, nil
 }
 
-func (mockEjemplarRoutesUC) Recodificar(_ context.Context, id int64, req dto.RecodificarDTO) (dto.CodigoHistoricoDTO, error) {
+func (mockEjemplarRoutesUC) Actualizar(_ context.Context, id int64, req dto.ActualizarEjemplarDTO, _ *int64) (dto.EjemplarDTO, error) {
+	return dto.EjemplarDTO{ID: id, Codigo: "EJ-1", Salud: req.Salud, Activo: true}, nil
+}
+
+func (mockEjemplarRoutesUC) Recodificar(_ context.Context, id int64, req dto.RecodificarDTO, _ *int64) (dto.CodigoHistoricoDTO, error) {
 	return dto.CodigoHistoricoDTO{ID: 1, EjemplarID: id, CodigoAnterior: "OLD", CodigoNuevo: req.Codigo}, nil
 }
 
@@ -1402,6 +1406,8 @@ func TestRutasCatastroMaestro_SinAutenticacionDa401(t *testing.T) {
 		{http.MethodGet, "/areas-verdes/v1/catastro/ejemplares"},
 		{http.MethodPost, "/api/v1/catastro/ejemplares"},
 		{http.MethodPost, "/areas-verdes/v1/catastro/ejemplares"},
+		{http.MethodPatch, "/api/v1/catastro/ejemplares/1"},
+		{http.MethodPatch, "/areas-verdes/v1/catastro/ejemplares/1"},
 
 		{http.MethodGet, "/api/v1/catastro/ejemplares/1/codigos"},
 		{http.MethodGet, "/areas-verdes/v1/catastro/ejemplares/1/codigos"},
@@ -1463,6 +1469,8 @@ func TestRutasCatastroMaestro_PermisosPorRol(t *testing.T) {
 		{http.MethodPost, "/api/v1/catastro/especies", "token-norte", `{"nombre_cientifico":"S1","nombre_comun":"C1"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodGet, "/api/v1/catastro/ejemplares", "token-norte", "", 200, ""},
 		{http.MethodPost, "/api/v1/catastro/ejemplares", "token-norte", `{"codigo":"EJ-1","tipo_vegetacion":"Árbol","cantidad":1}`, 201, ""},
+		{http.MethodPatch, "/api/v1/catastro/ejemplares/1", "token-norte", `{"salud":"bueno"}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/areas-verdes/v1/catastro/ejemplares/1", "token-norte", `{"salud":"bueno"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodGet, "/api/v1/catastro/ejemplares/1/codigos", "token-norte", "", 200, ""},
 		{http.MethodPost, "/api/v1/catastro/ejemplares/1/codigos", "token-norte", `{"codigo_nuevo":"AV-NEW"}`, 201, ""},
 		{http.MethodGet, "/api/v1/catastro/fauna", "token-norte", "", 200, ""},
@@ -1477,6 +1485,8 @@ func TestRutasCatastroMaestro_PermisosPorRol(t *testing.T) {
 		{http.MethodPost, "/api/v1/catastro/zonas-supervision", "token-coordinacion", `{"codigo":"Z1","nombre":"Zona 1"}`, 201, ""},
 		{http.MethodGet, "/api/v1/catastro/ejemplares", "token-coordinacion", "", 200, ""},
 		{http.MethodPost, "/api/v1/catastro/ejemplares", "token-coordinacion", `{"codigo":"EJ-1","tipo_vegetacion":"Árbol","cantidad":1}`, 201, ""},
+		{http.MethodPatch, "/api/v1/catastro/ejemplares/1", "token-coordinacion", `{"salud":"bueno"}`, 200, ""},
+		{http.MethodPatch, "/areas-verdes/v1/catastro/ejemplares/1", "token-coordinacion", `{"salud":"bueno"}`, 200, ""},
 		{http.MethodPost, "/api/v1/catastro/ejemplares/1/codigos", "token-coordinacion", `{"codigo_nuevo":"AV-NEW"}`, 201, ""},
 
 		// 3. Admin: consultar=true, registrar=true
@@ -1504,6 +1514,7 @@ func TestRutasCatastroMaestro_PermisosPorRol(t *testing.T) {
 		{http.MethodPost, "/api/v1/catastro/lugares", "token-jefatura", `{"nombre":"L1","lat":-12.07,"lon":-77.08}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/api/v1/catastro/especies", "token-jefatura", `{"nombre_cientifico":"S1","nombre_comun":"C1"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/api/v1/catastro/ejemplares", "token-jefatura", `{"codigo":"EJ-1","tipo_vegetacion":"Árbol","cantidad":1}`, 403, "su rol no tiene ese permiso"},
+		{http.MethodPatch, "/api/v1/catastro/ejemplares/1", "token-jefatura", `{"salud":"bueno"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/api/v1/catastro/ejemplares/1/codigos", "token-jefatura", `{"codigo_nuevo":"AV-NEW"}`, 403, "su rol no tiene ese permiso"},
 		{http.MethodPost, "/areas-verdes/v1/catastro/ejemplares/1/codigos", "token-jefatura", `{"codigo_nuevo":"AV-NEW"}`, 403, "su rol no tiene ese permiso"},
 	}

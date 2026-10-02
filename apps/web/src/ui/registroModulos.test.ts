@@ -7,4 +7,7 @@ test("la jefatura administra cuentas y el capataz no ve esa pestaña", () => {
   assert.equal(modulosDe("admin").includes("admin"), true)
   assert.equal(modulosDe("capataz").includes("admin"), false)
   assert.equal(modulosDe("coordinacion").includes("admin"), false)
+  assert.equal(modulosDe("coordinacion").at(-1), "ejemplares")
+  assert.equal(modulosDe("capataz").at(-1), "ejemplares")
+  assert.equal(modulosDe("jefatura").includes("ejemplares"), true)
 })

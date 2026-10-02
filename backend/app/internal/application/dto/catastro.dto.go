@@ -39,20 +39,43 @@ type EspecieDTO struct {
 
 // EjemplarDTO represents an individual flora specimen on campus.
 type EjemplarDTO struct {
-	ID                 int64    `json:"id"`
-	NumeroOrigen       *int     `json:"numero_origen,omitempty"`
-	Codigo             string   `json:"codigo"`
-	EspecieID          *int64   `json:"especie_id,omitempty"`
-	NombreComun        string   `json:"nombre_comun"`
-	TipoVegetacion     string   `json:"tipo_vegetacion"`
-	Cantidad           int      `json:"cantidad"`
-	UbicacionLugarID   *int64   `json:"ubicacion_lugar_id,omitempty"`
-	Referencia         string   `json:"referencia"`
-	Lat                *float64 `json:"lat,omitempty"`
-	Lon                *float64 `json:"lon,omitempty"`
-	ObservacionFen2026 string   `json:"observacion_fen_2026"`
-	Salud              *string  `json:"salud"`
-	Activo             bool     `json:"activo"`
+	ID                  int64    `json:"id"`
+	NumeroOrigen        *int     `json:"numero_origen,omitempty"`
+	Codigo              string   `json:"codigo"`
+	EspecieID           *int64   `json:"especie_id,omitempty"`
+	NombreComun         string   `json:"nombre_comun"`
+	TipoVegetacion      string   `json:"tipo_vegetacion"`
+	Cantidad            int      `json:"cantidad"`
+	UbicacionLugarID    *int64   `json:"ubicacion_lugar_id,omitempty"`
+	Referencia          string   `json:"referencia"`
+	Lat                 *float64 `json:"lat,omitempty"`
+	Lon                 *float64 `json:"lon,omitempty"`
+	ObservacionFen2026  string   `json:"observacion_fen_2026"`
+	Salud               *string  `json:"salud"`
+	SectorCuartelID     *int64   `json:"sector_cuartel_id,omitempty"`
+	SectorCuartelNombre string   `json:"sector_cuartel_nombre,omitempty"`
+	SectorCuartelClase  string   `json:"sector_cuartel_clase,omitempty"`
+	EspecieCientifico   string   `json:"especie_cientifico,omitempty"`
+	LugarNombre         string   `json:"lugar_nombre,omitempty"`
+	Activo              bool     `json:"activo"`
+}
+
+// ActualizarEjemplarDTO is a partial edit. Tiene* means the key came in the JSON.
+type ActualizarEjemplarDTO struct {
+	Codigo           *string
+	TieneCodigo      bool
+	EspecieID        *int64
+	TieneEspecie     bool
+	Salud            *string
+	TieneSalud       bool
+	Lat              *float64
+	Lon              *float64
+	TieneLat         bool
+	TieneLon         bool
+	UbicacionLugarID *int64
+	TieneLugar       bool
+	SectorCuartelID  *int64
+	TieneSector      bool
 }
 
 // CodigoHistoricoDTO preserves previous and new codes of a specimen when recodified.

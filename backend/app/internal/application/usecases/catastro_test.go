@@ -196,7 +196,7 @@ type mockEjemplarRepo struct {
 	err     error
 }
 
-func (m *mockEjemplarRepo) Listar(_ context.Context, _, _ int) ([]entities.Ejemplar, int, error) {
+func (m *mockEjemplarRepo) Listar(_ context.Context, _, _ int, _ string) ([]entities.Ejemplar, int, error) {
 	return m.items, m.total, m.err
 }
 
@@ -209,7 +209,21 @@ func (m *mockEjemplarRepo) Crear(_ context.Context, e entities.Ejemplar) (entiti
 	return e, nil
 }
 
-func (m *mockEjemplarRepo) Recodificar(_ context.Context, ejemplarID int64, nuevo string) (entities.CodigoHistorico, error) {
+func (m *mockEjemplarRepo) Actualizar(_ context.Context, id int64, p entities.ParcheEjemplar, _ *int64) (entities.Ejemplar, error) {
+	if m.err != nil {
+		return entities.Ejemplar{}, m.err
+	}
+	e := entities.Ejemplar{ID: id, Activo: true, Cantidad: 1}
+	if p.TieneSalud {
+		e.Salud = p.Salud
+	}
+	if p.TieneCodigo && p.Codigo != nil {
+		e.Codigo = *p.Codigo
+	}
+	return e, nil
+}
+
+func (m *mockEjemplarRepo) Recodificar(_ context.Context, ejemplarID int64, nuevo string, _ *int64) (entities.CodigoHistorico, error) {
 	if m.err != nil {
 		return entities.CodigoHistorico{}, m.err
 	}
@@ -230,7 +244,7 @@ func TestEjemplarUseCase(t *testing.T) {
 	uc := usecases.NewEjemplarUseCase(repo)
 
 	// Listar
-	res, err := uc.Listar(ctx, 10, 0)
+	res, err := uc.Listar(ctx, 10, 0, "")
 	if err != nil || res.Total != 1 || len(res.Ejemplares) != 1 {
 		t.Fatalf("Listar failed: %v", err)
 	}
@@ -250,9 +264,19 @@ func TestEjemplarUseCase(t *testing.T) {
 	}
 
 	// Recodificar
-	hist, err := uc.Recodificar(ctx, 1, dto.RecodificarDTO{Codigo: "AV-NEW"})
-	if err != nil || hist.CodigoNuevo != "AV-NEW" {
-		t.Fatalf("Recodificar failed: %v", err)
+	hist, err := uc.Recodificar(ctx, 1, dto.RecodificarDTO{Codigo: "AV-NEW"}, nil)
+	if err != nil || hist.CodigoNuevo != "AV-NEW" || hist.CodigoAnterior != "AV-OLD" {
+		t.Fatalf("Recodificar failed: %+v %v", hist, err)
+	}
+
+	salud := "bueno"
+	editado, err := uc.Actualizar(ctx, 1, dto.ActualizarEjemplarDTO{Salud: &salud, TieneSalud: true}, nil)
+	if err != nil || editado.Salud == nil || *editado.Salud != "bueno" {
+		t.Fatalf("Actualizar salud: %+v %v", editado, err)
+	}
+	mala := "agonizando"
+	if _, err := uc.Actualizar(ctx, 1, dto.ActualizarEjemplarDTO{Salud: &mala, TieneSalud: true}, nil); !errors.Is(err, domainErrors.ErrEntrada) {
+		t.Fatalf("salud inválida: %v", err)
 	}
 
 	// ListarCodigos
