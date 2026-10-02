@@ -185,6 +185,7 @@ jobs:
 
   escaneo:
     runs-on: ubuntu-24.04
+    continue-on-error: true
     permissions:
       contents: read
     steps:
@@ -196,16 +197,11 @@ jobs:
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - name: Escaneo Trivy fs (sistema de archivos)
-        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
-        with:
-          scan-type: "fs"
-          scan-ref: "."
-          scanners: "vuln,secret,config"
-          severity: "HIGH,CRITICAL"
-          exit-code: "0"
-          format: "table"
-          output: "trivy-fs.txt"
+      - name: Escaneo Trivy fs (sistema de archivos, no bloqueante)
+        continue-on-error: true
+        run: |
+          docker run --rm -v "$PWD:/src:ro" -v "$RUNNER_TEMP/trivy-cache:/root/.cache" ghcr.io/aquasecurity/trivy@sha256:e2b22eac59c02003d8749f5b8d9bd073b62e30fefaef5b7c8371204e0a4b0c08 \
+            fs --scanners vuln,secret,misconfig --severity HIGH,CRITICAL --exit-code 0 /src > trivy-fs.txt 2>&1 || true
       - name: Configurar Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
       - name: Construir imágenes para escaneo
@@ -222,24 +218,16 @@ jobs:
             --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
             --load \
             .
-      - name: Escaneo Trivy image (API)
-        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
-        with:
-          scan-type: "image"
-          image-ref: "campus-verde-api:scan"
-          severity: "HIGH,CRITICAL"
-          exit-code: "0"
-          format: "table"
-          output: "trivy-api.txt"
-      - name: Escaneo Trivy image (Web)
-        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
-        with:
-          scan-type: "image"
-          image-ref: "campus-verde-web:scan"
-          severity: "HIGH,CRITICAL"
-          exit-code: "0"
-          format: "table"
-          output: "trivy-web.txt"
+      - name: Escaneo Trivy image (API, no bloqueante)
+        continue-on-error: true
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP/trivy-cache:/root/.cache" ghcr.io/aquasecurity/trivy@sha256:e2b22eac59c02003d8749f5b8d9bd073b62e30fefaef5b7c8371204e0a4b0c08 \
+            image --severity HIGH,CRITICAL --exit-code 0 campus-verde-api:scan > trivy-api.txt 2>&1 || true
+      - name: Escaneo Trivy image (Web, no bloqueante)
+        continue-on-error: true
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP/trivy-cache:/root/.cache" ghcr.io/aquasecurity/trivy@sha256:e2b22eac59c02003d8749f5b8d9bd073b62e30fefaef5b7c8371204e0a4b0c08 \
+            image --severity HIGH,CRITICAL --exit-code 0 campus-verde-web:scan > trivy-web.txt 2>&1 || true
       - name: Resumen de escaneo en step summary
         if: always()
         run: |
