@@ -1,9 +1,10 @@
 import { apiUrl } from "../api"
+import { CAPA } from "../ui/nomenclatura"
 
 export const CAPAS_EDITABLES = [
-  { id: "fauna", label: "Fauna", campos: ["nombre"] },
-  { id: "puertas", label: "Puertas", campos: ["codigo"] },
-  { id: "playas_estacionamiento", label: "Playas", campos: ["codigo"] },
+  { id: "fauna", label: CAPA.fauna.label, campos: ["nombre"] },
+  { id: "puertas", label: CAPA.puertas.label, campos: ["codigo"] },
+  { id: "playas_estacionamiento", label: CAPA.playas.label, campos: ["codigo"] },
   { id: "veredas_riesgo", label: "Vereda en riesgo", campos: ["nota"] },
   { id: "xerofiticas", label: "Xerofítica", campos: ["clase", "riego", "area_m2", "perimetro_m"] },
   { id: "jardines_reserva", label: "Jardines de reserva", campos: ["codigo", "nombre", "nota", "uso", "riego", "pertenecen", "area_m2", "perimetro_m"] },

@@ -26,7 +26,7 @@ test("el panel de reportes ofrece zona, cuadrilla, origen y fechas", () => {
     assert.ok(html.includes(texto), texto)
   }
   assert.equal(html.includes("PDF"), false)
-  for (const texto of ["Cobertura", "Rendimiento", "Métricas de proveedor", "definición pendiente"]) {
+  for (const texto of ["Cobertura", "Rendimiento", "Métricas del servicio tercerizado", "definición pendiente"]) {
     assert.ok(html.includes(texto), texto)
   }
   assert.equal(html.includes("%"), false)

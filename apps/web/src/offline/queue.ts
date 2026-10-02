@@ -131,9 +131,9 @@ export function clasificarEstado(status: number): ResultadoEnvio {
 }
 
 export function mensajeReintento(status: number): string {
-  if (status === 401) return "La sesión venció. La foto sigue en este equipo."
-  if (status === 403) return "Sin permiso para esta labor. La foto sigue en este equipo."
-  if (status === 404) return "La labor aún no está sincronizada. La foto sigue en este equipo."
+  if (status === 401) return "La sesión venció. La foto sigue en este navegador."
+  if (status === 403) return "Sin permiso para esta actividad. La foto sigue en este navegador."
+  if (status === 404) return "La actividad aún no está sincronizada. La foto sigue en este navegador."
   if (status === 400) return "No se pudo enviar la foto. Se reintentará."
   return "No se pudo enviar la foto. Se reintentará."
 }

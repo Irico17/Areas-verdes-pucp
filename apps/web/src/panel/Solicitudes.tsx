@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { ApiError } from "../operacion"
 import { Esqueleto } from "../ui/Esqueleto"
 import { crearOrden, crearSolicitud, fetchOrdenes, fetchSolicitudes, type Orden } from "../producto"
+import { SOLICITUD } from "../ui/nomenclatura"
 
 export function SolicitudesPanel(props: { actividadId: string }) {
   const [rows, setRows] = useState<Awaited<ReturnType<typeof fetchSolicitudes>>>([])
@@ -91,7 +92,7 @@ export function SolicitudesPanel(props: { actividadId: string }) {
           <input value={titulo} onChange={(event) => setTitulo(event.target.value)} required />
         </label>
         <label className="field">
-          Fuente
+          {SOLICITUD.origen}
           <select value={fuente} onChange={(event) => setFuente(event.target.value)}>
             <option value="centuria">Centuria</option>
             <option value="osg">Matriz OSG</option>
@@ -120,11 +121,11 @@ export function SolicitudesPanel(props: { actividadId: string }) {
         </button>
       </form>
       <h3>Órdenes de servicio</h3>
-      <p className="lede">Solo se vinculan a una labor marcada como tercerizada. Sin orden, esa labor no se cierra.</p>
+      <p className="lede">{SOLICITUD.vincula}</p>
       <p className="hint">
-        {ordenes.length} {ordenes.length === 1 ? "orden registrada" : "órdenes registradas"}. Métricas de proveedor: definición pendiente.
+        {ordenes.length} {ordenes.length === 1 ? "orden registrada" : "órdenes registradas"}. {SOLICITUD.metricas}
       </p>
-      {ordenes.length === 0 && <p className="empty">Todavía no hay órdenes. Una labor tercerizada no se cierra hasta que exista una.</p>}
+      {ordenes.length === 0 && <p className="empty">{SOLICITUD.vacioOrden}</p>}
       <ul className="labor-list">
         {ordenes.map((row) => (
           <li key={row.id} className="agenda">
@@ -140,7 +141,7 @@ export function SolicitudesPanel(props: { actividadId: string }) {
         onSubmit={(event) => {
           event.preventDefault()
           if (!props.actividadId) {
-            setError("Elija una labor en el mapa antes de crear la orden.")
+            setError(SOLICITUD.elegir)
             return
           }
           void crearOrden({
@@ -158,7 +159,7 @@ export function SolicitudesPanel(props: { actividadId: string }) {
             .catch((err: unknown) => setError(err instanceof Error ? err.message : "No se pudo crear la orden"))
         }}
       >
-        <p className="hint">{props.actividadId ? `Labor seleccionada ${props.actividadId.slice(0, 8)}` : "Ninguna labor seleccionada."}</p>
+        <p className="hint">{props.actividadId ? SOLICITUD.seleccionada(props.actividadId.slice(0, 8)) : SOLICITUD.ninguna}</p>
         <label className="field">
           Empresa
           <input value={empresa} onChange={(event) => setEmpresa(event.target.value)} required />

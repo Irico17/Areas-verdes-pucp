@@ -88,7 +88,9 @@ test("la ficha de labores conserva el pin y muestra los campos de escritorio", (
       onConfirmarPista: () => {},
     }),
   )
-  assert.match(html, /Marcar labor|Cancelar marca/)
+  assert.match(html, /Actividades/)
+  assert.match(html, /Cuadrilla/)
+  assert.match(html, /Marcar actividad|Cancelar marca/)
   assert.match(html, /Servicio tercerizado/)
   assert.match(html, /en proceso/)
   assert.match(html, /Confirmar Poda/)

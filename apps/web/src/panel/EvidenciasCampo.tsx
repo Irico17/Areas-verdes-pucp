@@ -22,9 +22,10 @@ import {
   unirEvidencias,
   urlArchivo,
 } from "../offline/subida"
+import { apiUrl } from "../api"
 import { fetchEvidencias, type Evidencia } from "../producto"
 import { Esqueleto } from "../ui/Esqueleto"
-import { apiUrl } from "../api"
+import { EVIDENCIA } from "../ui/nomenclatura"
 
 async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const dig = await crypto.subtle.digest("SHA-256", bytes)
@@ -123,7 +124,7 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
         await encolarEvidencia(item)
         despachar({
           tipo: "cola",
-          texto: sinPunto ? "Guardado en este equipo, sin ubicación." : "Guardado en este equipo.",
+          texto: sinPunto ? EVIDENCIA.enNavegadorSinPunto : EVIDENCIA.enNavegador,
         })
         await refrescar()
         return
@@ -208,7 +209,7 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
     estado.fase === "preparando" ? "Preparando…" : estado.fase === "subiendo" ? "Subiendo…" : "Tomar foto"
 
   return (
-    <section className="evidencia-campo" aria-label="Evidencias de la labor">
+    <section className="evidencia-campo" aria-label={EVIDENCIA.aria}>
       <h3>Evidencia</h3>
       <p className="evidencia-ayuda">La foto se reduce en el teléfono antes de enviarse.</p>
       <div className="evidencia-acciones">
@@ -262,7 +263,7 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
           </button>
         )}
       </div>
-      <ul className="evidencia-grid" aria-label="Fotos de la labor">
+      <ul className="evidencia-grid" aria-label={EVIDENCIA.fotos}>
         {items.map((it) => {
           const rota = rotas.has(it.id)
           const contenido = rota ? (
@@ -306,7 +307,7 @@ export function EvidenciasCampo({ actividadId }: { actividadId: string }) {
       </ul>
       {cargando && <Esqueleto filas={2} />}
       {!cargando && items.length === 0 && (
-        <p className="empty">{actividadId ? "Esta labor no tiene fotos." : "La foto se adjunta cuando la labor ya está en el servidor."}</p>
+        <p className="empty">{actividadId ? EVIDENCIA.sinFotos : EVIDENCIA.esperaServidor}</p>
       )}
     </section>
   )

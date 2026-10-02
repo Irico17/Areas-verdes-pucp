@@ -131,9 +131,9 @@ export const HUECOS: Hueco[] = [
   },
   {
     clave: "metricas_proveedor",
-    nombre: "Métricas de proveedor",
+    nombre: "Métricas del servicio tercerizado",
     estado: "definición pendiente",
-    nota: "Jefatura no ha acordado la fórmula. No hay portal del proveedor.",
+    nota: "Jefatura de sección no ha acordado la fórmula. No hay portal del servicio tercerizado.",
   },
 ]
 

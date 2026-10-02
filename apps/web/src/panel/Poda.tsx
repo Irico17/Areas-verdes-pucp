@@ -3,6 +3,7 @@ import { FechaCampo } from "../FechaCampo"
 import { Esqueleto } from "../ui/Esqueleto"
 import { PODA_VACIA, codigoExterno, validarPoda, type PodaItem } from "./poda"
 import { apiUrl } from "../api"
+import { PODA } from "../ui/nomenclatura"
 
 type Props = {
   iniciales?: PodaItem[]
@@ -37,7 +38,7 @@ export function PodaPanel(props: Props) {
   return (
     <section className="block">
       <h2>Poda</h2>
-      <p className="lede">Incidencias de poda. El código externo solo se conserva si ya viene como OSG.</p>
+      <p className="lede">{PODA.lede}</p>
       {cargando && <Esqueleto />}
       <ul className="labor-list">
         {!cargando && items.length === 0 && <li className="empty">No hay podas en esta vista.</li>}

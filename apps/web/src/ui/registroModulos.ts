@@ -1,4 +1,5 @@
 import type { Rol } from "../types"
+import { MODULO } from "./nomenclatura"
 
 export type Modulo =
   | "mapa"
@@ -12,15 +13,15 @@ export type Modulo =
   | "admin"
 
 export const MODULOS: { id: Modulo; label: string }[] = [
-  { id: "mapa", label: "Mapa" },
-  { id: "labores", label: "Labores" },
-  { id: "catastro", label: "Catastro" },
-  { id: "inventario", label: "Inventario" },
-  { id: "solicitudes", label: "Solicitudes" },
-  { id: "reportes", label: "Reportes" },
-  { id: "catalogos", label: "Catálogos" },
-  { id: "importaciones", label: "Importar" },
-  { id: "admin", label: "Admin" },
+  { id: "mapa", label: MODULO.mapa },
+  { id: "labores", label: MODULO.labores },
+  { id: "catastro", label: MODULO.catastro },
+  { id: "inventario", label: MODULO.inventario },
+  { id: "solicitudes", label: MODULO.solicitudes },
+  { id: "reportes", label: MODULO.reportes },
+  { id: "catalogos", label: MODULO.catalogos },
+  { id: "importaciones", label: MODULO.importaciones },
+  { id: "admin", label: MODULO.admin },
 ]
 
 export function modulosDe(rol: Rol): Modulo[] {

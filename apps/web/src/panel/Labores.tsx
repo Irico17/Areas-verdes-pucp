@@ -16,6 +16,7 @@ import {
 } from "../operacion"
 import { etiquetaRol, type CatalogoItem } from "../producto"
 import type { Rol } from "../types"
+import { ACTIVIDAD, marcaEjecutor } from "../ui/nomenclatura"
 import { EvidenciasCampo } from "./EvidenciasCampo"
 import { apiUrl } from "../api"
 
@@ -90,14 +91,14 @@ export function Labores(props: Props) {
   }, [elegida])
   return (
     <section className="block">
-      <h2>Labores</h2>
-      <p className="lede">Puntos abiertos. El color es el estado y la letra, el tipo.</p>
-      {props.rol === "capataz" && <p className="hint">Solo ve las labores de su equipo.</p>}
+      <h2>{ACTIVIDAD.titulo}</h2>
+      <p className="lede">{ACTIVIDAD.lede}</p>
+      {props.rol === "capataz" && <p className="hint">{ACTIVIDAD.soloCuadrilla}</p>}
       {puedeAsignar && (
         <label className="field">
-          Equipo
+          {ACTIVIDAD.cuadrilla}
           <select value={equipoVista} onChange={(event) => setEquipoVista(event.target.value)}>
-            <option value="">Todos los equipos</option>
+            <option value="">{ACTIVIDAD.todas}</option>
             {props.equipos.map((equipo) => (
               <option key={equipo.id} value={equipo.id}>
                 {equipo.equipo}
@@ -120,9 +121,9 @@ export function Labores(props: Props) {
         ))}
       </div>
       <label className="field">
-        Tipo
+        {ACTIVIDAD.tipo}
         <select value={props.tipo} onChange={(event) => props.onTipo(event.target.value)}>
-          <option value="">Todos</option>
+          <option value="">{ACTIVIDAD.todosTipos}</option>
           {props.tipos.map((tipo) => (
             <option key={tipo.id} value={tipo.id}>
               {tipo.label}
@@ -132,10 +133,10 @@ export function Labores(props: Props) {
       </label>
       {puedeAsignar && (
         <button type="button" className={props.pinMode ? "primary sheet-action on" : "primary sheet-action"} onClick={() => props.onPinMode(!props.pinMode)}>
-          {props.pinMode ? "Cancelar marca" : "Marcar labor"}
+          {props.pinMode ? ACTIVIDAD.cancelarMarca : ACTIVIDAD.marcar}
         </button>
       )}
-      {props.pinMode && !props.draft && <p className="hint">Haga clic en el mapa para ubicar la labor.</p>}
+      {props.pinMode && !props.draft && <p className="hint">{ACTIVIDAD.ubicar}</p>}
       {props.draft && puedeAsignar && (
         <form
           className="form"
@@ -148,7 +149,7 @@ export function Labores(props: Props) {
             {props.draft.lat.toFixed(5)}, {props.draft.lon.toFixed(5)}
           </p>
           <label className="field">
-            Tipo
+            {ACTIVIDAD.tipo}
             <select value={props.formTipo} onChange={(event) => props.onForm({ tipo: event.target.value })}>
               {props.tipos.map((tipo) => (
                 <option key={tipo.id} value={tipo.id}>
@@ -158,13 +159,13 @@ export function Labores(props: Props) {
             </select>
           </label>
           <label className="field">
-            Título
+            {ACTIVIDAD.tituloCampo}
             <input value={props.formTitulo} maxLength={160} onChange={(event) => props.onForm({ titulo: event.target.value })} required />
           </label>
-          <p className="hint">Regla local, en proceso. No sale de este equipo. Confirme el tipo antes de guardar.</p>
+          <p className="hint">{ACTIVIDAD.regla}</p>
           {props.sugerencia && <p className="hint">{props.sugerencia}</p>}
           <button type="button" onClick={props.onSugerir}>
-            Sugerir tipo
+            {ACTIVIDAD.sugerir}
           </button>
           {props.pista?.codigo && (
             <button type="button" onClick={props.onConfirmarPista}>
@@ -172,21 +173,21 @@ export function Labores(props: Props) {
             </button>
           )}
           <label className="field">
-            Quién ejecuta
+            {ACTIVIDAD.quienEjecuta}
             <select value={props.formEjecutor} onChange={(event) => props.onForm({ ejecutor: event.target.value })}>
-              <option value="propia">Personal propio</option>
-              <option value="tercerizada">Servicio tercerizado</option>
+              <option value="propia">{ACTIVIDAD.personalPropio}</option>
+              <option value="tercerizada">{ACTIVIDAD.servicioTercerizado}</option>
             </select>
           </label>
           <FichaLabor />
           <label className="field">
-            Detalle
+            {ACTIVIDAD.detalle}
             <textarea value={props.formDetalle} maxLength={2000} rows={3} onChange={(event) => props.onForm({ detalle: event.target.value })} />
           </label>
           <label className="field">
-            Equipo
+            {ACTIVIDAD.cuadrilla}
             <select value={props.formEquipo} onChange={(event) => props.onForm({ equipo: event.target.value })}>
-              <option value="">Sin asignar</option>
+              <option value="">{ACTIVIDAD.sinAsignar}</option>
               {props.equipos.map((equipo) => (
                 <option key={equipo.id} value={equipo.id}>
                   {equipo.equipo}
@@ -195,15 +196,15 @@ export function Labores(props: Props) {
             </select>
           </label>
           <button type="submit" className="primary" disabled={props.creating}>
-            {props.creating ? "Guardando…" : "Crear labor"}
+            {props.creating ? ACTIVIDAD.guardando : ACTIVIDAD.crear}
           </button>
         </form>
       )}
       {props.queueCount > 0 && (
         <p className="hint">
-          {props.queueCount} en cola local.{" "}
+          {ACTIVIDAD.colaLocal(props.queueCount)}{" "}
           <button type="button" className="link" onClick={props.onFlush}>
-            Reintentar envío
+            {ACTIVIDAD.reintentar}
           </button>
         </p>
       )}
@@ -214,7 +215,7 @@ export function Labores(props: Props) {
       )}
       {props.cargando && <Esqueleto />}
       <ul className="labor-list">
-        {!props.cargando && visibles.length === 0 && <li className="empty">No hay labores con este filtro.</li>}
+        {!props.cargando && visibles.length === 0 && <li className="empty">{ACTIVIDAD.vacio}</li>}
         {visibles.map((item) => (
           <li key={item.id}>
             <button type="button" className={props.selected?.id === item.id ? "labor on" : "labor"} onClick={() => props.onSelect(item.id)}>
@@ -224,8 +225,8 @@ export function Labores(props: Props) {
               <span>
                 <strong>{item.titulo}</strong>
                 <small>
-                  {etiquetaTipo(item.tipo)} · {etiquetaEstado(item.estado)} · {item.equipo || "Sin equipo"}
-                  {item.ejecutor === "tercerizada" ? " · tercerizada" : ""}
+                  {etiquetaTipo(item.tipo)} · {etiquetaEstado(item.estado)} · {item.equipo || ACTIVIDAD.sinCuadrilla}
+                  {item.ejecutor === "tercerizada" ? ` · ${marcaEjecutor(item.ejecutor)}` : ""}
                   {item.queued ? " · pendiente de envío" : ""}
                 </small>
               </span>
@@ -237,8 +238,8 @@ export function Labores(props: Props) {
         <div className="detail" ref={detalleRef}>
           <h3>{props.selected.titulo}</h3>
           <p className="meta">
-            {etiquetaTipo(props.selected.tipo)} · {etiquetaEstado(props.selected.estado)} · {props.selected.equipo || "Sin equipo"}
-            {props.selected.ejecutor === "tercerizada" ? " · tercerizada" : " · personal propio"}
+            {etiquetaTipo(props.selected.tipo)} · {etiquetaEstado(props.selected.estado)} · {props.selected.equipo || ACTIVIDAD.sinCuadrilla}
+            {` · ${marcaEjecutor(props.selected.ejecutor) || ACTIVIDAD.propioMarca}`}
           </p>
           {props.selected.detalle && <p className="lede">{props.selected.detalle}</p>}
           <FichaLabor key={props.selected.id} actividadId={props.selected.queued ? "" : props.selected.id} />
@@ -247,7 +248,7 @@ export function Labores(props: Props) {
           ) : (
             <>
               <label className="field">
-                Estado
+                {ACTIVIDAD.estado}
                 <select value={props.estadoNuevo} onChange={(event) => props.onEstadoNuevo(event.target.value)}>
                   {estadosPermitidos(props.rol).map((estado) => (
                     <option key={estado.id} value={estado.id}>
@@ -257,12 +258,12 @@ export function Labores(props: Props) {
                 </select>
               </label>
               <button type="button" className="primary" onClick={props.onEstado}>
-                Guardar estado
+                {ACTIVIDAD.guardarEstado}
               </button>
               {puedeAsignar && (
                 <>
                   <label className="field">
-                    Reasignar a
+                    {ACTIVIDAD.reasignarA}
                     <select value={props.reasignarA} onChange={(event) => props.onReasignarA(event.target.value)}>
                       {props.equipos.map((equipo) => (
                         <option key={equipo.id} value={equipo.id}>
@@ -272,9 +273,9 @@ export function Labores(props: Props) {
                     </select>
                   </label>
                   <label className="field">
-                    Motivo de archivo
+                    {ACTIVIDAD.motivo}
                     <select value={props.motivo} onChange={(event) => props.onMotivo(event.target.value)}>
-                      <option value="">Elegir</option>
+                      <option value="">{ACTIVIDAD.elegir}</option>
                       {props.motivos.map((item) => (
                         <option key={item.codigo} value={item.codigo}>
                           {item.nombre}
@@ -284,16 +285,16 @@ export function Labores(props: Props) {
                   </label>
                   <div className="row-actions">
                     <button type="button" onClick={props.onReasignar}>
-                      Reasignar
+                      {ACTIVIDAD.reasignar}
                     </button>
                     <button type="button" className="danger" onClick={props.onArchivar}>
-                      {props.confirmarArchivo ? "Confirmar archivo" : "Archivar"}
+                      {props.confirmarArchivo ? ACTIVIDAD.confirmarArchivo : ACTIVIDAD.archivar}
                     </button>
                   </div>
                 </>
               )}
               <EvidenciasCampo key={props.selected.id} actividadId={props.selected.queued ? "" : props.selected.id} />
-              <h3>Bitácora</h3>
+              <h3>{ACTIVIDAD.bitacora}</h3>
               {props.timelineError && <p className="status error">{props.timelineError}</p>}
               <ol className="timeline">
                 {props.timeline.map((evento) => (
@@ -334,7 +335,7 @@ function FichaLabor(props: { actividadId?: string }) {
       return
     }
     if (!props.actividadId) {
-      setAviso("Cree la labor en el mapa para poder guardar la ficha.")
+      setAviso(ACTIVIDAD.creePrimero)
       return
     }
     try {
@@ -361,29 +362,29 @@ function FichaLabor(props: { actividadId?: string }) {
   }
   return (
     <fieldset className="form grupo" ref={fichaRef}>
-      <legend>Ficha de la labor</legend>
+      <legend>{ACTIVIDAD.ficha}</legend>
       <label className="field">
-        Clase
+        {ACTIVIDAD.clase}
         <input value={clase} onChange={(event) => setClase(event.target.value)} />
       </label>
       <label className="field">
-        Fecha de solicitud
+        {ACTIVIDAD.fechaSolicitud}
         <FechaCampo value={solicitud} onChange={setSolicitud} />
       </label>
       <label className="field">
-        Fecha de atención
+        {ACTIVIDAD.fechaAtencion}
         <FechaCampo value={atencion} onChange={setAtencion} />
       </label>
       <label className="field">
-        Lugar
-        <input value={lugar} onChange={(event) => setLugar(event.target.value)} placeholder="Si no hay pin, el lugar ubica la labor" />
+        {ACTIVIDAD.lugar}
+        <input value={lugar} onChange={(event) => setLugar(event.target.value)} placeholder={ACTIVIDAD.lugarPlaceholder} />
       </label>
       <label className="field">
-        Comentario
+        {ACTIVIDAD.comentario}
         <textarea value={comentario} rows={2} maxLength={2000} onChange={(event) => setComentario(event.target.value)} />
       </label>
       <button type="button" onClick={() => void guardar()}>
-        Guardar ficha
+        {ACTIVIDAD.guardarFicha}
       </button>
       {aviso && <p className="hint">{aviso}</p>}
     </fieldset>

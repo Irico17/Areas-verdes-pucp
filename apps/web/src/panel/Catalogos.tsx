@@ -8,24 +8,9 @@ import {
   renombrarCatalogo,
   type CatalogoItem,
 } from "../producto"
+import { CLASE_CATALOGO } from "../ui/nomenclatura"
 
-const ETIQUETA_CLASE: Record<string, string> = {
-  tipo_actividad: "Tipos de actividad",
-  estado: "Estados",
-  prioridad: "Prioridades",
-  lugar: "Lugares",
-  especie: "Especies",
-  motivo_archivo: "Motivos de archivo",
-  turno: "Turnos",
-  fuente: "Fuentes",
-  clase_actividad: "Clases de actividad",
-  plaga: "Plagas",
-  producto_fitosanitario: "Productos fitosanitarios",
-  frecuencia: "Frecuencias",
-  sede: "Sedes",
-  cuartel: "Cuarteles (histórico)",
-  sector_capataz: "Sectores de capataz",
-}
+const ETIQUETA_CLASE = CLASE_CATALOGO
 
 const CLASES_INICIALES = Object.keys(ETIQUETA_CLASE)
 

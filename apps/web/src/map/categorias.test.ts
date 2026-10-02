@@ -12,18 +12,22 @@ import {
 } from "./categorias.ts"
 import type { FeatureCollection, GeoFeature } from "../types.ts"
 
-test("categoriaUso replica las 5 categorías del original", () => {
+test("categoriaUso separa los seis textos de la propiedad Uso", () => {
   assert.equal(categoriaUso("Uso Institucional"), "institucional")
   assert.equal(categoriaUso("Áreas de uso administrativo"), "administrativo")
   assert.equal(categoriaUso("Áreas de uso recreativo/descanso"), "recreativo")
   assert.equal(categoriaUso("Áreas de manejo sostenible y reducción de consumo de agua"), "sostenible")
-  assert.equal(categoriaUso("Áreas deportivas y recreación activa"), "otros")
-  assert.equal(categoriaUso("Áreas de conservación"), "otros")
+  assert.equal(categoriaUso("Áreas deportivas y recreación activa"), "deportivas")
+  assert.equal(categoriaUso("Áreas de conservación"), "conservacion")
+  for (const cat of USOS.filter((item) => item.id !== "sin-uso")) {
+    assert.equal(cat.label.includes("Otros"), false, cat.id)
+    assert.equal(categoriaUso(cat.label), cat.id)
+  }
 })
 
 test("categoriaUso tolera nulos, vacíos, mayúsculas y tildes", () => {
-  assert.equal(categoriaUso(null), "otros")
-  assert.equal(categoriaUso(""), "otros")
+  assert.equal(categoriaUso(null), "sin-uso")
+  assert.equal(categoriaUso(""), "sin-uso")
   assert.equal(categoriaUso("INSTITUCIONAL"), "institucional")
   assert.equal(categoriaUso("sosténible"), "sostenible")
 })
@@ -63,10 +67,11 @@ test("conCategorias sin datos devuelve una colección vacía", () => {
 test("conteoPorCategoria incluye ceros y suma el total", () => {
   const fc: FeatureCollection = {
     type: "FeatureCollection",
-    features: [feature({ cat_uso: "otros" }), feature({ cat_uso: "otros" }), feature({ cat_uso: "institucional" })],
+    features: [feature({ cat_uso: "deportivas" }), feature({ cat_uso: "conservacion" }), feature({ cat_uso: "institucional" })],
   }
   const conteo = conteoPorCategoria(fc, "cat_uso", USOS)
-  assert.equal(conteo.otros, 2)
+  assert.equal(conteo.deportivas, 1)
+  assert.equal(conteo.conservacion, 1)
   assert.equal(conteo.institucional, 1)
   assert.equal(conteo.administrativo, 0)
   const total = Object.values(conteo).reduce((a, b) => a + b, 0)
@@ -92,8 +97,8 @@ test("filtroCategorias devuelve null cuando están todas activas", () => {
 
 test("filtroCategorias arma un filtro in cuando falta alguna", () => {
   const todos = USOS.map((c) => c.id)
-  const filtro = filtroCategorias("cat_uso", ["otros"], todos)
-  assert.deepEqual(filtro, ["in", ["get", "cat_uso"], ["literal", ["otros"]]])
+  const filtro = filtroCategorias("cat_uso", ["deportivas"], todos)
+  assert.deepEqual(filtro, ["in", ["get", "cat_uso"], ["literal", ["deportivas"]]])
 })
 
 function hexALab(hex: string): [number, number, number] {

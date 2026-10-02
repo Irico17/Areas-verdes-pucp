@@ -29,7 +29,8 @@ import { ViveroPanel } from "./panel/Vivero"
 import { CatastroEditor } from "./panel/CatastroEditor"
 import { InventarioCapas } from "./panel/InventarioCapas"
 import { CalendarioReservas } from "./panel/CalendarioReservas"
-import { conCategorias, conteoPorCategoria, normalizar, SECTORES, USOS, type ColorPor } from "./map/categorias"
+import { conCategorias, conteoPorCategoria, SECTORES, USOS, type ColorPor } from "./map/categorias"
+import { ACTIVIDAD, CAPA, MAPA, conteoCatastro, resumenCatastro } from "./ui/nomenclatura"
 import { BottomSheet } from "./ui/BottomSheet"
 import { ImportacionesPanel } from "./panel/Importaciones"
 import { AdminPanel } from "./panel/Admin"
@@ -57,7 +58,7 @@ function toItem(feature: GeoFeature, queued = false): LaborItem | null {
   if (!id) return null
   return {
     id,
-    titulo: prop(feature, "titulo") || "Labor",
+    titulo: prop(feature, "titulo") || ACTIVIDAD.sinTitulo,
     tipo: prop(feature, "tipo"),
     estado: prop(feature, "estado") || "pendiente",
     equipo: prop(feature, "equipo"),
@@ -148,7 +149,7 @@ export default function App() {
         setActivities(cached)
         setActivityError("Sin conexión: se muestra la última lista guardada en este navegador.")
       } else {
-        const message = error instanceof Error ? error.message : "No se pudieron leer las labores"
+        const message = error instanceof Error ? error.message : ACTIVIDAD.noLeer
         setActivityError(message)
       }
     }
@@ -172,7 +173,7 @@ export default function App() {
       } catch (error) {
         if (error instanceof ApiError && error.status === 409) {
           await removeQueued(item.id)
-          setNotice("Una labor en cola ya existía con otro contenido y se descartó.")
+          setNotice(ACTIVIDAD.duplicada)
         } else if (!(error instanceof ApiError) || error.status !== 0) {
           await removeQueued(item.id)
         } else {
@@ -283,7 +284,7 @@ export default function App() {
           setLaboresListas(true)
           return
         }
-        setActivityError(error instanceof Error ? error.message : "No se pudieron leer las labores")
+        setActivityError(error instanceof Error ? error.message : ACTIVIDAD.noLeer)
         setLaboresListas(true)
       })
     return () => {
@@ -387,23 +388,13 @@ export default function App() {
   const conteoSector = useMemo(() => conteoPorCategoria(dataMapa.zonas, "cat_sector", SECTORES), [dataMapa.zonas])
   const catsColor = colorPor === "uso" ? USOS : SECTORES
   const conteoColor: Record<string, number> = colorPor === "uso" ? conteoUso : conteoSector
-  const otrosDesglose = useMemo(() => {
-    let deportivas = 0
-    let conservacion = 0
-    for (const f of data.areas?.features ?? []) {
-      const uso = normalizar(f.properties?.uso)
-      if (uso.includes("deportiv")) deportivas++
-      else if (uso.includes("conserv")) conservacion++
-    }
-    return { deportivas, conservacion }
-  }, [data.areas])
 
   const selected = items.find((item) => item.id === selectedId) ?? null
   const summary = useMemo(() => {
     const areas = data.areas?.features.length
     const zonas = data.zonas?.features.length
-    if (areas == null || zonas == null) return "Leyendo catastro…"
-    return `${areas} áreas · ${zonas} zonas · ${items.length} labores`
+    if (areas == null || zonas == null) return MAPA.leyendo
+    return resumenCatastro(areas, zonas, items.length)
   }, [data, items.length])
 
   function choose(id: string) {
@@ -443,14 +434,14 @@ export default function App() {
       setFormTitulo("")
       setFormDetalle("")
       setSugerencia("")
-      setNotice("Labor creada. Marque el siguiente punto.")
+      setNotice(ACTIVIDAD.creada)
       await reloadActivities()
       setSelectedId(body.id)
     } catch (error) {
       if (error instanceof ApiError && error.status === 0) {
         await enqueue({ id: body.id, body, createdAt: new Date().toISOString() })
         await reloadQueue()
-        setNotice("Sin conexión: la labor quedó en la cola de este navegador.")
+        setNotice(ACTIVIDAD.enCola)
         setDraft(null)
         setPinMode(false)
       } else {
@@ -464,7 +455,7 @@ export default function App() {
   async function onEstado() {
     if (!selected || selected.queued) return
     if (!puedeEncolarEstado(rol, estadoNuevo)) {
-      setNotice("El rol capataz no puede cerrar ni cancelar una labor.")
+      setNotice(ACTIVIDAD.noCierra)
       return
     }
     try {
@@ -517,7 +508,7 @@ export default function App() {
     try {
       await archivar(selected.id, rol, motivo)
       setSelectedId(null)
-      setNotice("Labor archivada. Ya no aparece en el mapa abierto.")
+      setNotice(ACTIVIDAD.archivada)
       await reloadActivities()
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "No se pudo archivar")
@@ -660,32 +651,30 @@ export default function App() {
       >
         {moduloActivo === "mapa" && (
           <section className="block">
-            <h2>Capas</h2>
+            <h2>{MAPA.capas}</h2>
             <div className="layer">
               <span className="swatch" style={{ background: "#c8c0b2" }} />
               <label>
-                <input type="checkbox" checked={showEdificios} onChange={() => setShowEdificios((on) => !on)} /> Edificios OSM
-                <small>Huellas del recinto, solo en relieve</small>
+                <input type="checkbox" checked={showEdificios} onChange={() => setShowEdificios((on) => !on)} /> {CAPA.edificios.label}
+                <small>{CAPA.edificios.hint}</small>
               </label>
               <span className="count">{edificios.features.length || "—"}</span>
             </div>
             <fieldset className="grupo catastro-color">
-              <legend>Catastro</legend>
+              <legend>{MAPA.catastro}</legend>
               <label className="layer-toggle">
-                <input type="checkbox" checked={catastroOn} onChange={() => setCatastroOn((on) => !on)} /> Mostrar catastro
-                <small>
-                  {data.areas?.features.length ?? "—"} áreas · {data.zonas?.features.length ?? "—"} polígonos de sector
-                </small>
+                <input type="checkbox" checked={catastroOn} onChange={() => setCatastroOn((on) => !on)} /> {MAPA.mostrarCatastro}
+                <small>{conteoCatastro(data.areas?.features.length ?? "—", data.zonas?.features.length ?? "—")}</small>
               </label>
-              <div className="roles segmentado" role="group" aria-label="Colorear el catastro por">
+              <div className="roles segmentado" role="group" aria-label={MAPA.colorear}>
                 <button type="button" aria-pressed={colorPor === "uso"} onClick={() => setColorPor("uso")}>
-                  Uso del área
+                  {MAPA.uso}
                 </button>
                 <button type="button" aria-pressed={colorPor === "sector"} onClick={() => setColorPor("sector")}>
-                  Sector operativo
+                  {MAPA.sector}
                 </button>
               </div>
-              <ul className="leyenda" aria-label={colorPor === "uso" ? "Leyenda por uso del área" : "Leyenda por sector operativo"}>
+              <ul className="leyenda" aria-label={colorPor === "uso" ? MAPA.leyendaUso : MAPA.leyendaSector}>
                 {catsColor.map((cat) => {
                   const n = conteoColor[cat.id]
                   return (
@@ -711,12 +700,7 @@ export default function App() {
                   )
                 })}
               </ul>
-              {colorPor === "uso" && (
-                <p className="hint">
-                  Otros incluye áreas deportivas ({otrosDesglose.deportivas}) y de conservación ({otrosDesglose.conservacion}), como en el mapa original.
-                </p>
-              )}
-              {colorPor === "sector" && <p className="hint">Cuadrillas con nombre ficticio. La asignación real no se publica.</p>}
+              {colorPor === "sector" && <p className="hint">{MAPA.cuadrillasFicticias}</p>}
             </fieldset>
             {LAYERS.filter((layer) => layer.id === "jardines_reserva" || layer.id === "xerofitica").map((layer) => (
               <div className="layer" key={layer.id}>
@@ -729,8 +713,8 @@ export default function App() {
                 <span className="count">{data[layer.id]?.features.length ?? "—"}</span>
               </div>
             ))}
-            <h2>Inventario</h2>
-            <p className="lede">Capas opcionales. Apagadas hasta que se necesiten.</p>
+            <h2>{MAPA.inventario}</h2>
+            <p className="lede">{MAPA.inventarioLede}</p>
             {INVENTARIO.map((layer) => (
               <div className="layer" key={layer.id}>
                 <span className="swatch" style={{ background: layer.color }} />

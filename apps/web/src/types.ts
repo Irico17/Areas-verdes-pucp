@@ -1,4 +1,5 @@
 import { apiUrl } from "./api"
+import { CAPA } from "./ui/nomenclatura"
 
 export type Rol = "jefatura" | "coordinacion" | "capataz" | "admin"
 
@@ -35,8 +36,8 @@ export type LayerSpec = {
 export const LAYERS: LayerSpec[] = [
   {
     id: "areas",
-    label: "Áreas verdes",
-    hint: "Catastro principal",
+    label: CAPA.areas.label,
+    hint: CAPA.areas.hint,
     path: apiUrl("/geo/areas"),
     defaultOn: true,
     fill: "#308046",
@@ -45,8 +46,8 @@ export const LAYERS: LayerSpec[] = [
   },
   {
     id: "zonas",
-    label: "Zonas",
-    hint: "Sectores operativos, sin nombres de personas",
+    label: CAPA.zonas.label,
+    hint: CAPA.zonas.hint,
     path: apiUrl("/geo/zonas"),
     defaultOn: true,
     fill: "#5a6e80",
@@ -55,8 +56,8 @@ export const LAYERS: LayerSpec[] = [
   },
   {
     id: "jardines_reserva",
-    label: "Jardines de reserva",
-    hint: "Capa auxiliar",
+    label: CAPA.jardinesReserva.label,
+    hint: CAPA.jardinesReserva.hint,
     path: apiUrl("/geo/capas/jardines_reserva"),
     defaultOn: false,
     fill: "#2f4a44",
@@ -65,8 +66,8 @@ export const LAYERS: LayerSpec[] = [
   },
   {
     id: "xerofitica",
-    label: "Xerofítica",
-    hint: "Capa auxiliar",
+    label: CAPA.xerofitica.label,
+    hint: CAPA.xerofitica.hint,
     path: apiUrl("/geo/capas/xerofitica"),
     defaultOn: false,
     fill: "#6e5344",
@@ -79,17 +80,17 @@ export const ROLES: { id: Rol; label: string; note: string }[] = [
   {
     id: "jefatura",
     label: "Jefatura de sección",
-    note: "Ve todas las labores abiertas. Puede crear, reasignar y archivar.",
+    note: "Ve todas las actividades abiertas. Puede crear, reasignar y archivar.",
   },
   {
     id: "coordinacion",
     label: "Ingeniería / Coordinación",
-    note: "Crea labores con un pin, asigna el equipo y sigue la bitácora.",
+    note: "Crea actividades con un pin, asigna la cuadrilla y sigue la bitácora.",
   },
   {
     id: "capataz",
     label: "Capataz",
-    note: "Solo ve las labores de su equipo. Puede cambiar el estado, no reasignar.",
+    note: "Solo ve las actividades de su cuadrilla. Puede cambiar el estado, no reasignar.",
   },
   {
     id: "admin",

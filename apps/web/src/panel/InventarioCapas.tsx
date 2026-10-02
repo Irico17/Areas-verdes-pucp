@@ -21,6 +21,7 @@ import {
   type EntidadInventario,
   type ErrorCampo,
 } from "./inventarioCapas"
+import { CONTEO_TACHO, INVENTARIO_PESTANAS, SUBTIPO_BEBEDERO } from "../ui/nomenclatura"
 
 type Fila = { id: number; etiqueta: string; raw: Record<string, unknown> }
 
@@ -28,7 +29,7 @@ const ceros = Object.fromEntries(CONTEOS_TACHO.map((campo) => [campo, 0])) as Co
 
 const GEO_PUNTO = '{"type":"Point","coordinates":[-77.08,-12.07]}'
 
-const PESTANAS = { tachos: "Tachos", bebederos: "Bebederos", puntos: "Puntos", reservas: "Reservas" } as const
+const PESTANAS = INVENTARIO_PESTANAS
 
 const CAMPO = {
   nombre: "nombre",
@@ -312,7 +313,7 @@ export function InventarioCapas({
               </label>
               {CONTEOS_TACHO.map((campo) => (
                 <label className="field" key={campo}>
-                  {campo}
+                  {CONTEO_TACHO[campo] ?? campo}
                   <input
                     inputMode="numeric"
                     value={conteos[campo]}
@@ -339,8 +340,10 @@ export function InventarioCapas({
               <label className="field">
                 Subtipo
                 <select value={subtipo} onChange={(event) => setSubtipo(event.target.value)}>
-                  {["fuente", "llenador", "nuevo", "deterioro", "baja"].map((item) => (
-                    <option key={item}>{item}</option>
+                  {Object.entries(SUBTIPO_BEBEDERO).map(([item, etiqueta]) => (
+                    <option key={item} value={item}>
+                      {etiqueta}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -384,7 +387,7 @@ export function InventarioCapas({
           )}
           {entidad === "reservas" && (
             <>
-              <p className="hint">Agenda ficticia. La hoja institucional responde 401 y no se abre.</p>
+              <p className="hint">Reserva de jardín ficticia. La hoja de origen respondió 401 y no se copia.</p>
               <label className="field">
                 Fecha
                 <input value={reserva.fecha} onChange={(event) => setReserva({ ...reserva, fecha: event.target.value })} />

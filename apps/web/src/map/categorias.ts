@@ -1,8 +1,9 @@
 import type { ExpressionSpecification, FilterSpecification } from "@maplibre/maplibre-gl-style-spec"
 import type { FeatureCollection, GeoFeature } from "../types"
+import { SECTOR_CAPATAZ, USO_FUENTE } from "../ui/nomenclatura"
 
 export type ColorPor = "uso" | "sector"
-export type UsoId = "institucional" | "administrativo" | "recreativo" | "sostenible" | "otros"
+export type UsoId = "institucional" | "administrativo" | "recreativo" | "sostenible" | "deportivas" | "conservacion" | "sin-uso"
 export type SectorId = "cua-valeria" | "cua-mateo" | "cua-renato" | "campo-deportivo" | "bosque-humedo" | "sin-sector"
 export type Categoria<T extends string> = { id: T; label: string; fill: string; line: string }
 
@@ -11,20 +12,22 @@ export type Categoria<T extends string> = { id: T; label: string; fill: string; 
 // (administrativo) y verde (recreativo) se separan por luminosidad para
 // deuteranopía, igual que verde azulado (institucional) y azul (sostenible).
 export const USOS: Categoria<UsoId>[] = [
-  { id: "institucional", label: "Institucional", fill: "#1f5f58", line: "#143f3a" },
-  { id: "administrativo", label: "Administrativo", fill: "#b86a24", line: "#7d4716" },
-  { id: "recreativo", label: "Recreativo / descanso", fill: "#7fa94a", line: "#4f6e2c" },
-  { id: "sostenible", label: "Manejo sostenible", fill: "#4f86bf", line: "#2f5a86" },
-  { id: "otros", label: "Otros", fill: "#8d968f", line: "#5c6a62" },
+  { id: "institucional", label: USO_FUENTE.institucional, fill: "#1f5f58", line: "#143f3a" },
+  { id: "administrativo", label: USO_FUENTE.administrativo, fill: "#b86a24", line: "#7d4716" },
+  { id: "recreativo", label: USO_FUENTE.recreativo, fill: "#7fa94a", line: "#4f6e2c" },
+  { id: "sostenible", label: USO_FUENTE.sostenible, fill: "#4f86bf", line: "#2f5a86" },
+  { id: "deportivas", label: USO_FUENTE.deportivas, fill: "#9a3d62", line: "#6b2844" },
+  { id: "conservacion", label: USO_FUENTE.conservacion, fill: "#5c4a86", line: "#3d315c" },
+  { id: "sin-uso", label: USO_FUENTE["sin-uso"], fill: "#8d968f", line: "#5c6a62" },
 ]
 
 export const SECTORES: Categoria<SectorId>[] = [
-  { id: "cua-valeria", label: "Cuadrilla Valeria Quispe", fill: "#6b5596", line: "#463763" },
-  { id: "cua-mateo", label: "Cuadrilla Mateo Salazar", fill: "#3f73b0", line: "#284c78" },
-  { id: "cua-renato", label: "Cuadrilla Renato Cárdenas", fill: "#c27c2c", line: "#83521b" },
-  { id: "campo-deportivo", label: "Campo deportivo", fill: "#9aab3e", line: "#66722a" },
-  { id: "bosque-humedo", label: "Bosque húmedo", fill: "#3f9a82", line: "#286656" },
-  { id: "sin-sector", label: "Sin sector", fill: "#8d968f", line: "#5c6a62" },
+  { id: "cua-valeria", label: SECTOR_CAPATAZ["cua-valeria"], fill: "#6b5596", line: "#463763" },
+  { id: "cua-mateo", label: SECTOR_CAPATAZ["cua-mateo"], fill: "#3f73b0", line: "#284c78" },
+  { id: "cua-renato", label: SECTOR_CAPATAZ["cua-renato"], fill: "#c27c2c", line: "#83521b" },
+  { id: "campo-deportivo", label: SECTOR_CAPATAZ["campo-deportivo"], fill: "#9aab3e", line: "#66722a" },
+  { id: "bosque-humedo", label: SECTOR_CAPATAZ["bosque-humedo"], fill: "#3f9a82", line: "#286656" },
+  { id: "sin-sector", label: SECTOR_CAPATAZ["sin-sector"], fill: "#8d968f", line: "#5c6a62" },
 ]
 
 export const CAMPO: Record<ColorPor, "cat_uso" | "cat_sector"> = { uso: "cat_uso", sector: "cat_sector" }
@@ -38,16 +41,17 @@ export function normalizar(s: unknown): string {
     .replace(/\s+/g, " ")
 }
 
-// Réplica de obtenerCategoriaUso (data/raw/legacy-app/script.js): "Áreas
-// deportivas y recreación activa" y "Áreas de conservación" caen en otros,
-// igual que en el mapa original (docs/MAPA-DATOS-Y-EDICION.md).
+// Los seis textos de la propiedad Uso se ven por separado. Un valor vacío
+// o desconocido queda en sin-uso, sin esconder deportivas ni conservación.
 export function categoriaUso(uso: unknown): UsoId {
   const n = normalizar(uso)
   if (n.includes("institucional")) return "institucional"
   if (n.includes("administrativo")) return "administrativo"
+  if (n.includes("deportiv")) return "deportivas"
   if (n.includes("recreativo") || n.includes("descanso")) return "recreativo"
   if (n.includes("sostenible") || n.includes("reduccion") || n.includes("consumo")) return "sostenible"
-  return "otros"
+  if (n.includes("conserv")) return "conservacion"
+  return "sin-uso"
 }
 
 const SECTOR_IDS = new Set<string>(SECTORES.map((s) => s.id).filter((id) => id !== "sin-sector"))

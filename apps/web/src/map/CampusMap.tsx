@@ -29,6 +29,7 @@ import { activarDibujo, type ModoDibujo } from "./draw"
 import { INVENTARIO } from "../inventario"
 import { etiquetaEstado, etiquetaTipo } from "../operacion"
 import { EMPTY, LAYERS, type FeatureCollection, type LayerId } from "../types"
+import { ACTIVIDAD } from "../ui/nomenclatura"
 import { apiUrl } from "../api"
 
 const CATASTRO_FILLS = ["areas-fill", "zonas-fill"]
@@ -412,8 +413,8 @@ export function CampusMap({
             .setLngLat(event.lngLat)
             .setHTML(
               `<p class="cv-popup-kicker">${escapeHtml(etiquetaTipo(String(props.tipo ?? "")))} · ${escapeHtml(etiquetaEstado(String(props.estado ?? "")))}</p>
-               <p class="cv-popup-title">${escapeHtml(props.titulo || "Labor")}</p>
-               <p class="cv-popup-meta">${escapeHtml(props.equipo || "Sin equipo")}</p>`,
+               <p class="cv-popup-title">${escapeHtml(props.titulo || ACTIVIDAD.sinTitulo)}</p>
+               <p class="cv-popup-meta">${escapeHtml(props.equipo || ACTIVIDAD.sinCuadrilla)}</p>`,
             )
             .addTo(map)
           popupRef.current = popup

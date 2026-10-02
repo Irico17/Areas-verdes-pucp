@@ -11,6 +11,7 @@ import {
   type ReservaCalendario,
   type VistaCalendario,
 } from "./calendario"
+import { CAPA } from "../ui/nomenclatura"
 
 const VISTAS: { id: VistaCalendario; label: string }[] = [
   { id: "mes", label: "Mes" },
@@ -76,9 +77,9 @@ export function CalendarioReservas({ cliente = fetch }: { cliente?: typeof fetch
   const hoy = aISO(new Date())
 
   return (
-    <section className="calendario" aria-label="Calendario de reservas">
+    <section className="calendario" aria-label="Calendario de reservas de jardín">
       <div className="cal-head">
-        <h2>Reservas</h2>
+        <h2>{CAPA.reservas}</h2>
         <div className="roles" role="group" aria-label="Vista del calendario">
           {VISTAS.map((item) => (
             <button key={item.id} type="button" aria-pressed={vista === item.id} onClick={() => setVista(item.id)}>

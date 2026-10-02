@@ -3,13 +3,14 @@ import { FechaCampo } from "../FechaCampo"
 import { formatFecha, hoyISO } from "../fecha"
 import { Esqueleto } from "../ui/Esqueleto"
 import { crearRiego, fetchRiego } from "../producto"
+import { RIEGO, etiquetaZonaSupervision } from "../ui/nomenclatura"
 
 export function RiegoPanel(props: { capatazId: string }) {
   const [aviso, setAviso] = useState("")
   const [rows, setRows] = useState<Awaited<ReturnType<typeof fetchRiego>>["registros"]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState("")
-  const [sector, setSector] = useState("Eje central")
+  const [sector, setSector] = useState("")
   const [zona, setZona] = useState("Z1")
   const [turno, setTurno] = useState("manana")
   const [fecha, setFecha] = useState(hoyISO)
@@ -48,8 +49,8 @@ export function RiegoPanel(props: { capatazId: string }) {
 
   return (
     <section className="block">
-      <h2>Riego</h2>
-      <p className="lede">{aviso || "Sector, turno y equipo. Cobertura: definición pendiente."}</p>
+      <h2>{RIEGO.titulo}</h2>
+      <p className="lede">{aviso || RIEGO.lede}</p>
       <p className="hint">
         {rows.length} {rows.length === 1 ? "turno registrado" : "turnos registrados"}. Cobertura: definición pendiente.
       </p>
@@ -61,7 +62,7 @@ export function RiegoPanel(props: { capatazId: string }) {
           <li key={row.id} className="agenda">
             <strong>{row.sector}</strong>
             <small>
-              {formatFecha(row.fecha)} · {row.turno === "manana" ? "mañana" : row.turno} · {row.equipo || "sin equipo"}
+              {formatFecha(row.fecha)} · {row.turno === "manana" ? RIEGO.manana.toLowerCase() : row.turno} · {row.equipo || RIEGO.sinCuadrilla}
             </small>
           </li>
         ))}
@@ -91,23 +92,24 @@ export function RiegoPanel(props: { capatazId: string }) {
         }}
       >
         <label className="field">
-          Zona de supervisión
+          {RIEGO.zona}
           <select value={zona} onChange={(event) => setZona(event.target.value)}>
-            <option value="Z1">Z1</option>
-            <option value="Z2">Z2</option>
-            <option value="Z3">Z3</option>
-            <option value="Z4">Z4</option>
+            {["Z1", "Z2", "Z3", "Z4"].map((codigo) => (
+              <option key={codigo} value={codigo}>
+                {etiquetaZonaSupervision(codigo)}
+              </option>
+            ))}
           </select>
         </label>
         <label className="field">
-          Sector
-          <input value={sector} onChange={(event) => setSector(event.target.value)} required />
+          {RIEGO.sector}
+          <input value={sector} onChange={(event) => setSector(event.target.value)} placeholder={RIEGO.sectorPlaceholder} required />
         </label>
         <label className="field">
-          Turno
+          {RIEGO.turno}
           <select value={turno} onChange={(event) => setTurno(event.target.value)}>
-            <option value="manana">Mañana</option>
-            <option value="tarde">Tarde</option>
+            <option value="manana">{RIEGO.manana}</option>
+            <option value="tarde">{RIEGO.tarde}</option>
           </select>
         </label>
         <label className="field">

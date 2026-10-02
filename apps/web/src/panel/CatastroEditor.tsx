@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react"
 import { listarVertices, medirGeom, moverVertice, type ModoDibujo, type Position, type VerticeRef } from "../map/draw"
 import { mostrarEnPanel } from "../ui/desplazar"
+import { CATASTRO, etiquetaZonaSupervision } from "../ui/nomenclatura"
 import {
   areaNueva,
   areasDeFixture,
@@ -313,7 +314,7 @@ export function CatastroEditor({
     }
     try {
       await persistirZona(payload, altaZona)
-      setAviso("Zona guardada.")
+      setAviso(CATASTRO.zonaGuardada)
       setAltaZona(false)
       setEditandoGeom(false)
       await load()
@@ -332,7 +333,7 @@ export function CatastroEditor({
             Áreas verdes
           </button>
           <button type="button" aria-pressed={entidad === "zona"} onClick={() => { setEntidad("zona"); setErrores([]); setEditandoGeom(false) }}>
-            Zonas
+            {CATASTRO.zonas}
           </button>
         </div>
         <form
@@ -372,7 +373,7 @@ export function CatastroEditor({
                 setVerLista(false)
               }}
             >
-              Nueva zona
+              {CATASTRO.nuevaZona}
             </button>
           )}
           <button
@@ -566,7 +567,7 @@ export function CatastroEditor({
                 value={area.zona_supervision_id ?? ""}
                 onChange={(event) => setArea({ ...area, zona_supervision_id: event.target.value || null })}
               >
-                <option value="">Sin zona</option>
+                <option value="">Sin zona de supervisión</option>
                 {CODIGOS_ZONA.map((item) => (
                   <option key={item} value={item}>
                     {zonas.find((row) => row.codigo === item)?.nombre || item}
@@ -624,7 +625,7 @@ export function CatastroEditor({
         )}
         {entidad === "zona" && zona && (
           <form className="form" onSubmit={(event) => void onGuardarZona(event)}>
-            <h3>{altaZona ? "Nueva zona" : zona.nombre || zona.codigo}</h3>
+            <h3>{altaZona ? CATASTRO.nuevaZona : zona.nombre || etiquetaZonaSupervision(zona.codigo)}</h3>
             <label className="field" htmlFor={`${baseId}-zcode`}>
               {ETIQUETA_ZONA.codigo}
               <select
@@ -669,7 +670,7 @@ export function CatastroEditor({
             {avisoAreaZona && <p className="hint">{avisoAreaZona}</p>}
             <fieldset className="geom-box">
               <legend>{ETIQUETA_ZONA.geom}</legend>
-              <p className="hint">{zona.geom ? "MultiPolygon de la zona." : "La zona necesita polígono para guardarse."}</p>
+              <p className="hint">{zona.geom ? "MultiPolygon de la zona de supervisión." : "La zona de supervisión necesita polígono para guardarse."}</p>
               <ErroresCampo mensajes={motivosDe(errores, "geom")} />
               <button type="button" className={editandoGeom ? "primary" : undefined} aria-pressed={editandoGeom} onClick={() => setEditandoGeom((on) => !on)}>
                 {editandoGeom ? "Cerrar edición de vértices" : "Editar geometría"}
@@ -682,7 +683,7 @@ export function CatastroEditor({
               </p>
             )}
             <button type="submit" className="primary">
-              Guardar zona
+              Guardar zona de supervisión
             </button>
             {!altaZona && (
               <button
@@ -698,7 +699,7 @@ export function CatastroEditor({
                   void archivarZona(zona.codigo)
                     .then(() => {
                       setZona(null)
-                      setAviso("Zona dada de baja.")
+                      setAviso("Zona de supervisión dada de baja.")
                       return load()
                     })
                     .catch((err: unknown) => setAviso(err instanceof Error ? err.message : "No se pudo dar de baja"))

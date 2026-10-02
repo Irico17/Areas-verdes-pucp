@@ -1,5 +1,6 @@
 import { apiUrl, fetchCollection } from "./api"
 import type { FeatureCollection, GeoFeature, Rol } from "./types"
+import { TIPO_RESPALDO } from "./ui/nomenclatura"
 
 export class ApiError extends Error {
   status: number
@@ -14,7 +15,7 @@ export const TIPOS = [
   { id: "riego", label: "Riego", marca: "R" },
   { id: "poda", label: "Poda", marca: "P" },
   { id: "limpieza", label: "Limpieza", marca: "L" },
-  { id: "incidencia", label: "Incidencia", marca: "I" },
+  { id: "incidencia", label: TIPO_RESPALDO.incidencia, marca: "I" },
   { id: "inspeccion", label: "Inspección", marca: "V" },
 ] as const
 

@@ -11,6 +11,7 @@ import {
   type PermisoCuenta,
   type RolCuenta,
 } from "../producto"
+import { ADMIN } from "../ui/nomenclatura"
 
 const ETIQUETAS: { id: string; label: string }[] = [
   { id: "capataz", label: "Capataz" },
@@ -99,7 +100,7 @@ export function AdminPanel() {
 
   return (
     <section className="block">
-      <h2>Admin</h2>
+      <h2>{ADMIN.titulo}</h2>
       <p className="lede">{data?.aviso || "Cuentas de VerdePUCP. Las administra la jefatura de sección."}</p>
       {error && <p className="status error">{error}</p>}
       {aviso && <p className="status">{aviso}</p>}

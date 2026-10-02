@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { FechaCampo } from "../FechaCampo"
 import { ESTADOS, etiquetaEstado, etiquetaTipo } from "../operacion"
 import { fetchReporte, HUECOS, reporteHref } from "../producto"
+import { REPORTE } from "../ui/nomenclatura"
 
 export function ReportesPanel() {
   const [estado, setEstado] = useState("")
@@ -42,7 +43,7 @@ export function ReportesPanel() {
   return (
     <section className="block">
       <h2>Reportes</h2>
-      <p className="lede">Reporte básico de labores, filtrable por zona, cuadrilla, origen y fechas. Los conteos no son indicadores oficiales.</p>
+      <p className="lede">{REPORTE.lede}</p>
       <h3>Sin fórmula acordada</h3>
       <ul className="huecos">
         {HUECOS.map((hueco) => (
@@ -78,8 +79,8 @@ export function ReportesPanel() {
           </select>
         </label>
         <label className="field">
-          Zona
-          <input value={zona} onChange={(event) => setZona(event.target.value)} placeholder="Z1" />
+          {REPORTE.zona}
+          <input value={zona} onChange={(event) => setZona(event.target.value)} placeholder="Zona 1" />
         </label>
         <label className="field">
           Cuadrilla
@@ -118,7 +119,7 @@ export function ReportesPanel() {
             <a href={reporteHref("csv", filtro)}>Descargar CSV</a>
             <a href={reporteHref("xls", filtro)}>Descargar Excel</a>
           </p>
-          {data.filas.length === 0 && <p className="empty">No hay labores en ese rango.</p>}
+          {data.filas.length === 0 && <p className="empty">{REPORTE.vacio}</p>}
           <ul className="labor-list">
             {data.filas.slice(0, 40).map((row) => (
               <li key={row.id} className="agenda">
