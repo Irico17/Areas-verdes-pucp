@@ -456,6 +456,10 @@ func (mockServicioTercerizadoRoutesUC) Crear(_ context.Context, in dto.CrearOrde
 	return &dto.OrdenDTO{ID: in.ID, ActividadID: in.ActividadID}, nil
 }
 
+func (mockServicioTercerizadoRoutesUC) Evidencias(_ context.Context, id string) (*dto.EvidenciasOrdenDTO, error) {
+	return &dto.EvidenciasOrdenDTO{OrdenID: id, Evidencias: []dto.EvidenciaOrdenDTO{}}, nil
+}
+
 func (mockServicioTercerizadoRoutesUC) Editar(_ context.Context, in dto.EditarOrdenDTO, _, _ string) (*dto.EditarOrdenResponseDTO, error) {
 	return &dto.EditarOrdenResponseDTO{Orden: dto.OrdenDTO{ID: in.ID}}, nil
 }

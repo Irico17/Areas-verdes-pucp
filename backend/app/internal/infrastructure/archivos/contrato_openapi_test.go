@@ -26,10 +26,10 @@ func TestContratoUneLosTags(t *testing.T) {
 	if err := yaml.Unmarshal(body, &doc); err != nil {
 		t.Fatal(err)
 	}
-	if len(doc.Paths) != 85 {
+	if len(doc.Paths) != 86 {
 		t.Fatalf("paths = %d", len(doc.Paths))
 	}
-	for _, key := range []string{"/health", "/api/v1/geo/areas", "/api/v1/operacion/actividades", "/api/v1/operacion/taxonomia-actividad", "/api/v1/operacion/actividades/{id}/personal", "/api/v1/sesion", "/api/v1/sesion/clave", "/api/v1/accesos/usuarios", "/api/v1/accesos/permisos", "/api/v1/ia/sugerir-tipo", "/api/v1/evidencias", "/api/v1/evidencias/{id}/archivo", "/api/v1/catalogos/{id}"} {
+	for _, key := range []string{"/health", "/api/v1/geo/areas", "/api/v1/operacion/actividades", "/api/v1/operacion/taxonomia-actividad", "/api/v1/operacion/actividades/{id}/personal", "/api/v1/sesion", "/api/v1/sesion/clave", "/api/v1/accesos/usuarios", "/api/v1/accesos/permisos", "/api/v1/ia/sugerir-tipo", "/api/v1/evidencias", "/api/v1/evidencias/{id}/archivo", "/api/v1/catalogos/{id}", "/api/v1/ordenes/{id}/evidencias"} {
 		if _, ok := doc.Paths[key]; !ok {
 			t.Errorf("falta %s", key)
 		}

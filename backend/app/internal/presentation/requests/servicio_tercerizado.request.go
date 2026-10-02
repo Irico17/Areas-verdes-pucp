@@ -5,21 +5,27 @@ import "github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend/internal/application/
 
 // CrearOrdenRequest represents HTTP body for creating a work order.
 type CrearOrdenRequest struct {
-	ID          string `json:"id"`
-	ActividadID string `json:"actividad_id"`
-	Empresa     string `json:"empresa"`
-	Referencia  string `json:"referencia"`
-	Frecuencia  string `json:"frecuencia"`
+	ID           string `json:"id"`
+	ActividadID  string `json:"actividad_id"`
+	Empresa      string `json:"empresa"`
+	EmpresaID    int64  `json:"empresa_id"`
+	Referencia   string `json:"referencia"`
+	Frecuencia   string `json:"frecuencia"`
+	FrecuenciaID int64  `json:"frecuencia_id"`
+	Conformidad  string `json:"conformidad"`
 }
 
 // ToDTO converts CrearOrdenRequest to CrearOrdenDTO.
 func (r CrearOrdenRequest) ToDTO() dto.CrearOrdenDTO {
 	return dto.CrearOrdenDTO{
-		ID:          r.ID,
-		ActividadID: r.ActividadID,
-		Empresa:     r.Empresa,
-		Referencia:  r.Referencia,
-		Frecuencia:  r.Frecuencia,
+		ID:           r.ID,
+		ActividadID:  r.ActividadID,
+		Empresa:      r.Empresa,
+		EmpresaID:    r.EmpresaID,
+		Referencia:   r.Referencia,
+		Frecuencia:   r.Frecuencia,
+		FrecuenciaID: r.FrecuenciaID,
+		Conformidad:  r.Conformidad,
 	}
 }
 
