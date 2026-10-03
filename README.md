@@ -1,40 +1,86 @@
-# VerdePUCP — Gestión de Áreas Verdes
+# VerdePUCP
 
-VerdePUCP es el sistema de gestión de áreas verdes del campus PUCP (Pando): catastro, labores, solicitudes, riego y reportes, con el mapa sobre la misma API. No es un mapa aislado ni un segundo backend.
+VerdePUCP es el sistema de gestión de áreas verdes del campus PUCP (Pando): catastro, actividades, solicitudes, riego, inventario y reportes. El mapa es un módulo de la misma aplicación: no tiene backend propio.
+
+La API que se despliega es `backend/app` (Go, Gin y GORM). `apps/api` es la API anterior: se conserva para pruebas y para el arnés de paridad. La base es PostgreSQL con PostGIS. Las evidencias van a disco o, si se configura, a un cubo privado.
 
 Licencia: [MIT](LICENSE).
 
-Fuentes oficiales en [`docs/fuente/`](docs/fuente/). Plan de mapa: [`docs/PLAN-INTEGRACION-MAPA.md`](docs/PLAN-INTEGRACION-MAPA.md). Plan de producto e interfaz: [`docs/PLAN-PRODUCTO-Y-UI.md`](docs/PLAN-PRODUCTO-Y-UI.md).
+## Arquitectura
 
-## Stack
+```mermaid
+flowchart LR
+  web["apps/web<br/>PWA React"] -->|HTTPS JSON y GeoJSON| api["backend/app<br/>Go · Gin · GORM"]
+  api --> db[("PostgreSQL + PostGIS")]
+  api --> ev["Evidencias<br/>disco o cubo privado"]
+  ci["CI en GitHub"] --> ghcr["Imágenes en GHCR"]
+  ghcr --> ec2["EC2 con Compose<br/>develop · qa · producción"]
+```
 
-| Capa | Tecnología | Estado |
-|------|------------|--------|
-| API | **Go + Gin + GORM** — monolito modular | Fase A |
-| Datos | **PostgreSQL + PostGIS** en la misma base (sin GeoServer) | Fase B |
-| Catastro | ETL `data/raw` → `data/v1` → PostGIS, EPSG:4326 | Fase B |
-| PWA | React + TypeScript + Vite + MapLibre | Fase C |
-| Objetos | Archivos de evidencia en disco local (`data/evidencias`, no se versiona) | Piloto. Sin bucket S3 |
-| Sesión | Cuentas locales y cookie HttpOnly | No es SSO |
+Un solo proceso de API. Sin GeoServer, sin microservicios y sin `AutoMigrate`. El esquema lo aplican las migraciones de `db/migrations`.
 
-Roles de la sesión: **Capataz** (norte, sur, riego), **Coordinación**, **Jefatura** y **Admin**.
+## Estructura
 
-Las cuentas semilla (`norte`, `sur`, `riego`, `coordinacion`, `jefatura`, `admin`) y la clave `pando-local` (`CAMPUS_DEV_PASSWORD`) son **solo para desarrollo local**. No son cuentas de la universidad ni el SSO de la PUCP. No las use en un entorno con datos reales.
+```
+backend/app       API que se despliega (también responde en /api/v1)
+apps/api          API anterior, solo pruebas y referencia
+apps/web          PWA (React, TypeScript, Vite, MapLibre)
+db/migrations     esquema SQL. Fuente de verdad. No se reordenan
+db/referencia     esquemas ajenos: no se aplican
+deploy/           compose por ambiente, smoke, TLS y semilla ficticia
+data/raw          fuentes del ETL (no editar a mano)
+data/v1           GeoJSON normalizado (salida del ETL)
+data/mocks        agenda ficticia
+infra/            Terraform y Ansible del laboratorio
+docs/             glosario, arquitectura, datos, protecciones, cambio de cuenta
+scripts/          espera de Postgres, conteos, aprovisionamiento, esquema
+```
 
-## Qué hay cargado
+## Cómo correrlo en local
 
-| Capa | Origen | Registros | Tabla |
-|------|--------|-----------|--------|
-| Áreas verdes | `data/raw/areas_verdes.geojson` | **521** | `areas_verdes` |
-| Zonas | `data/raw/jefe_de_grupo.json` | **534** | `zonas` |
-| Jardines de reserva | `data/raw/jardines_reserva.geojson` | 21 | `capas_auxiliares` |
-| Xerofítica | `data/raw/xerofitica.geojson` | 10 | `capas_auxiliares` |
+Hace falta Docker (Compose v2), Go 1.25.3 para la API y Node 22 para el visor.
 
-Las zonas **no** guardan el campo `jefes` (nombres de personas). El identificador de zona es `Z-NNNN`. Las áreas usan `AV-NNNN`. Geometría: MultiPolygon **EPSG:4326** (lon/lat), la que consume MapLibre. `geom` puede ser NULL en registros futuros sin GPS (catastro progresivo).
+```bash
+cp .env.example .env
+docker compose up -d db
+make wait
+make migrate
+make api
+```
 
-## Ambientes
+`make bootstrap` hace el compose de la base, la espera, las migraciones y el ETL. Después hay que arrancar la API con `make api`.
 
-`develop`, `qa` y `produccion` pueden correr a la vez. La matriz, los secretos de GitHub y el rollback están en [`docs/AMBIENTES.md`](docs/AMBIENTES.md).
+La API queda en **http://127.0.0.1:8091**.
+
+```bash
+curl -s http://127.0.0.1:8091/health
+```
+
+El visor, en otra terminal:
+
+```bash
+cd apps/web
+npm ci
+npm run dev
+```
+
+Abre **http://127.0.0.1:4317**. Vite reenvía `/api`, `/areas-verdes` y `/health` a la API. Desde la raíz, `make web` es lo mismo que `npm run dev`.
+
+Para ver el campus en el mapa, con la base ya migrada:
+
+```bash
+make etl
+```
+
+`make etl` carga `data/raw` (521 áreas y 534 sectores, entre otras capas). Si el catastro publicado ya está, no vuelve a truncar. El detalle está en [docs/DATOS-Y-ETL.md](docs/DATOS-Y-ETL.md).
+
+El stack completo (PostGIS, API y nginx) en un solo origen:
+
+```bash
+docker compose up -d --build
+```
+
+La web de ese compose publica el puerto **8088**. Tres ambientes a la vez, en local:
 
 ```bash
 make up ENV=develop
@@ -42,135 +88,96 @@ make smoke ENV=develop
 make down ENV=develop
 ```
 
-`make up` sin `ENV` sigue levantando solo el Postgres del compose histórico.
+`make up` sin `ENV` levanta solo el Postgres del compose de la raíz. `make down` no usa `-v`: no borra volúmenes.
 
-## Cómo correrlo en local
-
-Requisitos: Docker (Compose v2), Go 1.22+, Node 22+ para el visor.
+Si el puerto 5432 o el 8091 ya están ocupados:
 
 ```bash
-cp .env.example .env
-docker compose up -d
-make wait
-make migrate
-make etl
-make api
+POSTGRES_PORT=5442 API_PORT=8093 WEB_PORT=8089 make up ENV=develop
 ```
 
-Equivalente: `make bootstrap` y después `make api`.
+La clave de `.env.example` (`pando-local`) es de demostración local para las seis cuentas ficticias. No es una clave de la universidad. `.env` está en `.gitignore`.
 
-La API escucha en **http://127.0.0.1:8091**. El visor, en otra terminal:
+## Roles
 
-```bash
-cd apps/web && npm install
-make web
-```
+| Rol | Qué puede hacer en la interfaz |
+| --- | --- |
+| Capataz | Consultar y registrar. Ve Hoy, mapa, sus actividades, registros, bitácora y ejemplares. |
+| Coordinación | Consultar, registrar, validar, solicitudes y reportes. También catastro, inventario, catálogos e importación. |
+| Jefatura | Consultar, validar, reportes, solicitudes, evidencias y usuarios. No registra avances de campo. |
+| Administración | Consultar, registrar, validar, reportes, catálogos, solicitudes y usuarios. |
 
-Abre **http://127.0.0.1:4317**. Vite reenvía `/api` y `/health` a la API. Entra con `coordinacion` / `pando-local` (u otra cuenta semilla: `norte`, `sur`, `riego`, `jefatura`, `admin`).
+La matriz que pinta las pestañas está en `apps/web/src/ui/permisos.ts`. Los códigos de rol no se renombran. Las etiquetas visibles están en [docs/GLOSARIO-NOMENCLATURA.md](docs/GLOSARIO-NOMENCLATURA.md).
 
-```bash
-curl -s http://127.0.0.1:8091/health
-curl -s http://127.0.0.1:8091/api/v1/geo/resumen
-curl -s -H 'Accept: application/geo+json' http://127.0.0.1:8091/api/v1/geo/areas | head -c 400
-curl -s http://127.0.0.1:8091/api/v1/geo/zonas?limit=1
-```
+## Ambientes y cuentas de prueba
 
-Conteos en la base:
+Las seis cuentas son ficticias en los tres ambientes: `norte`, `sur`, `riego`, `coordinacion`, `jefatura` y `admin`. La clave es distinta en cada ambiente. Aquí van marcadores; no hay claves reales en este archivo.
 
-```bash
-make counts
-```
+| Ambiente | URL | Notas |
+| --- | --- | --- |
+| develop | http://34.224.230.64:8088 | HTTP. Cookie no Secure. |
+| QA | http://34.224.230.64:8188 | HTTP. Cookie no Secure. Misma máquina que develop. |
+| producción | https://verde-pucp.duckdns.org | HTTPS cuando el certificado está instalado. |
+| producción por IP | http://100.51.112.92 | La IP elástica responde. Por IP el certificado no coincide con el nombre. |
 
-Pruebas del módulo Go (sin base de datos):
+Esas IP de develop y de QA cambian si se apaga la instancia del laboratorio. Para apuntarlas de nuevo, [docs/CAMBIO-DE-CUENTA-LAB.md](docs/CAMBIO-DE-CUENTA-LAB.md).
 
-```bash
-cd apps/api && go test ./...
-```
+### develop
 
-`make etl` **reemplaza** el catastro semilla (TRUNCATE + carga). Es idempotente respecto a `data/raw`. No es un editor de geometrías.
+| Usuario | Rol | Clave |
+| --- | --- | --- |
+| norte | Capataz, cuadrilla norte | `<<CLAVE_DEVELOP>>` |
+| sur | Capataz, cuadrilla sur | `<<CLAVE_DEVELOP>>` |
+| riego | Capataz, cuadrilla de riego | `<<CLAVE_DEVELOP>>` |
+| coordinacion | Coordinación | `<<CLAVE_DEVELOP>>` |
+| jefatura | Jefatura | `<<CLAVE_DEVELOP>>` |
+| admin | Administración | `<<CLAVE_DEVELOP>>` |
 
-La contraseña de `.env.example` es solo para desarrollo local. `.env` no se versiona.
+### QA
 
-## Rutas
+| Usuario | Rol | Clave |
+| --- | --- | --- |
+| norte | Capataz, cuadrilla norte | `<<CLAVE_QA>>` |
+| sur | Capataz, cuadrilla sur | `<<CLAVE_QA>>` |
+| riego | Capataz, cuadrilla de riego | `<<CLAVE_QA>>` |
+| coordinacion | Coordinación | `<<CLAVE_QA>>` |
+| jefatura | Jefatura | `<<CLAVE_QA>>` |
+| admin | Administración | `<<CLAVE_QA>>` |
 
-| Método | Ruta | Respuesta |
-|--------|------|-----------|
-| GET | `/health` | Proceso, Postgres y PostGIS |
-| GET | `/api/v1` | Índice |
-| GET | `/api/v1/openapi.yaml` | Contrato |
-| GET | `/api/v1/geo/resumen` | Conteos |
-| GET | `/api/v1/geo/areas` | FeatureCollection de áreas |
-| GET | `/api/v1/geo/zonas` | FeatureCollection de zonas |
-| GET | `/api/v1/geo/capas` | Capas auxiliares |
-| GET | `/api/v1/geo/capas/{capa}` | `jardines_reserva` o `xerofitica` |
-| GET | `/api/v1/operacion/capataces` | Equipos ficticios (Equipo Norte, Sur, Riego) |
-| GET | `/api/v1/operacion/actividades` | Labores abiertas, GeoJSON Point. `rol=capataz&capataz_id=` filtra |
-| POST | `/api/v1/operacion/actividades` | Alta desde un pin. UUID de cliente, idempotente |
-| PATCH | `/api/v1/operacion/actividades/{id}/asignacion` | Asignar o reasignar |
-| PATCH | `/api/v1/operacion/actividades/{id}/estado` | Cambio de estado |
-| POST | `/api/v1/operacion/actividades/{id}/archivar` | Baja lógica |
-| GET | `/api/v1/operacion/actividades/{id}/timeline` | Bitácora |
-| POST | `/api/v1/sesion` | Ingreso local. Cookie `cv_sesion` HttpOnly |
-| GET | `/api/v1/catalogos` | Catálogos (tipos, estados, lugares, especies…) |
-| GET/POST/PATCH | `/api/v1/catastro/areas` | Fichas y alta sin geometría |
-| GET/POST | `/api/v1/solicitudes` | Solicitudes con código externo |
-| GET/POST | `/api/v1/ordenes` | Órdenes de una labor tercerizada |
-| GET/POST | `/api/v1/riego` | Riego por sector y turno |
-| POST | `/api/v1/evidencias` | Archivo ligado a una labor |
-| GET | `/api/v1/reportes/labores` | Reporte básico y conteos. Filtros `zona`, `cuadrilla`, `origen`, `desde`, `hasta`. `formato=csv` o `formato=xls`. Cobertura, rendimiento y métricas de proveedor: definición pendiente. Sin PDF |
-| POST | `/api/v1/ia/sugerir-tipo` | Regla local, en proceso. La persona confirma el tipo. No sale del proceso |
+### producción
 
-Filtro opcional `bbox=minLon,minLat,maxLon,maxLat` (EPSG:4326) y `limit`.
+| Usuario | Rol | Clave |
+| --- | --- | --- |
+| norte | Capataz, cuadrilla norte | `<<CLAVE_PRODUCCION>>` |
+| sur | Capataz, cuadrilla sur | `<<CLAVE_PRODUCCION>>` |
+| riego | Capataz, cuadrilla de riego | `<<CLAVE_PRODUCCION>>` |
+| coordinacion | Coordinación | `<<CLAVE_PRODUCCION>>` |
+| jefatura | Jefatura | `<<CLAVE_PRODUCCION>>` |
+| admin | Administración | `<<CLAVE_PRODUCCION>>` |
 
-Detalle del contrato: [`apps/api/openapi.yaml`](apps/api/openapi.yaml) y [`apps/api/README.md`](apps/api/README.md).
+En local, sin `APP_ENV`, las mismas cuentas entran con la clave de demostración de `.env.example` (`pando-local`). En producción la API rechaza `pando-local`, `campus-lab` y cualquier clave de menos de 16 caracteres.
 
-## Estructura
+## Cómo contribuir
 
-```
-backend/app       API que sirve /areas-verdes/v1 (y el alias /api/v1)
-apps/api          API anterior, solo referencia de código
-apps/web          Visor PWA (React, MapLibre, OSM)
-db/migrations     esquema SQL (001 en adelante). Fuente de verdad
-db/referencia     esquemas ajenos: no se aplican ni se montan en initdb
-data/raw          recovery, no editar
-data/v1           GeoJSON normalizado (salida del ETL)
-data/mocks        reservas FAKE
-docs/             arquitectura, ADRs, plan de mapa
-scripts/          espera de Postgres, bootstrap, conteos
-docker-compose.yml
-```
+El trabajo se integra en `develop`. `main` avanza por fast-forward desde `develop` y no despliega. No se hace force push ni se borra `main`.
 
-El esquema no se carga con `initdb`. `make migrate` aplica `db/migrations`. La imagen copia esa carpeta a `/opt/campus/migrations`. El corte de la base que ya está en servicio está descrito en [`docs/RUNBOOK-CORTE-PRODUCCION.md`](docs/RUNBOOK-CORTE-PRODUCCION.md) y lo ejecuta el responsable; no es un paso de este README.
+| Qué | Dónde |
+| --- | --- |
+| Pruebas | `.github/workflows/ci.yml`: `test`, `backend`, `escaneo` (no bloqueante) y `e2e`. Un cambio solo de `*.md` o `docs/**` no dispara el CI. |
+| Imágenes | El job `imagenes` publica `ghcr.io/<dueño>/campus-verde-api:<sha>` y `campus-verde-web:<sha>` en push a `develop` o en un tag `rc-*`. |
+| develop | Push a `develop` despliega solo si el CI de ese SHA está en verde. |
+| QA | Tag `rc-*` o despliegue manual del mismo SHA que ya pasó por develop. |
+| producción | Solo manual, desde `develop`, con el mismo SHA ya desplegado en QA y con la aprobación del environment. |
+
+Las protecciones de rama y de environments están en [docs/PROTECCIONES-REPO.md](docs/PROTECCIONES-REPO.md). El detalle del pipeline está en [deploy/README.md](deploy/README.md).
 
 ## Documentación
 
-| Doc | Contenido |
-|-----|-----------|
-| [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) | Arquitectura DP2 |
-| [`docs/PLAN-INTEGRACION-MAPA.md`](docs/PLAN-INTEGRACION-MAPA.md) | Fases A–F del visor, hechas |
-| [`docs/PLAN-PRODUCTO-Y-UI.md`](docs/PLAN-PRODUCTO-Y-UI.md) | Backlog, interfaz y olas de producto |
-| [`docs/PLAN-MIGRACION.md`](docs/PLAN-MIGRACION.md) | Migración legacy → DP2 |
-| [`docs/DECISIONES.md`](docs/DECISIONES.md) | ADRs, incluido CRS, PII de zonas y `db/migrations` |
-| [`docs/RUNBOOK-CORTE-PRODUCCION.md`](docs/RUNBOOK-CORTE-PRODUCCION.md) | Checklist del corte en la EC2 (no ejecutado desde el repo) |
-| [`docs/AMBIENTES.md`](docs/AMBIENTES.md) | develop, qa y produccion: puertos, secretos, flujo y rollback |
-| [`docs/legacy-recovery/`](docs/legacy-recovery/) | Análisis del monolito Leaflet |
-
-El visor crea labores con un pin (Jefatura y Coordinación), las asigna a un equipo y muestra la bitácora. El rol Capataz solo recibe las de su equipo. Si la API no responde, el alta queda en IndexedDB y se reintenta con el mismo UUID.
-
-La vista **Relieve** extruye las áreas verdes según su superficie y, si se enciende la capa, las huellas de edificios OSM del recinto (`GET /api/v1/geo/edificios`). **Plano** vuelve al relleno 2D.
-
-Inventario opcional (apagado al entrar): bebederos 67, fauna 19, puertas 7, tachos 184, flora 74, cafetos 53, playas 15, vereda 1. `GET /api/v1/geo/inventario` y `GET /api/v1/geo/inventario/{capa}`. La agenda de reservas es ficticia: `GET /api/v1/geo/reservas-mock` (71 ítems, sin hoja de cálculo). No hay JPEG de bebederos en `data/raw`; el mapa lo indica en el popup.
-
-## Despliegue
-
-El destino previsto es un AWS Academy Learner Lab: una EC2 pequeña con Docker Compose (PostGIS, API y nginx). Los pasos, el presupuesto y cómo destruir la instancia están en [`docs/DEPLOY-AWS.md`](docs/DEPLOY-AWS.md). Desde una laptop, con credenciales temporales del lab:
-
-```bash
-bash scripts/deploy-learner-lab.sh
-```
-
-Esas credenciales no van en el repositorio. `.env`, `*.tfstate`, `*.tfvars` y `.terraform/` están en `.gitignore`.
-
-## Fuera de este corte
-
-SSO institucional y reservas reales. La agenda que se ve es el mock FAKE.
+| Documento | Para qué |
+| --- | --- |
+| [deploy/README.md](deploy/README.md) | CI/CD, ambientes, runners, promoción, HTTPS, rollback y verificación |
+| [infra/README.md](infra/README.md) | Terraform, Ansible y los workflows de cuenta |
+| [backend/README.md](backend/README.md) | API, migraciones, ETL, OpenAPI y variables |
+| [apps/web/README.md](apps/web/README.md) | Visor, pruebas y permisos |
+| [apps/api/README.md](apps/api/README.md) | API anterior, conservada para pruebas |
+| [docs/INDICE.md](docs/INDICE.md) | Resto de la documentación |

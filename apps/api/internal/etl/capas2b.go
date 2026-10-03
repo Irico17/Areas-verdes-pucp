@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Conteos de tachos publicados en docs/MAPA-DATOS-Y-EDICION.md §4.11.
+// Conteos de tachos de la fuente que carga el ETL.
 var ConteosTachosEsperados = map[string]int{
 	"no_aprovechables":     294,
 	"papel_carton":         142,

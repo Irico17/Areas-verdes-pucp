@@ -2,7 +2,7 @@ package catastro
 
 // etiquetasSector solo sirven para mostrar; no se guardan en la BD. Los
 // nombres son ficticios (ver apps/api/internal/etl/sector.go y
-// docs/MAPA-DATOS-Y-EDICION.md §2), no identifican a ninguna persona real.
+// docs/DATOS-Y-ETL.md), no identifican a ninguna persona real.
 var etiquetasSector = map[string]string{
 	"cua-valeria":     "Cuadrilla Valeria Quispe",
 	"cua-mateo":       "Cuadrilla Mateo Salazar",

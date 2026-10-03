@@ -178,11 +178,3 @@ func eventoEstado(estado string) string {
 	}
 	return "estado"
 }
-
-func blankPtr(v string) *string {
-	v = strings.TrimSpace(v)
-	if v == "" {
-		return nil
-	}
-	return &v
-}

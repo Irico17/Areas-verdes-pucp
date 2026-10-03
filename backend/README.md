@@ -1,179 +1,139 @@
-> **Port en curso (VerdePUCP).** Esta carpeta es una copia fiel de `backend/` de la rama `init/backend` del equipo (HEAD `1e876dd`). El backend actual (`apps/api`) se porta aquí por lotes siguiendo `docs/PLAN-MIGRACION-BACKEND.md`; hasta el corte, `apps/api` sigue siendo el backend desplegado.
+# Backend
 
-# Backend - Áreas Verdes PUCP
+API de VerdePUCP. Módulo Go `github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend`, Go 1.25.3, Gin, GORM y `dig`. El proceso que se despliega es este. `apps/api` es la API anterior y no es la imagen del CI.
 
-API del Sistema de Gestión de Áreas Verdes del campus PUCP. Usa Go 1.25.3,
-Gin, GORM/PostgreSQL y `dig` para inyección de dependencias, con arquitectura
-por capas basada en el servicio de referencia del equipo.
+Prefijos HTTP: `/areas-verdes/v1` y el alias `/api/v1`. El mismo router monta los dos.
 
-## Requisitos
+## Capas
 
-- Go 1.25.3
-- PostgreSQL 16 con PostGIS 3.4+ (a diferencia de la API anterior, la nueva API valida la conexión a la base de datos al iniciar y falla si no está disponible; en producción el entrypoint corre `migrate` antes de iniciar la API)
-- Docker
+```
+backend/app/cmd/                  proceso, migrate, etl, etl-lote, sectores, modelgen
+backend/app/internal/presentation controladores, rutas, middleware, peticiones
+backend/app/internal/application  casos de uso, servicios, contratos y DTO
+backend/app/internal/domain       entidades, enums y errores
+backend/app/internal/persistence  GORM, modelos, mappers y repositorios
+backend/app/internal/infrastructure  ETL, archivos, almacenamiento, rate limit
+backend/app/internal/shared       configuración y logs
+backend/dockerfile                imagen de la API
+backend/docker-entrypoint.sh      migrate, carga y exec de la API
+```
 
-## Ejecución local
+El contenedor de `dig` está en `cmd/ioc`. Una ruta nueva se registra en el controlador, en el grupo de `presentation/routes/groups` y en el contenedor de presentación. Swagger sale de las anotaciones `swag` y se regenera con `make swagger` desde este directorio. No se editan a mano `app/docs/docs.go`, `swagger.json` ni `swagger.yaml`.
+
+OpenAPI que sirve la API: `/areas-verdes/v1/openapi.yaml` y `/api/v1/openapi.yaml`. En `APP_ENV=produccion` responden 404. En develop, QA y en local sin `APP_ENV` responden 200, con independencia de `SWAGGER_ENABLED`. La UI de Swagger, cuando está encendida, queda en `/areas-verdes/v1/swagger/index.html`.
+
+El contrato histórico de la API anterior sigue en `apps/api/openapi.yaml`. `backend/openapi/openapi.base.json` es la base que produce `make swagger`.
+
+## Migraciones
+
+Son aditivas e idempotentes. Cada archivo de `db/migrations` se aplica una vez, en su transacción, y se anota en `schema_migrations`. No hay migraciones «down». No se usa `AutoMigrate`. No se renombran ni se reordenan los archivos.
 
 ```bash
-cd backend
-cp app/.env.example app/.env
-make run
+cd app
+go run ./cmd/migrate
+go run ./cmd/migrate -semilla-ficticia
+go run ./cmd/migrate -necesita-etl
+go run ./cmd/migrate -catastro-incompleto
 ```
 
-El servidor inicia por defecto en `http://localhost:8080`.
+Hace falta `DATABASE_URL` (o el conjunto `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME`) y `CAMPUS_DEV_PASSWORD`. `MIGRATIONS_DIR` por defecto es `db/migrations` en la raíz del repositorio y `/opt/campus/migrations` dentro de la imagen.
 
-## API y Swagger
+`Ensure` crea las seis cuentas ficticias si no existen y no reescribe un hash ya guardado. `-semilla-ficticia` aplica `deploy/seed/ficticio.sql`.
 
-La API usa el prefijo `/areas-verdes/v1`. La interfaz de Swagger está en
-`http://localhost:8080/areas-verdes/v1/swagger/index.html` y la definición JSON
-que carga está en
-`http://localhost:8080/areas-verdes/v1/swagger/doc.json`.
+El detalle de la carga y de los flags está en [docs/DATOS-Y-ETL.md](../docs/DATOS-Y-ETL.md).
 
-Para que un endpoint nuevo forme parte de la API y aparezca en Swagger, hay que
-conectarlo en dos lugares: el registro de rutas y las anotaciones del controller.
-El grupo organiza y monta rutas Gin; el controller implementa las operaciones.
-
-### Flujo para agregar un group-controller
-
-1. **Crear el controller** bajo `app/internal/presentation/controller/`.
-   Define su interfaz, implementación y constructor (por ejemplo,
-   `NewPlantsController`). Anota cada método HTTP exportado para `swaggo/swag`:
-
-   ```go
-   // List godoc
-   // @Summary Listar áreas verdes
-   // @Description Devuelve las áreas verdes registradas
-   // @Tags areas-verdes
-   // @Produce json
-   // @Success 200 {array} AreaResponse
-   // @Router /v1/areas-verdes [get]
-   func (c *plantsController) List(ctx *gin.Context) { /* ... */ }
-   ```
-
-   Usa anotaciones `@Param`, `@Accept`, `@Produce`, `@Success`, `@Failure` y
-   `@Router` según el contrato. `@Router` debe incluir `/v1`, pero no
-   `/areas-verdes`: ese prefijo ya está declarado como `@BasePath` en
-   `app/cmd/main.go`. Los tipos de request/response referenciados deben estar
-   exportados para que Swagger pueda describirlos.
-
-2. **Crear un route group** en
-   `app/internal/presentation/routes/groups/`. Recibe el controller por
-   constructor y registra los métodos y paths en `Register`, usando paths
-   relativos al prefijo común:
-
-   ```go
-   type PlantsGroup struct{ controller controller.IPlantsController }
-
-   func NewPlantsGroup(c controller.IPlantsController) *PlantsGroup {
-       return &PlantsGroup{controller: c}
-   }
-
-   func (g *PlantsGroup) Register(router gin.IRouter) {
-       router.GET("/areas-verdes", g.controller.List)
-   }
-   ```
-
-3. **Registrar las dependencias en `app/internal/presentation/container.go`.**
-   Añade `groups.NewPlantsGroup` a la lista de Groups y
-   `controller.NewPlantsController` a la lista de Controllers. `dig` construye
-   el group e inyecta el controller.
-
-4. **Conectar el group al router** en
-   `app/internal/presentation/routes/routes.go`: añádelo a `Router`, a
-   `RouterParams` y a `NewRouter`, y llama `r.plantsGroup.Register(servicePath)`
-   dentro de `Setup`. `servicePath` ya representa `/areas-verdes/v1`.
-
-5. **Regenerar los documentos** desde `backend/`:
-
-   ```bash
-   make swagger
-   ```
-
-   El target genera `app/docs/docs.go`, `app/docs/swagger.json` y
-   `app/docs/swagger.yaml`, y actualiza `openapi/openapi.base.json`. Requiere la
-   CLI `swag` (`go install github.com/swaggo/swag/cmd/swag@v1.16.6`),
-   `swagger2openapi` y Node.js. No edites manualmente los archivos de
-   `app/docs/`: son generados. La aplicación ya importa ese paquete desde
-   `app/cmd/main.go` y monta el UI mediante `SwaggerGroup`.
-
-6. **Reiniciar `make run` y comprobar** el endpoint y Swagger. La ruta real del
-   ejemplo sería `GET /areas-verdes/v1/areas-verdes`; en Swagger debe aparecer
-   bajo la etiqueta `areas-verdes`. Si el UI abre pero muestra “Failed to load
-   API definition”, abre `.../swagger/doc.json`: un 500 suele indicar que la
-   especificación generada o registrada no es válida; comprueba que ejecutaste
-   `make swagger` y que los archivos `app/docs/` corresponden a las anotaciones
-   actuales.
-
-### Health check
-
-Endpoint de ejemplo actualmente expuesto:
+## etl y etl-lote
 
 ```bash
-curl http://localhost:8080/areas-verdes/v1/health
+cd app
+go run ./cmd/etl
+go run ./cmd/etl --skip-load
+go run ./cmd/etl --no-strict
+go run ./cmd/etl-lote
+go run ./cmd/etl-lote -solo-lectura
+go run ./cmd/sectores
 ```
 
-Respuesta esperada:
+Desde la raíz: `make etl`, `make etl-lote` y `make sectores`.
 
-```json
-{
-  "status": "healthy",
-  "timestamp": "2026-09-24T20:00:00Z"
-}
-```
+## Arranque local
 
-## Comandos
+Con Postgres ya arriba (desde la raíz, `docker compose up -d db` y `make wait`):
 
 ```bash
-make run        # Ejecuta la API
-make build      # Genera app/bin/api
-make test       # Ejecuta las pruebas
-make tidy       # Ordena las dependencias del módulo
-make swagger    # Regenera la documentación swagger
-make gen-models # Genera modelos GORM y ejecuta control de deriva contra BD desechable
+cp ../.env.example ../.env
+cd app
+go run ./cmd
 ```
 
-### Control de deriva y generación de modelos (`make gen-models`)
+Por defecto escucha en `:8091` si `API_ADDR` está definido, y si no en el puerto de `SERVER_PORT` (8080). El compose y el `.env.example` de la raíz fijan `API_ADDR=:8091`.
 
-`make gen-models` ejecuta `cmd/modelgen` como control de deriva de nuestros modelos en `internal/persistence/models/*.model.go` y genera modelos GORM en un directorio temporal o `$MODELGEN_OUT`.
-
-Por seguridad, `modelgen` cuenta con guardas estrictas que abortan si:
-1. Apunta a la base de datos de datos reales (`campus_verde`).
-2. El nombre de la base de datos no comienza con el prefijo desechable `vp_` o `modelgen_`.
-3. La base de datos no fue construida con nuestras migraciones (falta `schema_migrations`).
-4. La tabla `areas_verdes` contiene datos (debe ser una BD vacía creada por `cmd/migrate` sin ETL).
-
-**Flujo de uso:**
 ```bash
-# 1. Crear una base de datos desechable con prefijo vp_ o modelgen_
-psql "postgres://campus:campus@127.0.0.1:5432/campus_verde?sslmode=disable" -c "CREATE DATABASE vp_modelgen_x"
-
-# 2. Aplicar nuestras migraciones con cmd/migrate
-(cd app && DATABASE_URL="postgres://campus:campus@127.0.0.1:5432/vp_modelgen_x?sslmode=disable" MIGRATIONS_DIR="../../db/migrations" go run ./cmd/migrate)
-
-# 3. Ejecutar gen-models apuntando a la base desechable
-DATABASE_URL="postgres://campus:campus@127.0.0.1:5432/vp_modelgen_x?sslmode=disable" make gen-models
-
-# 4. Eliminar la base de datos desechable
-psql "postgres://campus:campus@127.0.0.1:5432/campus_verde?sslmode=disable" -c "DROP DATABASE vp_modelgen_x"
+curl -s http://127.0.0.1:8091/health
 ```
 
-## Estructura
+Dentro de la imagen el entrypoint exige `CAMPUS_DEV_PASSWORD`, migra, decide el ETL y solo entonces ejecuta la API. En `APP_ENV=produccion` rechaza `pando-local`, `campus-lab` y claves de menos de 16 caracteres antes de migrar.
 
-```text
-backend/
-├── app/
-│   ├── cmd/                    # Entry point y composition root (dig)
-│   └── internal/
-│       ├── application/        # Casos de uso, servicios, contratos y DTOs
-│       ├── domain/             # Entidades, constantes y errores de dominio
-│       ├── infrastructure/     # Adaptadores de servicios externos
-│       ├── persistence/        # GORM, modelos, mappers y repositorios
-│       ├── presentation/       # HTTP, controladores, middleware y rutas
-│       └── shared/             # Configuración, logging y utilitarios
-├── dockerfile
-└── Makefile
+## Pruebas
+
+```bash
+cd app
+gofmt -l .
+go vet ./...
+MIGRATE_TEST_URL='postgres://campus:campus@127.0.0.1:5432/campus?sslmode=disable' go test ./...
 ```
 
-La configuración se obtiene de variables de entorno; los
-valores de `.env.example` son solo para desarrollo y nunca se deben versionar
-secretos reales.
+Sin `MIGRATE_TEST_URL`, las pruebas que necesitan base se omiten. Esas pruebas crean una base `vp_c_test_…` y la borran al terminar. No apuntan a una base con datos de servicio.
+
+`make gen-models` (desde `backend/`) corre `cmd/modelgen` contra una base desechable cuyo nombre empieza por `vp_` o `modelgen_`, ya migrada y sin filas en `areas_verdes`. Aborta si la URL apunta a `campus_verde`. La salida va a un temporal o a `MODELGEN_OUT`.
+
+`make swagger` exige `swag` v1.16.6, `swagger2openapi` y Node. El job `backend` del CI compara el resultado con lo versionado.
+
+## Variables de entorno
+
+Los valores de ejemplo están en `/.env.example`. Aquí solo el nombre y para qué sirve. Ninguna clave real.
+
+| Variable | Uso |
+| --- | --- |
+| `APP_ENV` | `develop`, `qa`, `produccion`, o vacío (pool y Swagger históricos). |
+| `API_ADDR` | Dirección de escucha, por ejemplo `:8091`. Si falta, se usa `SERVER_PORT`. |
+| `SERVER_PORT` | Puerto si no hay `API_ADDR`. Default del código: `8080`. |
+| `SERVER_GIN_MODE` | `debug` o `release`. Vacío: debug en develop y release en el resto. |
+| `SERVER_TRUSTED_PROXIES` | Lista separada por comas. Vacío: ninguna. |
+| `LOG_LEVEL` | `debug`, `info`, `warn` o `error`. |
+| `LOG_FORMAT` | `console` o `json`. |
+| `DATABASE_URL` | URL de Postgres. Si está, manda sobre las piezas sueltas. |
+| `DATABASE_HOST` | Host. Default del código: `localhost`. |
+| `DATABASE_PORT` | Puerto. Default: `5432`. |
+| `DATABASE_USER` | Usuario. Default del código: `areasverdes`. El compose local usa `campus`. |
+| `DATABASE_PASSWORD` | Clave de Postgres cuando no va dentro de `DATABASE_URL`. |
+| `DATABASE_NAME` | Nombre de la base. |
+| `DATABASE_SCHEMA` | Esquema. Default: `public`. |
+| `DATABASE_SSL_MODE` | `disable`, `require`, o un modo de libpq. `true` equivale a `require`. |
+| `DATABASE_MAX_OPEN_CONNS` | Tope de conexiones abiertas. |
+| `DATABASE_MAX_IDLE_CONNS` | Conexiones inactivas. |
+| `DATABASE_CONN_MAX_LIFETIME` | Vida máxima, en formato de `time.ParseDuration` (`30m`). |
+| `CAMPUS_DEV_PASSWORD` | Clave inicial de las cuentas ficticias. Obligatoria para migrar y para el entrypoint. |
+| `CAMPUS_CORS_ORIGINS` | Orígenes separados por coma. Un `*` se ignora. |
+| `CAMPUS_COOKIE_SECURE` | `true` solo con HTTPS. Cualquier otro valor, o vacío, deja la cookie sin `Secure`. |
+| `CAMPUS_COOKIE_SAMESITE` | Default `Lax`. |
+| `CAMPUS_LOGIN_MAX` | Intentos de login por minuto. Default 8. |
+| `CAMPUS_ENV` | Lo escribe el compose. La cookie `Secure` no depende de esta variable. |
+| `SWAGGER_ENABLED` | `true` o `false`. Vacío: encendido en develop y QA, apagado en producción, y según Gin si `APP_ENV` está vacío. |
+| `SWAGGER_HOST` | Host que anuncia Swagger. |
+| `MIGRATIONS_DIR` | Carpeta de SQL. |
+| `SEED_FILE` | Semilla ficticia. Default: `deploy/seed/ficticio.sql`. |
+| `SEED_PROFILE` | `etl` o `ficticio`. Lo lee el entrypoint, no el binario de la API. |
+| `EVIDENCIAS_DIR` | Carpeta local de evidencias. |
+| `EVIDENCIAS_BUCKET` | Cubo privado. Vacío: disco. |
+| `DATA_RAW_DIR` | Fuentes del ETL. |
+| `DATA_V1_DIR` | Salida normalizada. |
+| `EDIFICIOS_PATH` | GeoJSON de edificios OSM. |
+| `RESERVAS_MOCK_PATH` | Agenda ficticia. |
+| `DRIVE_FOTOS_DIR` | Fotos recuperadas. No se versionan los JPEG. |
+| `OPENAPI_PATH` | YAML que sirve la API. Default: `apps/api/openapi.yaml`. |
+| `MODELGEN_OUT` | Directorio de salida de `modelgen`. |
+| `AWS_REGION` | Región del SDK cuando hay cubo. No es una clave. |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | Cadena por defecto del SDK. No van en el repositorio. Con un rol de instancia no hacen falta. |
+
+Postgres del compose, leídas por Docker y no por el proceso Go: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`.

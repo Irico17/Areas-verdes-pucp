@@ -630,32 +630,6 @@ func (h Atencion) Sugerir(c *gin.Context) {
 	c.JSON(200, atencion.SugerirTipo(body.Titulo))
 }
 
-func extDe(mime, name string) string {
-	switch strings.ToLower(mime) {
-	case "image/jpeg":
-		return ".jpg"
-	case "image/png":
-		return ".png"
-	case "image/webp":
-		return ".webp"
-	case "application/pdf":
-		return ".pdf"
-	}
-	lower := strings.ToLower(name)
-	switch {
-	case strings.HasSuffix(lower, ".jpg"), strings.HasSuffix(lower, ".jpeg"):
-		return ".jpg"
-	case strings.HasSuffix(lower, ".png"):
-		return ".png"
-	case strings.HasSuffix(lower, ".webp"):
-		return ".webp"
-	case strings.HasSuffix(lower, ".pdf"):
-		return ".pdf"
-	default:
-		return ""
-	}
-}
-
 func writeAtencion(c *gin.Context, err error) {
 	switch {
 	case err == nil:

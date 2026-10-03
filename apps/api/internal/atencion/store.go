@@ -309,29 +309,6 @@ func (s *Store) ListarEvidencias(ctx context.Context, actividadID string) ([]Evi
 	return out, rows.Err()
 }
 
-func (s *Store) GuardarEvidencia(ctx context.Context, id, actividadID, nombre, mime, ruta, nota string, nBytes int) error {
-	if !operacionUUID(id) || !operacionUUID(actividadID) {
-		return operacion.InputError{Reason: "id y actividad_id deben ser UUID"}
-	}
-	res := s.db.WithContext(ctx).Exec(`
-		INSERT INTO evidencias (id, actividad_id, nombre, mime, bytes, ruta, nota)
-		SELECT $1, $2, $3, $4, $5, $6, $7
-		WHERE EXISTS (SELECT 1 FROM actividades WHERE id = $2)`,
-		id, actividadID, nombre, mime, nBytes, ruta, nota,
-	)
-	if res.Error != nil {
-		return res.Error
-	}
-	if res.RowsAffected == 0 {
-		return operacion.ErrNoEncontrada
-	}
-	return s.db.WithContext(ctx).Exec(`
-		INSERT INTO actividad_eventos (actividad_id, tipo, actor_rol, nota)
-		VALUES ($1, 'evidencia', 'sesion', $2)`,
-		actividadID, "Evidencia: "+nombre,
-	).Error
-}
-
 func (s *Store) RutaEvidencia(ctx context.Context, id string) (string, string, error) {
 	var ruta, mime string
 	err := s.db.WithContext(ctx).Raw(`SELECT ruta, mime FROM evidencias WHERE id = $1`, id).Row().Scan(&ruta, &mime)
