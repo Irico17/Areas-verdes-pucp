@@ -21,7 +21,7 @@ import (
 // SectoresValidos son los sectores operativos que puede llevar
 // poligonos_cuadrilla.sector: 3 cuadrillas ficticias, por frecuencia de mayor
 // a menor, y 2 rótulos de lugar. Mismo orden que el CHECK de la migración 044
-// y que MAPA-DATOS-Y-EDICION.md §2.
+// y que el glosario de nomenclatura.
 var SectoresValidos = []string{"cua-valeria", "cua-mateo", "cua-renato", "campo-deportivo", "bosque-humedo"}
 
 // SectorPoligono es una fila de data/v1/zonas_sector.json.
@@ -73,7 +73,7 @@ type asignado struct {
 // solo ve hashes o etiquetas, nunca nombres. Exige exactamente 3 grupos de
 // hash sin empate entre sus conteos: son los que reciben cua-valeria (el más
 // numeroso), cua-mateo y cua-renato, en ese orden. No exige un conteo fijo,
-// porque la fuente viva cambia con el tiempo (ver MAPA-DATOS-Y-EDICION.md §2).
+// porque la fuente viva cambia con el tiempo (ver docs/DATOS-Y-ETL.md).
 func SectoresDeJefes(body []byte, desde string) (ArchivoSectores, error) {
 	anon, err := anonimizarJefes(body)
 	if err != nil {

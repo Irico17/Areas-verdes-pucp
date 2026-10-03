@@ -50,7 +50,7 @@ Nombre: VerdePUCP. Lugar: PUCP Pando. Voz: operativa, concreta, en español del 
 
 ## Evidence on Hand
 
-- Código en `apps/web` y `apps/api`. Plan previo en `docs/PLAN-PRODUCTO-Y-UI.md`.
+- Código en `apps/web`. La API que se despliega es `backend/app`.
 - Catastro real: 521 áreas, 534 zonas. Unas 20 áreas tienen nombre de jardín (Jardín Tinkuy, Jardín Humanidades, y otras). El resto trae código y uso, no nombre.
 - Labores de demostración en la migración 003 y la solicitud `OSG-2026-0142`.
 - No hay fotos de equipo, testimonios ni manual de marca PUCP en el repo. No se fabrican.

@@ -64,15 +64,6 @@ func (s *Store) List(ctx context.Context, clase string, soloActivos bool) ([]Ite
 	return out, err
 }
 
-// Activo dice si el código sigue vigente en esa clase.
-func (s *Store) Activo(ctx context.Context, clase, codigo string) (bool, error) {
-	var n int
-	err := s.db.WithContext(ctx).Raw(`
-		SELECT count(*) FROM catalogos WHERE clase = $1 AND codigo = $2 AND activo`,
-		clase, codigo).Scan(&n).Error
-	return n == 1, err
-}
-
 func (s *Store) Create(ctx context.Context, clase, codigo, nombre string) (Item, error) {
 	var zero Item
 	clase = strings.TrimSpace(clase)

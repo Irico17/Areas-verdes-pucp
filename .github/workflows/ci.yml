@@ -178,6 +178,7 @@ jobs:
           bash deploy/test_host_deploy.sh
           bash deploy/test_smoke_tls.sh
           bash deploy/tls/test_nginx_tls.sh
+          bash scripts/tests/test-parsear-bloque-credenciales-aws.sh
       - name: Swagger sin deriva
         working-directory: backend/app
         run: |

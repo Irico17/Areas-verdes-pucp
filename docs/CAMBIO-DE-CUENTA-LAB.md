@@ -23,7 +23,7 @@ Auditoría del workflow de despliegue: no tenía id de instancia, ARN, IP, regi�
 
 ## Por qué las credenciales van en un environment
 
-Pegar la access key en los inputs de un workflow la deja visible en la pantalla del run, en la API y en el resumen, antes de que ningún paso pueda enmascararla. El camino normal es otro:
+Pegar la access key en los inputs de un workflow la deja visible en la pantalla del run, en la API y en el resumen, antes de que ningún paso pueda enmascararla. El camino recomendado sigue siendo el script:
 
 1. En el Learner Lab: **Start Lab**. Espere el semáforo verde.
 2. **AWS Details → AWS CLI → Show**. Copie el bloque (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, región).
@@ -43,12 +43,16 @@ El script lee el bloque por stdin o, si la terminal está vacía, por el portapa
 
 Esas credenciales caducan cuando termina la sesión del lab (unas cuatro horas). El workflow lo comprueba con `aws sts get-caller-identity` y se detiene si caducaron.
 
-Hay un camino secundario, en el mismo workflow, con el input `usar_credenciales_de_inputs`. El primer paso hace `::add-mask::` para que el log no las muestre. Aun así quedan en el historial del run. Úselo solo si no puede correr el script, y borre la sesión del lab en cuanto termine.
+Si no puede correr el script, hay un camino rápido al lanzar a mano `aprovisionar-cuenta` o `pausar-cuenta`: el input `bloque_credenciales_aws`. Pegue ahí el bloque completo de **AWS Details → AWS CLI** (con saltos de línea, o en una sola línea separada por `;` o por espacios). No hace falta marcar `usar_credenciales_de_inputs`. Si ese campo tiene texto, tiene prioridad sobre los cuatro inputs separados y sobre los secretos del environment.
+
+Ese bloque queda visible en el historial del run. Antes de instalar herramientas o llamar a AWS, el job lo enmascara en el log (`::add-mask::`) y no lo imprime; el historial, la API y la pantalla del run sí lo guardan. Las credenciales caducan con la sesión del lab: no reutilice el bloque de una sesión ya cerrada, y borre la sesión en cuanto termine el run.
+
+Los cuatro inputs `aws_access_key_id`, `aws_secret_access_key`, `aws_session_token` y `aws_region_input` siguen detrás de `usar_credenciales_de_inputs`, por compatibilidad. Si pegó el bloque, se ignoran. También quedan en el historial. Úselos solo si no puede pegar el bloque ni correr el script.
 
 ## Lista de comprobación
 
 1. **Environment `aws-lab`.** En GitHub: Settings → Environments → New environment → `aws-lab`. No le ponga revisores: si no, el aprovisionamiento se queda esperando. No es el environment de producción.
-2. **Credenciales.** El script de arriba. Compruebe que existen los secretos `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN`, y la variable `AWS_REGION`.
+2. **Credenciales.** El script de arriba. Compruebe que existen los secretos `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN`, y la variable `AWS_REGION`. Si no puede correrlo, pegue el bloque en `bloque_credenciales_aws` al lanzar el workflow: queda en el historial y caduca con la sesión.
 3. **PAT del runner.** Fine-grained, solo el repositorio `Irico17/Areas-verdes-pucp`, caducidad de 90 días o menos. Permiso **Administration: Read and write**. Con eso alcanza para:
    - `POST /repos/{owner}/{repo}/actions/runners/registration-token`
    - `PUT` de la variable `PUBLIC_URL` en los environments `develop`, `qa` y `produccion`
@@ -137,7 +141,7 @@ Permisos que ya trae el rol del lab y que este flujo usa, sin crear políticas: 
 
 | Síntoma | Qué hacer |
 | --- | --- |
-| `ExpiredToken` o «caducaron» | Start Lab, copie el bloque nuevo y vuelva a correr `actualizar-credenciales-lab.sh`. No reutilice el bloque de ayer. |
+| `ExpiredToken` o «caducaron» | Start Lab, copie el bloque nuevo y vuelva a correr `actualizar-credenciales-lab.sh`. Si no puede correr el script, pegue ese bloque en `bloque_credenciales_aws`. No reutilice el bloque de ayer. |
 | El lab rechaza crear un rol o una política | Esperado. El código usa `LabInstanceProfile` y no declara `aws_iam_role`. |
 | `BucketAlreadyExists` | El nombre lleva el id de la cuenta. Si choca, otra cuenta lo creó o la región no coincide. No reutilice el cubo de la cuenta anterior. |
 | El plan dice `forces replacement` | Hay datos en ese disco. Repita el plan con el tamaño actual o acepte el reemplazo con `acepto_reemplazo=SI`, sabiendo que borra el volumen. |

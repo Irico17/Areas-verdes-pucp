@@ -1,56 +1,16 @@
 # apps/api
 
-API del sistema DP2 — **Go + Gin + GORM** (monolito modular). Módulo Go: `campusverde/api`.
+API anterior de VerdePUCP (módulo `campusverde/api`, Go 1.22). Se conserva para `go test ./...` y para `scripts/paridad-api.sh`.
 
-El mapa no tiene backend propio: consume estas rutas.
-
-## Layout
-
-```
-cmd/api          proceso HTTP
-cmd/migrate      aplica db/migrations/*.sql (MIGRATIONS_DIR)
-cmd/etl          data/raw → data/v1 → PostGIS
-internal/config  DATABASE_URL, API_ADDR, rutas del repo
-internal/db      conexión GORM / Postgres
-internal/models  áreas, zonas, capas auxiliares
-internal/handlers
-internal/catastro lectura GeoJSON
-internal/etl     normalización (sin el campo jefes) y carga
-internal/migrate
-../db/migrations esquema vigente (esta carpeta ya no guarda los .sql)
-openapi.yaml
-```
-
-El esquema espacial lo definen las migraciones SQL. GORM abre la conexión y lee las tablas; no se usa AutoMigrate sobre geometría.
-
-## Variables
-
-Ver `/.env.example` en la raíz del repo. Por defecto:
-
-- `DATABASE_URL=postgres://campus:campus@127.0.0.1:5432/campus_verde?sslmode=disable`
-- `API_ADDR=:8091`
-
-## Comandos
-
-Desde la raíz del repo (con Postgres ya arriba):
+La API que se despliega, y la que publica el CI como `campus-verde-api`, es [backend/app](../../backend/README.md). El esquema ya no vive en esta carpeta: los SQL están en `db/migrations` ([migrations/README.md](migrations/README.md)).
 
 ```bash
-make migrate
-make etl
-make api
-```
-
-O, dentro de este directorio:
-
-```bash
+go test ./...
+go run ./cmd/api
 go run ./cmd/migrate
 go run ./cmd/etl
-go run ./cmd/api
-go test ./...
 ```
 
-`go run ./cmd/etl --skip-load` solo escribe `data/v1`. `--no-strict` no exige los conteos del baseline (521 / 534 / 21 / 10).
+Las pruebas que usan base leen `MIGRATE_TEST_URL`. Si no está, prueban `postgres://campus:campus@127.0.0.1:5432/postgres?sslmode=disable` y omiten el caso cuando no hay Postgres. Crean bases temporales y las borran al terminar.
 
-## CRS
-
-EPSG:4326. `ST_AsGeoJSON` sirve lon/lat. Un Polygon de origen se guarda como MultiPolygon. `geom` NULL está permitido para registros sin GPS.
+El contrato de esta API sigue en `openapi.yaml`.
