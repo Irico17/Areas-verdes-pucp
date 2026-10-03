@@ -8,7 +8,7 @@ TMP="$(mktemp -d)"
 cleanup() { rm -rf "$TMP"; }
 trap cleanup EXIT
 
-# shellcheck source=lib/credenciales-lab.sh
+# shellcheck source=scripts/lib/credenciales-lab.sh
 source "$ROOT/scripts/lib/credenciales-lab.sh"
 
 fail() {

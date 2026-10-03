@@ -16,6 +16,7 @@ valor_asignacion() {
       fi
     fi
   fi
+  # shellcheck disable=SC2016
   case "$raw" in
     *[[:space:]]*|*'`'*|*'$(*)'*)
       return 1
@@ -66,7 +67,7 @@ credenciales_completas() {
 }
 
 validar_forma_credenciales() {
-  local region="${1:-}"
+  local region="${PARSE_REGION:-us-east-1}"
   if ! credenciales_completas; then
     echo "El bloque no trae aws_access_key_id, aws_secret_access_key y aws_session_token." >&2
     return 1
@@ -89,9 +90,6 @@ validar_forma_credenciales() {
       return 1
       ;;
   esac
-  if [ -z "$region" ]; then
-    region="${PARSE_REGION:-us-east-1}"
-  fi
   case "$region" in
     us-east-1|us-west-2)
       PARSE_REGION="$region"

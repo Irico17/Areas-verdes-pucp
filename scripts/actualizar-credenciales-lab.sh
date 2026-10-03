@@ -9,7 +9,7 @@ set -euo pipefail
 set +x
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-# shellcheck source=lib/credenciales-lab.sh
+# shellcheck source=scripts/lib/credenciales-lab.sh
 source "$ROOT/scripts/lib/credenciales-lab.sh"
 
 ENV_NAME="${ENV_NAME:-aws-lab}"

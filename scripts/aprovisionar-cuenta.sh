@@ -265,9 +265,10 @@ configurar() {
 }
 
 esperar_ssm() {
-  local id="$1" i status
+  local id="$1" status intentos=0
   echo "Esperando a que SSM vea ${id}."
-  for i in $(seq 1 40); do
+  while [ "$intentos" -lt 40 ]; do
+    intentos=$((intentos + 1))
     status="$(aws ssm describe-instance-information --region "$AWS_REGION" \
       --filters "Key=InstanceIds,Values=${id}" \
       --query 'InstanceInformationList[0].PingStatus' --output text 2>/dev/null || true)"

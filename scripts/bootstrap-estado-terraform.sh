@@ -6,7 +6,6 @@
 set -euo pipefail
 set +x
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}"
 BACKEND_HCL="${1:-}"
 
