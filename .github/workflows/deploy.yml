@@ -5,7 +5,11 @@ name: deploy
 # produccion: solo workflow_dispatch (requiere promoción: despliegue previo exitoso en qa, y
 #             aprobación manual mediante Required Reviewers configurado en el environment de GitHub;
 #             opcionalmente se puede activar un wait-timer).
-# Despliegues ejecutados en runners self-hosted en cada instancia EC2:
+# Despliegues ejecutados en runners self-hosted en cada instancia EC2.
+# Las etiquetas no dependen de la cuenta de AWS. Si hiciera falta otra,
+# defina las variables de repositorio RUNNER_LABEL_DEVELOP, RUNNER_LABEL_QA
+# y RUNNER_LABEL_PRODUCCION. La URL pública sale de vars.PUBLIC_URL del
+# environment (develop, qa o produccion), no de una IP escrita en este archivo.
 #   develop    -> [self-hosted, campus-develop]
 #   qa         -> [self-hosted, campus-qa]
 #   produccion -> [self-hosted, campus-prod]
@@ -69,6 +73,9 @@ jobs:
           INPUT_ROLLBACK: ${{ inputs.rollback }}
           DEFAULT_SHA: ${{ github.sha }}
           REF: ${{ github.ref }}
+          RUNNER_LABEL_DEVELOP: ${{ vars.RUNNER_LABEL_DEVELOP }}
+          RUNNER_LABEL_QA: ${{ vars.RUNNER_LABEL_QA }}
+          RUNNER_LABEL_PRODUCCION: ${{ vars.RUNNER_LABEL_PRODUCCION }}
         run: |
           set -euo pipefail
           valido() {
@@ -117,9 +124,15 @@ jobs:
           fi
 
           case "$ambiente" in
-            develop) runner_label="campus-develop" ;;
-            qa) runner_label="campus-qa" ;;
-            produccion) runner_label="campus-prod" ;;
+            develop) runner_label="${RUNNER_LABEL_DEVELOP:-campus-develop}" ;;
+            qa) runner_label="${RUNNER_LABEL_QA:-campus-qa}" ;;
+            produccion) runner_label="${RUNNER_LABEL_PRODUCCION:-campus-prod}" ;;
+          esac
+          case "$runner_label" in
+            ""|*[!A-Za-z0-9._-]*)
+              echo "etiqueta de runner no permitida" >&2
+              exit 2
+              ;;
           esac
 
           echo "ambiente=$ambiente" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,234 @@
+name: aprovisionar-cuenta
+
+# Crea o destruye la infraestructura en la cuenta de Learner Lab cuyas
+# credenciales están en el environment aws-lab. plan es el default.
+# Los inputs de credenciales son un camino secundario: quedan visibles en el
+# historial del run. El log los enmascara; el historial, no.
+
+on:
+  workflow_dispatch:
+    inputs:
+      accion:
+        description: Qué hacer. plan no cambia la cuenta.
+        required: true
+        type: choice
+        default: plan
+        options:
+          - plan
+          - apply
+          - destroy
+      ambientes:
+        description: nonprod (develop y qa), prod, o todos
+        required: true
+        type: choice
+        default: nonprod
+        options:
+          - nonprod
+          - prod
+          - todos
+      confirmar:
+        description: Escriba APLICAR para apply o DESTRUIR para destroy. En plan se ignora.
+        required: false
+        type: string
+        default: ""
+      acepto_reemplazo:
+        description: Escriba SI solo si un plan previo reemplaza discos o instancias y acepta perder esos datos.
+        required: false
+        type: string
+        default: ""
+      tipo_nonprod:
+        description: Instancia develop/qa. La máquina que ya existía era t3.medium.
+        required: true
+        type: choice
+        default: t3.small
+        options:
+          - t3.micro
+          - t3.small
+          - t3.medium
+      tipo_prod:
+        description: Instancia de producción.
+        required: true
+        type: choice
+        default: t3.micro
+        options:
+          - t3.micro
+          - t3.small
+      disco_raiz_gb:
+        description: Disco raíz, de 20 a 40. Bajarlo reemplaza el volumen.
+        required: true
+        type: string
+        default: "20"
+      disco_datos_gb:
+        description: Disco de datos, de 20 a 40. La nonprod anterior usaba 40.
+        required: true
+        type: string
+        default: "20"
+      configurar_hosts:
+        description: Tras apply, Ansible configura Docker, /opt/campus y el runner.
+        required: true
+        type: boolean
+        default: true
+      ansible_check:
+        description: Con plan, si la instancia ya existe, Ansible en modo check.
+        required: true
+        type: boolean
+        default: false
+      registrar_runners:
+        description: Registrar runners con RUNNER_REG_TOKEN_PAT. Si falta el PAT, apply termina en error.
+        required: true
+        type: boolean
+        default: true
+      usar_credenciales_de_inputs:
+        description: SECUNDARIO y menos seguro. Los inputs quedan en el historial del run. Deje false.
+        required: true
+        type: boolean
+        default: false
+      aws_access_key_id:
+        description: Solo con usar_credenciales_de_inputs. Visible en el historial.
+        required: false
+        type: string
+        default: ""
+      aws_secret_access_key:
+        description: Solo con usar_credenciales_de_inputs. Visible en el historial.
+        required: false
+        type: string
+        default: ""
+      aws_session_token:
+        description: Solo con usar_credenciales_de_inputs. Visible en el historial.
+        required: false
+        type: string
+        default: ""
+      aws_region_input:
+        description: Solo con usar_credenciales_de_inputs. us-east-1 o us-west-2.
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cuenta-lab-aws
+  cancel-in-progress: false
+
+jobs:
+  aprovisionar:
+    runs-on: ubuntu-24.04
+    environment: aws-lab
+    timeout-minutes: 90
+    steps:
+      - name: Enmascarar credenciales antes de cualquier otro paso
+        env:
+          INPUT_AWS_ACCESS_KEY_ID: ${{ inputs.aws_access_key_id }}
+          INPUT_AWS_SECRET_ACCESS_KEY: ${{ inputs.aws_secret_access_key }}
+          INPUT_AWS_SESSION_TOKEN: ${{ inputs.aws_session_token }}
+          SECRET_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          SECRET_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          SECRET_AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+          SECRET_TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
+          SECRET_TF_VAR_dev_password: ${{ secrets.TF_VAR_dev_password }}
+          SECRET_RUNNER_REG_TOKEN_PAT: ${{ secrets.RUNNER_REG_TOKEN_PAT }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          for name in (
+              "INPUT_AWS_ACCESS_KEY_ID",
+              "INPUT_AWS_SECRET_ACCESS_KEY",
+              "INPUT_AWS_SESSION_TOKEN",
+              "SECRET_AWS_ACCESS_KEY_ID",
+              "SECRET_AWS_SECRET_ACCESS_KEY",
+              "SECRET_AWS_SESSION_TOKEN",
+              "SECRET_TF_VAR_db_password",
+              "SECRET_TF_VAR_dev_password",
+              "SECRET_RUNNER_REG_TOKEN_PAT",
+          ):
+              valor = os.environ.get(name, "")
+              if valor:
+                  print(f"::add-mask::{valor}")
+          PY
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Instalar Terraform fijado
+        run: |
+          set -euo pipefail
+          bash scripts/instalar-terraform.sh
+          echo "${GITHUB_WORKSPACE}/tmp/bin" >> "$GITHUB_PATH"
+
+      - name: Instalar Ansible y Session Manager
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user 'ansible-core==2.18.8' 'boto3==1.35.99' 'botocore==1.35.99'
+          export PATH="${HOME}/.local/bin:${PATH}"
+          ansible-galaxy collection install -r infra/ansible/requirements.yml
+          bash scripts/instalar-session-manager-plugin.sh
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Aprovisionar
+        env:
+          ACCION: ${{ inputs.accion }}
+          AMBIENTES: ${{ inputs.ambientes }}
+          CONFIRMAR: ${{ inputs.confirmar }}
+          ACEPTO_REEMPLAZO: ${{ inputs.acepto_reemplazo }}
+          TIPO_NONPROD: ${{ inputs.tipo_nonprod }}
+          TIPO_PROD: ${{ inputs.tipo_prod }}
+          DISCO_RAIZ_GB: ${{ inputs.disco_raiz_gb }}
+          DISCO_DATOS_GB: ${{ inputs.disco_datos_gb }}
+          CONFIGURAR_HOSTS: ${{ inputs.configurar_hosts && 'true' || 'false' }}
+          ANSIBLE_CHECK: ${{ inputs.ansible_check && 'true' || 'false' }}
+          REGISTRAR_RUNNERS: ${{ inputs.registrar_runners && 'true' || 'false' }}
+          USAR_INPUTS: ${{ inputs.usar_credenciales_de_inputs && 'true' || 'false' }}
+          INPUT_AWS_ACCESS_KEY_ID: ${{ inputs.aws_access_key_id }}
+          INPUT_AWS_SECRET_ACCESS_KEY: ${{ inputs.aws_secret_access_key }}
+          INPUT_AWS_SESSION_TOKEN: ${{ inputs.aws_session_token }}
+          INPUT_AWS_REGION: ${{ inputs.aws_region_input }}
+          SECRET_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          SECRET_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          SECRET_AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+          SECRET_TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
+          SECRET_TF_VAR_dev_password: ${{ secrets.TF_VAR_dev_password }}
+          SECRET_RUNNER_REG_TOKEN_PAT: ${{ secrets.RUNNER_REG_TOKEN_PAT }}
+          AWS_REGION_ENV: ${{ vars.AWS_REGION }}
+        run: |
+          set -euo pipefail
+          if [ "$USAR_INPUTS" = "true" ]; then
+            echo "Aviso: las credenciales llegaron como inputs. Quedan en el historial del run aunque este log las enmascare."
+            export AWS_ACCESS_KEY_ID="$INPUT_AWS_ACCESS_KEY_ID"
+            export AWS_SECRET_ACCESS_KEY="$INPUT_AWS_SECRET_ACCESS_KEY"
+            export AWS_SESSION_TOKEN="$INPUT_AWS_SESSION_TOKEN"
+            if [ -n "${INPUT_AWS_REGION}" ]; then
+              export AWS_REGION="$INPUT_AWS_REGION"
+            fi
+          else
+            export AWS_ACCESS_KEY_ID="$SECRET_AWS_ACCESS_KEY_ID"
+            export AWS_SECRET_ACCESS_KEY="$SECRET_AWS_SECRET_ACCESS_KEY"
+            export AWS_SESSION_TOKEN="$SECRET_AWS_SESSION_TOKEN"
+          fi
+          if [ -z "${AWS_REGION:-}" ]; then
+            export AWS_REGION="${AWS_REGION_ENV:-us-east-1}"
+          fi
+          export TF_VAR_db_password="${SECRET_TF_VAR_db_password:-}"
+          export TF_VAR_dev_password="${SECRET_TF_VAR_dev_password:-}"
+          export RUNNER_REG_TOKEN_PAT="${SECRET_RUNNER_REG_TOKEN_PAT:-}"
+          unset INPUT_AWS_ACCESS_KEY_ID INPUT_AWS_SECRET_ACCESS_KEY INPUT_AWS_SESSION_TOKEN
+          unset SECRET_AWS_ACCESS_KEY_ID SECRET_AWS_SECRET_ACCESS_KEY SECRET_AWS_SESSION_TOKEN
+          unset SECRET_TF_VAR_db_password SECRET_TF_VAR_dev_password SECRET_RUNNER_REG_TOKEN_PAT
+          export PATH="${GITHUB_WORKSPACE}/tmp/bin:${HOME}/.local/bin:${PATH}"
+          bash scripts/aprovisionar-cuenta.sh
+
+      - name: Subir el plan de texto
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: planes-terraform-${{ github.run_id }}
+          path: tmp/planes/*.txt
+          if-no-files-found: ignore
+          retention-days: 5
+
+      - name: Resumen
+        if: always()
+        run: |
+          if [ -f tmp/resumen-aprovision.md ]; then
+            cat tmp/resumen-aprovision.md >> "$GITHUB_STEP_SUMMARY"
+          fi

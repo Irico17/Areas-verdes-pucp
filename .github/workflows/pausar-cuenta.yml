@@ -1,0 +1,131 @@
+name: pausar-cuenta
+
+# Enciende o detiene las instancias de esta cuenta por etiquetas.
+# No borra discos ni la IP elástica. Credenciales: environment aws-lab.
+
+on:
+  workflow_dispatch:
+    inputs:
+      accion:
+        description: stop detiene. start enciende.
+        required: true
+        type: choice
+        default: stop
+        options:
+          - stop
+          - start
+      ambientes:
+        description: nonprod, prod o todos
+        required: true
+        type: choice
+        default: todos
+        options:
+          - nonprod
+          - prod
+          - todos
+      confirmar:
+        description: Escriba DETENER para stop o ENCENDER para start.
+        required: true
+        type: string
+        default: ""
+      usar_credenciales_de_inputs:
+        description: SECUNDARIO y menos seguro. Los inputs quedan en el historial del run. Deje false.
+        required: true
+        type: boolean
+        default: false
+      aws_access_key_id:
+        description: Solo con usar_credenciales_de_inputs. Visible en el historial.
+        required: false
+        type: string
+        default: ""
+      aws_secret_access_key:
+        description: Solo con usar_credenciales_de_inputs. Visible en el historial.
+        required: false
+        type: string
+        default: ""
+      aws_session_token:
+        description: Solo con usar_credenciales_de_inputs. Visible en el historial.
+        required: false
+        type: string
+        default: ""
+      aws_region_input:
+        description: Solo con usar_credenciales_de_inputs. us-east-1 o us-west-2.
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cuenta-lab-aws
+  cancel-in-progress: false
+
+jobs:
+  pausar:
+    runs-on: ubuntu-24.04
+    environment: aws-lab
+    timeout-minutes: 20
+    steps:
+      - name: Enmascarar credenciales antes de cualquier otro paso
+        env:
+          INPUT_AWS_ACCESS_KEY_ID: ${{ inputs.aws_access_key_id }}
+          INPUT_AWS_SECRET_ACCESS_KEY: ${{ inputs.aws_secret_access_key }}
+          INPUT_AWS_SESSION_TOKEN: ${{ inputs.aws_session_token }}
+          SECRET_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          SECRET_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          SECRET_AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          for name in (
+              "INPUT_AWS_ACCESS_KEY_ID",
+              "INPUT_AWS_SECRET_ACCESS_KEY",
+              "INPUT_AWS_SESSION_TOKEN",
+              "SECRET_AWS_ACCESS_KEY_ID",
+              "SECRET_AWS_SECRET_ACCESS_KEY",
+              "SECRET_AWS_SESSION_TOKEN",
+          ):
+              valor = os.environ.get(name, "")
+              if valor:
+                  print(f"::add-mask::{valor}")
+          PY
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Encender o detener por etiquetas
+        env:
+          ACCION: ${{ inputs.accion }}
+          AMBIENTES: ${{ inputs.ambientes }}
+          CONFIRMAR: ${{ inputs.confirmar }}
+          USAR_INPUTS: ${{ inputs.usar_credenciales_de_inputs && 'true' || 'false' }}
+          INPUT_AWS_ACCESS_KEY_ID: ${{ inputs.aws_access_key_id }}
+          INPUT_AWS_SECRET_ACCESS_KEY: ${{ inputs.aws_secret_access_key }}
+          INPUT_AWS_SESSION_TOKEN: ${{ inputs.aws_session_token }}
+          INPUT_AWS_REGION: ${{ inputs.aws_region_input }}
+          SECRET_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          SECRET_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          SECRET_AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+          AWS_REGION_ENV: ${{ vars.AWS_REGION }}
+        run: |
+          set -euo pipefail
+          if [ "$USAR_INPUTS" = "true" ]; then
+            echo "Aviso: las credenciales llegaron como inputs. Quedan en el historial del run aunque este log las enmascare."
+            export AWS_ACCESS_KEY_ID="$INPUT_AWS_ACCESS_KEY_ID"
+            export AWS_SECRET_ACCESS_KEY="$INPUT_AWS_SECRET_ACCESS_KEY"
+            export AWS_SESSION_TOKEN="$INPUT_AWS_SESSION_TOKEN"
+            if [ -n "${INPUT_AWS_REGION}" ]; then
+              export AWS_REGION="$INPUT_AWS_REGION"
+            fi
+          else
+            export AWS_ACCESS_KEY_ID="$SECRET_AWS_ACCESS_KEY_ID"
+            export AWS_SECRET_ACCESS_KEY="$SECRET_AWS_SECRET_ACCESS_KEY"
+            export AWS_SESSION_TOKEN="$SECRET_AWS_SESSION_TOKEN"
+          fi
+          if [ -z "${AWS_REGION:-}" ]; then
+            export AWS_REGION="${AWS_REGION_ENV:-us-east-1}"
+          fi
+          unset INPUT_AWS_ACCESS_KEY_ID INPUT_AWS_SECRET_ACCESS_KEY INPUT_AWS_SESSION_TOKEN
+          unset SECRET_AWS_ACCESS_KEY_ID SECRET_AWS_SECRET_ACCESS_KEY SECRET_AWS_SESSION_TOKEN
+          bash scripts/pausar-cuenta.sh

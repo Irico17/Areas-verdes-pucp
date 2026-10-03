@@ -156,6 +156,22 @@ grep -q "ref=1111222233334444555566667777888899990000" "$OUT_R3"
 grep -q "runner_label=campus-prod" "$OUT_R3"
 echo "Caso R3 OK: dispatch produccion -> ambiente=produccion, runner_label=campus-prod"
 
+# Caso R3b: la etiqueta sale de la variable de repositorio si existe
+OUT_R3B="$TMPDIR/out_r3b.txt"
+env -i \
+  PATH="/usr/bin:/bin" \
+  EVENT_NAME="workflow_dispatch" \
+  REF="refs/heads/develop" \
+  INPUT_AMBIENTE="develop" \
+  INPUT_REF="" \
+  INPUT_ROLLBACK="" \
+  DEFAULT_SHA="$DEFAULT_TEST_SHA" \
+  RUNNER_LABEL_DEVELOP="campus-develop-lab" \
+  GITHUB_OUTPUT="$OUT_R3B" \
+  bash "$RESOLVER_SCRIPT"
+grep -q "runner_label=campus-develop-lab" "$OUT_R3B"
+echo "Caso R3b OK: RUNNER_LABEL_DEVELOP sustituye la etiqueta por defecto"
+
 # Caso R4: rollback inválido -> rc=2
 OUT_R4="$TMPDIR/out_r4.txt"
 set +e
