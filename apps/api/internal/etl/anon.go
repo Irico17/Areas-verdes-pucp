@@ -8,13 +8,6 @@ import (
 )
 
 // Ficticios fijos del campus. No son personas reales.
-// La clave es el conteo del hash, no el nombre de origen.
-const (
-	ficticio259 = "Valeria Quispe"
-	ficticio168 = "Mateo Salazar"
-	ficticio104 = "Renato Cárdenas"
-)
-
 var ficticiosPorFrecuencia = []string{
 	"Nora Beltrán",
 	"Iván Paredes",
@@ -135,19 +128,6 @@ func asignarCuadrillas(valores []string) map[string]cuadrillaFicticia {
 		out["etiqueta:"+visible] = cuadrillaFicticia{ID: id, Nombre: visible, Etiqueta: true}
 	}
 	return out
-}
-
-func ficticioPorConteo(n int) string {
-	switch n {
-	case 259:
-		return ficticio259
-	case 168:
-		return ficticio168
-	case 104:
-		return ficticio104
-	default:
-		return ""
-	}
 }
 
 func cuadrillaDe(tabla map[string]cuadrillaFicticia, valor string) (cuadrillaFicticia, bool) {
