@@ -43,6 +43,14 @@ func ComprobarNecesitaETL(sqlDB *sql.DB) (bool, []string, error) {
 	return true, nil, nil
 }
 
+const (
+	// migracionBaseline es el esquema consolidado. La serie que lo originó
+	// quedó en db/referencia/migraciones-historicas y ya no se aplica.
+	migracionBaseline = "001_esquema_base.sql"
+	// migracionSerieHistorica marca una base que ya recorrió esa serie hasta el final.
+	migracionSerieHistorica = "078_medidas_palmera_baja.sql"
+)
+
 // Apply executes .sql files in dir in lexicographical order, exactly once each.
 func Apply(gdb *gorm.DB, dir string) error {
 	sqlDB, err := gdb.DB()
@@ -81,6 +89,19 @@ func Apply(gdb *gorm.DB, dir string) error {
 			fmt.Printf("migración ya aplicada: %s\n", name)
 			continue
 		}
+		if name == migracionBaseline {
+			omitir, err := baselineYaCubierta(sqlDB)
+			if err != nil {
+				return err
+			}
+			if omitir {
+				if _, err := sqlDB.Exec(`INSERT INTO schema_migrations (version) VALUES ($1)`, name); err != nil {
+					return fmt.Errorf("registrar %s: %w", name, err)
+				}
+				fmt.Printf("migración ya cubierta por la serie histórica: %s\n", name)
+				continue
+			}
+		}
 
 		body, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {
@@ -107,6 +128,37 @@ func Apply(gdb *gorm.DB, dir string) error {
 		fmt.Printf("migración aplicada: %s\n", name)
 	}
 	return nil
+}
+
+// baselineYaCubierta informa si la base ya terminó la serie histórica.
+// En ese caso el esquema está en el estado final y no hay que recrearlo.
+// Una serie a medias (hay versiones, pero no la última) no se puede saltar:
+// los archivos viejos ya no están en el directorio que aplica migrate.
+func baselineYaCubierta(sqlDB *sql.DB) (bool, error) {
+	var cerrada int
+	if err := sqlDB.QueryRow(
+		`SELECT count(*) FROM schema_migrations WHERE version = $1`, migracionSerieHistorica,
+	).Scan(&cerrada); err != nil {
+		return false, fmt.Errorf("consultar serie histórica: %w", err)
+	}
+	if cerrada > 0 {
+		return true, nil
+	}
+	var otras int
+	if err := sqlDB.QueryRow(
+		`SELECT count(*) FROM schema_migrations WHERE version <> $1`, migracionBaseline,
+	).Scan(&otras); err != nil {
+		return false, fmt.Errorf("consultar migraciones previas: %w", err)
+	}
+	if otras > 0 {
+		return false, fmt.Errorf(
+			"la base tiene migraciones de la serie histórica pero no %s. "+
+				"No se aplica %s sobre una serie a medias. "+
+				"Esos archivos están en db/referencia/migraciones-historicas",
+			migracionSerieHistorica, migracionBaseline,
+		)
+	}
+	return false, nil
 }
 
 // splitSQL splits SQL statements respecting $$ blocks (PL/pgSQL functions) and -- comments.

@@ -13,7 +13,7 @@
 | `wait-db.sh` | Espera a que `pg_isready` responda en el servicio `db` |
 | `counts.sh` | Conteos de áreas, zonas y capas, con SRID 4326 |
 | `runner-instalar.sh` | Instala y registra el runner self-hosted de GitHub Actions en la EC2 (`develop`, `qa` o `produccion`). Lee token de `RUNNER_TOKEN` o SSM, verifica SHA-256 e instala servicio systemd. |
-| `generar-esquema-bd.sh` | PostGIS temporal, aplica `db/migrations` y escribe `docs/BASE-DE-DATOS.md`. |
+| `generar-esquema-bd.sh` | Aplica `db/migrations` y escribe `db/esquema.sql` y `docs/BASE-DE-DATOS.md`. `--comprobar` falla si hay deriva. |
 
 El ETL que usa el Makefile está en `backend/app` (`cmd/etl`, `cmd/etl-lote`, `cmd/sectores`, `cmd/migrate`). Desde la raíz, `make bootstrap`, `make etl`, `make etl-lote` y `make counts` llaman a estos scripts o a ese módulo.
 

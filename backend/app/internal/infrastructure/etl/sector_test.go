@@ -290,5 +290,5 @@ func v1Dir(t *testing.T) string {
 
 func migrationsDir(t *testing.T) string {
 	t.Helper()
-	return filepath.Join(rawDir(t), "..", "..", "db", "migrations")
+	return filepath.Join(rawDir(t), "..", "..", "db", "referencia", "migraciones-historicas")
 }

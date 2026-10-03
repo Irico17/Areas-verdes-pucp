@@ -42,6 +42,15 @@ func urlDe(name string) string {
 	return u.String()
 }
 
+func dirSerieHistorica() string {
+	live := findMigrationsDir()
+	hist := filepath.Clean(filepath.Join(live, "..", "referencia", "migraciones-historicas"))
+	if _, err := os.Stat(filepath.Join(hist, "014_areas_verdes_zona.sql")); err == nil {
+		return hist
+	}
+	return live
+}
+
 func findMigrationsDir() string {
 	if env := os.Getenv("MIGRATIONS_DIR"); env != "" {
 		if fi, err := os.Stat(env); err == nil && fi.IsDir() {
@@ -531,7 +540,7 @@ func TestMigracionesConCodigosDuplicados(t *testing.T) {
 		t.Fatalf("sin postgres de prueba: %v", err)
 	}
 
-	dir := findMigrationsDir()
+	dir := dirSerieHistorica()
 	name := "vp_c_dup_codigo"
 	recrear(t, admin, name)
 	defer func() {
@@ -613,5 +622,73 @@ func TestComprobarNecesitaETL(t *testing.T) {
 	}
 	if len(conDatos) != 1 || !strings.Contains(conDatos[0], "inventario") {
 		t.Fatalf("esperaba conDatos con inventario, obtuve: %v", conDatos)
+	}
+}
+
+func TestBaselineNoSeReaplicaSiLaSerieHistoricaCerro(t *testing.T) {
+	base := os.Getenv("MIGRATE_TEST_URL")
+	if base == "" {
+		t.Skip("MIGRATE_TEST_URL no configurada; omitiendo test de base de datos")
+	}
+	admin, err := sql.Open("pgx", base)
+	if err != nil {
+		t.Fatalf("abrir conexion admin: %v", err)
+	}
+	defer admin.Close()
+	if err := admin.Ping(); err != nil {
+		t.Fatalf("sin postgres de prueba: %v", err)
+	}
+
+	name := fmt.Sprintf("vp_c_baseline_%08x", rand.Uint32())
+	recrear(t, admin, name)
+	defer func() {
+		_, _ = admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name)
+		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + name)
+	}()
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "078_medidas_palmera_baja.sql"), []byte("CREATE TABLE marca_historica (id int);"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := aplicar(name, dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(dir, "078_medidas_palmera_baja.sql")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "001_esquema_base.sql"), []byte("SELECT 1/0;"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := aplicar(name, dir); err != nil {
+		t.Fatalf("la baseline no debía ejecutarse: %v", err)
+	}
+
+	gdb, err := openTestDB(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sqlDB.Close()
+	var marca, fantasma, versiones int
+	if err := gdb.Raw(`SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'marca_historica'`).Scan(&marca).Error; err != nil {
+		t.Fatal(err)
+	}
+	if marca != 1 {
+		t.Fatal("se perdió la tabla de la serie histórica")
+	}
+	if err := gdb.Raw(`SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'no_debe'`).Scan(&fantasma).Error; err != nil {
+		t.Fatal(err)
+	}
+	if fantasma != 0 {
+		t.Fatal("la baseline se ejecutó sobre una serie ya cerrada")
+	}
+	if err := gdb.Raw(`SELECT count(*) FROM schema_migrations WHERE version IN ('078_medidas_palmera_baja.sql', '001_esquema_base.sql')`).Scan(&versiones).Error; err != nil {
+		t.Fatal(err)
+	}
+	if versiones != 2 {
+		t.Fatalf("versiones registradas = %d", versiones)
 	}
 }

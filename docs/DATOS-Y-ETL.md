@@ -21,6 +21,8 @@ Variables: `DATA_RAW_DIR`, `DATA_V1_DIR`, `EDIFICIOS_PATH`, `RESERVAS_MOCK_PATH`
 
 Cada archivo `NNN_*.sql` se aplica una vez, en su propia transacción, y queda anotado en `schema_migrations`. Volver a correr `migrate` no las repite. No hay migraciones «down»: un rollback de imagen no quita columnas.
 
+`001_esquema_base.sql` es el esquema consolidado (acceso, catastro, operación, inventario, catálogos, auditoría, evidencias y los datos de referencia). La serie `001_postgis.sql` … `078_medidas_palmera_baja.sql` está en `db/referencia/migraciones-historicas/` y ya no se ejecuta. Una base que ya registró `078_medidas_palmera_baja.sql` no vuelve a correr la baseline. Los archivos nuevos no se reordenan ni se renombran.
+
 Desde la raíz, con Postgres arriba y `.env` cargado:
 
 ```bash
@@ -100,4 +102,4 @@ Con un ambiente de `deploy/`: `make counts ENV=develop`.
 
 ## Esquema legible
 
-`scripts/generar-esquema-bd.sh` levanta un PostGIS temporal, aplica estas migraciones y escribe `docs/BASE-DE-DATOS.md`. Ese documento es un v0 hasta la Ola 5: no es el esquema definitivo. No sustituye a los SQL de `db/migrations`.
+`scripts/generar-esquema-bd.sh` aplica estas migraciones sobre un PostGIS vacío y escribe `db/esquema.sql` y `docs/BASE-DE-DATOS.md`. `db/esquema.sql` es la foto del resultado, sin dueños ni privilegios. La fuente de verdad siguen siendo las migraciones. `bash scripts/generar-esquema-bd.sh --comprobar` falla si alguno de los dos archivos se desvía. El control de deriva de `modelgen` sigue comparando los modelos Go con la misma base.

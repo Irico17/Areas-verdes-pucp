@@ -1,25 +1,29 @@
 #!/usr/bin/env bash
-# Levanta un PostGIS temporal, aplica db/migrations con cmd/migrate y escribe
-# docs/BASE-DE-DATOS.md. No usa AutoMigrate. No toca campus_verde ni el compose
-# del repositorio. Borra la base y el contenedor al terminar.
+# Levanta un PostGIS temporal (o usa ESQUEMA_ADMIN_URL), aplica db/migrations
+# con cmd/migrate y escribe db/esquema.sql y docs/BASE-DE-DATOS.md.
+# Con --comprobar no pisa los archivos: sale 1 si difieren del volcado.
+# No usa AutoMigrate. No toca campus_verde ni el compose del repositorio.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="${ESQUEMA_MD:-$ROOT/docs/BASE-DE-DATOS.md}"
+OUT_MD="${ESQUEMA_MD:-$ROOT/docs/BASE-DE-DATOS.md}"
+OUT_SQL="${ESQUEMA_SQL:-$ROOT/db/esquema.sql}"
 IMAGEN="${POSTGIS_IMAGE:-postgis/postgis:16-3.4}"
 NOMBRE="vp-esquema-$$"
 DB="vp_c_esquema_$(od -An -N3 -tx1 /dev/urandom | tr -d ' \n')"
+COMPROBAR=0
+USAR_DOCKER=0
 PORT=""
+PGHOST="127.0.0.1"
+PGUSER="campus"
+PGADMINDB="postgres"
 TMP_TSV=""
 TMP_MD=""
+TMP_DUMP=""
+TMP_SQL=""
 
-if docker info >/dev/null 2>&1; then
-  DOCKER=(docker)
-elif sudo docker info >/dev/null 2>&1; then
-  DOCKER=(sudo docker)
-else
-  echo "Hace falta el daemon de Docker para levantar ${IMAGEN}." >&2
-  exit 1
+if [ "${1:-}" = "--comprobar" ]; then
+  COMPROBAR=1
 fi
 
 if [ -x /usr/local/go/bin/go ]; then
@@ -27,22 +31,61 @@ if [ -x /usr/local/go/bin/go ]; then
 fi
 command -v go >/dev/null
 command -v python3 >/dev/null
+command -v pg_dump >/dev/null
+command -v psql >/dev/null
+
+psql_admin() {
+  PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PORT}" -U "${PGUSER}" -d "${PGADMINDB}" "$@"
+}
 
 limpiar() {
   set +e
   if [ -n "${PORT}" ]; then
-    PGPASSWORD=campus psql -h 127.0.0.1 -p "${PORT}" -U campus -d postgres -v ON_ERROR_STOP=1 \
+    psql_admin -v ON_ERROR_STOP=1 \
       -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${DB}' AND pid <> pg_backend_pid();" \
       >/dev/null 2>&1
-    PGPASSWORD=campus psql -h 127.0.0.1 -p "${PORT}" -U campus -d postgres -v ON_ERROR_STOP=1 \
+    psql_admin -v ON_ERROR_STOP=1 \
       -c "DROP DATABASE IF EXISTS ${DB};" >/dev/null 2>&1
   fi
-  "${DOCKER[@]}" rm -f "${NOMBRE}" >/dev/null 2>&1
-  rm -f "${TMP_TSV}" "${TMP_MD}"
+  if [ "${USAR_DOCKER}" = 1 ]; then
+    "${DOCKER[@]}" rm -f "${NOMBRE}" >/dev/null 2>&1
+  fi
+  rm -f "${TMP_TSV}" "${TMP_MD}" "${TMP_DUMP}" "${TMP_SQL}"
 }
 trap limpiar EXIT
 
-PORT="$(python3 - <<'PY'
+if [ -n "${ESQUEMA_ADMIN_URL:-}" ]; then
+  eval "$(ESQUEMA_ADMIN_URL="${ESQUEMA_ADMIN_URL}" python3 - <<'PY'
+import os
+import shlex
+from urllib.parse import urlparse
+
+u = urlparse(os.environ["ESQUEMA_ADMIN_URL"])
+host = u.hostname or "127.0.0.1"
+port = str(u.port or 5432)
+user = u.username or "campus"
+password = u.password or ""
+admin = (u.path or "/postgres").lstrip("/") or "postgres"
+print(f"PGHOST={shlex.quote(host)}")
+print(f"PORT={shlex.quote(port)}")
+print(f"PGUSER={shlex.quote(user)}")
+print(f"PGPASSWORD={shlex.quote(password)}")
+print(f"PGADMINDB={shlex.quote(admin)}")
+PY
+)"
+  export PGPASSWORD
+else
+  if docker info >/dev/null 2>&1; then
+    DOCKER=(docker)
+  elif sudo docker info >/dev/null 2>&1; then
+    DOCKER=(sudo docker)
+  else
+    echo "Hace falta Docker o ESQUEMA_ADMIN_URL para levantar PostGIS." >&2
+    exit 1
+  fi
+  USAR_DOCKER=1
+  export PGPASSWORD=campus
+  PORT="$(python3 - <<'PY'
 import socket
 s = socket.socket()
 s.bind(("127.0.0.1", 0))
@@ -50,18 +93,18 @@ print(s.getsockname()[1])
 s.close()
 PY
 )"
-
-echo "PostGIS temporal en 127.0.0.1:${PORT}, base ${DB}."
-"${DOCKER[@]}" run -d --name "${NOMBRE}" \
-  -e POSTGRES_USER=campus \
-  -e POSTGRES_PASSWORD=campus \
-  -e POSTGRES_DB=postgres \
-  -p "127.0.0.1:${PORT}:5432" \
-  "${IMAGEN}" >/dev/null
+  echo "PostGIS temporal en 127.0.0.1:${PORT}, base ${DB}."
+  "${DOCKER[@]}" run -d --name "${NOMBRE}" \
+    -e POSTGRES_USER=campus \
+    -e POSTGRES_PASSWORD=campus \
+    -e POSTGRES_DB=postgres \
+    -p "127.0.0.1:${PORT}:5432" \
+    "${IMAGEN}" >/dev/null
+fi
 
 listo=0
 for _ in $(seq 1 60); do
-  if PGPASSWORD=campus psql -h 127.0.0.1 -p "${PORT}" -U campus -d postgres -At -c "SELECT 1" >/dev/null 2>&1; then
+  if psql_admin -At -c "SELECT 1" >/dev/null 2>&1; then
     listo=1
     break
   fi
@@ -69,31 +112,48 @@ for _ in $(seq 1 60); do
 done
 if [ "${listo}" -ne 1 ]; then
   echo "Postgres no aceptó conexiones desde el host." >&2
-  "${DOCKER[@]}" logs "${NOMBRE}" >&2 || true
+  if [ "${USAR_DOCKER}" = 1 ]; then
+    "${DOCKER[@]}" logs "${NOMBRE}" >&2 || true
+  fi
   exit 1
 fi
 
-PGPASSWORD=campus psql -h 127.0.0.1 -p "${PORT}" -U campus -d postgres -v ON_ERROR_STOP=1 \
-  -c "CREATE DATABASE ${DB};"
+psql_admin -v ON_ERROR_STOP=1 -c "CREATE DATABASE ${DB};"
 
-export DATABASE_URL="postgres://campus:campus@127.0.0.1:${PORT}/${DB}?sslmode=disable"
+export DATABASE_URL="postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PORT}/${DB}?sslmode=disable"
 export MIGRATIONS_DIR="${ROOT}/db/migrations"
-export CAMPUS_DEV_PASSWORD="clave-demo-local"
+export CAMPUS_DEV_PASSWORD="${CAMPUS_DEV_PASSWORD:-clave-demo-local}"
 export APP_ENV=""
 unset SEED_PROFILE || true
 
 (cd "${ROOT}/backend/app" && go run ./cmd/migrate)
 
 n_sql="$(find "${MIGRATIONS_DIR}" -maxdepth 1 -name '*.sql' | wc -l | tr -d ' ')"
-n_apl="$(PGPASSWORD=campus psql -h 127.0.0.1 -p "${PORT}" -U campus -d "${DB}" -At -c "SELECT count(*) FROM schema_migrations;")"
+n_apl="$(PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PORT}" -U "${PGUSER}" -d "${DB}" -At -c "SELECT count(*) FROM schema_migrations;")"
 if [ "${n_sql}" != "${n_apl}" ]; then
   echo "Inconsistente: ${n_sql} archivos SQL y ${n_apl} filas en schema_migrations." >&2
   exit 1
 fi
 
+TMP_DUMP="$(mktemp)"
+TMP_SQL="$(mktemp)"
+PGPASSWORD="${PGPASSWORD}" pg_dump -h "${PGHOST}" -p "${PORT}" -U "${PGUSER}" -d "${DB}" \
+  --schema-only --no-owner --no-privileges --no-tablespaces --schema=public \
+  > "${TMP_DUMP}"
+python3 "${ROOT}/scripts/esquema_sql.py" normalizar "${TMP_DUMP}" > "${TMP_SQL}"
+if [ "${COMPROBAR}" = 1 ]; then
+  if ! diff -u "${OUT_SQL}" "${TMP_SQL}"; then
+    echo "db/esquema.sql no coincide con el volcado de las migraciones." >&2
+    exit 1
+  fi
+else
+  cp "${TMP_SQL}" "${OUT_SQL}"
+  echo "Escrito ${OUT_SQL}."
+fi
+
 TMP_TSV="$(mktemp)"
 TMP_MD="$(mktemp)"
-PGPASSWORD=campus psql -h 127.0.0.1 -p "${PORT}" -U campus -d "${DB}" -v ON_ERROR_STOP=1 -At -F $'\t' > "${TMP_TSV}" <<'SQL'
+PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PORT}" -U "${PGUSER}" -d "${DB}" -v ON_ERROR_STOP=1 -At -F $'\t' > "${TMP_TSV}" <<'SQL'
 SELECT 'COL', c.table_name, c.column_name, c.data_type, c.udt_name, c.is_nullable
 FROM information_schema.columns c
 JOIN information_schema.tables t
@@ -185,9 +245,12 @@ def ident(name):
 lines = []
 lines.append("# Base de datos")
 lines.append("")
-lines.append("v0 hasta la Ola 5. Generado por `scripts/generar-esquema-bd.sh` a partir de un PostGIS vacío con las migraciones de `db/migrations` aplicadas por `cmd/migrate`. No es el esquema definitivo.")
+lines.append("Generado por `scripts/generar-esquema-bd.sh` a partir de un PostGIS vacío con las migraciones de `db/migrations` aplicadas por `cmd/migrate`. La fuente de verdad son esas migraciones. La foto SQL, sin datos, está en `db/esquema.sql`.")
 lines.append("")
-lines.append(f"Migraciones aplicadas: **{n_apl}**. No hay filas de negocio en este documento. Se omiten `spatial_ref_sys` y las vistas del catálogo de PostGIS.")
+if n_apl == "1":
+    lines.append("Migración aplicada: **1**. No hay filas de negocio en este documento. Se omiten `spatial_ref_sys` y las vistas del catálogo de PostGIS.")
+else:
+    lines.append(f"Migraciones aplicadas: **{n_apl}**. No hay filas de negocio en este documento. Se omiten `spatial_ref_sys` y las vistas del catálogo de PostGIS.")
 lines.append("")
 lines.append("## Tablas")
 lines.append("")
@@ -263,6 +326,14 @@ if grep -Eq 'clave-demo-local|pando-local|AKIA' "${TMP_MD}"; then
   exit 1
 fi
 
-mkdir -p "$(dirname "${OUT}")"
-cp "${TMP_MD}" "${OUT}"
-echo "Escrito ${OUT} (${n_apl} migraciones)."
+if [ "${COMPROBAR}" = 1 ]; then
+  if ! diff -u "${OUT_MD}" "${TMP_MD}"; then
+    echo "docs/BASE-DE-DATOS.md no coincide con el esquema de las migraciones." >&2
+    exit 1
+  fi
+  echo "Sin deriva: ${OUT_SQL} y ${OUT_MD} (${n_apl} en schema_migrations)."
+else
+  mkdir -p "$(dirname "${OUT_MD}")"
+  cp "${TMP_MD}" "${OUT_MD}"
+  echo "Escrito ${OUT_MD} (${n_apl} en schema_migrations)."
+fi

@@ -25,7 +25,7 @@ flowchart TB
 | --- | --- | --- |
 | PWA | `frontend` | React, TypeScript, Vite, MapLibre. Teselas OSM. |
 | API en servicio | `backend/app` | Go, Gin, GORM, inyección con `dig`. Un solo módulo. |
-| Esquema | `db/migrations` | SQL aditivo e idempotente. Lo aplica `cmd/migrate`. |
+| Esquema | `db/migrations` | SQL que aplica `cmd/migrate`. La foto es `db/esquema.sql`. |
 | Objetos | `EVIDENCIAS_DIR` o `EVIDENCIAS_BUCKET` | La base guarda la clave del archivo, no una URL pública. |
 
 No hay GeoServer, Redis, bus de eventos ni plataforma de BI. El estilo es un monolito modular: controlador → caso de uso → repositorio.

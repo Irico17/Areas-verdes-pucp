@@ -1,8 +1,8 @@
 # Base de datos
 
-v0 hasta la Ola 5. Generado por `scripts/generar-esquema-bd.sh` a partir de un PostGIS vacío con las migraciones de `db/migrations` aplicadas por `cmd/migrate`. No es el esquema definitivo.
+Generado por `scripts/generar-esquema-bd.sh` a partir de un PostGIS vacío con las migraciones de `db/migrations` aplicadas por `cmd/migrate`. La fuente de verdad son esas migraciones. La foto SQL, sin datos, está en `db/esquema.sql`.
 
-Migraciones aplicadas: **65**. No hay filas de negocio en este documento. Se omiten `spatial_ref_sys` y las vistas del catálogo de PostGIS.
+Migración aplicada: **1**. No hay filas de negocio en este documento. Se omiten `spatial_ref_sys` y las vistas del catálogo de PostGIS.
 
 ## Tablas
 

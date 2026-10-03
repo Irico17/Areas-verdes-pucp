@@ -88,6 +88,11 @@ jobs:
           test -z "$(gofmt -l .)"
           go vet ./...
           go test ./...
+      - name: Esquema y documentación sin deriva
+        env:
+          ESQUEMA_ADMIN_URL: postgres://campus:campus@localhost:5432/postgres?sslmode=disable
+          CAMPUS_DEV_PASSWORD: clave-demo-local
+        run: bash scripts/generar-esquema-bd.sh --comprobar
       - name: Prohibir AutoMigrate, borrados en migraciones nuevas e initdb
         run: |
           if grep -RIn --include='*.go' -E 'AutoMigrate[[:space:]]*\(' backend; then
