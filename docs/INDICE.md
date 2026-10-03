@@ -14,3 +14,4 @@ Documentación que sigue vigente. El arranque local está en el [README](../READ
 | [../infra/README.md](../infra/README.md) | Aprovisionamiento |
 | [../backend/README.md](../backend/README.md) | Backend |
 | [../frontend/README.md](../frontend/README.md) | Frontend |
+| [ARQUITECTURA-FRONTEND.md](ARQUITECTURA-FRONTEND.md) | Propuesta hexagonal del visor. No está aplicada al código |

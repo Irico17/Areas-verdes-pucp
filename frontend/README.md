@@ -70,6 +70,8 @@ Las etiquetas visibles están en `src/ui/nomenclatura.ts` (`MODULO`, `CAPA`, `EJ
 
 El vocabulario acordado, con los sinónimos que no deben volver a la interfaz, está en [docs/GLOSARIO-NOMENCLATURA.md](../docs/GLOSARIO-NOMENCLATURA.md).
 
+La organización por capas que se propone para `src/`, todavía sin aplicar, está en [docs/ARQUITECTURA-FRONTEND.md](../docs/ARQUITECTURA-FRONTEND.md).
+
 ## Roles y permisos
 
 `GET /sesion` no devuelve la lista de permisos. Las pestañas salen de `src/ui/permisos.ts`, copia de la matriz semilla del backend. Los códigos de acción no se renombran.
