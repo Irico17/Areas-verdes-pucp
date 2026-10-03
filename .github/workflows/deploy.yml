@@ -135,10 +135,12 @@ jobs:
               ;;
           esac
 
-          echo "ambiente=$ambiente" >> "$GITHUB_OUTPUT"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
-          echo "rollback=$rollback" >> "$GITHUB_OUTPUT"
-          echo "runner_label=$runner_label" >> "$GITHUB_OUTPUT"
+          {
+            echo "ambiente=$ambiente"
+            echo "ref=$ref"
+            echo "rollback=$rollback"
+            echo "runner_label=$runner_label"
+          } >> "$GITHUB_OUTPUT"
 
   esperar-ci:
     needs: resolver
