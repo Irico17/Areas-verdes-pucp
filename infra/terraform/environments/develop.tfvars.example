@@ -1,6 +1,6 @@
 # Copie a develop.tfvars (no se versiona) si quiere fijar valores no secretos.
 # Las claves NO van aquí: TF_VAR_db_password y TF_VAR_dev_password en el entorno.
-# No ejecute apply desde un agente. Workspace: terraform workspace select develop
+# No ejecute apply sin haber revisado el plan. Workspace: terraform workspace select develop
 
 ambiente      = "develop"
 aws_region    = "us-east-1"

@@ -11,5 +11,5 @@ test("el historial muestra un cambio de la semilla y dice que no hay retención"
   await expect(page.getByText("No hay un plazo de retención.")).toBeVisible()
   await expect(page.getByText("Este historial no se borra por antigüedad.")).toBeVisible()
   await expect(page.locator(".historial-lista").getByText("Equipo Norte").first()).toBeVisible()
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/historial-semilla.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/historial-semilla.png" })
 })

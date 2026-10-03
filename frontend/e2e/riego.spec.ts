@@ -18,6 +18,6 @@ test("el riego elige el sector de capataz y muestra la cobertura provisional", a
   await expect(riego.locator('select[name="sector_id"]')).toBeVisible()
   await expect(riego.locator('input[name="sector"]')).toHaveCount(0)
   await expect(riego.locator('select[name="sector_id"] option')).toContainText(["Bosque húmedo"])
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/riego-cobertura-provisional.png", fullPage: true })
-  await riego.screenshot({ path: "/opt/cursor/artifacts/screenshots/riego-panel-cobertura.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/riego-cobertura-provisional.png", fullPage: true })
+  await riego.screenshot({ path: "e2e-artifacts/capturas/riego-panel-cobertura.png" })
 })

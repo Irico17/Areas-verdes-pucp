@@ -54,7 +54,7 @@ test("la bitácora muestra la reasignación y la foto bajo ese hito", async ({ p
   await expect(hito.getByText("Cuadrilla Norte")).toBeVisible()
   await expect(hito.getByText("Cuadrilla Sur")).toBeVisible()
   await hito.scrollIntoViewIfNeeded()
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/bitacora-reasignada.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/bitacora-reasignada.png" })
 
   await hito.locator("input[type=file]").setInputFiles({
     name: "aspersor.png",
@@ -63,7 +63,7 @@ test("la bitácora muestra la reasignación y la foto bajo ese hito", async ({ p
   })
   const foto = hito.locator("img[alt='aspersor.png']").first()
   await expect(foto).toBeVisible()
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/bitacora-evidencia.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/bitacora-evidencia.png" })
 
   await page.locator(".guard").getByRole("button", { name: "Bitácora", exact: true }).click()
   await expect(page.getByText("Quién hizo qué, a qué hora")).toBeVisible()
@@ -72,9 +72,9 @@ test("la bitácora muestra la reasignación y la foto bajo ese hito", async ({ p
   await expect(fotoPanel).toBeVisible()
   await enPanel.scrollIntoViewIfNeeded()
   await fotoPanel.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/bitacora-panel.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/bitacora-panel.png" })
 
   await page.setViewportSize({ width: 390, height: 844 })
   await enPanel.scrollIntoViewIfNeeded()
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/bitacora-movil.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/bitacora-movil.png" })
 })

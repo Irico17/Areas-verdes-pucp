@@ -42,7 +42,7 @@ test("el pin abre el detalle sin cambiar de pestaña y a 390 px se ve la lista",
   await expect(page.locator("#detalle-actividad")).toBeVisible()
   await expect(page.locator(".guard").getByRole("button", { name: "Mapa", exact: true })).toHaveAttribute("aria-current", "page")
   await expect(page.locator(".guard").getByRole("button", { name: "Actividades", exact: true })).not.toHaveAttribute("aria-current", "page")
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/mapa-pin-sin-cambiar-pestana.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/mapa-pin-sin-cambiar-pestana.png" })
 
   await page.setViewportSize({ width: 390, height: 844 })
   const lista = page.getByRole("group", { name: "Vista de actividades" }).getByRole("button", { name: "Lista", exact: true })
@@ -51,11 +51,11 @@ test("el pin abre el detalle sin cambiar de pestaña y a 390 px se ve la lista",
   if (!caja || caja.y < 0 || caja.y > 844 || caja.x < 0 || caja.x > 390) {
     throw new Error(`el conmutador quedó fuera de la vista: ${JSON.stringify(caja)}`)
   }
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/mapa-conmutador-390.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/mapa-conmutador-390.png" })
   await lista.click()
   await expect(page.locator(".lista-sobre-mapa")).toBeVisible()
   await expect(page.locator(".guard").getByRole("button", { name: "Mapa", exact: true })).toHaveAttribute("aria-current", "page")
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/mapa-lista-390.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/mapa-lista-390.png" })
 })
 
 test("sin teselas la lista queda forzada y dice por qué", async ({ page }) => {
@@ -70,7 +70,7 @@ test("sin teselas la lista queda forzada y dice por qué", async ({ page }) => {
   await expect(page.locator(".lista-sobre-mapa")).toBeVisible()
   const mapa = page.getByRole("group", { name: "Vista de actividades" }).getByRole("button", { name: "Mapa", exact: true })
   await expect(mapa).toBeEnabled()
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/mapa-sin-teselas.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/mapa-sin-teselas.png" })
   await page.unroute("https://tile.openstreetmap.org/**")
   await mapa.click()
   await expect(aviso).toBeHidden()

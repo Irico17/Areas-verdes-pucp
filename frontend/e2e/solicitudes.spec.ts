@@ -16,7 +16,7 @@ test("la solicitud no es solo un texto de lugar y la orden elige empresa", async
   await expect(solicitud.getByLabel("Longitud")).toBeVisible()
   await expect(solicitud.getByLabel("Cantidad solicitada")).toBeVisible()
   await expect(solicitud.getByLabel("Cantidad ejecutada")).toBeVisible()
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/solicitud-ubicacion.png", fullPage: true })
+  await page.screenshot({ path: "e2e-artifacts/capturas/solicitud-ubicacion.png", fullPage: true })
 
   const orden = page.locator("form.orden-alta")
   const empresa = orden.getByLabel("Empresa")
@@ -25,5 +25,5 @@ test("la solicitud no es solo un texto de lugar y la orden elige empresa", async
   await expect(empresa.locator("option", { hasText: "Taller Verde Andino (ficticia)" })).toHaveCount(1)
   await empresa.selectOption({ label: "Taller Verde Andino (ficticia)" })
   await expect(orden.getByLabel("Frecuencia")).toBeVisible()
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/orden-empresa.png", fullPage: true })
+  await page.screenshot({ path: "e2e-artifacts/capturas/orden-empresa.png", fullPage: true })
 })

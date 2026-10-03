@@ -21,7 +21,7 @@ test("al volver la red el cambio de estado sale de la cola sin pulsar el botón"
   const enCola = page.locator(".marca-cola", { hasText: "por enviar" }).first()
   await expect(enCola).toBeVisible()
   await enCola.scrollIntoViewIfNeeded()
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/offline-estado-en-cola.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/offline-estado-en-cola.png" })
 
   const envio = page.waitForRequest((req) => req.method() === "PATCH" && req.url().includes("/estado"))
   await context.setOffline(false)
@@ -29,5 +29,5 @@ test("al volver la red el cambio de estado sale de la cola sin pulsar el botón"
   expect(pedido.postData() ?? "").toContain(siguiente)
   await expect(page.getByRole("button", { name: "Reintentar envío" })).toHaveCount(0)
   await expect(page.getByText("por enviar")).toHaveCount(0)
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/offline-estado-enviado.png", fullPage: true })
+  await page.screenshot({ path: "e2e-artifacts/capturas/offline-estado-enviado.png", fullPage: true })
 })

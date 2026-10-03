@@ -9,7 +9,7 @@ test("la jefatura da de alta una cuenta y la persona cambia su clave", async ({ 
   await expect(page.getByText(/universidad/i)).toHaveCount(0)
   await expect(page.getByText(/SSO/)).toHaveCount(0)
   await expect(page.getByText("Inicia sesión con tu cuenta de VerdePUCP.")).toBeVisible()
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/login-sin-sso.png", fullPage: true })
+  await page.screenshot({ path: "e2e-artifacts/capturas/login-sin-sso.png", fullPage: true })
 
   await page.getByLabel("Usuario").fill("jefatura")
   await page.getByLabel("Clave").fill("pando-local")
@@ -25,7 +25,7 @@ test("la jefatura da de alta una cuenta y la persona cambia su clave", async ({ 
     "Jefatura de sección",
     "Administrador del sistema",
   ])
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/admin-alta-cuentas.png", fullPage: true })
+  await page.screenshot({ path: "e2e-artifacts/capturas/admin-alta-cuentas.png", fullPage: true })
 
   const alta = page.locator("form").filter({ has: page.getByRole("button", { name: "Dar de alta" }) })
   await alta.getByLabel("Usuario", { exact: true }).fill(usuario)
@@ -44,5 +44,5 @@ test("la jefatura da de alta una cuenta y la persona cambia su clave", async ({ 
   await page.getByRole("button", { name: "Entrar" }).click()
   await expect(page.getByRole("heading", { name: "Elija su clave" })).toBeVisible()
   await expect(page.getByText(/universidad/i)).toHaveCount(0)
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/cambio-clave.png", fullPage: true })
+  await page.screenshot({ path: "e2e-artifacts/capturas/cambio-clave.png", fullPage: true })
 })

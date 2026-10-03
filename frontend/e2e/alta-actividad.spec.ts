@@ -38,7 +38,7 @@ test("el alta de una actividad muestra clase, tipo, riesgo y lugar de catálogo"
 
   await alta.getByLabel("Clase de actividad").selectOption("riego")
   await expect(alta.getByLabel("Tipo de actividad").locator("option", { hasText: "Riego manual" })).toHaveCount(1)
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/alta-actividad-campos.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/alta-actividad-campos.png" })
   await alta.getByText("Personal de la actividad").scrollIntoViewIfNeeded()
-  await page.screenshot({ path: "/opt/cursor/artifacts/screenshots/alta-actividad-pedido.png" })
+  await page.screenshot({ path: "e2e-artifacts/capturas/alta-actividad-pedido.png" })
 })
