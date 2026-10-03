@@ -7,6 +7,8 @@ node_modules/
 .env
 .env.*
 !.env.example
+# Archivos locales con claves para compartir entre el equipo (.env-github, .env-ambientes)
+.env-*
 *.pem
 *.key
 credentials*.json
