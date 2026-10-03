@@ -38,11 +38,11 @@ Workflow: `.github/workflows/ci.yml`.
 
 | Job | Qué hace |
 | --- | --- |
-| `test` | Construcción de las imágenes `campus-verde-api` (`backend/dockerfile`) y `campus-verde-web` (`frontend/Dockerfile`). |
+| `test` | Construcción de las imágenes `backend-campus-verde` (`backend/dockerfile`) y `frontend-campus-verde` (`frontend/Dockerfile`). |
 | `frontend` | En `frontend/`: `npm ci`, `oxlint --max-warnings 0`, pruebas unitarias y `tsc -b && vite build`. |
 | `backend` | `gofmt`, `go vet` y `go test` de `backend/app` contra PostGIS. Prohíbe `AutoMigrate`, borrados en migraciones desde la 047, SQL montado en `initdb` y borrados en `deploy/seed`. Prueba los scripts de `deploy/`. Regenera Swagger y falla si hay deriva. |
 | `escaneo` | Gitleaks y Trivy. No bloquea el pipeline. |
-| `imagenes` | Solo en push a `develop` o en tag `rc-*`. Publica `ghcr.io/<dueño>/campus-verde-api:<sha>` y `campus-verde-web:<sha>`. No publica `:latest`. |
+| `imagenes` | Solo en push a `develop` o en tag `rc-*`. Publica `ghcr.io/<dueño>/backend-campus-verde:<sha>` y `frontend-campus-verde:<sha>`. No publica `:latest`. |
 | `e2e` | Migra, aplica la semilla ficticia, arranca la API y corre Playwright (`npm run test:e2e`). |
 
 Los permisos son de lectura, salvo `packages: write` en el job de imágenes. Las acciones de terceros van fijadas por SHA. Los workflows de despliegue no se disparan con `pull_request`.

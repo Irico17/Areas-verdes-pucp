@@ -33,8 +33,8 @@ jobs:
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
       - name: Construir imágenes (verificación con caché)
         run: |
-          docker buildx build -f backend/dockerfile -t campus-verde-api:ci .
-          docker buildx build -f frontend/Dockerfile -t campus-verde-web:ci .
+          docker buildx build -f backend/dockerfile -t backend-campus-verde:ci .
+          docker buildx build -f frontend/Dockerfile -t frontend-campus-verde:ci .
 
   frontend:
     runs-on: ubuntu-24.04
@@ -213,13 +213,13 @@ jobs:
         run: |
           docker buildx build \
             -f backend/dockerfile \
-            -t campus-verde-api:scan \
+            -t backend-campus-verde:scan \
             --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
             --load \
             .
           docker buildx build \
             -f frontend/Dockerfile \
-            -t campus-verde-web:scan \
+            -t frontend-campus-verde:scan \
             --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
             --load \
             .
@@ -227,12 +227,12 @@ jobs:
         continue-on-error: true
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP/trivy-cache:/root/.cache" ghcr.io/aquasecurity/trivy@sha256:e2b22eac59c02003d8749f5b8d9bd073b62e30fefaef5b7c8371204e0a4b0c08 \
-            image --severity HIGH,CRITICAL --exit-code 0 campus-verde-api:scan > trivy-api.txt 2>&1 || true
+            image --severity HIGH,CRITICAL --exit-code 0 backend-campus-verde:scan > trivy-api.txt 2>&1 || true
       - name: Escaneo Trivy image (Web, no bloqueante)
         continue-on-error: true
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP/trivy-cache:/root/.cache" ghcr.io/aquasecurity/trivy@sha256:e2b22eac59c02003d8749f5b8d9bd073b62e30fefaef5b7c8371204e0a4b0c08 \
-            image --severity HIGH,CRITICAL --exit-code 0 campus-verde-web:scan > trivy-web.txt 2>&1 || true
+            image --severity HIGH,CRITICAL --exit-code 0 frontend-campus-verde:scan > trivy-web.txt 2>&1 || true
       - name: Resumen de escaneo en step summary
         if: always()
         run: |
@@ -280,8 +280,8 @@ jobs:
           set -euo pipefail
           owner="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
           sha="${GITHUB_SHA}"
-          api="ghcr.io/${owner}/campus-verde-api"
-          web="ghcr.io/${owner}/campus-verde-web"
+          api="ghcr.io/${owner}/backend-campus-verde"
+          web="ghcr.io/${owner}/frontend-campus-verde"
 
           tags_api=("-t" "${api}:${sha}")
           tags_web=("-t" "${web}:${sha}")

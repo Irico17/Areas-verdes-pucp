@@ -112,11 +112,11 @@ state_dir() {
 }
 
 image_api() {
-  printf 'campus-verde-api:%s' "$AMBIENTE"
+  printf 'backend-campus-verde:%s' "$AMBIENTE"
 }
 
 image_web() {
-  printf 'campus-verde-web:%s' "$AMBIENTE"
+  printf 'frontend-campus-verde:%s' "$AMBIENTE"
 }
 
 record_previous() {
@@ -303,8 +303,8 @@ aws_deploy() {
   ghcr_api=""
   ghcr_web=""
   if [ -n "$owner_lc" ]; then
-    ghcr_api="ghcr.io/${owner_lc}/campus-verde-api:${target_tag}"
-    ghcr_web="ghcr.io/${owner_lc}/campus-verde-web:${target_tag}"
+    ghcr_api="ghcr.io/${owner_lc}/backend-campus-verde:${target_tag}"
+    ghcr_web="ghcr.io/${owner_lc}/frontend-campus-verde:${target_tag}"
   fi
 
   aws ecr get-login-password --region "$AWS_DEFAULT_REGION" \

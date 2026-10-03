@@ -30,7 +30,7 @@ services:
     build:
       context: ..
       dockerfile: backend/dockerfile
-    image: campus-verde-api:${APP_ENV}
+    image: backend-campus-verde:${APP_ENV}
     container_name: campus-${APP_ENV}-api
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
@@ -60,7 +60,7 @@ services:
     build:
       context: ..
       dockerfile: frontend/Dockerfile
-    image: campus-verde-web:${APP_ENV}
+    image: frontend-campus-verde:${APP_ENV}
     container_name: campus-${APP_ENV}-web
     ports:
       - "${WEB_PORT}:80"

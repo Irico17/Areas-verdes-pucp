@@ -143,8 +143,8 @@ if [ -z "$OWNER" ]; then
 fi
 OWNER_LC="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
 
-API_IMAGE="ghcr.io/${OWNER_LC}/campus-verde-api:${target_tag}"
-WEB_IMAGE="ghcr.io/${OWNER_LC}/campus-verde-web:${target_tag}"
+API_IMAGE="ghcr.io/${OWNER_LC}/backend-campus-verde:${target_tag}"
+WEB_IMAGE="ghcr.io/${OWNER_LC}/frontend-campus-verde:${target_tag}"
 export API_IMAGE WEB_IMAGE CAMPUS_DATA_DIR APP_ENV POSTGRES_PORT API_PORT WEB_PORT
 export CAMPUS_CERTS_DIR WEB_TLS_PORT CAMPUS_COOKIE_SECURE
 

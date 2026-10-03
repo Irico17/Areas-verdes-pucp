@@ -94,7 +94,7 @@ case "${1:-}" in
       exit 0
     fi
     if [ "$is_image" -eq 1 ]; then
-      echo "ghcr.io/campus-verde/campus-verde-api:prev-sha-mock"
+      echo "ghcr.io/campus-verde/backend-campus-verde:prev-sha-mock"
       exit 0
     fi
     echo "healthy"
@@ -593,8 +593,8 @@ CAMPUS_COOKIE_SECURE=false
 CAMPUS_CORS_ORIGINS=http://127.0.0.1
 CAMPUS_ENV=production
 CAMPUS_DATA_DIR=$TMPDIR/data-compose
-API_IMAGE=example.invalid/campus-verde-api:prueba
-WEB_IMAGE=example.invalid/campus-verde-web:prueba
+API_IMAGE=example.invalid/backend-campus-verde:prueba
+WEB_IMAGE=example.invalid/frontend-campus-verde:prueba
 CAMPUS_CERTS_DIR=$certs_ok
 EOF
   sin="$TMPDIR/compose-sin.json"

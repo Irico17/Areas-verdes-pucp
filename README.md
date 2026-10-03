@@ -164,7 +164,7 @@ El trabajo se integra en `develop`. `main` avanza por fast-forward desde `develo
 | Qué | Dónde |
 | --- | --- |
 | Pruebas | `.github/workflows/ci.yml`: `test`, `backend`, `frontend`, `escaneo` (no bloqueante) y `e2e`. Un cambio solo de `*.md` o `docs/**` no dispara el CI. |
-| Imágenes | El job `imagenes` publica `ghcr.io/<dueño>/campus-verde-api:<sha>` y `campus-verde-web:<sha>` en push a `develop` o en un tag `rc-*`. |
+| Imágenes | El job `imagenes` publica `ghcr.io/<dueño>/backend-campus-verde:<sha>` y `frontend-campus-verde:<sha>` en push a `develop` o en un tag `rc-*`. |
 | develop | Push a `develop` despliega solo si el CI de ese SHA está en verde. |
 | QA | Tag `rc-*` o despliegue manual del mismo SHA que ya pasó por develop. |
 | producción | Solo manual, desde `develop`, con el mismo SHA ya desplegado en QA y con la aprobación del environment. |

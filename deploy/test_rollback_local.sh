@@ -34,13 +34,13 @@ case "${1:-}" in
         fi
       done
       case "$img" in
-        campus-verde-api:develop)
+        backend-campus-verde:develop)
           if [ "$format" = "id" ]; then
             echo "sha256:api_old_111111111111"
           fi
           exit 0
           ;;
-        campus-verde-web:develop)
+        frontend-campus-verde:develop)
           if [ "$format" = "id" ]; then
             echo "sha256:web_old_222222222222"
           fi
@@ -145,12 +145,12 @@ echo "=== Prueba 2: rollback local sin tag retaguea api y web ==="
 : > "$LOG_FILE"
 bash "$ROOT/deploy/deploy.sh" develop --local --rollback
 
-if ! grep -q "TAG sha256:api_old_111111111111 campus-verde-api:develop" "$LOG_FILE"; then
+if ! grep -q "TAG sha256:api_old_111111111111 backend-campus-verde:develop" "$LOG_FILE"; then
   echo "ERROR: No se retagueó la imagen de api" >&2
   cat "$LOG_FILE" >&2
   exit 1
 fi
-if ! grep -q "TAG sha256:web_old_222222222222 campus-verde-web:develop" "$LOG_FILE"; then
+if ! grep -q "TAG sha256:web_old_222222222222 frontend-campus-verde:develop" "$LOG_FILE"; then
   echo "ERROR: No se retagueó la imagen de web" >&2
   cat "$LOG_FILE" >&2
   exit 1
@@ -166,12 +166,12 @@ echo "=== Prueba 3: rollback local con TAG explícito retaguea api con ese tag y
 : > "$LOG_FILE"
 bash "$ROOT/deploy/deploy.sh" develop --local --rollback tag-api-custom
 
-if ! grep -q "TAG tag-api-custom campus-verde-api:develop" "$LOG_FILE"; then
+if ! grep -q "TAG tag-api-custom backend-campus-verde:develop" "$LOG_FILE"; then
   echo "ERROR: No se retagueó la imagen de api con el tag explícito" >&2
   cat "$LOG_FILE" >&2
   exit 1
 fi
-if ! grep -q "TAG sha256:web_old_222222222222 campus-verde-web:develop" "$LOG_FILE"; then
+if ! grep -q "TAG sha256:web_old_222222222222 frontend-campus-verde:develop" "$LOG_FILE"; then
   echo "ERROR: No se retagueó la imagen de web desde el estado" >&2
   cat "$LOG_FILE" >&2
   exit 1
@@ -209,12 +209,12 @@ if [ "$rc_up" -eq 0 ]; then
   echo "ERROR: up_local debió terminar con error tras fallo del smoke inicial" >&2
   exit 1
 fi
-if ! grep -q "TAG sha256:api_old_111111111111 campus-verde-api:develop" "$LOG_FILE"; then
+if ! grep -q "TAG sha256:api_old_111111111111 backend-campus-verde:develop" "$LOG_FILE"; then
   echo "ERROR: Rollback automático no retagueó api" >&2
   cat "$LOG_FILE" >&2
   exit 1
 fi
-if ! grep -q "TAG sha256:web_old_222222222222 campus-verde-web:develop" "$LOG_FILE"; then
+if ! grep -q "TAG sha256:web_old_222222222222 frontend-campus-verde:develop" "$LOG_FILE"; then
   echo "ERROR: Rollback automático no retagueó web" >&2
   cat "$LOG_FILE" >&2
   exit 1
