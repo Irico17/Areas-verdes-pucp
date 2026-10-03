@@ -1821,3 +1821,10 @@ fieldset { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
     bottom: calc(min(55dvh, calc(100dvh - var(--nav-h) - var(--topbar-zona) - 8px)) + var(--nav-h) + env(safe-area-inset-bottom) + 24px) !important;
   }
 }
+
+/* En escritorio el panel de capas abierto ocupa el borde derecho: el zoom y la atribución se corren a su izquierda. */
+@media (min-width: 821px) {
+  .shell:has(.marco-mapa[data-abierto="si"]) .maplibregl-ctrl-bottom-right {
+    right: 304px;
+  }
+}
