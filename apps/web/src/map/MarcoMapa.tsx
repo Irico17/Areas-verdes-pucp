@@ -38,43 +38,45 @@ export function MarcoMapa({ usuario, vista, control }: Props) {
   const abrirBtn = useRef<HTMLButtonElement>(null)
   const cerrarBtn = useRef<HTMLButtonElement>(null)
   const idCapas = useId()
-  const estado = useRef({ usuario, estrecho, abierto })
-  estado.current = { usuario, estrecho, abierto }
 
   function fijar(siguiente: boolean, enfocar: "abrir" | "cerrar" | "nada") {
     setAbierto(siguiente)
-    guardarPreferenciaPanel(estado.current.usuario, estado.current.estrecho, siguiente)
+    guardarPreferenciaPanel(usuario, estrecho, siguiente)
     if (enfocar === "nada") return
     const ref = enfocar === "cerrar" ? cerrarBtn : abrirBtn
     requestAnimationFrame(() => ref.current?.focus({ preventScroll: true }))
   }
 
   useEffect(() => {
+    if (!abierto) return
     function tecla(event: KeyboardEvent) {
-      if (!estado.current.abierto || event.key !== "Escape" || event.defaultPrevented) return
+      if (event.key !== "Escape" || event.defaultPrevented) return
       const activo = document.activeElement
       if (activo instanceof Element && activo.closest("dialog, .cuenta-menu, .guard-menu, .recorrido")) return
       event.preventDefault()
       event.stopPropagation()
-      fijar(false, "abrir")
+      setAbierto(false)
+      guardarPreferenciaPanel(usuario, estrecho, false)
+      requestAnimationFrame(() => abrirBtn.current?.focus({ preventScroll: true }))
     }
     document.addEventListener("keydown", tecla)
     return () => document.removeEventListener("keydown", tecla)
-  }, [])
+  }, [abierto, usuario, estrecho])
 
   useEffect(() => {
+    if (!abierto || !estrecho) return
     function puntero(event: PointerEvent) {
-      if (!estado.current.abierto || !estado.current.estrecho) return
       const objetivo = event.target
       if (!(objetivo instanceof Element)) return
       if (objetivo.closest(".marco-mapa, .topbar, .guard, .guard-menu, .cuenta-menu, .recorrido, .maplibregl-ctrl, .cv-popup, .lista-sobre-mapa, .panel, .skip")) return
       event.preventDefault()
       event.stopPropagation()
-      fijar(false, "nada")
+      setAbierto(false)
+      guardarPreferenciaPanel(usuario, estrecho, false)
     }
     document.addEventListener("pointerdown", puntero, true)
     return () => document.removeEventListener("pointerdown", puntero, true)
-  }, [])
+  }, [abierto, estrecho, usuario])
 
   return (
     <div className="marco-mapa" data-abierto={abierto ? "si" : "no"} data-ancho={estrecho ? "estrecho" : "ancho"}>
