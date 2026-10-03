@@ -287,8 +287,8 @@ jobs:
             -f backend/dockerfile \
             "${tags_api[@]}" \
             --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
-            --cache-from type=registry,ref=${api}:buildcache \
-            --cache-to type=registry,ref=${api}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true \
+            --cache-from type=registry,ref="${api}:buildcache" \
+            --cache-to type=registry,ref="${api}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true" \
             --push \
             .
 
@@ -296,8 +296,8 @@ jobs:
             -f frontend/Dockerfile \
             "${tags_web[@]}" \
             --label "org.opencontainers.image.source=https://github.com/Irico17/Areas-verdes-pucp" \
-            --cache-from type=registry,ref=${web}:buildcache \
-            --cache-to type=registry,ref=${web}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true \
+            --cache-from type=registry,ref="${web}:buildcache" \
+            --cache-to type=registry,ref="${web}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true" \
             --push \
             .
 
