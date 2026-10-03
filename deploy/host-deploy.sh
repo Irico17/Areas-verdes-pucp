@@ -73,6 +73,18 @@ if [ -z "${CAMPUS_HOME:-}" ]; then
   esac
 fi
 
+# Un solo despliegue a la vez por ambiente en este servidor. Pueden coexistir runners de más de
+# un repositorio (cada uno con su propio concurrency); el candado por archivo los serializa.
+if [ "$dry_run" -ne 1 ]; then
+  mkdir -p "$CAMPUS_HOME/state"
+  exec 9>"$CAMPUS_HOME/state/deploy.lock"
+  echo "Esperando el candado de despliegue de ${AMBIENTE} (${CAMPUS_HOME}/state/deploy.lock)..."
+  if ! flock -w 1800 9; then
+    echo "ERROR: Otro despliegue de ${AMBIENTE} sigue en curso tras 30 minutos." >&2
+    exit 1
+  fi
+fi
+
 HOST_ENV="$CAMPUS_HOME/host.env"
 if [ ! -f "$HOST_ENV" ]; then
   echo "ERROR: No existe el archivo de entorno en el host: $HOST_ENV" >&2
