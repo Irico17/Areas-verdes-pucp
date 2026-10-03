@@ -10,7 +10,7 @@ sa-east-1 queda más cerca de Lima y suele costar más. El lab no lo habilita. S
 - Las tres credenciales temporales: access key, secret y **session token**. Caducan cuando termina la sesión (unas 4 horas).
 - Docker y Terraform en la laptop, si despliega desde ahí. Para el atajo de cada sesión (copiar AWS CLI y actualizar los secrets), use `docs/DESPLIEGUE.md`.
 - No hace falta la llave SSH del lab. El puerto 22 queda cerrado y el reinicio va por SSM con `LabInstanceProfile`.
-- No hace falta un dominio. La URL es el Elastic IP en HTTP (puerto 80). El 443 queda abierto para un certificado futuro; nginx escucha en 80.
+- La URL por IP sigue siendo el Elastic IP en HTTP (puerto 80) mientras no haya PEM. El 443 ya está abierto. El nombre `verde-pucp.duckdns.org` y el HTTPS, solo en producción y solo con certificado, están en [`DESPLIEGUE-README.md`](DESPLIEGUE-README.md).
 - No hace falta crear IAM. Si el lab le pide un nombre, use `LabRole` y `LabInstanceProfile`.
 
 ## Pasos

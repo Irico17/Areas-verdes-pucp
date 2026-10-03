@@ -1,0 +1,67 @@
+# Emisión manual del certificado en el runner de producción.
+# No tiene push ni pull_request: no se dispara solo.
+name: certificado-duckdns
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: "Escriba EMITIR para continuar. Cualquier otro texto no emite."
+        required: true
+        type: string
+      staging:
+        description: "1 = staging de Let's Encrypt (recomendado). 0 = certificado real."
+        required: true
+        default: "1"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: certificado-duckdns
+  cancel-in-progress: false
+
+jobs:
+  emitir:
+    runs-on: [self-hosted, campus-prod]
+    steps:
+      - name: Exigir la confirmación escrita
+        env:
+          CONFIRMAR: ${{ github.event.inputs.confirmar }}
+        run: |
+          if [ "$CONFIRMAR" != "EMITIR" ]; then
+            echo "ERROR: escriba EMITIR en el input confirmar. No se emite nada." >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Enmascarar DUCKDNS_TOKEN
+        env:
+          DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
+        run: |
+          if [ -z "${DUCKDNS_TOKEN:-}" ]; then
+            echo "ERROR: el secreto DUCKDNS_TOKEN no está definido. No se emite nada." >&2
+            exit 1
+          fi
+          echo "::add-mask::${DUCKDNS_TOKEN}"
+
+      - name: Emitir (staging por defecto)
+        env:
+          DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
+          STAGING: ${{ github.event.inputs.staging }}
+          ACME_EMAIL: ${{ vars.ACME_EMAIL }}
+          DUCKDNS_DOMAIN: verde-pucp
+          CAMPUS_CERTS_DIR: /opt/campus/certs
+          LEGO_DATA_DIR: /opt/campus/letsencrypt
+          APP_ENV: produccion
+        run: |
+          if [ "$STAGING" = "0" ]; then
+            export ACME_STAGING=0
+            echo "Certificado real (staging=0). Hágalo solo después del ensayo."
+          else
+            export ACME_STAGING=1
+            echo "Staging de Let's Encrypt (valor distinto de 0, incluido el vacío)."
+          fi
+          bash deploy/tls/emitir-certificado.sh

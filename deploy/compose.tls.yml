@@ -1,0 +1,17 @@
+# Override opt-in. host-deploy.sh lo añade solo si en el host existen
+# fullchain.pem y privkey.pem. Sin esos archivos no se incluye este fichero
+# y el `docker compose config` del host sigue igual que sin TLS.
+# No publica db ni api. El 443 del host sale en 443 salvo WEB_TLS_PORT.
+
+services:
+  web:
+    ports: !override
+      - "0.0.0.0:${WEB_PORT}:80"
+      - "0.0.0.0:${WEB_TLS_PORT:-443}:443"
+    volumes:
+      - "${CAMPUS_CERTS_DIR:-/opt/campus/certs}:/etc/nginx/certs:ro"
+
+  api:
+    environment:
+      # Con este override hay PEM: la cookie de sesión sale Secure.
+      CAMPUS_COOKIE_SECURE: "true"
