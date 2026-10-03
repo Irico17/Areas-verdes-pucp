@@ -28,5 +28,5 @@ if openssl x509 -checkend 2592000 -noout -in "$fullchain" >/dev/null 2>&1; then
 fi
 
 echo "Faltan menos de 30 días (o ya venció). Se renueva."
-tls_lego_run renew --days 30
+tls_lego_run run --renew-days 30 --no-random-sleep
 echo "Renovación terminada."
