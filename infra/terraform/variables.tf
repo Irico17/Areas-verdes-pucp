@@ -31,6 +31,28 @@ variable "instance_type" {
   }
 }
 
+variable "root_volume_gb" {
+  description = "Disco raíz gp3. 20 GB alcanza para el sistema y las imágenes. Máximo 40 para cuidar el crédito."
+  type        = number
+  default     = 20
+
+  validation {
+    condition     = var.root_volume_gb >= 20 && var.root_volume_gb <= 40
+    error_message = "root_volume_gb debe estar entre 20 y 40."
+  }
+}
+
+variable "data_volume_gb" {
+  description = "Disco de datos gp3 (Postgres y archivos). Bajar el tamaño de un volumen ya creado lo reemplaza y borra los datos."
+  type        = number
+  default     = 20
+
+  validation {
+    condition     = var.data_volume_gb >= 20 && var.data_volume_gb <= 40
+    error_message = "data_volume_gb debe estar entre 20 y 40."
+  }
+}
+
 variable "instance_profile" {
   description = "Perfil que ya existe en el lab. No se crea ninguno."
   type        = string

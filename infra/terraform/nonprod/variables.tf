@@ -10,15 +10,36 @@ variable "aws_region" {
 }
 
 variable "instance_type" {
-  description = "Tipo de instancia EC2 para la máquina compartida develop/qa."
+  description = "Tipo de instancia EC2 para la máquina compartida develop/qa. t3.small es el default para cuidar el crédito; t3.medium si los dos stacks se quedan cortos de memoria."
   type        = string
-  default     = "t3.medium"
+  default     = "t3.small"
+
+  validation {
+    condition     = contains(["t3.micro", "t3.small", "t3.medium"], var.instance_type)
+    error_message = "Use t3.micro, t3.small o t3.medium."
+  }
+}
+
+variable "root_volume_gb" {
+  description = "Disco raíz gp3. Bajar el tamaño de un volumen ya creado lo reemplaza."
+  type        = number
+  default     = 20
+
+  validation {
+    condition     = var.root_volume_gb >= 20 && var.root_volume_gb <= 40
+    error_message = "root_volume_gb debe estar entre 20 y 40."
+  }
 }
 
 variable "data_volume_gb" {
-  description = "Tamaño en GB del volumen EBS persistente gp3 montado en /opt/campus para develop y qa."
+  description = "Tamaño en GB del volumen EBS persistente gp3 montado en /opt/campus para develop y qa. La máquina anterior usaba 40; bajarlo reemplaza el disco y borra los datos."
   type        = number
-  default     = 40
+  default     = 20
+
+  validation {
+    condition     = var.data_volume_gb >= 20 && var.data_volume_gb <= 40
+    error_message = "data_volume_gb debe estar entre 20 y 40."
+  }
 }
 
 variable "instance_profile" {

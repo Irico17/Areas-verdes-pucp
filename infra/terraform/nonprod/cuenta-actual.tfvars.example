@@ -1,0 +1,6 @@
+# Tamaños de la nonprod que ya estaba creada antes de abaratar el default.
+# Páselos solo si va a operar ESA máquina y el plan muestra reemplazo de discos.
+# Una cuenta nueva debe usar los defaults (t3.small, 20 GB, 20 GB).
+instance_type  = "t3.medium"
+root_volume_gb = 30
+data_volume_gb = 40

@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.10.0"
 
   required_providers {
     aws = {
@@ -8,11 +8,12 @@ terraform {
     }
   }
 
+  # Misma cuenta y mismo cubo que el root de producción; otra clave de estado.
+  # Cubo y región llegan por -backend-config (ver scripts/bootstrap-estado-terraform.sh).
   backend "s3" {
-    bucket  = "campus-verde-tfstate-890991908027"
-    key     = "learner-lab-nonprod/terraform.tfstate"
-    region  = "us-east-1"
-    encrypt = true
+    key          = "learner-lab-nonprod/terraform.tfstate"
+    encrypt      = true
+    use_lockfile = true
   }
 }
 
@@ -21,8 +22,9 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project = "campus-verde"
-      Stack   = "nonprod"
+      Project       = "campus-verde"
+      Stack         = "nonprod"
+      CampusGestion = "cuenta-lab"
     }
   }
 }

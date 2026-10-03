@@ -1,0 +1,4 @@
+# Copie a tmp/backend.hcl (no se versiona) o deje que lo escriba
+# scripts/bootstrap-estado-terraform.sh. El 000000000000 es ficticio.
+bucket = "campus-verde-tfstate-000000000000"
+region = "us-east-1"

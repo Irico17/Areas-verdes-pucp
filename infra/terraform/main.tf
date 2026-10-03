@@ -77,7 +77,7 @@ resource "aws_instance" "app" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = 20
+    volume_size = var.root_volume_gb
   }
 
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
@@ -109,17 +109,19 @@ resource "aws_instance" "app" {
   }
 
   tags = {
-    Name = local.name_prefix
+    Name      = local.name_prefix
+    CampusRol = var.ambiente
   }
 }
 
 resource "aws_ebs_volume" "data" {
   availability_zone = aws_instance.app.availability_zone
-  size              = 20
+  size              = var.data_volume_gb
   type              = "gp3"
 
   tags = {
-    Name = "${local.name_prefix}-data"
+    Name      = "${local.name_prefix}-data"
+    CampusRol = "datos"
   }
 }
 

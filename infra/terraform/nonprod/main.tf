@@ -60,7 +60,7 @@ resource "aws_instance" "nonprod" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = 30
+    volume_size = var.root_volume_gb
     encrypted   = true
   }
 
@@ -79,7 +79,8 @@ resource "aws_instance" "nonprod" {
   }
 
   tags = {
-    Name = "campus-verde-nonprod"
+    Name      = "campus-verde-nonprod"
+    CampusRol = "nonprod"
   }
 }
 

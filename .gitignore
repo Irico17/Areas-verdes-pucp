@@ -73,6 +73,12 @@ deploy/state/
 infra/terraform/.terraform/
 infra/terraform/nonprod/.terraform/
 infra/terraform/nonprod/.terraform.lock.hcl
+infra/terraform/backend.hcl
+infra/terraform/nonprod/backend.hcl
+tmp/
+infra/ansible/inventory/hosts.yml
+infra/ansible/.ansible/
+*.retry
 *.tfstate
 *.tfstate.*
 *.tfvars

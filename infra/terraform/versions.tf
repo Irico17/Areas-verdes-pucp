@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.10.0"
 
   required_providers {
     aws = {
@@ -8,14 +8,14 @@ terraform {
     }
   }
 
-  # Estado en S3 para que una laptop con credenciales nuevas del lab pueda
-  # actualizar o destruir. El cubo se crea a mano (versionado, SSE-S3);
-  # este root no crea IAM ni una tabla de lock.
+  # El cubo y la región no van en el código: cada cuenta de Learner Lab
+  # tiene el suyo (campus-verde-tfstate-<id de la cuenta>). Lo crea
+  # scripts/bootstrap-estado-terraform.sh y se pasa con -backend-config.
+  # use_lockfile evita una tabla DynamoDB, que este lab no necesita.
   backend "s3" {
-    bucket  = "campus-verde-tfstate-890991908027"
-    key     = "learner-lab/terraform.tfstate"
-    region  = "us-east-1"
-    encrypt = true
+    key          = "learner-lab/terraform.tfstate"
+    encrypt      = true
+    use_lockfile = true
   }
 }
 
@@ -24,9 +24,10 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project  = "campus-verde"
-      Stack    = "learner-lab"
-      Ambiente = var.ambiente
+      Project       = "campus-verde"
+      Stack         = "learner-lab"
+      Ambiente      = var.ambiente
+      CampusGestion = "cuenta-lab"
     }
   }
 }
