@@ -174,7 +174,6 @@ export function Labores(props: Props) {
                         </label>
                         <button
                           type="button"
-                          role="menuitem"
                           onClick={() => {
                             setMenuAbierto(false)
                             props.onReasignar()
@@ -184,7 +183,6 @@ export function Labores(props: Props) {
                         </button>
                         <button
                           type="button"
-                          role="menuitem"
                           className="danger"
                           onClick={() => {
                             setMenuAbierto(false)

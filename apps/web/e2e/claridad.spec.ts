@@ -196,13 +196,15 @@ test("ficha, evidencia y bitácora nacen plegadas y el rol oculta lo que no pued
   await page.setViewportSize({ width: 390, height: 844 })
   await entrar(page, "norte")
   await page.getByRole("button", { name: "Mis actividades", exact: true }).click()
-  await page.getByRole("button", { name: /Riego del eje central/ }).click()
+  const omitir = page.getByRole("button", { name: "Omitir" })
+  if (await omitir.isVisible()) await omitir.click()
+  await page.locator(".labor-list .labor").first().click()
   await expect(page.getByRole("button", { name: "Más acciones" })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Cambiar estado" })).toBeVisible()
   await page.screenshot({ path: "e2e-artifacts/o4-claridad/detalle-pliegues-390.png" })
+})
 
-  await page.getByRole("button", { name: "Cuenta" }).click()
-  await page.getByRole("button", { name: "Salir" }).click()
+test("jefatura cambia el estado y no ve guardar ficha ni avance", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await entrar(page, "jefatura")
   await page.getByRole("button", { name: "Actividades", exact: true }).click()
