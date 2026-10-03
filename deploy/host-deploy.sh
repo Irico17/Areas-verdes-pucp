@@ -102,6 +102,8 @@ POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-}"
 CAMPUS_COOKIE_SECURE="${CAMPUS_COOKIE_SECURE:-false}"
 CAMPUS_ENV="${CAMPUS_ENV:-$AMBIENTE}"
 PUBLIC_URL="${PUBLIC_URL:-http://127.0.0.1:${WEB_PORT}}"
+CAMPUS_CERTS_DIR="${CAMPUS_CERTS_DIR:-/opt/campus/certs}"
+WEB_TLS_PORT="${WEB_TLS_PORT:-443}"
 LEGACY_PROJECT="${LEGACY_PROJECT:-campus}"
 LEGACY_COMPOSE="${LEGACY_COMPOSE:-$CAMPUS_HOME/docker-compose.yml}"
 
@@ -144,6 +146,7 @@ OWNER_LC="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
 API_IMAGE="ghcr.io/${OWNER_LC}/campus-verde-api:${target_tag}"
 WEB_IMAGE="ghcr.io/${OWNER_LC}/campus-verde-web:${target_tag}"
 export API_IMAGE WEB_IMAGE CAMPUS_DATA_DIR APP_ENV POSTGRES_PORT API_PORT WEB_PORT
+export CAMPUS_CERTS_DIR WEB_TLS_PORT CAMPUS_COOKIE_SECURE
 
 echo "=== Despliegue en host: $AMBIENTE ==="
 echo "Target Tag: $target_tag"
@@ -315,12 +318,51 @@ else
   fi
 fi
 
+# TLS solo si los dos PEM ya están en el host. Sin ellos el compose es el de siempre.
+tls_activo=0
+if [ -f "${CAMPUS_CERTS_DIR}/fullchain.pem" ] && [ -f "${CAMPUS_CERTS_DIR}/privkey.pem" ]; then
+  tls_activo=1
+  echo "TLS: PEM presentes en ${CAMPUS_CERTS_DIR}; se incluye deploy/compose.tls.yml"
+  if [ "$CAMPUS_COOKIE_SECURE" != "true" ]; then
+    echo "AVISO: hay PEM pero CAMPUS_COOKIE_SECURE no es true en host.env. El compose de TLS igual envía true al contenedor de la API; deje el valor en true para que coincida con el archivo." >&2
+  fi
+  if [[ "$PUBLIC_URL" != https://* ]]; then
+    echo "AVISO: hay PEM pero PUBLIC_URL no empieza por https (${PUBLIC_URL})." >&2
+  fi
+else
+  echo "TLS: sin par PEM en ${CAMPUS_CERTS_DIR}; el despliegue sigue en HTTP."
+fi
+
+smoke_base="http://127.0.0.1:${WEB_PORT}"
+smoke_resolve=""
+smoke_insecure=0
+if [ "$tls_activo" -eq 1 ]; then
+  if [ "${SMOKE_INSECURE_TLS:-0}" = "1" ]; then
+    smoke_base="https://127.0.0.1:${WEB_TLS_PORT}"
+    smoke_insecure=1
+    echo "Smoke HTTPS con SMOKE_INSECURE_TLS=1 (certificado de prueba) en ${smoke_base}"
+  else
+    if [ "$WEB_TLS_PORT" = "443" ]; then
+      smoke_base="https://verde-pucp.duckdns.org"
+    else
+      smoke_base="https://verde-pucp.duckdns.org:${WEB_TLS_PORT}"
+    fi
+    smoke_resolve="verde-pucp.duckdns.org:${WEB_TLS_PORT}:127.0.0.1"
+    echo "Smoke HTTPS de ${smoke_base} resuelto a 127.0.0.1:${WEB_TLS_PORT}"
+  fi
+fi
+
 # Despliegue con docker compose
 compose_cmd=(
   docker compose
   -f "$ROOT/deploy/compose.yml"
   -f "$ROOT/deploy/compose.${AMBIENTE}.yml"
   -f "$ROOT/deploy/compose.host.yml"
+)
+if [ "$tls_activo" -eq 1 ]; then
+  compose_cmd+=(-f "$ROOT/deploy/compose.tls.yml")
+fi
+compose_cmd+=(
   -p "campus-${AMBIENTE}"
   --env-file "$HOST_ENV"
 )
@@ -328,7 +370,7 @@ compose_cmd=(
 if [ "$dry_run" -eq 1 ]; then
   echo "[dry-run] ${compose_cmd[*]} up -d --no-build --remove-orphans"
   echo "[dry-run] Esperar healthy en campus-${AMBIENTE}-db"
-  echo "[dry-run] Ejecutar smoke test deploy/smoke.sh $AMBIENTE en http://127.0.0.1:${WEB_PORT}"
+  echo "[dry-run] Ejecutar smoke test deploy/smoke.sh $AMBIENTE en ${smoke_base}"
   if [ "$AMBIENTE" = "produccion" ]; then
     echo "[dry-run] Conteos después con deploy/conteos.sql y comparar_conteos.py"
   fi
@@ -364,7 +406,18 @@ echo "Servicio de base de datos healthy."
 # Smoke test
 echo "Ejecutando smoke test post-despliegue..."
 smoke_passed=1
-if ! SMOKE_ENV_FILE="$HOST_ENV" SMOKE_BASE_URL="http://127.0.0.1:${WEB_PORT}" CAMPUS_DEV_PASSWORD="$CAMPUS_DEV_PASSWORD" bash "$ROOT/deploy/smoke.sh" "$AMBIENTE"; then
+smoke_env=(
+  SMOKE_ENV_FILE="$HOST_ENV"
+  SMOKE_BASE_URL="$smoke_base"
+  CAMPUS_DEV_PASSWORD="$CAMPUS_DEV_PASSWORD"
+)
+if [ -n "$smoke_resolve" ]; then
+  smoke_env+=(SMOKE_TLS_RESOLVE="$smoke_resolve")
+fi
+if [ "$smoke_insecure" -eq 1 ]; then
+  smoke_env+=(SMOKE_INSECURE_TLS=1)
+fi
+if ! env "${smoke_env[@]}" bash "$ROOT/deploy/smoke.sh" "$AMBIENTE"; then
   smoke_passed=0
 fi
 

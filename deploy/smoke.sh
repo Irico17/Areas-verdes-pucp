@@ -68,13 +68,31 @@ BASE="${SMOKE_BASE_URL:-http://127.0.0.1:${WEB_PORT:?falta WEB_PORT}}"
 USER_NAME="${SMOKE_USER:-coordinacion}"
 body="$(mktemp)"
 jar="$(mktemp)"
-trap 'rm -f "$body" "$jar"' EXIT
+hdr="$(mktemp)"
+trap 'rm -f "$body" "$jar" "$hdr"' EXIT
+
+# HTTPS: -k solo si SMOKE_INSECURE_TLS=1 (nunca por defecto).
+# SMOKE_TLS_RESOLVE, si viene, fija el nombre al 127.0.0.1 del host.
+curl_tls_args=()
+case "$BASE" in
+  https://*)
+    if [ "${SMOKE_INSECURE_TLS:-0}" = "1" ]; then
+      curl_tls_args+=(-k)
+    fi
+    if [ -n "${SMOKE_TLS_RESOLVE:-}" ]; then
+      curl_tls_args+=(--resolve "$SMOKE_TLS_RESOLVE")
+    fi
+    if [ -n "${SMOKE_CACERT:-}" ]; then
+      curl_tls_args+=(--cacert "$SMOKE_CACERT")
+    fi
+    ;;
+esac
 
 esperar_health() {
   local intento=0
   while [ "$intento" -lt 45 ]; do
     intento=$((intento + 1))
-    code="$(curl -sS -o "$body" -w '%{http_code}' --max-time 5 "$BASE/health" || true)"
+    code="$(curl -sS "${curl_tls_args[@]}" -o "$body" -w '%{http_code}' --max-time 5 "$BASE/health" || true)"
     if [ "$code" = "200" ] && grep -q '"status":"ok"' "$body"; then
       echo "health ok $BASE/health"
       return 0
@@ -91,20 +109,46 @@ pedir() {
   local method="$1"
   local url="$2"
   shift 2
-  curl -sS -o "$body" -w '%{http_code}' --max-time 20 -X "$method" "$url" "$@"
+  curl -sS "${curl_tls_args[@]}" -o "$body" -w '%{http_code}' --max-time 20 -X "$method" "$url" "$@"
+}
+
+cookie_https_lleva_secure() {
+  SMOKE_HDR="$hdr" python3 - <<'PY'
+import os, sys
+text = open(os.environ["SMOKE_HDR"], encoding="utf-8", errors="replace").read()
+lines = [ln for ln in text.splitlines() if ln.lower().startswith("set-cookie:")]
+if not lines:
+    sys.exit(1)
+for ln in lines:
+    attrs = [p.strip().lower() for p in ln.split(":", 1)[1].split(";")][1:]
+    if "secure" in attrs:
+        sys.exit(0)
+sys.exit(1)
+PY
 }
 
 esperar_health
 
 payload="$(SMOKE_USER="$USER_NAME" CAMPUS_DEV_PASSWORD="$CAMPUS_DEV_PASSWORD" python3 -c 'import json,os; print(json.dumps({"usuario": os.environ["SMOKE_USER"], "clave": os.environ["CAMPUS_DEV_PASSWORD"]}))')"
 
-code="$(pedir POST "$BASE/api/v1/sesion" -H 'Content-Type: application/json' -c "$jar" --data "$payload" || true)"
+login_args=(-H 'Content-Type: application/json' -c "$jar" --data "$payload")
+if [[ "$BASE" == https://* ]]; then
+  login_args+=(-D "$hdr")
+fi
+code="$(pedir POST "$BASE/api/v1/sesion" "${login_args[@]}" || true)"
 if [ "$code" != "200" ]; then
   echo "ALERTA: login de $USER_NAME respondió $code" >&2
   cat "$body" >&2 || true
   exit 1
 fi
 echo "login ok"
+if [[ "$BASE" == https://* ]]; then
+  if ! cookie_https_lleva_secure; then
+    echo "ALERTA: el login por HTTPS no devolvió Set-Cookie con Secure" >&2
+    exit 1
+  fi
+  echo "login cookie Secure"
+fi
 
 for ruta in /api/v1/geo/resumen /api/v1/catalogos; do
   code="$(pedir GET "$BASE$ruta" -b "$jar" || true)"

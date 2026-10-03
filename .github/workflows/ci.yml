@@ -176,6 +176,8 @@ jobs:
           python3 deploy/comparar_conteos.py --selftest
           bash deploy/test_deploy_orden.sh
           bash deploy/test_host_deploy.sh
+          bash deploy/test_smoke_tls.sh
+          bash deploy/tls/test_nginx_tls.sh
       - name: Swagger sin deriva
         working-directory: backend/app
         run: |

@@ -1,0 +1,7 @@
+# Etiquetas de los runners self-hosted de VerdePUCP.
+# actionlint no las conoce si no se listan aquí.
+self-hosted-runner:
+  labels:
+    - campus-develop
+    - campus-qa
+    - campus-prod

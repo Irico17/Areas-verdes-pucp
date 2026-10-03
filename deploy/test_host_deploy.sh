@@ -149,12 +149,16 @@ set -euo pipefail
 
 url=""
 out_file=""
+dump_file=""
 args=("$@")
 for ((i=0; i<${#args[@]}; i++)); do
   if [ "${args[i]}" = "-o" ]; then
     out_file="${args[i+1]}"
   fi
-  if [[ "${args[i]}" =~ ^http:// ]]; then
+  if [ "${args[i]}" = "-D" ]; then
+    dump_file="${args[i+1]}"
+  fi
+  if [[ "${args[i]}" =~ ^https?:// ]]; then
     url="${args[i]}"
   fi
 done
@@ -197,6 +201,13 @@ fi
 if [[ "$url" == *"/api/v1/sesion"* ]]; then
   if [ -n "$out_file" ]; then
     echo '{"status":"ok"}' > "$out_file"
+  fi
+  if [ -n "$dump_file" ]; then
+    if [ "${FAIL_COOKIE_SECURE:-0}" = "1" ]; then
+      printf 'Set-Cookie: cv_sesion=prueba; Path=/; HttpOnly\n' > "$dump_file"
+    else
+      printf 'Set-Cookie: cv_sesion=prueba; Path=/; HttpOnly; Secure\n' > "$dump_file"
+    fi
   fi
   printf '200'
   exit 0
@@ -252,6 +263,7 @@ CAMPUS_COOKIE_SECURE=false
 CAMPUS_ENV=production
 CAMPUS_DATA_DIR=$home/data
 PUBLIC_URL=http://127.0.0.1
+CAMPUS_CERTS_DIR=$home/certs-ausentes
 LEGACY_PROJECT=campus
 LEGACY_COMPOSE=$home/docker-compose.yml
 EOF
@@ -475,5 +487,183 @@ if "build: !reset null" not in text:
 print("compose.host.yml verificado: db y api estrictamente en 127.0.0.1, web en 0.0.0.0, bind mounts y build reseteado.")
 PY
 echo "Prueba 7 OK: validación de red y configuración de compose.host.yml exitosa."
+
+echo "=== Prueba 8: sin PEM el dry-run no incluye compose.tls.yml ==="
+HOME8="$TMPDIR/env8"
+setup_env_produccion "$HOME8"
+: > "$LOG_FILE"
+out_sin_pem="$(CAMPUS_HOME="$HOME8" bash "$ROOT/deploy/host-deploy.sh" produccion --sha "$VALID_SHA" --dry-run)"
+if grep -q "compose.tls.yml" <<< "$out_sin_pem"; then
+  echo "ERROR: sin PEM el dry-run incluyó compose.tls.yml." >&2
+  echo "$out_sin_pem" >&2
+  exit 1
+fi
+if ! grep -q "en http://127.0.0.1:80" <<< "$out_sin_pem"; then
+  echo "ERROR: sin PEM el smoke del dry-run no sigue en HTTP." >&2
+  echo "$out_sin_pem" >&2
+  exit 1
+fi
+echo "Prueba 8 OK: sin PEM el compose y el smoke siguen en HTTP."
+
+echo "=== Prueba 9: con PEM de prueba el dry-run incluye TLS y el smoke HTTPS ==="
+HOME9="$TMPDIR/env9"
+setup_env_produccion "$HOME9"
+mkdir -p "$HOME9/certs"
+printf 'certificado-de-prueba\n' > "$HOME9/certs/fullchain.pem"
+printf 'clave-de-prueba\n' > "$HOME9/certs/privkey.pem"
+printf 'CAMPUS_CERTS_DIR=%s\n' "$HOME9/certs" >> "$HOME9/host.env"
+: > "$LOG_FILE"
+out_con_pem="$(CAMPUS_HOME="$HOME9" bash "$ROOT/deploy/host-deploy.sh" produccion --sha "$VALID_SHA" --dry-run)"
+if ! grep -q "compose.tls.yml" <<< "$out_con_pem"; then
+  echo "ERROR: con PEM el dry-run no incluyó compose.tls.yml." >&2
+  echo "$out_con_pem" >&2
+  exit 1
+fi
+if ! grep -q "https://verde-pucp.duckdns.org" <<< "$out_con_pem"; then
+  echo "ERROR: con PEM el dry-run no anuncia el smoke HTTPS con el nombre del certificado." >&2
+  echo "$out_con_pem" >&2
+  exit 1
+fi
+if grep -q "ACTION_COMPOSE_UP" "$LOG_FILE"; then
+  echo "ERROR: el dry-run con PEM ejecutó compose up." >&2
+  exit 1
+fi
+echo "Prueba 9 OK: con PEM el dry-run anuncia TLS y no toca el sistema."
+
+echo "=== Prueba 10: con PEM el despliegue usa compose.tls.yml y el smoke HTTPS pasa ==="
+HOME10="$TMPDIR/env10"
+setup_env_produccion "$HOME10"
+mkdir -p "$HOME10/certs"
+printf 'certificado-de-prueba\n' > "$HOME10/certs/fullchain.pem"
+printf 'clave-de-prueba\n' > "$HOME10/certs/privkey.pem"
+printf 'CAMPUS_CERTS_DIR=%s\n' "$HOME10/certs" >> "$HOME10/host.env"
+printf 'CAMPUS_COOKIE_SECURE=true\n' >> "$HOME10/host.env"
+: > "$LOG_FILE"
+CAMPUS_HOME="$HOME10" bash "$ROOT/deploy/host-deploy.sh" produccion --sha "$VALID_SHA"
+if ! grep -q "compose.tls.yml" "$LOG_FILE"; then
+  echo "ERROR: el compose registrado no incluyó compose.tls.yml." >&2
+  cat "$LOG_FILE" >&2
+  exit 1
+fi
+echo "Prueba 10 OK: el despliegue con PEM incluye TLS y el smoke HTTPS acepta la cookie Secure."
+
+echo "=== Prueba 11: con PEM, si la cookie no es Secure, hay rollback ==="
+HOME11="$TMPDIR/env11"
+setup_env_produccion "$HOME11"
+mkdir -p "$HOME11/certs"
+printf 'certificado-de-prueba\n' > "$HOME11/certs/fullchain.pem"
+printf 'clave-de-prueba\n' > "$HOME11/certs/privkey.pem"
+printf 'CAMPUS_CERTS_DIR=%s\n' "$HOME11/certs" >> "$HOME11/host.env"
+: > "$LOG_FILE"
+set +e
+out_cookie="$(CAMPUS_HOME="$HOME11" FAIL_COOKIE_SECURE=1 bash "$ROOT/deploy/host-deploy.sh" produccion --sha "$VALID_SHA" 2>&1)"
+rc_cookie=$?
+set -e
+if [ "$rc_cookie" -eq 0 ]; then
+  echo "ERROR: el despliegue debió fallar cuando la cookie HTTPS no trae Secure." >&2
+  exit 1
+fi
+if ! grep -q "Rollback automático a imágenes previas" <<< "$out_cookie"; then
+  echo "ERROR: sin cookie Secure no hubo rollback." >&2
+  echo "$out_cookie" >&2
+  exit 1
+fi
+echo "Prueba 11 OK: cookie HTTPS sin Secure dispara el rollback."
+
+echo "=== Prueba 12: docker compose config, con y sin el override TLS ==="
+REAL_DOCKER="/usr/bin/docker"
+if [ ! -x "$REAL_DOCKER" ] || ! "$REAL_DOCKER" info >/dev/null 2>&1; then
+  echo "OMITIDO: no hay Docker real para docker compose config."
+else
+  cfg="$TMPDIR/compose-env"
+  certs_ok="$TMPDIR/certs-ok"
+  mkdir -p "$certs_ok"
+  printf 'certificado-de-prueba\n' > "$certs_ok/fullchain.pem"
+  printf 'clave-de-prueba\n' > "$certs_ok/privkey.pem"
+  cat > "$cfg" <<EOF
+APP_ENV=produccion
+POSTGRES_USER=campus
+POSTGRES_PASSWORD=produccion-valida-2026-demo
+POSTGRES_DB=campus_verde
+POSTGRES_PORT=5432
+API_PORT=8091
+WEB_PORT=80
+CAMPUS_DEV_PASSWORD=produccion-valida-2026-demo
+CAMPUS_COOKIE_SECURE=false
+CAMPUS_CORS_ORIGINS=http://127.0.0.1
+CAMPUS_ENV=production
+CAMPUS_DATA_DIR=$TMPDIR/data-compose
+API_IMAGE=example.invalid/campus-verde-api:prueba
+WEB_IMAGE=example.invalid/campus-verde-web:prueba
+CAMPUS_CERTS_DIR=$certs_ok
+EOF
+  sin="$TMPDIR/compose-sin.json"
+  con="$TMPDIR/compose-con.json"
+  "$REAL_DOCKER" compose \
+    -f "$ROOT/deploy/compose.yml" \
+    -f "$ROOT/deploy/compose.produccion.yml" \
+    -f "$ROOT/deploy/compose.host.yml" \
+    --env-file "$cfg" \
+    config --format json > "$sin"
+  "$REAL_DOCKER" compose \
+    -f "$ROOT/deploy/compose.yml" \
+    -f "$ROOT/deploy/compose.produccion.yml" \
+    -f "$ROOT/deploy/compose.host.yml" \
+    -f "$ROOT/deploy/compose.tls.yml" \
+    --env-file "$cfg" \
+    config --format json > "$con"
+  python3 - "$sin" "$con" "$certs_ok" <<'PY'
+import json, sys
+sin_path, con_path, certs = sys.argv[1:]
+sin = json.load(open(sin_path, encoding="utf-8"))
+con = json.load(open(con_path, encoding="utf-8"))
+
+def puertos(doc, servicio):
+    return doc["services"][servicio].get("ports") or []
+
+def publicado(lista, target):
+    hits = []
+    for p in lista:
+        t = str(p.get("target"))
+        if t == str(target):
+            hits.append(p)
+    return hits
+
+def exige_loopback(doc, servicio, target):
+    hits = publicado(puertos(doc, servicio), target)
+    if not hits:
+        sys.exit(f"ERROR: {servicio} no publica {target}")
+    for p in hits:
+        hip = p.get("host_ip") or ""
+        if hip != "127.0.0.1":
+            sys.exit(f"ERROR: {servicio}:{target} no está solo en 127.0.0.1 ({p})")
+        if "0.0.0.0" in json.dumps(p):
+            sys.exit(f"ERROR: {servicio}:{target} menciona 0.0.0.0 ({p})")
+
+for doc in (sin, con):
+    exige_loopback(doc, "db", 5432)
+    exige_loopback(doc, "api", 8091)
+
+if publicado(puertos(sin, "web"), 443):
+    sys.exit("ERROR: sin PEM renderizado aparece el puerto 443")
+vols_sin = json.dumps(sin["services"]["web"].get("volumes") or [])
+if "/etc/nginx/certs" in vols_sin:
+    sys.exit("ERROR: sin el override TLS aparece el montaje de certificados")
+
+if not publicado(puertos(con, "web"), 443):
+    sys.exit("ERROR: con el override TLS no aparece el puerto 443")
+vols_con = json.dumps(con["services"]["web"].get("volumes") or [])
+if "/etc/nginx/certs" not in vols_con or certs not in vols_con:
+    sys.exit(f"ERROR: el montaje de certificados no apunta al temporal: {vols_con}")
+cookie = con["services"]["api"]["environment"].get("CAMPUS_COOKIE_SECURE")
+if cookie != "true":
+    sys.exit(f"ERROR: con TLS la API no recibe CAMPUS_COOKIE_SECURE=true ({cookie})")
+cookie_sin = sin["services"]["api"]["environment"].get("CAMPUS_COOKIE_SECURE")
+if cookie_sin != "false":
+    sys.exit(f"ERROR: sin TLS la cookie dejó de ser false ({cookie_sin})")
+print("compose config: sin TLS no hay 443 ni montaje; con TLS sí; db y api siguen en 127.0.0.1.")
+PY
+  echo "Prueba 12 OK: docker compose config distingue el override TLS."
+fi
 
 echo "TODAS LAS PRUEBAS DE test_host_deploy.sh PASARON SATISFACTORIAMENTE."

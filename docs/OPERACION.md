@@ -28,7 +28,7 @@ SSH queda cerrado salvo que pase `ssh_cidr` con una IP (`x.x.x.x/32`). Postgres 
 
 ## Certificado TLS
 
-Copie `fullchain.pem` y `privkey.pem` a `/opt/campus/certs/` en la instancia y reinicie el servicio `web`. Nginx escucha 443, redirige el 80 a HTTPS y añade HSTS. Sin esos dos archivos sigue en HTTP, que es el caso del lab sin dominio.
+Sin PEM, nginx sigue en HTTP. Con el par en `/opt/campus/certs/`, el entrypoint de la web usa `nginx.tls.conf` (443, redirección del 80 salvo `/health`, HSTS). La primera vez hay que recrear el contenedor web y reiniciar la API con `CAMPUS_COOKIE_SECURE=true`. El alta con Let's Encrypt y DuckDNS, el timer y el orden del cambio de DNS están en [`DESPLIEGUE-README.md`](DESPLIEGUE-README.md). No copie la clave privada al repositorio.
 
 El origen de la PWA, si no es el mismo host, va en `CAMPUS_CORS_ORIGINS` antes de `poner-secretos.sh`. No use `*`.
 

@@ -1,0 +1,23 @@
+# Ejemplo. Copiar a /etc/systemd/system/ y ajustar la ruta si no instaló
+# los scripts en /opt/campus/bin. No ponga el token en esta unidad:
+# el script lo lee de /opt/campus/duckdns.env (modo 600).
+# Active el timer solo después de una emisión correcta.
+
+[Unit]
+Description=Renueva el certificado de verde-pucp.duckdns.org si faltan menos de 30 días
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+Environment=DUCKDNS_ENV_FILE=/opt/campus/duckdns.env
+Environment=CAMPUS_CERTS_DIR=/opt/campus/certs
+Environment=LEGO_DATA_DIR=/opt/campus/letsencrypt
+Environment=DUCKDNS_DOMAIN=verde-pucp
+Environment=APP_ENV=produccion
+# Ensayo: ACME_STAGING=1. Certificado real: 0. El timer de producción usa 0
+# solo cuando el certificado vigente ya salió del directorio real.
+Environment=ACME_STAGING=0
+ExecStart=/opt/campus/bin/renovar-certificado.sh
+NoNewPrivileges=true
+# User=runner

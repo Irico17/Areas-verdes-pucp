@@ -1,0 +1,18 @@
+# OPCIONAL y apagado hasta que una persona decida mover el DNS.
+# No lo instale en un runner de GitHub: el script rechaza CI y GITHUB_ACTIONS,
+# y --auto usaría la IP de esa máquina.
+# Hasta el cambio, verde-pucp.duckdns.org sigue en la IP doméstica.
+# No ponga el token aquí.
+
+[Unit]
+Description=Mantiene la IP de verde-pucp.duckdns.org (solo en el host de producción)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=DUCKDNS_ENV_FILE=/opt/campus/duckdns.env
+Environment=DUCKDNS_DOMAIN=verde-pucp
+ExecStart=/opt/campus/bin/actualizar-ip-duckdns.sh --auto
+NoNewPrivileges=true
+# User=runner
