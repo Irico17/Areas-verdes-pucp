@@ -7,6 +7,7 @@ fi
 
 # Imagen fijada por versión y digest del índice publicado en Docker Hub (v5.5.2).
 # El proveedor duckdns lee DUCKDNS_TOKEN del entorno; no va en la línea de comandos.
+# El binario de la imagen es /lego (un archivo): los datos se montan en /lego-data.
 # lego v5: un solo subcomando `run` (obtiene o renueva) y las opciones (--path,
 # --dns, --domains, --email, --server...) van DESPUÉS del subcomando.
 LEGO_IMAGE_DEFAULT="goacme/lego:v5.5.2@sha256:1944e8c36055beec47c7de6f15202b41128be75eea0ffa257f0c14d93c5155fd"
@@ -158,10 +159,10 @@ tls_lego_run() {
     docker run --rm \
       --user "$(id -u):$(id -g)" \
       --env-file "$envf" \
-      -v "${LEGO_DATA_DIR}:/lego" \
+      -v "${LEGO_DATA_DIR}:/lego-data" \
       "$image" \
       "$lego_cmd" \
-      --path /lego \
+      --path /lego-data \
       --accept-tos \
       --email "$email" \
       --dns duckdns \
