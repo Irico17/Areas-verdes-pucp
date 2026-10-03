@@ -26,6 +26,13 @@ for nombre in nombres:
     valor = os.environ.get(nombre, "")
     if len(valor) >= 8 and valor in blob:
         encontrados.append(nombre)
+bloque = os.environ.get("BLOQUE_CREDENCIALES_AWS", "")
+if bloque:
+    for linea in bloque.replace("\r", "\n").replace(";", "\n").splitlines():
+        linea = linea.strip()
+        if len(linea) >= 8 and linea in blob:
+            encontrados.append("bloque_credenciales_aws")
+            break
 if "-----BEGIN " in blob:
     encontrados.append("PEM")
 if encontrados:

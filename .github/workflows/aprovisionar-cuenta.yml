@@ -2,8 +2,9 @@ name: aprovisionar-cuenta
 
 # Crea o destruye la infraestructura en la cuenta de Learner Lab cuyas
 # credenciales están en el environment aws-lab. plan es el default.
-# Los inputs de credenciales son un camino secundario: quedan visibles en el
-# historial del run. El log los enmascara; el historial, no.
+# El camino recomendado es scripts/actualizar-credenciales-lab.sh.
+# bloque_credenciales_aws y los inputs sueltos quedan en el historial del run.
+# El log los enmascara; el historial, no.
 
 on:
   workflow_dispatch:
@@ -78,28 +79,33 @@ on:
         required: true
         type: boolean
         default: true
+      bloque_credenciales_aws:
+        description: "Pegue aquí el bloque completo de AWS Details > AWS CLI del Learner Lab. Queda visible en el historial del run. Úselo solo si no corrió el script. Si tiene texto, tiene prioridad y no hace falta marcar usar_credenciales_de_inputs."
+        required: false
+        type: string
+        default: ""
       usar_credenciales_de_inputs:
-        description: SECUNDARIO y menos seguro. Los inputs quedan en el historial del run. Deje false.
+        description: SECUNDARIO. No hace falta si pega el bloque. Los inputs quedan en el historial. Deje false.
         required: true
         type: boolean
         default: false
       aws_access_key_id:
-        description: Solo con usar_credenciales_de_inputs. Visible en el historial.
+        description: Se ignora si hay bloque. Si no, solo con usar_credenciales_de_inputs. Visible en el historial.
         required: false
         type: string
         default: ""
       aws_secret_access_key:
-        description: Solo con usar_credenciales_de_inputs. Visible en el historial.
+        description: Se ignora si hay bloque. Si no, solo con usar_credenciales_de_inputs. Visible en el historial.
         required: false
         type: string
         default: ""
       aws_session_token:
-        description: Solo con usar_credenciales_de_inputs. Visible en el historial.
+        description: Se ignora si hay bloque. Si no, solo con usar_credenciales_de_inputs. Visible en el historial.
         required: false
         type: string
         default: ""
       aws_region_input:
-        description: Solo con usar_credenciales_de_inputs. us-east-1 o us-west-2.
+        description: Se ignora si hay bloque. Si no, solo con usar_credenciales_de_inputs. us-east-1 o us-west-2.
         required: false
         type: string
         default: ""
@@ -117,8 +123,13 @@ jobs:
     environment: aws-lab
     timeout-minutes: 90
     steps:
+      # Este paso no recibe el bloque. El siguiente lo enmascara antes de cualquier otro trabajo.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
       - name: Enmascarar credenciales antes de cualquier otro paso
         env:
+          BLOQUE_CREDENCIALES_AWS: ${{ inputs.bloque_credenciales_aws }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
           INPUT_AWS_ACCESS_KEY_ID: ${{ inputs.aws_access_key_id }}
           INPUT_AWS_SECRET_ACCESS_KEY: ${{ inputs.aws_secret_access_key }}
           INPUT_AWS_SESSION_TOKEN: ${{ inputs.aws_session_token }}
@@ -130,6 +141,10 @@ jobs:
           SECRET_RUNNER_REG_TOKEN_PAT: ${{ secrets.RUNNER_REG_TOKEN_PAT }}
         run: |
           set -euo pipefail
+          set +x
+          parser_rc=0
+          bash scripts/parsear-bloque-credenciales-aws.sh || parser_rc=$?
+          unset BLOQUE_CREDENCIALES_AWS
           python3 - <<'PY'
           import os
           for name in (
@@ -147,8 +162,9 @@ jobs:
               if valor:
                   print(f"::add-mask::{valor}")
           PY
-
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+          if [ "$parser_rc" -ne 0 ]; then
+            exit "$parser_rc"
+          fi
 
       - name: Instalar Terraform fijado
         run: |
@@ -192,7 +208,10 @@ jobs:
           AWS_REGION_ENV: ${{ vars.AWS_REGION }}
         run: |
           set -euo pipefail
-          if [ "$USAR_INPUTS" = "true" ]; then
+          set +x
+          if [ "${CREDENCIALES_DESDE_BLOQUE:-}" = "1" ]; then
+            echo "Aviso: las credenciales llegaron en bloque_credenciales_aws. Quedan en el historial del run aunque este log las enmascare."
+          elif [ "$USAR_INPUTS" = "true" ]; then
             echo "Aviso: las credenciales llegaron como inputs. Quedan en el historial del run aunque este log las enmascare."
             export AWS_ACCESS_KEY_ID="$INPUT_AWS_ACCESS_KEY_ID"
             export AWS_SECRET_ACCESS_KEY="$INPUT_AWS_SECRET_ACCESS_KEY"
