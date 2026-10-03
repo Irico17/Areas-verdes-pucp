@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// EntidadesImportables son las de docs/MAPA-DATOS-Y-EDICION.md secciones 4.1 a 4.15.
+// EntidadesImportables son las que carga el ETL (ver docs/DATOS-Y-ETL.md).
 var EntidadesImportables = []string{
 	"areas_verdes",
 	"zonas_supervision",

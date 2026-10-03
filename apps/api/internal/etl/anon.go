@@ -7,7 +7,7 @@ import (
 	"unicode"
 )
 
-// Ficticios fijos del campus (MAPA-DATOS-Y-EDICION.md §2).
+// Ficticios fijos del campus. No son personas reales.
 // La clave es el conteo del hash, no el nombre de origen.
 const (
 	ficticio259 = "Valeria Quispe"

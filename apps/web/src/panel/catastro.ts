@@ -17,7 +17,7 @@ export const RIEGOS_ACTUALES = ["Sin riego tecnificado", "Riego por aspersión",
 
 export const CODIGOS_ZONA = ["Z1", "Z2", "Z3", "Z4"] as const
 
-/** Campos de MAPA-DATOS-Y-EDICION.md §4.1, en el orden del formulario. */
+/** Campos del formulario de área, en ese orden. */
 export const CAMPOS_AREA = [
   "feature_id",
   "codigo",
@@ -32,7 +32,7 @@ export const CAMPOS_AREA = [
   "zona_supervision_id",
 ] as const
 
-/** Campos de MAPA-DATOS-Y-EDICION.md §4.2. */
+/** Campos del formulario de zona de supervisión. */
 export const CAMPOS_ZONA = ["codigo", "nombre", "area_m2", "geom"] as const
 
 export type CampoArea = (typeof CAMPOS_AREA)[number]
