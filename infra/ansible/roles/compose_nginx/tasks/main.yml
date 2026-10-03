@@ -1,0 +1,33 @@
+---
+- name: Directorio de referencia del Compose
+  ansible.builtin.file:
+    path: /opt/campus/compose
+    state: directory
+    owner: runner
+    group: runner
+    mode: "0755"
+
+- name: Copiar los Compose del repositorio
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../deploy/{{ item }}"
+    dest: "/opt/campus/compose/{{ item }}"
+    owner: runner
+    group: runner
+    mode: "0644"
+  loop:
+    - compose.yml
+    - compose.host.yml
+    - compose.develop.yml
+    - compose.qa.yml
+    - compose.produccion.yml
+
+- name: El HTTP público lo sirve el contenedor web, no un nginx del host
+  ansible.builtin.copy:
+    dest: /opt/campus/compose/LEEME.txt
+    owner: runner
+    group: runner
+    mode: "0644"
+    content: |
+      El proxy HTTP es el servicio web del Compose (imagen nginx).
+      No instale nginx en el host: pelearía por el puerto 80, 8088 o 8188.
+      El despliegue real lo hace deploy/host-deploy.sh desde el checkout del runner.

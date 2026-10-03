@@ -1,0 +1,27 @@
+---
+campus_dirs_nonprod:
+  - { path: /opt/campus, owner: root, group: root, mode: "0755" }
+  - { path: /opt/campus/develop, owner: runner, group: runner, mode: "0755" }
+  - { path: /opt/campus/develop/data, owner: runner, group: runner, mode: "0755" }
+  - { path: /opt/campus/develop/data/pg, owner: root, group: root, mode: "0755" }
+  - { path: /opt/campus/develop/data/app, owner: "10001", group: "10001", mode: "0750" }
+  - { path: /opt/campus/develop/data/backups, owner: runner, group: runner, mode: "0750" }
+  - { path: /opt/campus/develop/state, owner: runner, group: runner, mode: "0750" }
+  - { path: /opt/campus/qa, owner: runner, group: runner, mode: "0755" }
+  - { path: /opt/campus/qa/data, owner: runner, group: runner, mode: "0755" }
+  - { path: /opt/campus/qa/data/pg, owner: root, group: root, mode: "0755" }
+  - { path: /opt/campus/qa/data/app, owner: "10001", group: "10001", mode: "0750" }
+  - { path: /opt/campus/qa/data/backups, owner: runner, group: runner, mode: "0750" }
+  - { path: /opt/campus/qa/state, owner: runner, group: runner, mode: "0750" }
+
+campus_dirs_prod:
+  - { path: /opt/campus, owner: root, group: root, mode: "0755" }
+  - { path: /opt/campus/data, owner: runner, group: runner, mode: "0755" }
+  - { path: /opt/campus/data/pg, owner: root, group: root, mode: "0755" }
+  - { path: /opt/campus/data/app, owner: "10001", group: "10001", mode: "0750" }
+  - { path: /opt/campus/data/backups, owner: runner, group: runner, mode: "0750" }
+  - { path: /opt/campus/state, owner: runner, group: runner, mode: "0750" }
+
+campus_hostenvs_nonprod:
+  - { nombre: develop, home: /opt/campus/develop, puerto: 8088 }
+  - { nombre: qa, home: /opt/campus/qa, puerto: 8188 }

@@ -1,0 +1,48 @@
+---
+- name: Instalar Docker en Amazon Linux
+  ansible.builtin.dnf:
+    name: docker
+    state: present
+  when:
+    - ansible_os_family == "RedHat"
+    - not (campus_en_contenedor_prueba | default(false) | bool)
+  tags: [packages]
+
+- name: Instalar Docker en Debian o Ubuntu
+  ansible.builtin.apt:
+    name: docker.io
+    state: present
+    update_cache: true
+  when:
+    - ansible_os_family == "Debian"
+    - not (campus_en_contenedor_prueba | default(false) | bool)
+  tags: [packages]
+
+- name: Directorio del plugin de Compose
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /usr/local/lib/docker/cli-plugins
+    - /usr/libexec/docker/cli-plugins
+  when: not (campus_en_contenedor_prueba | default(false) | bool)
+  tags: [packages]
+
+- name: Instalar Docker Compose v2 con checksum fijo
+  ansible.builtin.get_url:
+    url: "{{ docker_compose_url }}"
+    dest: /usr/local/lib/docker/cli-plugins/docker-compose
+    checksum: "sha256:{{ docker_compose_sha256 }}"
+    mode: "0755"
+  when: not (campus_en_contenedor_prueba | default(false) | bool)
+  tags: [packages]
+
+- name: Enlazar el plugin donde lo busca el paquete docker
+  ansible.builtin.file:
+    src: /usr/local/lib/docker/cli-plugins/docker-compose
+    dest: /usr/libexec/docker/cli-plugins/docker-compose
+    state: link
+    force: true
+  when: not (campus_en_contenedor_prueba | default(false) | bool)
+  tags: [packages]

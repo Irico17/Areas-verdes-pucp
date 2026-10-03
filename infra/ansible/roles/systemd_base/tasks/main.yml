@@ -1,0 +1,35 @@
+---
+# Unidades de TLS o DuckDNS (rama o6) no se crean ni se modifican aquí.
+- name: ¿Hay systemd en esta máquina?
+  ansible.builtin.stat:
+    path: /run/systemd/system
+  register: campus_systemd
+  tags: [systemd]
+
+- name: Habilitar Docker
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+  when:
+    - campus_systemd.stat.exists
+    - not (campus_en_contenedor_prueba | default(false) | bool)
+  tags: [systemd]
+
+- name: ¿Existe la unidad amazon-ssm-agent?
+  ansible.builtin.command: systemctl cat amazon-ssm-agent
+  register: campus_ssm_unit
+  changed_when: false
+  failed_when: false
+  when: campus_systemd.stat.exists
+  tags: [systemd]
+
+- name: Habilitar el agente SSM
+  ansible.builtin.systemd:
+    name: amazon-ssm-agent
+    enabled: true
+    state: started
+  when:
+    - campus_systemd.stat.exists
+    - campus_ssm_unit.rc | default(1) == 0
+  tags: [systemd]

@@ -1,0 +1,45 @@
+---
+- name: La frontera de red es el security group de Terraform
+  ansible.builtin.debug:
+    msg: >-
+      Este rol no publica Postgres ni la API. Si firewalld no está activo,
+      no se abre ningún puerto en el host.
+
+- name: ¿firewalld está activo?
+  ansible.builtin.command: systemctl is-active firewalld
+  register: campus_firewalld
+  changed_when: false
+  failed_when: false
+  when: ansible_facts.service_mgr | default('') == 'systemd'
+  tags: [systemd]
+
+- name: Puertos web que el security group ya permite
+  ansible.builtin.set_fact:
+    campus_web_ports: "{{ [8088, 8188] if campus_perfil == 'nonprod' else [80] }}"
+  changed_when: false
+
+- name: Consultar si el puerto web ya está en firewalld
+  ansible.builtin.command: "firewall-cmd --query-port={{ item }}/tcp"
+  loop: "{{ campus_web_ports }}"
+  register: campus_fw_query
+  changed_when: false
+  failed_when: false
+  when: (campus_firewalld.stdout | default('')) == 'active'
+  tags: [systemd]
+
+- name: Abrir solo el puerto web que falte
+  ansible.builtin.command: "firewall-cmd --permanent --add-port={{ item.item }}/tcp"
+  loop: "{{ campus_fw_query.results | default([]) }}"
+  when:
+    - (campus_firewalld.stdout | default('')) == 'active'
+    - item.rc | default(0) != 0
+  changed_when: true
+  tags: [systemd]
+
+- name: Recargar firewalld si hubo cambios
+  ansible.builtin.command: firewall-cmd --reload
+  when:
+    - (campus_firewalld.stdout | default('')) == 'active'
+    - campus_fw_query.results | default([]) | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length > 0
+  changed_when: true
+  tags: [systemd]

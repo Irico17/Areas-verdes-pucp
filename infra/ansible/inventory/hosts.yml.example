@@ -1,0 +1,19 @@
+---
+# Ejemplo para ansible-playbook --syntax-check. El inventario real lo escribe
+# scripts/generar-inventario-ansible.sh y no se versiona (hosts.yml).
+# En la cuenta de verdad la conexión es amazon.aws.aws_ssm, ansible_host es el
+# id de instancia y ansible_aws_ssm_bucket_name es campus-verde-ssm-<cuenta>.
+all:
+  children:
+    campus:
+      hosts:
+        nonprod:
+          ansible_connection: local
+          ansible_host: 127.0.0.1
+          campus_perfil: nonprod
+          public_ip: 203.0.113.10
+        prod:
+          ansible_connection: local
+          ansible_host: 127.0.0.1
+          campus_perfil: produccion
+          public_ip: 203.0.113.20

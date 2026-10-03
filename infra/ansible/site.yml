@@ -1,0 +1,14 @@
+---
+- name: Configurar el host de VerdePUCP
+  hosts: campus
+  gather_facts: true
+  become: "{{ not (campus_en_contenedor_prueba | default(false) | bool) }}"
+  become_method: sudo
+  become_flags: "-n"
+  roles:
+    - role: docker
+    - role: campus_layout
+    - role: compose_nginx
+    - role: firewall
+    - role: systemd_base
+    - role: runner

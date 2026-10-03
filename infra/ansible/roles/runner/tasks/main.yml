@@ -1,0 +1,24 @@
+---
+- name: Runners de este host
+  ansible.builtin.set_fact:
+    campus_runners: "{{ ['develop', 'qa'] if campus_perfil == 'nonprod' else ['produccion'] }}"
+  changed_when: false
+  tags: [runner]
+
+- name: Copiar el instalador de runner que ya usa el repo
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../scripts/runner-instalar.sh"
+    dest: /usr/local/sbin/runner-instalar.sh
+    owner: root
+    group: root
+    mode: "0755"
+  when: campus_registrar_runner | bool
+  tags: [runner]
+
+- name: Registrar el runner leyendo el token desde SSM, no desde Ansible
+  ansible.builtin.command: /usr/local/sbin/runner-instalar.sh {{ item }}
+  loop: "{{ campus_runners }}"
+  register: campus_runner_cmd
+  changed_when: "'completada exitosamente' in (campus_runner_cmd.stdout | default(''))"
+  when: campus_registrar_runner | bool
+  tags: [runner]
