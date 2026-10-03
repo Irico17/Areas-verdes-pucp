@@ -113,6 +113,8 @@ frontend/src/
     calendario/
     mapa/                          clic, cobertura, clasificación de uso
     evidencias/                    EXIF puro
+    accesos/                       matriz de permisos
+    importaciones/                 entidades que se pueden cargar
   application/
     contracts/                     puertos
     dto/
