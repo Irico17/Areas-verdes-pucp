@@ -91,7 +91,7 @@ El script [`deploy/host-deploy.sh`](../deploy/host-deploy.sh) ejecuta el siguien
 8. **Espera de salud:** comprueba hasta 45 intentos que `campus-<ambiente>-db` alcance estado `healthy`.
 9. **Smoke test:** ejecuta [`deploy/smoke.sh`](../deploy/smoke.sh) contra `http://127.0.0.1:${WEB_PORT}`.
    - Si el smoke falla: ejecuta **rollback automático** a las imágenes previas (o reinicia el stack legado si era la primera migración) y sale con error `1`.
-10. **Conteos «después» (producción):** ejecuta nuevamente [`deploy/conteos.sql`](../deploy/conteos.sql) y compara con [`deploy/comparar_conteos.py`](../deploy/comparar_conteos.py) usando las exclusiones de [`deploy/conteos.excluir`](../deploy/conteos.excluir). Si alguna tabla de negocio varía en filas, el despliegue aborta con error.
+10. **Conteos «después» (producción):** ejecuta nuevamente [`deploy/conteos.sql`](../deploy/conteos.sql) y compara con [`deploy/comparar_conteos.py`](../deploy/comparar_conteos.py) usando las exclusiones de [`deploy/conteos.excluir`](../deploy/conteos.excluir). Si alguna tabla de negocio baja de filas (o desaparece), el despliegue aborta con error; los aumentos (las migraciones añaden catálogos, permisos y auditoría) y las tablas nuevas se reportan en el log sin fallar.
 11. **Registro:** escribe `$CAMPUS_HOME/state/deployed.env` con el SHA y fecha, y reporta en `$GITHUB_STEP_SUMMARY` si está disponible.
 
 ---

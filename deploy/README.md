@@ -34,7 +34,7 @@ En producción (`APP_ENV=produccion`), se rechazan claves de laboratorio (`pando
 
 ## Conteos y verificación de negocio
 
-En producción, el despliegue compara los conteos de filas antes y después de aplicar la imagen nueva (`deploy/comparar_conteos.py`). La verificación cubre **únicamente tablas de datos de negocio** (catastro, labores, cuadrillas, catálogos) y cualquier discrepancia aborta el despliegue.
+En producción, el despliegue compara los conteos de filas antes y después de aplicar la imagen nueva (`deploy/comparar_conteos.py`). La verificación cubre **únicamente tablas de datos de negocio** (catastro, labores, cuadrillas, catálogos) y una baja de conteo (o una tabla que desaparece) aborta el despliegue. Los aumentos por migraciones y las tablas nuevas se reportan en el log sin fallar.
 
 Para evitar falsos positivos por escrituras legítimas durante el despliegue, se excluyen explícitamente las tablas listadas en [`deploy/conteos.excluir`](conteos.excluir) (fuente única de verdad):
 - `schema_migrations`: el entrypoint aplica migraciones nuevas pendientes al iniciar.

@@ -55,7 +55,7 @@ Jobs: `resolver` → `esperar-ci` → `promocion` → `deploy` (en el runner del
 5. `docker compose up -d` con los datos en *bind mounts* (`pg/` y `app/`). Nunca se borran volúmenes ni datos.
 6. Espera a que Postgres esté sano y ejecuta el **smoke** (`deploy/smoke.sh`): `/health`, login de una cuenta ficticia y dos lecturas.
 7. Si el smoke falla: **rollback automático** a las imágenes previas (o reinicio del stack antiguo en la primera migración de producción).
-8. Solo producción: conteos «después» y comparación con los «antes» (`deploy/comparar_conteos.py`, excluye tablas volátiles como sesiones). Cualquier diferencia en tablas de negocio hace fallar el despliegue.
+8. Solo producción: conteos «después» y comparación con los «antes» (`deploy/comparar_conteos.py`, excluye tablas volátiles como sesiones). Solo una baja de conteo (o una tabla que desaparece) en tablas de negocio hace fallar el despliegue; los aumentos y las tablas nuevas se reportan en el log.
 
 Las migraciones son **aditivas** y las aplica la API al arrancar. El ETL inicial (`data/raw`) solo carga si el catastro está vacío; develop y qa además reciben una semilla ficticia aditiva (`ON CONFLICT DO NOTHING`).
 
