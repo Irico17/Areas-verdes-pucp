@@ -5,8 +5,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-CONF="$ROOT/apps/web/nginx.tls.conf"
-HEADERS="$ROOT/apps/web/nginx-headers.conf"
+CONF="$ROOT/frontend/nginx.tls.conf"
+HEADERS="$ROOT/frontend/nginx-headers.conf"
 
 if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
   cat <<'EOF'
@@ -18,8 +18,8 @@ OMITIDO: Docker no está disponible. Paso manual, con un PEM autofirmado en un d
     -addext "subjectAltName=DNS:verde-pucp.duckdns.org" \
     -keyout "$d/privkey.pem" -out "$d/fullchain.pem"
   docker run --rm \
-    -v "$PWD/apps/web/nginx.tls.conf:/etc/nginx/conf.d/default.conf:ro" \
-    -v "$PWD/apps/web/nginx-headers.conf:/etc/nginx/snippets/campus-headers.conf:ro" \
+    -v "$PWD/frontend/nginx.tls.conf:/etc/nginx/conf.d/default.conf:ro" \
+    -v "$PWD/frontend/nginx-headers.conf:/etc/nginx/snippets/campus-headers.conf:ro" \
     -v "$d:/etc/nginx/certs:ro" \
     --add-host api:127.0.0.1 \
     nginx:1.27-alpine nginx -t
@@ -43,4 +43,4 @@ docker run --rm \
   --add-host api:127.0.0.1 \
   nginx:1.27-alpine nginx -t
 
-echo "nginx -t aceptó apps/web/nginx.tls.conf"
+echo "nginx -t aceptó frontend/nginx.tls.conf"

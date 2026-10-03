@@ -175,7 +175,7 @@ func New() *Config {
 			EdificiosPath: valueOrDefault("EDIFICIOS_PATH", filepath.Join(root, "data", "osm", "edificios_pando.geojson")),
 			ReservasPath:  valueOrDefault("RESERVAS_MOCK_PATH", filepath.Join(root, "data", "mocks", "reservas_agenda.mock.json")),
 			FotosDir:      valueOrDefault("DRIVE_FOTOS_DIR", filepath.Join(rawDir, "drive_fotos")),
-			OpenAPIPath:   valueOrDefault("OPENAPI_PATH", filepath.Join(root, "apps", "api", "openapi.yaml")),
+			OpenAPIPath:   valueOrDefault("OPENAPI_PATH", filepath.Join(root, "backend", "openapi.yaml")),
 		},
 		Migraciones: MigracionesConfig{
 			Dir:     valueOrDefault("MIGRATIONS_DIR", filepath.Join(root, "db", "migrations")),
@@ -462,7 +462,7 @@ func findRepoRoot() string {
 	}
 	dir := wd
 	for {
-		if fileExists(filepath.Join(dir, "data", "raw")) && (fileExists(filepath.Join(dir, "apps", "api")) || fileExists(filepath.Join(dir, "backend"))) {
+		if fileExists(filepath.Join(dir, "data", "raw")) && fileExists(filepath.Join(dir, "backend")) {
 			return dir
 		}
 		parent := filepath.Dir(dir)

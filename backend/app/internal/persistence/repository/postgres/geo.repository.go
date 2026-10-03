@@ -25,8 +25,8 @@ func NewGeoRepository(db *gorm.DB) contracts.IGeoRepository {
 }
 
 func (r *geoRepository) Areas(ctx context.Context, f entities.FiltroGeo) (entities.FeatureCollection, error) {
-	// Filtra activo=false (alineado con listados de zonas). Divergencia intencional
-	// frente a apps/api, que incluye áreas dadas de baja en GET /geo/areas.
+	// Filtra activo=false (alineado con listados de zonas).
+	// Las áreas dadas de baja no salen en GET /geo/areas.
 	q, args := spatialSelect(`
 		SELECT id, feature_id, source_index, codigo, nombre, uso, proy_riego, riego_act,
 		       referencia, perimetro_m, area_m2, ST_AsGeoJSON(geom, 9)

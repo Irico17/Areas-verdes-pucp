@@ -325,7 +325,7 @@ aws_deploy() {
     fi
     echo "No está la imagen ${target_tag} en GHCR ni en ECR. Se construye desde el checkout y se publica en ECR."
     docker build -f "$ROOT/backend/dockerfile" -t "${api_repo}:${target_tag}" "$ROOT"
-    docker build -f "$ROOT/apps/web/Dockerfile" -t "${web_repo}:${target_tag}" "$ROOT"
+    docker build -f "$ROOT/frontend/Dockerfile" -t "${web_repo}:${target_tag}" "$ROOT"
   fi
   docker push "${api_repo}:${target_tag}"
   docker push "${web_repo}:${target_tag}"

@@ -59,7 +59,7 @@ services:
   web:
     build:
       context: ..
-      dockerfile: apps/web/Dockerfile
+      dockerfile: frontend/Dockerfile
     image: campus-verde-web:${APP_ENV}
     container_name: campus-${APP_ENV}-web
     ports:

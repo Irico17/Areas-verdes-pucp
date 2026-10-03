@@ -1,6 +1,6 @@
 # Datos y ETL
 
-La fuente de verdad del esquema es `db/migrations`. El cargador que se ejecuta es el de `backend/app` (`cmd/etl`, `cmd/etl-lote`, `cmd/migrate`). `apps/api` tiene los comandos equivalentes de la API anterior; el arranque y el Makefile usan los de `backend/app`.
+La fuente de verdad del esquema es `db/migrations`. El cargador que se ejecuta es el de `backend/app` (`cmd/etl`, `cmd/etl-lote`, `cmd/migrate`). Desde la raíz: `make etl` y `make etl-lote`.
 
 No se usa `AutoMigrate`. Postgres no monta SQL en `docker-entrypoint-initdb.d`. `db/referencia/` no se aplica.
 

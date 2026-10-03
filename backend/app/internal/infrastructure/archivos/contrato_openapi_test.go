@@ -13,7 +13,7 @@ import (
 )
 
 func TestContratoUneLosTags(t *testing.T) {
-	root := filepath.Join(testutil.FindRepoRoot(), "apps", "api", "openapi.yaml")
+	root := filepath.Join(testutil.FindRepoRoot(), "backend", "openapi.yaml")
 	body, err := archivos.UnirContrato(root)
 	if err != nil {
 		t.Fatal(err)

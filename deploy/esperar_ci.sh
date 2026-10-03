@@ -37,7 +37,19 @@ else:
 ' "$json")"
   case "$decision" in
     ok)
-      echo "CI en verde para $SHA"
+      run_id="$(python3 -c '
+import json, sys
+runs = json.loads(sys.argv[1] or "[]")
+ok = [r for r in runs if r.get("conclusion") == "success"]
+ok.sort(key=lambda r: r.get("createdAt") or "", reverse=True)
+print(ok[0]["databaseId"])
+' "$json")"
+      conclusion="$(gh run view "$run_id" --json jobs --jq '.jobs[] | select(.name=="frontend") | .conclusion')"
+      if [ "$conclusion" != "success" ]; then
+        echo "El job frontend no está en verde para $SHA (${conclusion:-ausente}). No se despliega." >&2
+        exit 1
+      fi
+      echo "CI en verde para $SHA (job frontend incluido)"
       exit 0
       ;;
     fallo)

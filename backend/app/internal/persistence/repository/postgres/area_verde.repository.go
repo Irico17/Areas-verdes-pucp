@@ -26,8 +26,8 @@ func NewAreaVerdeRepository(db *gorm.DB) contracts.IAreaVerdeRepository {
 
 func (r *areaVerdeRepository) Fichas(ctx context.Context, q string) ([]entities.AreaVerdeFicha, error) {
 	q = strings.TrimSpace(q)
-	// Solo áreas activas en listados (como zonas_supervision). Divergencia intencional
-	// frente a apps/api, que no filtra activo en GET /catastro/areas ni /geo/areas.
+	// Solo áreas activas en listados (como zonas_supervision).
+	// Las áreas dadas de baja no salen en GET /catastro/areas.
 	rows, err := r.db.WithContext(ctx).Raw(`
 		SELECT feature_id, COALESCE(nombre, ''), COALESCE(uso, ''), COALESCE(riego_act, ''),
 		       COALESCE(referencia, ''), area_m2, geom IS NOT NULL, activo

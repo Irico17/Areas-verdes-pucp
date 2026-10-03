@@ -1,6 +1,6 @@
 .git
 **/.git
 **/node_modules
-apps/web/dist
+frontend/dist
 data/evidencias
 **/*_test.go

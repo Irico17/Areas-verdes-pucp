@@ -2,7 +2,7 @@
 
 VerdePUCP es el sistema de gestión de áreas verdes del campus PUCP (Pando): catastro, actividades, solicitudes, riego, inventario y reportes. El mapa es un módulo de la misma aplicación: no tiene backend propio.
 
-La API que se despliega es `backend/app` (Go, Gin y GORM). `apps/api` es la API anterior: se conserva para pruebas y para el arnés de paridad. La base es PostgreSQL con PostGIS. Las evidencias van a disco o, si se configura, a un cubo privado.
+La API que se despliega es `backend/app` (Go, Gin y GORM). El visor está en `frontend/`. La base es PostgreSQL con PostGIS. Las evidencias van a disco o, si se configura, a un cubo privado.
 
 Licencia: [MIT](LICENSE).
 
@@ -10,7 +10,7 @@ Licencia: [MIT](LICENSE).
 
 ```mermaid
 flowchart LR
-  web["apps/web<br/>PWA React"] -->|HTTPS JSON y GeoJSON| api["backend/app<br/>Go · Gin · GORM"]
+  web["frontend<br/>PWA React"] -->|HTTPS JSON y GeoJSON| api["backend/app<br/>Go · Gin · GORM"]
   api --> db[("PostgreSQL + PostGIS")]
   api --> ev["Evidencias<br/>disco o cubo privado"]
   ci["CI en GitHub"] --> ghcr["Imágenes en GHCR"]
@@ -23,8 +23,7 @@ Un solo proceso de API. Sin GeoServer, sin microservicios y sin `AutoMigrate`. E
 
 ```
 backend/app       API que se despliega (también responde en /api/v1)
-apps/api          API anterior, solo pruebas y referencia
-apps/web          PWA (React, TypeScript, Vite, MapLibre)
+frontend          PWA (React, TypeScript, Vite, MapLibre)
 db/migrations     esquema SQL. Fuente de verdad. No se reordenan
 db/referencia     esquemas ajenos: no se aplican
 deploy/           compose por ambiente, smoke, TLS y semilla ficticia
@@ -59,7 +58,7 @@ curl -s http://127.0.0.1:8091/health
 El visor, en otra terminal:
 
 ```bash
-cd apps/web
+cd frontend
 npm ci
 npm run dev
 ```
@@ -107,7 +106,7 @@ La clave de `.env.example` (`pando-local`) es de demostración local para las se
 | Jefatura | Consultar, validar, reportes, solicitudes, evidencias y usuarios. No registra avances de campo. |
 | Administración | Consultar, registrar, validar, reportes, catálogos, solicitudes y usuarios. |
 
-La matriz que pinta las pestañas está en `apps/web/src/ui/permisos.ts`. Los códigos de rol no se renombran. Las etiquetas visibles están en [docs/GLOSARIO-NOMENCLATURA.md](docs/GLOSARIO-NOMENCLATURA.md).
+La matriz que pinta las pestañas está en `frontend/src/ui/permisos.ts`. Los códigos de rol no se renombran. Las etiquetas visibles están en [docs/GLOSARIO-NOMENCLATURA.md](docs/GLOSARIO-NOMENCLATURA.md).
 
 ## Ambientes y cuentas de prueba
 
@@ -163,7 +162,7 @@ El trabajo se integra en `develop`. `main` avanza por fast-forward desde `develo
 
 | Qué | Dónde |
 | --- | --- |
-| Pruebas | `.github/workflows/ci.yml`: `test`, `backend`, `escaneo` (no bloqueante) y `e2e`. Un cambio solo de `*.md` o `docs/**` no dispara el CI. |
+| Pruebas | `.github/workflows/ci.yml`: `test`, `backend`, `frontend`, `escaneo` (no bloqueante) y `e2e`. Un cambio solo de `*.md` o `docs/**` no dispara el CI. |
 | Imágenes | El job `imagenes` publica `ghcr.io/<dueño>/campus-verde-api:<sha>` y `campus-verde-web:<sha>` en push a `develop` o en un tag `rc-*`. |
 | develop | Push a `develop` despliega solo si el CI de ese SHA está en verde. |
 | QA | Tag `rc-*` o despliegue manual del mismo SHA que ya pasó por develop. |
@@ -178,6 +177,5 @@ Las protecciones de rama y de environments están en [docs/PROTECCIONES-REPO.md]
 | [deploy/README.md](deploy/README.md) | CI/CD, ambientes, runners, promoción, HTTPS, rollback y verificación |
 | [infra/README.md](infra/README.md) | Terraform, Ansible y los workflows de cuenta |
 | [backend/README.md](backend/README.md) | API, migraciones, ETL, OpenAPI y variables |
-| [apps/web/README.md](apps/web/README.md) | Visor, pruebas y permisos |
-| [apps/api/README.md](apps/api/README.md) | API anterior, conservada para pruebas |
+| [frontend/README.md](frontend/README.md) | Visor, pruebas y permisos |
 | [docs/INDICE.md](docs/INDICE.md) | Resto de la documentación |

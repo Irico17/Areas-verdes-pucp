@@ -62,8 +62,8 @@ help:
 	@echo "make sectores    # data/raw/lote/jefe_de_grupo.json → data/v1/zonas_sector.json"
 	@echo "make api         # API nueva en backend/app"
 	@echo "make web         # visor MapLibre en http://127.0.0.1:4317"
-	@echo "make test        # go test de apps/api"
-	@echo "make backend-test # go test de backend/app"
+	@echo "make test        # go test de backend/app"
+	@echo "make backend-test # alias de make test"
 	@echo "make swagger     # regenera docs de swag"
 	@echo "make counts      # conteos en PostGIS"
 	@echo "make down        # detiene el compose histórico, o ENV=... un ambiente"
@@ -130,13 +130,12 @@ api: env
 	cd backend/app && go run ./cmd
 
 web:
-	cd apps/web && npm run dev
+	cd frontend && npm run dev
 
 test:
-	cd apps/api && go test ./...
-
-backend-test:
 	$(MAKE) -C backend test
+
+backend-test: test
 
 swagger:
 	$(MAKE) -C backend swagger

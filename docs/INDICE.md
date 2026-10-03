@@ -13,4 +13,4 @@ Documentación que sigue vigente. El arranque local está en el [README](../READ
 | [../deploy/README.md](../deploy/README.md) | Despliegue |
 | [../infra/README.md](../infra/README.md) | Aprovisionamiento |
 | [../backend/README.md](../backend/README.md) | Backend |
-| [../apps/web/README.md](../apps/web/README.md) | Frontend |
+| [../frontend/README.md](../frontend/README.md) | Frontend |

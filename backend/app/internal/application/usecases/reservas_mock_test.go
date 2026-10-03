@@ -21,7 +21,7 @@ func (m *mockReservasAdapter) LeerReservas(ctx context.Context) ([]byte, error) 
 	return nil, nil
 }
 
-// TestReservasSinSheet ports apps/api/internal/handlers/reservas_test.go:TestReservasSinSheet
+// TestReservasSinSheet cubre la agenda de reservas cuando no hay hoja.
 func TestReservasSinSheet(t *testing.T) {
 	body := []byte(`{
 	  "_meta": {"fake": true, "warning": "SHEET_ID_RESERVAS=1R3Xz8A5xIVm-s0duMQhav2YAJrQdlSAYgKYeoEvoT8s"},

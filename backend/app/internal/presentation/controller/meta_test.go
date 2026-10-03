@@ -56,7 +56,7 @@ func TestMetaController_OpenAPI_Exitoso(t *testing.T) {
 
 	cfg := &config.Config{
 		Datos: config.DatosConfig{
-			OpenAPIPath: filepath.Join(testutil.FindRepoRoot(), "apps", "api", "openapi.yaml"),
+			OpenAPIPath: filepath.Join(testutil.FindRepoRoot(), "backend", "openapi.yaml"),
 		},
 	}
 	adapter := archivos.NewContratoOpenAPIAdapter(cfg)

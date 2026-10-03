@@ -38,7 +38,8 @@ Workflow: `.github/workflows/ci.yml`.
 
 | Job | Qué hace |
 | --- | --- |
-| `test` | `gofmt` y `go test` de `apps/api`. Lint, pruebas y build de `apps/web`. Construcción de las tres imágenes (API anterior, backend y web). |
+| `test` | Construcción de las imágenes `campus-verde-api` (`backend/dockerfile`) y `campus-verde-web` (`frontend/Dockerfile`). |
+| `frontend` | En `frontend/`: `npm ci`, `oxlint --max-warnings 0`, pruebas unitarias y `tsc -b && vite build`. |
 | `backend` | `gofmt`, `go vet` y `go test` de `backend/app` contra PostGIS. Prohíbe `AutoMigrate`, borrados en migraciones desde la 047, SQL montado en `initdb` y borrados en `deploy/seed`. Prueba los scripts de `deploy/`. Regenera Swagger y falla si hay deriva. |
 | `escaneo` | Gitleaks y Trivy. No bloquea el pipeline. |
 | `imagenes` | Solo en push a `develop` o en tag `rc-*`. Publica `ghcr.io/<dueño>/campus-verde-api:<sha>` y `campus-verde-web:<sha>`. No publica `:latest`. |
@@ -51,7 +52,7 @@ Los permisos son de lectura, salvo `packages: write` en el job de imágenes. Las
 `.github/workflows/deploy.yml`. Jobs: `resolver` → `esperar-ci` → `promocion` → `deploy` → `verificar-post-deploy`.
 
 1. **resolver** decide ambiente, SHA y etiqueta del runner. Producción solo entra por `workflow_dispatch`.
-2. **esperar-ci** espera a que el CI de ese SHA termine en verde (`deploy/esperar_ci.sh`).
+2. **esperar-ci** espera a que el workflow `ci` de ese SHA termine en verde y a que el job `frontend` haya concluido en success (`deploy/esperar_ci.sh`).
 3. **promocion**: QA exige un despliegue exitoso de ese SHA en develop. Producción exige uno exitoso en QA. Un rollback explícito se salta esta exigencia.
 4. **deploy** corre en `[self-hosted, campus-develop|campus-qa|campus-prod]`, entra a GHCR con el token del run y ejecuta `deploy/host-deploy.sh`. El environment de GitHub se llama igual que el ambiente. Producción espera la aprobación configurada en ese environment.
 5. **verificar-post-deploy** pide `GET $PUBLIC_URL/health` desde un runner hospedado. El smoke que decide es el del propio host. Si la URL no es alcanzable desde GitHub, el paso avisa y no sustituye al smoke.
@@ -196,7 +197,7 @@ No se suben claves al repositorio. `CAMPUS_DEV_PASSWORD` de producción tiene 16
 
 El nombre `verde-pucp.duckdns.org` es de producción. DuckDNS es un dominio de laboratorio, no el dominio definitivo de la universidad. Develop (`:8088`) y QA (`:8188`) siguen en HTTP.
 
-El cliente es `lego` (imagen fijada en `deploy/tls/comun.sh`), con el proveedor DuckDNS. Nginx es el de `apps/web`: si al arrancar ve `/etc/nginx/certs/fullchain.pem` y `privkey.pem`, usa la configuración TLS. No se añade otro proxy.
+El cliente es `lego` (imagen fijada en `deploy/tls/comun.sh`), con el proveedor DuckDNS. Nginx es el de `frontend`: si al arrancar ve `/etc/nginx/certs/fullchain.pem` y `privkey.pem`, usa la configuración TLS. No se añade otro proxy.
 
 El token no entra al repositorio. Vive en `/opt/campus/duckdns.env` (modo 600; plantilla `deploy/tls/duckdns.env.example`) o, si se usa el workflow, en el secreto `DUCKDNS_TOKEN`. El workflow `.github/workflows/duckdns-cert.yml` es solo `workflow_dispatch`, corre en `[self-hosted, campus-prod]` y exige `confirmar=EMITIR`. `staging` vale 1 por defecto. No cambia la IP.
 

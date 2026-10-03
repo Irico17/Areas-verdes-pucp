@@ -7,7 +7,7 @@ VerdePUCP gestiona las áreas verdes del campus PUCP (Pando). Un solo backend y 
 ```mermaid
 flowchart TB
   subgraph cliente [Navegador]
-    pwa["apps/web"]
+    pwa["frontend"]
     idb["IndexedDB: cola offline"]
   end
   subgraph servidor [Proceso de la API]
@@ -23,9 +23,8 @@ flowchart TB
 
 | Pieza | Dónde | Notas |
 | --- | --- | --- |
-| PWA | `apps/web` | React, TypeScript, Vite, MapLibre. Teselas OSM. |
-| API en servicio | `backend/app` | Go, Gin, GORM, inyección con `dig`. |
-| API anterior | `apps/api` | Sigue en el repositorio para `go test` y `scripts/paridad-api.sh`. No es la imagen que publica el CI. |
+| PWA | `frontend` | React, TypeScript, Vite, MapLibre. Teselas OSM. |
+| API en servicio | `backend/app` | Go, Gin, GORM, inyección con `dig`. Un solo módulo. |
 | Esquema | `db/migrations` | SQL aditivo e idempotente. Lo aplica `cmd/migrate`. |
 | Objetos | `EVIDENCIAS_DIR` o `EVIDENCIAS_BUCKET` | La base guarda la clave del archivo, no una URL pública. |
 

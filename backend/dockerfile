@@ -24,8 +24,8 @@ RUN apk add --no-cache ca-certificates tzdata \
 COPY --from=build /out/api /out/migrate /out/etl /out/etl-lote /out/sectores /usr/local/bin/
 # Origen del esquema: db/migrations (mismos nombres que schema_migrations.version).
 COPY db/migrations /opt/campus/migrations
-COPY apps/api/openapi.yaml /opt/campus/openapi.yaml
-COPY apps/api/openapi /opt/campus/openapi
+COPY backend/openapi.yaml /opt/campus/openapi.yaml
+COPY backend/openapi /opt/campus/openapi
 COPY data/raw /opt/campus/raw
 COPY data/osm /opt/campus/osm
 COPY data/mocks /opt/campus/mocks

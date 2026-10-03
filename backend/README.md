@@ -1,6 +1,6 @@
 # Backend
 
-API de VerdePUCP. Módulo Go `github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend`, Go 1.25.3, Gin, GORM y `dig`. El proceso que se despliega es este. `apps/api` es la API anterior y no es la imagen del CI.
+API de VerdePUCP. Módulo Go `github.com/GRUPO-12-DP2/-areas-verdes-pucp/backend`, Go 1.25.3, Gin, GORM y `dig`. El proceso que se despliega es este. Hay un solo `go.mod`, en `backend/app`.
 
 Prefijos HTTP: `/areas-verdes/v1` y el alias `/api/v1`. El mismo router monta los dos.
 
@@ -22,7 +22,7 @@ El contenedor de `dig` está en `cmd/ioc`. Una ruta nueva se registra en el cont
 
 OpenAPI que sirve la API: `/areas-verdes/v1/openapi.yaml` y `/api/v1/openapi.yaml`. En `APP_ENV=produccion` responden 404. En develop, QA y en local sin `APP_ENV` responden 200, con independencia de `SWAGGER_ENABLED`. La UI de Swagger, cuando está encendida, queda en `/areas-verdes/v1/swagger/index.html`.
 
-El contrato histórico de la API anterior sigue en `apps/api/openapi.yaml`. `backend/openapi/openapi.base.json` es la base que produce `make swagger`.
+El contrato que sirve la API está en `backend/openapi.yaml`, con los fragmentos en `backend/openapi/*.yaml`. `backend/openapi/openapi.base.json` es la base que produce `make swagger`.
 
 ## Migraciones
 
@@ -131,7 +131,7 @@ Los valores de ejemplo están en `/.env.example`. Aquí solo el nombre y para qu
 | `EDIFICIOS_PATH` | GeoJSON de edificios OSM. |
 | `RESERVAS_MOCK_PATH` | Agenda ficticia. |
 | `DRIVE_FOTOS_DIR` | Fotos recuperadas. No se versionan los JPEG. |
-| `OPENAPI_PATH` | YAML que sirve la API. Default: `apps/api/openapi.yaml`. |
+| `OPENAPI_PATH` | YAML que sirve la API. Default: `backend/openapi.yaml`. |
 | `MODELGEN_OUT` | Directorio de salida de `modelgen`. |
 | `AWS_REGION` | Región del SDK cuando hay cubo. No es una clave. |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | Cadena por defecto del SDK. No van en el repositorio. Con un rol de instancia no hacen falta. |

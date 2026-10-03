@@ -1,4 +1,4 @@
-# apps/web
+# frontend
 
 Visor de VerdePUCP. React 19, TypeScript, Vite 8 y MapLibre. El mapa no tiene backend propio: habla con `backend/app` por el proxy de Vite (`/api`, `/areas-verdes` y `/health`).
 
@@ -62,13 +62,13 @@ npm run test:e2e
 
 Playwright usa `E2E_BASE_URL` (por defecto `http://127.0.0.1:4317`) y levanta Vite si no está ya arriba. En CI (`CI=true`) no reutiliza un servidor previo. Las capturas quedan en `e2e-artifacts/` y el informe en `playwright-report/`. Esos directorios no se versionan.
 
-El job `e2e` de `.github/workflows/ci.yml` es el mismo recorrido: PostGIS, `migrate`, semilla, API en `127.0.0.1:8091` y `npm run test:e2e`.
+El job `frontend` de `.github/workflows/ci.yml` corre `npm ci`, `oxlint --max-warnings 0`, las pruebas unitarias y `tsc -b && vite build`. El job `e2e` es el recorrido de extremo a extremo: PostGIS, `migrate`, semilla, API en `127.0.0.1:8091` y `npm run test:e2e`.
 
 ## Nomenclatura
 
 Las etiquetas visibles están en `src/ui/nomenclatura.ts` (`MODULO`, `CAPA`, `EJEMPLAR` y el resto). Los códigos de rol, de estado, de capa y de ruta no se renombran ahí.
 
-El vocabulario acordado, con los sinónimos que no deben volver a la interfaz, está en [docs/GLOSARIO-NOMENCLATURA.md](../../docs/GLOSARIO-NOMENCLATURA.md).
+El vocabulario acordado, con los sinónimos que no deben volver a la interfaz, está en [docs/GLOSARIO-NOMENCLATURA.md](../docs/GLOSARIO-NOMENCLATURA.md).
 
 ## Roles y permisos
 

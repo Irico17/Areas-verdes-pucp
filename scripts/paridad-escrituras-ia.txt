@@ -1,8 +1,0 @@
-# Paridad de /ia/sugerir-tipo (Lote 16)
-coordinacion POST /api/v1/ia/sugerir-tipo @scripts/cuerpos/ia-sugerir-riego.json
-jefatura POST /api/v1/ia/sugerir-tipo @scripts/cuerpos/ia-sugerir-riego.json
-admin POST /api/v1/ia/sugerir-tipo @scripts/cuerpos/ia-sugerir-riego.json
-norte POST /api/v1/ia/sugerir-tipo @scripts/cuerpos/ia-sugerir-riego.json
-coordinacion POST /api/v1/ia/sugerir-tipo @scripts/cuerpos/ia-sugerir-sin-pista.json
-coordinacion POST /api/v1/ia/sugerir-tipo @scripts/cuerpos/ia-sugerir-invalido.json 400
-- POST /api/v1/ia/sugerir-tipo @scripts/cuerpos/ia-sugerir-riego.json 401

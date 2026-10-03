@@ -1,14 +1,14 @@
 FROM node:22-bookworm AS build
 WORKDIR /src
-COPY apps/web/package.json apps/web/package-lock.json ./
+COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
-COPY apps/web/ ./
+COPY frontend/ ./
 RUN npm run build
 
 FROM nginx:1.27-alpine
 LABEL org.opencontainers.image.source="https://github.com/Irico17/Areas-verdes-pucp"
-COPY apps/web/nginx.http.conf apps/web/nginx.tls.conf apps/web/nginx-headers.conf /opt/campus/
-COPY apps/web/docker-entrypoint.sh /entrypoint.sh
+COPY frontend/nginx.http.conf frontend/nginx.tls.conf frontend/nginx-headers.conf /opt/campus/
+COPY frontend/docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh && rm -f /etc/nginx/conf.d/default.conf
 COPY --from=build /src/dist /usr/share/nginx/html
 EXPOSE 80 443

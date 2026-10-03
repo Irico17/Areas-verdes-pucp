@@ -56,11 +56,10 @@ venv/
 /uploads/
 
 # Worker de MapLibre copiado en el build (no es fuente)
-apps/web/public/maplibre-gl-worker.mjs
-apps/web/public/maplibre-gl-shared.mjs
+frontend/public/maplibre-gl-worker.mjs
+frontend/public/maplibre-gl-shared.mjs
 
 # Binarios Go
-apps/api/bin/
 *.exe
 *.test
 
@@ -92,7 +91,7 @@ crash.*.log
 backend/app/bin/
 
 # Capturas de la ola de claridad (se archivan fuera del commit si pesan)
-apps/web/e2e-artifacts/
+frontend/e2e-artifacts/
 
 # Fotos recuperadas de Drive: caché local, nunca al repo
 data/raw/drive_fotos/*.jpg

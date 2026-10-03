@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 )
 
-// FindRepoRoot locates the repository root containing apps/api/openapi.yaml.
+// FindRepoRoot locates the repository root containing backend/openapi.yaml.
 func FindRepoRoot() string {
 	wd, err := os.Getwd()
 	if err == nil {
 		for dir := wd; ; {
-			candidate := filepath.Join(dir, "apps", "api", "openapi.yaml")
+			candidate := filepath.Join(dir, "backend", "openapi.yaml")
 			if fi, err := os.Stat(candidate); err == nil && !fi.IsDir() {
 				return dir
 			}

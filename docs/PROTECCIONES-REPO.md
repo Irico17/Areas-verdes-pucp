@@ -49,12 +49,12 @@ gh api -X POST "repos/$REPO/environments/qa/deployment-branch-policies" -f name=
 
 ## 2. Protección de `main`
 
-Sin force push, sin borrado de la rama y con los checks `test`, `backend`, `escaneo` y `e2e` (jobs de `.github/workflows/ci.yml`) obligatorios. `enforce_admins` queda en `false` a propósito: quien administra el repositorio puede seguir avanzando `main` con un fast-forward directo (por ejemplo, desde la API) sin abrir un PR. No se exige PR ni revisión, porque el flujo del equipo avanza `main` por fast-forward desde `develop`.
+Sin force push, sin borrado de la rama y con los checks `test`, `backend`, `frontend`, `escaneo` y `e2e` (jobs de `.github/workflows/ci.yml`) obligatorios. `enforce_admins` queda en `false` a propósito: quien administra el repositorio puede seguir avanzando `main` con un fast-forward directo (por ejemplo, desde la API) sin abrir un PR. No se exige PR ni revisión, porque el flujo del equipo avanza `main` por fast-forward desde `develop`.
 
 ```bash
 gh api -X PUT "repos/$REPO/branches/main/protection" --input - <<'EOF2'
 {
-  "required_status_checks": { "strict": false, "contexts": ["test", "backend", "escaneo", "e2e"] },
+  "required_status_checks": { "strict": false, "contexts": ["test", "backend", "frontend", "escaneo", "e2e"] },
   "enforce_admins": false,
   "required_pull_request_reviews": null,
   "restrictions": null,
@@ -72,7 +72,7 @@ gh api "repos/$REPO/branches/main/protection" \
 
 Notas:
 
-- Los nombres de `contexts` son los nombres de los jobs (`test`, `backend`, `escaneo`, `e2e`). `imagenes` no se exige: solo corre en `develop`, `backend/arquitectura-equipo` y tags `rc-*`, y en `main` queda `skipped`.
+- Los nombres de `contexts` son los nombres de los jobs (`test`, `backend`, `frontend`, `escaneo`, `e2e`). `imagenes` no se exige: solo corre en `develop`, `backend/arquitectura-equipo` y tags `rc-*`, y en `main` queda `skipped`. `frontend` corre en el mismo disparador que el resto del CI (el `paths-ignore` del workflow); no tiene un filtro propio que lo deje en `skipped` cuando los demás jobs corren.
 - Si un commit solo cambia `*.md` o `docs/**`, el CI no corre (`paths-ignore`). Para un administrador con `enforce_admins=false` eso no bloquea el push; para quien no sea administrador, un push directo sin checks se rechaza.
 - Para endurecerlo más tarde: poner `enforce_admins` en `true`, añadir `required_pull_request_reviews` y usar PR.
 
@@ -91,7 +91,7 @@ EOF2
 | --- | --- |
 | Environment `produccion` | revisor obligatorio `Irico17`, `prevent_self_review=false`, solo rama `develop` |
 | Environment `qa` | ramas `develop` y tags `rc-*` |
-| Rama `main` | checks `test`, `backend`, `escaneo`, `e2e`; sin force push; sin borrado; `enforce_admins=false` |
+| Rama `main` | checks `test`, `backend`, `frontend`, `escaneo`, `e2e`; sin force push; sin borrado; `enforce_admins=false` |
 
 ## 5. Lo que estas reglas no cubren
 
