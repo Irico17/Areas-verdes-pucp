@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -16,6 +17,8 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
+
+var identSQL = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)
 
 func openTestDB(name string) (*gorm.DB, error) {
 	u := urlDe(name)
@@ -659,8 +662,11 @@ func TestBaselineNoSeReaplicaSiLaSerieHistoricaCerro(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "001_esquema_base.sql"), []byte("SELECT 1/0;"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(dir, "002_catalogos_base.sql"), []byte("SELECT 1/0;"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if err := aplicar(name, dir); err != nil {
-		t.Fatalf("la baseline no debía ejecutarse: %v", err)
+		t.Fatalf("la serie consolidada no debía ejecutarse: %v", err)
 	}
 
 	gdb, err := openTestDB(name)
@@ -685,10 +691,255 @@ func TestBaselineNoSeReaplicaSiLaSerieHistoricaCerro(t *testing.T) {
 	if fantasma != 0 {
 		t.Fatal("la baseline se ejecutó sobre una serie ya cerrada")
 	}
-	if err := gdb.Raw(`SELECT count(*) FROM schema_migrations WHERE version IN ('078_medidas_palmera_baja.sql', '001_esquema_base.sql')`).Scan(&versiones).Error; err != nil {
+	if err := gdb.Raw(`SELECT count(*) FROM schema_migrations WHERE version IN ('078_medidas_palmera_baja.sql', '001_esquema_base.sql', '002_catalogos_base.sql')`).Scan(&versiones).Error; err != nil {
 		t.Fatal(err)
 	}
-	if versiones != 2 {
+	if versiones != 3 {
 		t.Fatalf("versiones registradas = %d", versiones)
 	}
+}
+
+func TestTransicionConservaDatosYRegistraBaseline(t *testing.T) {
+	base := os.Getenv("MIGRATE_TEST_URL")
+	if base == "" {
+		t.Skip("MIGRATE_TEST_URL no configurada; omitiendo test de base de datos")
+	}
+	admin, err := sql.Open("pgx", base)
+	if err != nil {
+		t.Fatalf("abrir conexion admin: %v", err)
+	}
+	defer admin.Close()
+	if err := admin.Ping(); err != nil {
+		t.Fatalf("sin postgres de prueba: %v", err)
+	}
+
+	name := fmt.Sprintf("vp_c_transicion_%08x", rand.Uint32())
+	recrear(t, admin, name)
+	defer func() {
+		_, _ = admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`, name)
+		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + name)
+	}()
+
+	if err := aplicar(name, dirSerieHistorica()); err != nil {
+		t.Fatalf("serie histórica: %v", err)
+	}
+	gdb, err := openTestDB(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sqlDB.Close()
+
+	if err := gdb.Exec(`UPDATE capataces SET equipo = 'MARCA-TRANSICION' WHERE id = 'cap-norte'`).Error; err != nil {
+		t.Fatal(err)
+	}
+	var catalogos, versiones int
+	if err := gdb.Raw(`SELECT count(*) FROM catalogos`).Scan(&catalogos).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := gdb.Raw(`SELECT count(*) FROM schema_migrations`).Scan(&versiones).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if err := aplicar(name, findMigrationsDir()); err != nil {
+		t.Fatalf("transición: %v", err)
+	}
+	var equipo string
+	if err := gdb.Raw(`SELECT equipo FROM capataces WHERE id = 'cap-norte'`).Scan(&equipo).Error; err != nil {
+		t.Fatal(err)
+	}
+	if equipo != "MARCA-TRANSICION" {
+		t.Fatalf("la transición alteró un dato ya cargado: %q", equipo)
+	}
+	var catalogosDespues, versionesDespues int
+	if err := gdb.Raw(`SELECT count(*) FROM catalogos`).Scan(&catalogosDespues).Error; err != nil {
+		t.Fatal(err)
+	}
+	if catalogosDespues != catalogos {
+		t.Fatalf("catalogos %d → %d", catalogos, catalogosDespues)
+	}
+	if err := gdb.Raw(`SELECT count(*) FROM schema_migrations`).Scan(&versionesDespues).Error; err != nil {
+		t.Fatal(err)
+	}
+	if versionesDespues != versiones+2 {
+		t.Fatalf("schema_migrations %d → %d; se esperaban las dos consolidadas", versiones, versionesDespues)
+	}
+	var cubiertas int
+	if err := gdb.Raw(`SELECT count(*) FROM schema_migrations WHERE version IN ('078_medidas_palmera_baja.sql', '001_esquema_base.sql', '002_catalogos_base.sql')`).Scan(&cubiertas).Error; err != nil {
+		t.Fatal(err)
+	}
+	if cubiertas != 3 {
+		t.Fatalf("faltan versiones de la transición: %d", cubiertas)
+	}
+
+	if err := aplicar(name, findMigrationsDir()); err != nil {
+		t.Fatalf("segunda pasada: %v", err)
+	}
+	var otraVez int
+	if err := gdb.Raw(`SELECT count(*) FROM schema_migrations`).Scan(&otraVez).Error; err != nil {
+		t.Fatal(err)
+	}
+	if otraVez != versionesDespues {
+		t.Fatalf("la segunda pasada registró versiones de más: %d → %d", versionesDespues, otraVez)
+	}
+}
+
+func TestEsquemaConsolidadoIgualASerieHistorica(t *testing.T) {
+	base := os.Getenv("MIGRATE_TEST_URL")
+	if base == "" {
+		t.Skip("MIGRATE_TEST_URL no configurada; omitiendo test de base de datos")
+	}
+	admin, err := sql.Open("pgx", base)
+	if err != nil {
+		t.Fatalf("abrir conexion admin: %v", err)
+	}
+	defer admin.Close()
+	if err := admin.Ping(); err != nil {
+		t.Fatalf("sin postgres de prueba: %v", err)
+	}
+
+	vieja := fmt.Sprintf("vp_c_eq_vieja_%08x", rand.Uint32())
+	nueva := fmt.Sprintf("vp_c_eq_nueva_%08x", rand.Uint32())
+	recrear(t, admin, vieja)
+	recrear(t, admin, nueva)
+	defer func() {
+		_, _ = admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname IN ($1, $2) AND pid <> pg_backend_pid()`, vieja, nueva)
+		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + vieja)
+		_, _ = admin.Exec("DROP DATABASE IF EXISTS " + nueva)
+	}()
+	if err := aplicar(vieja, dirSerieHistorica()); err != nil {
+		t.Fatalf("serie histórica: %v", err)
+	}
+	if err := aplicar(nueva, findMigrationsDir()); err != nil {
+		t.Fatalf("serie nueva: %v", err)
+	}
+
+	consultas := []string{
+		`SELECT format('%s.%s|%s|%s|%s', c.table_name, c.column_name, c.data_type, c.udt_name, c.is_nullable, coalesce(c.column_default, ''))
+		 FROM information_schema.columns c
+		 WHERE c.table_schema = 'public' AND c.table_name <> 'spatial_ref_sys'
+		 ORDER BY 1`,
+		`SELECT format('%s|%s|%s', r.relname, c.conname, pg_get_constraintdef(c.oid))
+		 FROM pg_constraint c
+		 JOIN pg_class r ON r.oid = c.conrelid
+		 JOIN pg_namespace n ON n.oid = r.relnamespace
+		 WHERE n.nspname = 'public' AND r.relname <> 'spatial_ref_sys'
+		 ORDER BY 1`,
+		`SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND tablename <> 'spatial_ref_sys' ORDER BY indexdef`,
+		`SELECT format('%s|%s', c.relname, pg_get_viewdef(c.oid))
+		 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+		 WHERE n.nspname = 'public' AND c.relkind = 'v' ORDER BY 1`,
+		`SELECT format('%s|%s', p.proname, pg_get_functiondef(p.oid))
+		 FROM pg_proc p
+		 JOIN pg_namespace n ON n.oid = p.pronamespace
+		 WHERE n.nspname = 'public'
+		   AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')
+		 ORDER BY 1`,
+		`SELECT pg_get_triggerdef(t.oid)
+		 FROM pg_trigger t
+		 JOIN pg_class c ON c.oid = t.tgrelid
+		 JOIN pg_namespace n ON n.oid = c.relnamespace
+		 WHERE n.nspname = 'public' AND NOT t.tgisinternal
+		 ORDER BY 1`,
+	}
+	for i, q := range consultas {
+		if diff := diferenciaListas(t, vieja, nueva, q); diff != "" {
+			t.Fatalf("consulta %d:\n%s", i, diff)
+		}
+	}
+	if diff := diferenciaListas(t, vieja, nueva, `
+		SELECT format('%s|%s', sequencename, last_value)
+		FROM pg_sequences WHERE schemaname = 'public' ORDER BY 1`); diff != "" {
+		t.Fatalf("secuencias:\n%s", diff)
+	}
+	for _, tabla := range leerLista(t, vieja, `
+		SELECT c.relname
+		FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+		WHERE n.nspname = 'public' AND c.relkind = 'r'
+		  AND c.relname NOT IN ('schema_migrations', 'spatial_ref_sys')
+		ORDER BY 1`) {
+		q := consultaDatos(t, vieja, tabla)
+		if diff := diferenciaListas(t, vieja, nueva, q); diff != "" {
+			t.Fatalf("datos %s:\n%s", tabla, diff)
+		}
+	}
+}
+
+func consultaDatos(t *testing.T, dbName, tabla string) string {
+	t.Helper()
+	if !identSQL.MatchString(tabla) {
+		t.Fatalf("tabla inesperada %s", tabla)
+	}
+	cols := leerLista(t, dbName, fmt.Sprintf(`
+		SELECT column_name
+		FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name = '%s'
+		  AND data_type <> 'timestamp with time zone'
+		ORDER BY ordinal_position`, tabla))
+	if len(cols) == 0 {
+		return fmt.Sprintf(`SELECT count(*)::text FROM %s`, tabla)
+	}
+	partes := make([]string, 0, len(cols))
+	for _, col := range cols {
+		if !identSQL.MatchString(col) || !identSQL.MatchString(tabla) {
+			t.Fatalf("identificador inesperado %s.%s", tabla, col)
+		}
+		partes = append(partes, fmt.Sprintf("coalesce(%s::text, '∅')", col))
+	}
+	return fmt.Sprintf(`
+		SELECT coalesce(string_agg(linea, E'\n' ORDER BY linea), '')
+		FROM (SELECT concat_ws('|', %s) AS linea FROM %s) s`,
+		strings.Join(partes, ", "), tabla)
+}
+
+func diferenciaListas(t *testing.T, a, b, query string) string {
+	t.Helper()
+	la := leerLista(t, a, query)
+	lb := leerLista(t, b, query)
+	if strings.Join(la, "\n") == strings.Join(lb, "\n") {
+		return ""
+	}
+	var bld strings.Builder
+	fmt.Fprintf(&bld, "vieja=%d nueva=%d\n", len(la), len(lb))
+	vistos := map[string]int{}
+	for _, s := range la {
+		vistos[s]++
+	}
+	for _, s := range lb {
+		vistos[s]--
+	}
+	n := 0
+	for s, d := range vistos {
+		if d == 0 {
+			continue
+		}
+		n++
+		if n > 12 {
+			fmt.Fprintf(&bld, "...\n")
+			break
+		}
+		fmt.Fprintf(&bld, "%+d %s\n", d, s)
+	}
+	return bld.String()
+}
+
+func leerLista(t *testing.T, name, query string) []string {
+	t.Helper()
+	gdb, err := openTestDB(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sqlDB.Close()
+	var out []string
+	if err := gdb.Raw(query).Scan(&out).Error; err != nil {
+		t.Fatal(err)
+	}
+	return out
 }

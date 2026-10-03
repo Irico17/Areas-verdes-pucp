@@ -88,6 +88,8 @@ jobs:
           test -z "$(gofmt -l .)"
           go vet ./...
           go test ./...
+      - name: Cliente de PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Esquema y documentación sin deriva
         env:
           ESQUEMA_ADMIN_URL: postgres://campus:campus@localhost:5432/postgres?sslmode=disable
@@ -114,7 +116,7 @@ jobs:
                   continue
               for path in sorted(base.glob("*.sql")):
                   match = re.match(r"(\d+)", path.name)
-                  if not match or int(match.group(1)) < 47:
+                  if not match or int(match.group(1)) < 3:
                       continue
                   checked += 1
                   text = path.read_text(encoding="utf-8")
@@ -124,9 +126,9 @@ jobs:
                           f"migración nueva no puede borrar datos ({hit.group(0)}): {path}"
                       )
           if checked == 0:
-              print("sin migraciones >= 047 todavía; el chequeo queda activo")
+              print("sin migraciones >= 003 todavía; el chequeo queda activo")
           else:
-              print(f"revisadas {checked} migraciones >= 047 (DROP/TRUNCATE/DELETE FROM, sin importar mayúsculas)")
+              print(f"revisadas {checked} migraciones >= 003 (DROP/TRUNCATE/DELETE FROM, sin importar mayúsculas)")
 
           compose_paths = []
           for pattern in ("docker-compose*.yml", "docker-compose*.yaml", "compose*.yml", "compose*.yaml"):

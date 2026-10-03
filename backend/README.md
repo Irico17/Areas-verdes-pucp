@@ -26,7 +26,7 @@ El contrato que sirve la API está en `backend/openapi.yaml`, con los fragmentos
 
 ## Migraciones
 
-Son aditivas. Cada archivo de `db/migrations` se aplica una vez, en su transacción, y se anota en `schema_migrations`. No hay migraciones «down». No se usa `AutoMigrate`. `001_esquema_base.sql` reemplaza la serie histórica; los archivos posteriores no se renombran ni se reordenan. Una base que ya tiene `078_medidas_palmera_baja.sql` no reejecuta la baseline.
+Son aditivas. Cada archivo de `db/migrations` se aplica una vez, en su transacción, y se anota en `schema_migrations` (`version` es el nombre del archivo; no hay checksum). No hay migraciones «down». No se usa `AutoMigrate`. `001_esquema_base.sql` es el esquema y `002_catalogos_base.sql` los catálogos. Sustituyen la serie histórica. Una base que ya tiene `078_medidas_palmera_baja.sql` anota esas dos versiones sin ejecutarlas y conserva el historial. Lo nuevo sigue en `003_*.sql`; esos archivos no se renombran ni se reordenan.
 
 ```bash
 cd app

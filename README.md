@@ -24,7 +24,7 @@ Un solo proceso de API. Sin GeoServer, sin microservicios y sin `AutoMigrate`. E
 ```
 backend/app       API que se despliega (también responde en /api/v1)
 frontend          PWA (React, TypeScript, Vite, MapLibre)
-db/migrations     esquema SQL. Fuente de verdad. La baseline es 001_esquema_base.sql
+db/migrations     esquema SQL. Fuente de verdad: 001_esquema_base.sql y 002_catalogos_base.sql
 db/esquema.sql    foto generada del resultado. No se edita a mano
 db/referencia     serie histórica y esquemas ajenos: no se aplican
 deploy/           compose por ambiente, smoke, TLS y semilla ficticia

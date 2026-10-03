@@ -21,7 +21,9 @@ Variables: `DATA_RAW_DIR`, `DATA_V1_DIR`, `EDIFICIOS_PATH`, `RESERVAS_MOCK_PATH`
 
 Cada archivo `NNN_*.sql` se aplica una vez, en su propia transacción, y queda anotado en `schema_migrations`. Volver a correr `migrate` no las repite. No hay migraciones «down»: un rollback de imagen no quita columnas.
 
-`001_esquema_base.sql` es el esquema consolidado (acceso, catastro, operación, inventario, catálogos, auditoría, evidencias y los datos de referencia). La serie `001_postgis.sql` … `078_medidas_palmera_baja.sql` está en `db/referencia/migraciones-historicas/` y ya no se ejecuta. Una base que ya registró `078_medidas_palmera_baja.sql` no vuelve a correr la baseline. Los archivos nuevos no se reordenan ni se renombran.
+La serie vigente son dos archivos. `001_esquema_base.sql` crea extensiones, tipos, tablas, índices, restricciones, vistas, funciones y triggers. `002_catalogos_base.sql` inserta los catálogos y los datos de referencia que la serie histórica dejaba en una base vacía; cada `INSERT` usa `ON CONFLICT DO NOTHING`. La semilla de demostración del despliegue sigue en `deploy/seed/ficticio.sql` y no entra en las migraciones. Usuarios y sesiones los crea la semilla de accesos, no el SQL.
+
+La serie `001_postgis.sql` … `078_medidas_palmera_baja.sql` está en `db/referencia/migraciones-historicas/` y ya no se ejecuta. Sirve para la transición y para las pruebas que recorren una base a medias. Si `schema_migrations` ya tiene `078_medidas_palmera_baja.sql`, `001` y `002` se anotan como aplicadas y no se ejecutan; el historial viejo permanece. Una serie a medias, sin ese archivo, no recibe la consolidada. Los cambios siguientes van en `003_*.sql` y siguientes: son aditivos, no se reordenan y no se renombran.
 
 Desde la raíz, con Postgres arriba y `.env` cargado:
 

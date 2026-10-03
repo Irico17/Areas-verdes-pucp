@@ -2,7 +2,7 @@
 
 Generado por `scripts/generar-esquema-bd.sh` a partir de un PostGIS vacío con las migraciones de `db/migrations` aplicadas por `cmd/migrate`. La fuente de verdad son esas migraciones. La foto SQL, sin datos, está en `db/esquema.sql`.
 
-Migración aplicada: **1**. No hay filas de negocio en este documento. Se omiten `spatial_ref_sys` y las vistas del catálogo de PostGIS.
+Migraciones aplicadas: **2**. No hay filas de negocio en este documento. Se omiten `spatial_ref_sys` y las vistas del catálogo de PostGIS.
 
 ## Tablas
 

@@ -44,12 +44,26 @@ func ComprobarNecesitaETL(sqlDB *sql.DB) (bool, []string, error) {
 }
 
 const (
-	// migracionBaseline es el esquema consolidado. La serie que lo originó
-	// quedó en db/referencia/migraciones-historicas y ya no se aplica.
-	migracionBaseline = "001_esquema_base.sql"
-	// migracionSerieHistorica marca una base que ya recorrió esa serie hasta el final.
+	// migracionSerieHistorica marca una base que ya recorrió 001_postgis.sql …
+	// 078_medidas_palmera_baja.sql. Esas versiones quedan en la tabla.
 	migracionSerieHistorica = "078_medidas_palmera_baja.sql"
 )
+
+// migracionesConsolidadas sustituyen a la serie histórica. Si esa serie ya
+// está registrada, se anotan como aplicadas y no se ejecutan.
+var migracionesConsolidadas = []string{
+	"001_esquema_base.sql",
+	"002_catalogos_base.sql",
+}
+
+func esConsolidada(name string) bool {
+	for _, n := range migracionesConsolidadas {
+		if n == name {
+			return true
+		}
+	}
+	return false
+}
 
 // Apply executes .sql files in dir in lexicographical order, exactly once each.
 func Apply(gdb *gorm.DB, dir string) error {
@@ -89,13 +103,15 @@ func Apply(gdb *gorm.DB, dir string) error {
 			fmt.Printf("migración ya aplicada: %s\n", name)
 			continue
 		}
-		if name == migracionBaseline {
+		if esConsolidada(name) {
 			omitir, err := baselineYaCubierta(sqlDB)
 			if err != nil {
 				return err
 			}
 			if omitir {
-				if _, err := sqlDB.Exec(`INSERT INTO schema_migrations (version) VALUES ($1)`, name); err != nil {
+				if _, err := sqlDB.Exec(
+					`INSERT INTO schema_migrations (version) VALUES ($1) ON CONFLICT (version) DO NOTHING`, name,
+				); err != nil {
 					return fmt.Errorf("registrar %s: %w", name, err)
 				}
 				fmt.Printf("migración ya cubierta por la serie histórica: %s\n", name)
@@ -131,9 +147,9 @@ func Apply(gdb *gorm.DB, dir string) error {
 }
 
 // baselineYaCubierta informa si la base ya terminó la serie histórica.
-// En ese caso el esquema está en el estado final y no hay que recrearlo.
-// Una serie a medias (hay versiones, pero no la última) no se puede saltar:
-// los archivos viejos ya no están en el directorio que aplica migrate.
+// En ese caso el esquema y los catálogos ya están, y las migraciones
+// consolidadas solo se registran. Una serie a medias no se salta: los
+// archivos viejos ya no están en el directorio que aplica migrate.
 func baselineYaCubierta(sqlDB *sql.DB) (bool, error) {
 	var cerrada int
 	if err := sqlDB.QueryRow(
@@ -144,18 +160,19 @@ func baselineYaCubierta(sqlDB *sql.DB) (bool, error) {
 	if cerrada > 0 {
 		return true, nil
 	}
-	var otras int
+	var ajenas int
 	if err := sqlDB.QueryRow(
-		`SELECT count(*) FROM schema_migrations WHERE version <> $1`, migracionBaseline,
-	).Scan(&otras); err != nil {
+		`SELECT count(*) FROM schema_migrations WHERE NOT (version = ANY($1::text[]))`,
+		migracionesConsolidadas,
+	).Scan(&ajenas); err != nil {
 		return false, fmt.Errorf("consultar migraciones previas: %w", err)
 	}
-	if otras > 0 {
+	if ajenas > 0 {
 		return false, fmt.Errorf(
 			"la base tiene migraciones de la serie histórica pero no %s. "+
-				"No se aplica %s sobre una serie a medias. "+
+				"No se aplican 001_esquema_base.sql ni 002_catalogos_base.sql sobre una serie a medias. "+
 				"Esos archivos están en db/referencia/migraciones-historicas",
-			migracionSerieHistorica, migracionBaseline,
+			migracionSerieHistorica,
 		)
 	}
 	return false, nil
