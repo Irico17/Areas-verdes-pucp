@@ -25,7 +25,7 @@ import {
   USOS,
   type Categoria,
 } from "./categorias"
-import { cargaInicial, clasificarErrorMapa, marcarEstiloListo, marcarEstiloRoto, planoNoArranco, registrarFalloTesela, registrarTeselaOk, textoDeError, type CargaPlano } from "./cargaPlano"
+import { cargaInicial, clasificarErrorMapa, esTeselaServida, marcarEstiloListo, marcarEstiloRoto, planoNoArranco, registrarFalloTesela, registrarTeselaOk, textoDeError, type CargaPlano } from "./cargaPlano"
 import { decisionClic } from "./clicMapa"
 import { catastroVisible, conteoCapas } from "./coverage"
 import { activarDibujo, type ModoDibujo } from "./draw"
@@ -220,7 +220,7 @@ export function CampusMap({
     map.on("sourcedata", (event) => {
       const ev = event as { sourceId?: string; sourceDataType?: string; tile?: unknown }
       if (ev.sourceId !== "osm") return
-      if (ev.tile && ev.sourceDataType === "content") {
+      if (esTeselaServida(ev)) {
         carga = registrarTeselaOk(carga)
         return
       }

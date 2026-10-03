@@ -42,6 +42,14 @@ export function registrarFalloTesela(estado: CargaPlano, texto: string): CargaPl
   return { ...estado, fallidas: { ...estado.fallidas, [clave]: true } }
 }
 
+/**
+ * MapLibre avisa cada tesela ráster servida con `tile` en `sourcedata`,
+ * sin `sourceDataType: "content"` (eso es de un GeoJSON).
+ */
+export function esTeselaServida(evento: { sourceId?: string; tile?: unknown }): boolean {
+  return evento.sourceId === "osm" && evento.tile != null
+}
+
 export function registrarTeselaOk(estado: CargaPlano): CargaPlano {
   return { ...estado, ok: estado.ok + 1 }
 }

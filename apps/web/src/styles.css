@@ -1671,7 +1671,12 @@ fieldset { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
     z-index: 4;
     pointer-events: none;
   }
-  .marco-mapa-vista { display: contents; }
+  .marco-mapa-vista {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .marco-mapa .vista-actividades,
   .marco-mapa-abrir,
   .marco-mapa-capas { pointer-events: auto; }
   .marco-mapa-abrir {
@@ -1745,15 +1750,16 @@ fieldset { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
     max-width: 100%;
   }
   .marco-mapa[data-abierto="si"] {
+    position: fixed;
+    z-index: var(--z-hoja);
     left: 0;
     right: 0;
+    top: auto;
     bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
     max-height: min(55dvh, calc(100dvh - var(--nav-h) - var(--topbar-zona) - 8px));
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: auto minmax(0, 1fr);
-    align-items: center;
-    column-gap: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     pointer-events: auto;
     background: var(--hoja);
     border: 1px solid var(--linea);
@@ -1762,14 +1768,29 @@ fieldset { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
     box-shadow: var(--sombra);
     overflow: hidden;
     padding: 8px 8px 0;
-    animation: rise 180ms var(--ease-llegada);
+    animation: aparecer 180ms var(--ease-llegada);
   }
-  .marco-mapa[data-abierto="si"] .marco-mapa-capas { display: contents; }
-  .marco-mapa[data-abierto="si"] .marco-mapa-vista { grid-column: 1; grid-row: 1; min-width: 0; }
-  .marco-mapa[data-abierto="si"] .marco-mapa-cromo { grid-column: 2; grid-row: 1; }
+  .marco-mapa[data-abierto="si"] .marco-mapa-capas {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .marco-mapa[data-abierto="si"] .marco-mapa-cromo {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+  }
+  .marco-mapa[data-abierto="si"] .marco-mapa-vista {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    min-width: 0;
+    padding-right: 148px;
+  }
   .marco-mapa[data-abierto="si"] .marco-mapa-cuerpo {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
     overscroll-behavior: contain;
@@ -1797,6 +1818,6 @@ fieldset { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
   }
   .lista-sobre-mapa { padding-top: calc(200px + env(safe-area-inset-top)); }
   .shell:has(.marco-mapa[data-abierto="si"]) :is(.maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right) {
-    bottom: calc(min(55dvh, calc(100dvh - var(--nav-h) - var(--topbar-zona) - 8px)) + var(--nav-h) + env(safe-area-inset-bottom) + 8px) !important;
+    bottom: calc(min(55dvh, calc(100dvh - var(--nav-h) - var(--topbar-zona) - 8px)) + var(--nav-h) + env(safe-area-inset-bottom) + 24px) !important;
   }
 }

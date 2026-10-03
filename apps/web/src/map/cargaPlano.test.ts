@@ -4,6 +4,7 @@ import {
   UMBRAL_TESELAS,
   cargaInicial,
   clasificarErrorMapa,
+  esTeselaServida,
   marcarEstiloListo,
   marcarEstiloRoto,
   planoNoArranco,
@@ -14,6 +15,12 @@ import {
 
 const TESELA = (z: number, x: number, y: number) =>
   `AJAXError: Failed to fetch (0): https://tile.openstreetmap.org/${z}/${x}/${y}.png`
+
+test("una tesela ráster servida se reconoce aunque no diga content", () => {
+  assert.equal(esTeselaServida({ sourceId: "osm", tile: { state: "loaded" } }), true)
+  assert.equal(esTeselaServida({ sourceId: "osm", sourceDataType: "idle" } as { sourceId: string; tile?: unknown }), false)
+  assert.equal(esTeselaServida({ sourceId: "areas", tile: {} }), false)
+})
 
 test("una tesela que falla no da el plano por perdido", () => {
   let estado = marcarEstiloListo(cargaInicial())

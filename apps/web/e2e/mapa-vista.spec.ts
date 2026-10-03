@@ -19,6 +19,29 @@ async function entrar(page: import("@playwright/test").Page) {
   })
 }
 
+const POLIGONO_VACIO = {
+  type: "FeatureCollection",
+  features: [
+    {
+      type: "Feature",
+      id: "sin-datos",
+      properties: {},
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [-77.0832, -12.07415],
+            [-77.07795, -12.07415],
+            [-77.07795, -12.0644],
+            [-77.0832, -12.0644],
+            [-77.0832, -12.07415],
+          ],
+        ],
+      },
+    },
+  ],
+}
+
 test("un clic en un elemento sin datos no pasa a Lista", async ({ page }) => {
   await entrar(page)
   const mapaBtn = page.getByRole("group", { name: "Vista de actividades" }).getByRole("button", { name: "Mapa", exact: true })
@@ -26,36 +49,10 @@ test("un clic en un elemento sin datos no pasa a Lista", async ({ page }) => {
 
   await page.evaluate(() => {
     const host = document.querySelector(".map-host") as {
-      mapa?: {
-        getSource: (id: string) => { setData: (data: unknown) => void } | undefined
-        project: (ll: [number, number]) => { x: number; y: number }
-        fire: (tipo: string, evento: unknown) => void
-      }
+      mapa?: { fire: (tipo: string, evento: unknown) => void }
     }
     const mapa = host.mapa
     if (!mapa) throw new Error("sin mapa")
-    mapa.getSource("areas")?.setData({
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          id: "sin-datos",
-          properties: {},
-          geometry: {
-            type: "Polygon",
-            coordinates: [
-              [
-                [-77.0832, -12.07415],
-                [-77.07795, -12.07415],
-                [-77.07795, -12.0644],
-                [-77.0832, -12.0644],
-                [-77.0832, -12.07415],
-              ],
-            ],
-          },
-        },
-      ],
-    })
     for (let i = 0; i < 6; i += 1) {
       mapa.fire("error", {
         error: new Error(`AJAXError: Failed to fetch (0): https://tile.openstreetmap.org/15/${9640 + i}/15430.png`),
@@ -63,6 +60,43 @@ test("un clic en un elemento sin datos no pasa a Lista", async ({ page }) => {
       })
     }
     mapa.fire("error", { error: new Error("The feature id does not exist in the source areas") })
+  })
+  await expect(page.getByText("Sin teselas. La lista queda a la vista porque el plano no cargó.")).toHaveCount(0)
+  await expect(mapaBtn).toHaveAttribute("aria-pressed", "true")
+
+  await page.evaluate((coleccion) => {
+    const host = document.querySelector(".map-host") as {
+      mapa?: {
+        getStyle: () => { sources: Record<string, unknown> }
+        getSource: (id: string) => { setData?: (data: unknown) => void } | undefined
+        setFilter: (capa: string, filtro: null) => void
+        triggerRepaint: () => void
+      }
+    }
+    const mapa = host.mapa
+    if (!mapa) throw new Error("sin mapa")
+    for (const id of Object.keys(mapa.getStyle().sources)) {
+      const fuente = mapa.getSource(id)
+      if (!fuente?.setData || id === "osm") continue
+      const fijar = fuente.setData.bind(fuente)
+      fuente.setData = () => {}
+      fijar(id === "areas" ? coleccion : { type: "FeatureCollection", features: [] })
+    }
+    mapa.setFilter("areas-fill", null)
+    mapa.triggerRepaint()
+  }, POLIGONO_VACIO)
+
+  await page.waitForFunction(() => {
+    const host = document.querySelector(".map-host") as {
+      mapa?: {
+        project: (ll: [number, number]) => { x: number; y: number }
+        queryRenderedFeatures: (punto: { x: number; y: number }, opciones: { layers: string[] }) => { source?: string }[]
+      }
+    }
+    const mapa = host.mapa
+    if (!mapa) return false
+    const punto = mapa.project([-77.0796, -12.0696])
+    return mapa.queryRenderedFeatures(punto, { layers: ["areas-fill"] }).some((hit) => hit.source === "areas")
   })
 
   const punto = await page.evaluate(() => {

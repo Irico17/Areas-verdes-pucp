@@ -22,10 +22,21 @@ async function captura(page: Page, ancho: number, alto: number, estado: "colapsa
   await page.screenshot({ path: `e2e-artifacts/mapa-panel/${ancho}-${estado}.png` })
 }
 
+async function cerrarRecorrido(page: Page) {
+  const omitir = page.getByRole("button", { name: "Omitir" })
+  try {
+    await omitir.waitFor({ state: "visible", timeout: 3000 })
+    await omitir.click()
+  } catch {
+    /* el recorrido ya se había cerrado */
+  }
+}
+
 test("en el teléfono el panel de capas arranca cerrado y no tapa la barra ni el zoom", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await entrar(page, "coordinacion")
   await page.getByRole("navigation", { name: "Módulos" }).getByRole("button", { name: "Mapa", exact: true }).click()
+  await cerrarRecorrido(page)
   const abrir = page.getByRole("button", { name: "Mostrar capas" })
   await expect(abrir).toBeVisible()
   await expect(abrir).toHaveAttribute("aria-expanded", "false")
@@ -81,8 +92,9 @@ test("en el teléfono el panel de capas arranca cerrado y no tapa la barra ni el
 test("el chip de sin conexión no tapa el botón de capas", async ({ page, context }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await entrar(page, "norte")
+  await cerrarRecorrido(page)
   await context.setOffline(true)
-  const chip = page.getByText(/Sin conexión/)
+  const chip = page.locator(".chip.chip-alerta")
   await expect(chip).toBeVisible()
   const abrir = page.getByRole("button", { name: "Mostrar capas" })
   await expect(abrir).toBeVisible()
@@ -94,6 +106,7 @@ test("en escritorio el panel se oculta y se recuerda al recargar", async ({ page
   await page.setViewportSize({ width: 1280, height: 800 })
   await entrar(page, "coordinacion")
   await page.getByRole("navigation", { name: "Módulos" }).getByRole("button", { name: "Mapa", exact: true }).click()
+  await cerrarRecorrido(page)
   await expect(page.getByRole("button", { name: "Plano" })).toBeVisible()
   await captura(page, 1280, 800, "abierto")
   await page.getByRole("button", { name: "Ocultar capas" }).click()
