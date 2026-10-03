@@ -1,7 +1,7 @@
 ---
 - name: Runners de este host
   ansible.builtin.set_fact:
-    campus_runners: "{{ ['develop', 'qa'] if campus_perfil == 'nonprod' else ['produccion'] }}"
+    runner_ambientes: "{{ ['develop', 'qa'] if campus_perfil == 'nonprod' else ['produccion'] }}"
   changed_when: false
   tags: [runner]
 
@@ -17,8 +17,8 @@
 
 - name: Registrar el runner leyendo el token desde SSM, no desde Ansible
   ansible.builtin.command: /usr/local/sbin/runner-instalar.sh {{ item }}
-  loop: "{{ campus_runners }}"
-  register: campus_runner_cmd
-  changed_when: "'completada exitosamente' in (campus_runner_cmd.stdout | default(''))"
+  loop: "{{ runner_ambientes }}"
+  register: runner_instalacion
+  changed_when: "'completada exitosamente' in (stdout | default(''))"
   when: campus_registrar_runner | bool
   tags: [runner]

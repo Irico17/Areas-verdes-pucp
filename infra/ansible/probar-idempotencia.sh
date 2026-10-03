@@ -9,8 +9,9 @@ docker run -d --name "$NOMBRE" ubuntu:24.04 sleep 600 >/dev/null
 cleanup() { docker rm -f "$NOMBRE" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
-docker exec "$NOMBRE" apt-get update
-docker exec "$NOMBRE" apt-get install -y python3 ansible
+docker exec -e DEBIAN_FRONTEND=noninteractive "$NOMBRE" apt-get update
+docker exec -e DEBIAN_FRONTEND=noninteractive "$NOMBRE" apt-get install -y python3 python3-pip
+docker exec "$NOMBRE" pip3 install --break-system-packages 'ansible-core==2.18.8'
 docker exec "$NOMBRE" mkdir -p /src
 docker cp "$ROOT/infra/ansible" "$NOMBRE:/src/ansible"
 docker cp "$ROOT/deploy" "$NOMBRE:/src/deploy"

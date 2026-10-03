@@ -78,6 +78,7 @@ infra/terraform/nonprod/backend.hcl
 tmp/
 infra/ansible/inventory/hosts.yml
 infra/ansible/.ansible/
+/.ansible/
 *.retry
 *.tfstate
 *.tfstate.*

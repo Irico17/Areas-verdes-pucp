@@ -7,7 +7,7 @@ El plugin SSM necesita un cubo S3 para copiar los módulos. Ese cubo es `campus-
 Comprobar sintaxis:
 
 ```bash
-ansible-playbook --syntax-check -i inventory/hosts.yml.example site.yml
+ansible-playbook --syntax-check -i inventory/hosts.example.yml site.yml
 ```
 
 Idempotencia del layout, en un contenedor local:

@@ -3,7 +3,7 @@
   hosts: campus
   gather_facts: true
   become: "{{ not (campus_en_contenedor_prueba | default(false) | bool) }}"
-  become_method: sudo
+  become_method: ansible.builtin.sudo
   become_flags: "-n"
   roles:
     - role: docker

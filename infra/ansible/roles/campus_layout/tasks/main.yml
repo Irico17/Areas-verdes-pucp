@@ -24,8 +24,8 @@
 
 - name: Elegir directorios según el perfil del host
   ansible.builtin.set_fact:
-    campus_dirs: "{{ campus_dirs_nonprod if campus_perfil == 'nonprod' else campus_dirs_prod }}"
-    campus_hostenvs: "{{ campus_hostenvs_nonprod if campus_perfil == 'nonprod' else [] }}"
+    campus_layout_dirs: "{{ campus_layout_dirs_nonprod if campus_perfil == 'nonprod' else campus_layout_dirs_prod }}"
+    campus_layout_hostenvs: "{{ campus_layout_hostenvs_nonprod if campus_perfil == 'nonprod' else [] }}"
   changed_when: false
 
 - name: Crear /opt/campus y los datos de cada ambiente
@@ -35,9 +35,9 @@
     owner: "{{ item.owner }}"
     group: "{{ item.group }}"
     mode: "{{ item.mode }}"
-  loop: "{{ campus_dirs }}"
+  loop: "{{ campus_layout_dirs }}"
 
-- name: host.env de develop y qa solo si aún no existe
+- name: Crear host.env de develop y qa solo si aún no existe
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../../deploy/env/host.env.example.{{ item.nombre }}"
     dest: "{{ item.home }}/host.env"
@@ -45,8 +45,8 @@
     group: runner
     mode: "0600"
     force: false
-  loop: "{{ campus_hostenvs }}"
-  register: campus_hostenv_copy
+  loop: "{{ campus_layout_hostenvs }}"
+  register: campus_layout_hostenv_copy
   when: campus_perfil == 'nonprod'
 
 - name: Apuntar PUBLIC_URL a la IP de esta cuenta en el archivo recién creado
@@ -54,7 +54,7 @@
     path: "{{ item.item.home }}/host.env"
     regexp: '^PUBLIC_URL='
     line: "PUBLIC_URL=http://{{ public_ip }}:{{ item.item.puerto }}"
-  loop: "{{ campus_hostenv_copy.results | default([]) }}"
+  loop: "{{ campus_layout_hostenv_copy.results | default([]) }}"
   when:
     - item.changed | default(false)
     - not ansible_check_mode
@@ -71,7 +71,7 @@
 - name: Aviso si producción todavía no tiene host.env
   ansible.builtin.stat:
     path: /opt/campus/host.env
-  register: campus_prod_env
+  register: campus_layout_prod_env
   when: campus_perfil == 'produccion'
 
 - name: Producción no recibe una clave de ejemplo en host.env
@@ -81,7 +81,7 @@
       con una clave de 16 caracteres o más. Este rol no la escribe.
   when:
     - campus_perfil == 'produccion'
-    - not (campus_prod_env.stat.exists | default(false))
+    - not (campus_layout_prod_env.stat.exists | default(false))
 
 - name: Marca de configuración, sin fecha para que la segunda corrida no cambie
   ansible.builtin.copy:
@@ -94,14 +94,14 @@
 - name: ¿Ya hay archivo de swap?
   ansible.builtin.stat:
     path: /swapfile
-  register: campus_swapfile
+  register: campus_layout_swapfile
   tags: [swap]
 
 - name: Crear swap de 2 GB
   ansible.builtin.command: fallocate -l 2048M /swapfile
   when:
     - campus_habilitar_swap | bool
-    - not (campus_swapfile.stat.exists | default(false))
+    - not (campus_layout_swapfile.stat.exists | default(false))
     - not (campus_en_contenedor_prueba | default(false) | bool)
   tags: [swap]
 
@@ -113,7 +113,7 @@
     mode: "0600"
   when:
     - campus_habilitar_swap | bool
-    - campus_swapfile.stat.exists | default(false) or not (campus_en_contenedor_prueba | default(false) | bool)
+    - campus_layout_swapfile.stat.exists | default(false) or not (campus_en_contenedor_prueba | default(false) | bool)
   tags: [swap]
 
 - name: Formatear y activar el swap recién creado
@@ -123,7 +123,7 @@
     - swapon /swapfile
   when:
     - campus_habilitar_swap | bool
-    - not (campus_swapfile.stat.exists | default(false))
+    - not (campus_layout_swapfile.stat.exists | default(false))
     - not (campus_en_contenedor_prueba | default(false) | bool)
   tags: [swap]
 
