@@ -34,24 +34,7 @@ bash scripts/deploy-learner-lab.sh
 
 El script invoca `deploy/deploy.sh produccion --aws`. En producción, tras `terraform init` y **antes de `terraform apply`**, toma un snapshot EBS del volumen de datos, un backup `pg_dump` y los conteos «antes» sobre la instancia existente en el estado de Terraform (si es la primera creación de la infraestructura y aún no existe instancia, se requiere `DEPLOY_PRIMERA_VEZ=1` para omitir el snapshot previo). Luego ejecuta `terraform apply`, construye las dos imágenes y las sube a ECR, inyecta los secretos con `scripts/poner-secretos.sh` y actualiza la instancia vía SSM (`patch_compose.py` y `docker compose pull` / `up`). El `docker-entrypoint.sh` (no el binario `api`), al arrancar el contenedor, aplica `db/migrations` desde `/opt/campus/migrations` con el binario `migrate` y corre el ETL una vez (521 áreas y el resto del catastro) si `/data/.etl-done` no existe y `areas_verdes` está vacía. Luego se corre el smoke test (`deploy/smoke.sh`) y se validan los conteos «después» de tablas de negocio. El checklist para cortar la base que ya tiene datos está en `docs/RUNBOOK-CORTE-PRODUCCION.md`.
 
-El estado de Terraform vive en S3, no en la laptop. El cubo es `campus-verde-tfstate-890991908027` (versionado, cifrado SSE-S3, sin acceso público), clave `learner-lab/terraform.tfstate`, región `us-east-1`. No hay tabla de lock: no haga dos `apply` a la vez. El bloque está en `infra/terraform/versions.tf`:
-
-```hcl
-backend "s3" {
-  bucket  = "campus-verde-tfstate-890991908027"
-  key     = "learner-lab/terraform.tfstate"
-  region  = "us-east-1"
-  encrypt = true
-}
-```
-
-Si el cubo no existe en una cuenta nueva, créelo antes del primer `init` (el lab no deja crear IAM; este comando no lo hace):
-
-```bash
-aws s3api create-bucket --bucket campus-verde-tfstate-890991908027 --region us-east-1
-aws s3api put-bucket-versioning --bucket campus-verde-tfstate-890991908027 \
-  --versioning-configuration Status=Enabled
-```
+El estado de Terraform vive en S3, en la misma cuenta que las instancias. El cubo se llama `campus-verde-tfstate-<id de la cuenta>` (versionado, cifrado SSE-S3, sin acceso público). La clave de producción es `learner-lab/terraform.tfstate`; la de develop/qa es `learner-lab-nonprod/terraform.tfstate`. El nombre no está en el código: lo crea `scripts/bootstrap-estado-terraform.sh` y Terraform lo recibe con `-backend-config`. El candado es el de S3 (`use_lockfile`). Cómo mudarse de cuenta, paso a paso: [`CAMBIO-DE-CUENTA-LAB.md`](CAMBIO-DE-CUENTA-LAB.md).
 
 5. Abra la URL que imprime el script (`http://<elastic-ip>`). Entre con `coordinacion` y la clave que exportó en `TF_VAR_dev_password` (u otra cuenta semilla: `norte` para el capataz). No hay clave de laboratorio en la instancia.
 

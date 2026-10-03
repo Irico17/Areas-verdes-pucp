@@ -21,13 +21,13 @@ Debido a las restricciones de AWS Academy Learner Lab (cuenta compartida de labo
 
 2. **Instancia EC2 (`campus-verde-nonprod`)**:
    - AMI: Amazon Linux 2023 x86_64 (`al2023-ami-2023*-x86_64`).
-   - Tipo: `t3.medium` por defecto (suficiente CPU y 4 GB de RAM para ambos ambientes y runners).
-   - Disco raíz: 30 GB gp3, cifrado.
+   - Tipo: `t3.small` por defecto (el crédito del lab es corto). `t3.medium` si los dos stacks se quedan sin memoria. La máquina que ya existía con 30/40 GB está en `cuenta-actual.tfvars.example`.
+   - Disco raíz: 20 GB gp3, cifrado. Bajar un disco ya creado lo reemplaza.
    - Metadatos IMDSv2 obligatorios: `http_tokens = "required"`, `http_put_response_hop_limit = 1`.
    - Protección contra reemplazo accidental: `user_data_replace_on_change = false` y `lifecycle { ignore_changes = [ami, user_data] }`.
 
 3. **Volumen EBS persistente (`campus-verde-nonprod-data`)**:
-   - Tipo gp3 de 40 GB, cifrado (`/dev/sdf`).
+   - Tipo gp3 de 20 GB por defecto, cifrado (`/dev/sdf`).
    - Formateado con XFS solo en el primer arranque y montado persistentemente por UUID en `/opt/campus` (`nofail` en `/etc/fstab`).
 
 4. **Dirección IP Elástica (`aws_eip`)**:
@@ -85,29 +85,19 @@ Adicionalmente, el script de inicialización configura:
 
 ## Cómo aplicar la infraestructura
 
-Este stack se inicializa y aplica **una sola vez** al configurar la máquina compartida:
+El camino repetible es el workflow `aprovisionar-cuenta` (`accion=plan` y después `apply` con `confirmar=APLICAR`). Carga las credenciales en el environment `aws-lab` con `scripts/actualizar-credenciales-lab.sh`. El detalle, incluido el bootstrap del cubo de estado, está en [`docs/CAMBIO-DE-CUENTA-LAB.md`](../../../docs/CAMBIO-DE-CUENTA-LAB.md).
 
-1. **Cargar credenciales del Learner Lab en la terminal**:
-   ```bash
-   export AWS_ACCESS_KEY_ID="ASIA..."
-   export AWS_SECRET_ACCESS_KEY="..."
-   export AWS_SESSION_TOKEN="..."
-   export AWS_DEFAULT_REGION="us-east-1"
-   ```
+A mano, con la sesión del lab ya exportada y el cubo creado por `scripts/bootstrap-estado-terraform.sh`:
 
-2. **Inicializar y aplicar con Terraform**:
-   ```bash
-   cd infra/terraform/nonprod
-   terraform init
-   terraform apply
-   ```
+```bash
+bash scripts/bootstrap-estado-terraform.sh "$PWD/tmp/backend.hcl"
+terraform -chdir=infra/terraform/nonprod init -backend-config="$PWD/tmp/backend.hcl"
+terraform -chdir=infra/terraform/nonprod apply
+```
 
-3. **Verificar los outputs**:
-   Al concluir, Terraform mostrará el `instance_id`, la `public_ip` y las URLs de acceso para `develop` y `qa`.
+Al concluir, Terraform muestra el `instance_id`, la `public_ip` y las URLs de `develop` y `qa`. Ansible registra los runners. Si lo hace a mano, como root por SSM:
 
-4. **Instalar los runners de GitHub Actions en la EC2**:
-   Mediante SSM Session Manager o Run Shell Script, ejecutar como root:
-   ```bash
-   /path/to/scripts/runner-instalar.sh develop
-   /path/to/scripts/runner-instalar.sh qa
-   ```
+```bash
+scripts/runner-instalar.sh develop
+scripts/runner-instalar.sh qa
+```

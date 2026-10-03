@@ -2,7 +2,7 @@
 
 Este documento explica cómo se despliega VerdePUCP en AWS (develop, qa y producción). **No contiene contraseñas.** Las claves viven en los *environments* de GitHub y en archivos `.env` locales que nunca se suben al repositorio.
 
-Detalle técnico complementario: `docs/DEPLOY-RUNNER.md` (runners), `docs/AMBIENTES.md` (ambientes), `docs/RUNBOOK-CORTE-PRODUCCION.md` (corte de producción).
+Detalle técnico complementario: `docs/DEPLOY-RUNNER.md` (runners), `docs/AMBIENTES.md` (ambientes), `docs/RUNBOOK-CORTE-PRODUCCION.md` (corte de producción), [`docs/CAMBIO-DE-CUENTA-LAB.md`](CAMBIO-DE-CUENTA-LAB.md) (otra cuenta de Learner Lab).
 
 ## 1. Resumen en una pantalla
 
@@ -98,9 +98,11 @@ gh workflow run deploy.yml --repo Irico17/Areas-verdes-pucp --ref develop \
 
 | Ambiente | Web | API (vía la web) | Swagger | Servidor |
 |---|---|---|---|---|
-| develop | http://34.224.230.64:8088 | http://34.224.230.64:8088/areas-verdes/v1 (también `/api/v1`) | `/swagger/index.html` | EC2 no-prod (t3.medium) |
-| qa | http://34.224.230.64:8188 | http://34.224.230.64:8188/areas-verdes/v1 | `/swagger/index.html` | misma EC2 no-prod |
-| producción | http://100.51.112.92 | http://100.51.112.92/areas-verdes/v1 | desactivado (404) | EC2 de producción (t3.micro) |
+| develop | variable `PUBLIC_URL` del environment `develop` (puerto 8088) | la misma URL + `/areas-verdes/v1` (también `/api/v1`) | `/swagger/index.html` | EC2 no-prod |
+| qa | variable `PUBLIC_URL` del environment `qa` (puerto 8188) | la misma URL + `/areas-verdes/v1` | `/swagger/index.html` | misma EC2 no-prod |
+| producción | variable `PUBLIC_URL` del environment `produccion` | la misma URL + `/areas-verdes/v1` | desactivado (404) | EC2 de producción |
+
+La IP no está en el workflow. La escribe `aprovisionar-cuenta` en `PUBLIC_URL` al terminar el apply, o se actualiza con `gh variable set`. Cómo cambiar de cuenta: [`CAMBIO-DE-CUENTA-LAB.md`](CAMBIO-DE-CUENTA-LAB.md).
 
 Puertos (en el servidor):
 
@@ -133,7 +135,7 @@ Estructura en cada servidor: `/opt/campus/<develop|qa>/{host.env,data/,state/}` 
 4. Si el Learner Lab reinició las instancias, los runners vuelven solos (servicio systemd) y las IP se conservan.
 
 ### Caducaron las credenciales de AWS
-El despliegue **no se ve afectado** (no usa AWS). Solo dejan de funcionar Terraform, SSM desde fuera y el acceso a la consola. Renueva las credenciales del Learner Lab (*AWS Details → Show*) cuando necesites aprovisionar o entrar por SSM. El snapshot EBS previo a producción lo toma la propia instancia con su rol, no tus credenciales. Si un Learner Lab nuevo cambia la cuenta o crea instancias nuevas, hay que volver a aprovisionar (`infra/terraform/`, `infra/terraform/nonprod/`) y reinstalar los runners.
+El despliegue **no se ve afectado** (no usa AWS). Solo dejan de funcionar Terraform, SSM desde fuera y el acceso a la consola. Renueva las credenciales del Learner Lab (*AWS Details → Show*) con `scripts/actualizar-credenciales-lab.sh` cuando necesites aprovisionar o entrar por SSM. El snapshot EBS previo a producción lo toma la propia instancia con su rol, no tus credenciales. Si hay que pasar a la cuenta de otro estudiante, sigue [`CAMBIO-DE-CUENTA-LAB.md`](CAMBIO-DE-CUENTA-LAB.md): el estado vive en la cuenta nueva y los deploys no se editan.
 
 ### Troubleshooting
 

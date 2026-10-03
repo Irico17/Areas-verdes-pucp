@@ -107,6 +107,8 @@ El workflow `ci` publica, en cada push que no es un pull request, dos imágenes 
 | --- | --- |
 | `.github/workflows/ci.yml` | Pruebas de `apps/api`, web, backend con PostGIS, escaneo de seguridad (Trivy fs/image, Gitleaks), prohibición de `AutoMigrate`/borrados/initdb, y publicación de imágenes inmutables por SHA en GHCR |
 | `.github/workflows/deploy.yml` | Despliegue en runner self-hosted por ambiente. Valida CI en verde, controla promoción estricta por SHA, solicita aprobación en producción y ejecuta `deploy/host-deploy.sh` |
+| `.github/workflows/aprovisionar-cuenta.yml` | Plan, apply o destroy de una cuenta de Learner Lab. Ver [`CAMBIO-DE-CUENTA-LAB.md`](CAMBIO-DE-CUENTA-LAB.md) |
+| `.github/workflows/pausar-cuenta.yml` | Enciende o detiene las instancias por etiquetas, sin borrar discos |
 
 Disparo de `deploy.yml`:
 
@@ -270,7 +272,7 @@ Hasta que eso esté guardado, GitHub puede crear el environment en el primer uso
 
 Los archivos están en `infra/terraform`. `ambiente` vale `develop`, `qa` o `produccion` (default `produccion`, así los nombres del lab siguen siendo `campus-verde`, `campus-verde-api` y `campus-verde-data`).
 
-Cada ambiente va en su workspace. El estado sigue en el cubo S3 que ya documenta [`DEPLOY-AWS.md`](DEPLOY-AWS.md). Este cambio no ejecuta `init`, `plan`, `apply` ni `workspace new`.
+El cubo de estado ya no va escrito en `versions.tf`. Cada cuenta usa `campus-verde-tfstate-<id de la cuenta>`, creado por `scripts/bootstrap-estado-terraform.sh`. El procedimiento para mudarse de cuenta está en [`CAMBIO-DE-CUENTA-LAB.md`](CAMBIO-DE-CUENTA-LAB.md). El detalle de costos y de la variante ECS sigue en [`DEPLOY-AWS.md`](DEPLOY-AWS.md).
 
 ```bash
 cd infra/terraform
