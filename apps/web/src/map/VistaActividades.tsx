@@ -24,12 +24,12 @@ export function ConmutadorVista({
   motivo: MotivoPlano
   onVista: (vista: Vista) => void
 }) {
-  const forzada = motivo != null
+  const sinRed = motivo === "red"
   const texto = motivo === "red" ? VISTA_ACTIVIDAD.sinRed : motivo === "teselas" ? VISTA_ACTIVIDAD.sinTeselas : ""
   return (
     <div className="vista-actividades">
       <div className="roles" role="group" aria-label={VISTA_ACTIVIDAD.grupo}>
-        <button type="button" aria-pressed={vista === "mapa"} disabled={forzada} onClick={() => onVista("mapa")}>
+        <button type="button" aria-pressed={vista === "mapa"} disabled={sinRed} onClick={() => onVista("mapa")}>
           {VISTA_ACTIVIDAD.mapa}
         </button>
         <button type="button" aria-pressed={vista === "lista"} onClick={() => onVista("lista")}>

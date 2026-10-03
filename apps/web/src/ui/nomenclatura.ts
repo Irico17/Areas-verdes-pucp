@@ -312,6 +312,7 @@ export const MAPA = {
   cuadrillasFicticias: "Cuadrillas con nombre ficticio. La asignación real no se publica.",
   inventario: "Inventario",
   inventarioLede: "Capas opcionales. Apagadas hasta que se necesiten.",
+  sinDetalle: "Este elemento no tiene datos para mostrar.",
   leyendo: "Leyendo catastro…",
 } as const
 

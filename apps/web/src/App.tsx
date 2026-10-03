@@ -124,6 +124,7 @@ export default function App() {
   const [planoForzado, setPlanoForzado] = useState<MotivoPlano>(() =>
     navigator.onLine === false ? "red" : null,
   )
+  const [cicloMapa, setCicloMapa] = useState(0)
   const [railOpen, setRailOpen] = useState(false)
   const [enLinea, setEnLinea] = useState(() => navigator.onLine)
   const [estadosPendientes, setEstadosPendientes] = useState(0)
@@ -700,6 +701,16 @@ export default function App() {
   const cuadrillaNombre = etiquetaCuadrilla(equipoId, equipos.find((item) => item.id === equipoId)?.equipo || "Cuadrilla")
   const gruposNav: GrupoNav[] = ["operacion", "datos", "configuracion"]
 
+  function elegirVista(siguiente: Vista) {
+    if (siguiente === "mapa" && planoForzado === "teselas") {
+      setPlanoForzado(null)
+      setVista("mapa")
+      setCicloMapa((n) => n + 1)
+      return
+    }
+    if (planoForzado === "red") return
+    setVista(siguiente)
+  }
   function irA(id: Modulo) {
     setModulo(id)
     setRailOpen(id !== "mapa")
@@ -922,9 +933,9 @@ export default function App() {
             onVivero={() => irA("registros")}
             onBitacora={permitidos.includes("bitacora") ? () => irA("bitacora") : undefined}
             onEjemplares={permitidos.includes("ejemplares") ? () => irA("ejemplares") : undefined}
-            vista={vista}
-            onVista={setVista}
-            mapaBloqueado={planoForzado !== null}
+            vista={planoForzado ? "lista" : vista}
+            onVista={elegirVista}
+            mapaBloqueado={planoForzado === "red"}
           />
         )}
         {moduloActivo === "resumen" && (
@@ -1065,7 +1076,7 @@ export default function App() {
             <ConmutadorVista
               vista={planoForzado ? "lista" : vista}
               motivo={planoForzado}
-              onVista={setVista}
+              onVista={elegirVista}
             />
           }
           control={
@@ -1101,7 +1112,7 @@ export default function App() {
             />
           }
         />
-        <MapBoundary>
+        <MapBoundary key={cicloMapa}>
           <CampusMap
             data={dataMapa}
             visible={visibleMapa}

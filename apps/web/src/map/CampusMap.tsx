@@ -25,12 +25,14 @@ import {
   USOS,
   type Categoria,
 } from "./categorias"
+import { cargaInicial, clasificarErrorMapa, marcarEstiloListo, marcarEstiloRoto, planoNoArranco, registrarFalloTesela, registrarTeselaOk, textoDeError, type CargaPlano } from "./cargaPlano"
+import { decisionClic } from "./clicMapa"
 import { catastroVisible, conteoCapas } from "./coverage"
 import { activarDibujo, type ModoDibujo } from "./draw"
 import { INVENTARIO } from "../inventario"
 import { etiquetaEstado, etiquetaTipo } from "../operacion"
 import { EMPTY, LAYERS, type FeatureCollection, type LayerId } from "../types"
-import { ACTIVIDAD, etiquetaClase } from "../ui/nomenclatura"
+import { ACTIVIDAD, MAPA, etiquetaClase } from "../ui/nomenclatura"
 import { TRAZO_CLASE, pintarIcono } from "./trazosClase"
 import { apiUrl } from "../api"
 
@@ -199,14 +201,33 @@ export function CampusMap({
     })
     map.addControl(new NavigationControl({ showCompass: true, visualizePitch: false }), "bottom-right")
     map.addControl(new ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left")
+    let carga: CargaPlano = cargaInicial()
+    let avisado = false
+    const publicarPlano = (enReposo = false) => {
+      if (avisado || !planoNoArranco(carga, enReposo)) return
+      avisado = true
+      onSinPlanoRef.current?.("teselas")
+    }
     map.on("error", (event) => {
-      const fallo = event.error
-      const mensaje = fallo instanceof Error ? fallo.message : String(fallo ?? "")
-      if (/tile\.openstreetmap\.org|openstreetmap/i.test(mensaje)) {
-        onSinPlanoRef.current?.("teselas")
+      const crudo = event as { error?: unknown; sourceId?: string }
+      const texto = textoDeError(crudo.error)
+      const clase = clasificarErrorMapa(texto, crudo.sourceId)
+      if (clase === "tesela") carga = registrarFalloTesela(carga, texto)
+      else if (clase === "estilo") carga = marcarEstiloRoto(carga)
+      else return
+      publicarPlano(false)
+    })
+    map.on("sourcedata", (event) => {
+      const ev = event as { sourceId?: string; sourceDataType?: string; tile?: unknown }
+      if (ev.sourceId !== "osm") return
+      if (ev.tile && ev.sourceDataType === "content") {
+        carga = registrarTeselaOk(carga)
+        return
       }
+      if (ev.sourceDataType === "idle") publicarPlano(true)
     })
     map.on("load", () => {
+      carga = marcarEstiloListo(carga)
       const alturaExtrusion = [
         "interpolate",
         ["linear"],
@@ -427,115 +448,177 @@ export function CampusMap({
           .addTo(map)
         popupRef.current = popup
       }
+      const consultar = (punto: MapMouseEvent["point"], capas: string[]) => {
+        const presentes = capas.filter((id) => {
+          try {
+            return Boolean(map.getLayer(id))
+          } catch {
+            return false
+          }
+        })
+        if (!presentes.length) return []
+        try {
+          return map.queryRenderedFeatures(punto, { layers: presentes })
+        } catch {
+          return []
+        }
+      }
+      const marcar = (feature: { source: string; id: string | number }, estado: { hover?: boolean; sel?: boolean }) => {
+        try {
+          map.setFeatureState(feature, estado)
+        } catch {
+          /* el id no está en la fuente: el clic no cambia la vista */
+        }
+      }
+      const mostrarVacio = (lngLat: MapMouseEvent["lngLat"]) => {
+        onActividad.current(null)
+        onCatastro.current(null)
+        const popup = new Popup({ closeButton: true, maxWidth: "280px", className: "cv-popup" })
+          .setLngLat(lngLat)
+          .setHTML(`<p class="cv-popup-title">${escapeHtml(MAPA.sinDetalle)}</p>`)
+          .addTo(map)
+        popupRef.current = popup
+      }
       const limpiarHover = () => {
         if (!hoverRef.current) return
-        map.setFeatureState(hoverRef.current, { hover: false })
+        marcar(hoverRef.current, { hover: false })
         hoverRef.current = null
       }
       map.on("mousemove", (event: MapMouseEvent) => {
-        if (pinRef.current || dibujoRef.current) {
-          map.getCanvas().style.cursor = pinRef.current ? "crosshair" : ""
-          limpiarHover()
-          return
-        }
-        const near = nearestInventoryPoint(map, event.point, inventoryRef.current, inventoryOnRef.current)
-        const hits = map.queryRenderedFeatures(event.point, { layers: ["actividades-circle", ...invFills, ...fills] })
-        map.getCanvas().style.cursor = near || hits.length ? "pointer" : ""
-        const catastroHit = map.queryRenderedFeatures(event.point, { layers: CATASTRO_FILLS })[0]
-        if (catastroHit?.id != null) {
-          const siguiente = { source: String(catastroHit.source), id: catastroHit.id }
-          if (!hoverRef.current || hoverRef.current.source !== siguiente.source || hoverRef.current.id !== siguiente.id) {
+        try {
+          if (pinRef.current || dibujoRef.current) {
+            map.getCanvas().style.cursor = pinRef.current ? "crosshair" : ""
             limpiarHover()
-            map.setFeatureState(siguiente, { hover: true })
-            hoverRef.current = siguiente
+            return
           }
-        } else {
-          limpiarHover()
+          const near = nearestInventoryPoint(map, event.point, inventoryRef.current, inventoryOnRef.current)
+          const hits = consultar(event.point, ["actividades-circle", ...invFills, ...fills])
+          map.getCanvas().style.cursor = near || hits.length ? "pointer" : ""
+          const catastroHit = consultar(event.point, CATASTRO_FILLS)[0]
+          if (catastroHit?.id != null) {
+            const siguiente = { source: String(catastroHit.source), id: catastroHit.id }
+            if (!hoverRef.current || hoverRef.current.source !== siguiente.source || hoverRef.current.id !== siguiente.id) {
+              limpiarHover()
+              marcar(siguiente, { hover: true })
+              hoverRef.current = siguiente
+            }
+          } else {
+            limpiarHover()
+          }
+        } catch {
+          map.getCanvas().style.cursor = ""
         }
       })
       map.on("mouseout", limpiarHover)
       map.on("click", (event: MapMouseEvent) => {
-        if (dibujoRef.current) return
-        if (pinRef.current) {
-          onPinRef.current(event.lngLat.lng, event.lngLat.lat)
-          return
-        }
-        popupRef.current?.remove()
-        const acts = map.queryRenderedFeatures(event.point, { layers: ["actividades-circle"] })
-        if (acts.length) {
-          const props = (acts[0].properties ?? {}) as Record<string, unknown>
-          const id = String(props.id ?? acts[0].id ?? "")
-          onActividad.current(id || null)
-          onCatastro.current(null)
-          const claseVisible = etiquetaClase(String(props.clase ?? "")) || etiquetaTipo(String(props.tipo ?? ""))
+        try {
+          if (dibujoRef.current) return
+          if (pinRef.current) {
+            onPinRef.current(event.lngLat.lng, event.lngLat.lat)
+            return
+          }
+          popupRef.current?.remove()
+          const acts = consultar(event.point, ["actividades-circle"])
+          if (acts.length) {
+            const props = (acts[0].properties ?? {}) as Record<string, unknown>
+            const decision = decisionClic(acts[0].geometry, props)
+            const id = String(props.id ?? acts[0].id ?? "")
+            if (decision === "ignorar") return
+            if (decision === "vacio" || !id) {
+              mostrarVacio(event.lngLat)
+              return
+            }
+            onActividad.current(id)
+            onCatastro.current(null)
+            const claseVisible = etiquetaClase(String(props.clase ?? "")) || etiquetaTipo(String(props.tipo ?? ""))
+            const popup = new Popup({ closeButton: true, maxWidth: "280px", className: "cv-popup" })
+              .setLngLat(event.lngLat)
+              .setHTML(
+                `<p class="cv-popup-kicker">${escapeHtml(claseVisible)} · ${escapeHtml(etiquetaEstado(String(props.estado ?? "")))}</p>
+               <p class="cv-popup-title">${escapeHtml(props.titulo || ACTIVIDAD.sinTitulo)}</p>
+               <p class="cv-popup-meta">${escapeHtml(props.equipo || ACTIVIDAD.sinCuadrilla)}</p>`,
+              )
+              .addTo(map)
+            popupRef.current = popup
+            return
+          }
+          const near = nearestInventoryPoint(map, event.point, inventoryRef.current, inventoryOnRef.current)
+          if (near) {
+            if (decisionClic({ type: "Point", coordinates: [0, 0] }, near.props) !== "detalle") {
+              mostrarVacio(event.lngLat)
+              return
+            }
+            openInventory(event.lngLat, near.id, near.props)
+            return
+          }
+          const polyHits = consultar(event.point, invFills)
+          if (polyHits.length) {
+            const props = (polyHits[0].properties ?? {}) as Record<string, unknown>
+            const decision = decisionClic(polyHits[0].geometry, props)
+            if (decision === "ignorar") return
+            if (decision === "vacio") {
+              mostrarVacio(event.lngLat)
+              return
+            }
+            const source = String(polyHits[0].source).replace(/^inv-/, "")
+            openInventory(event.lngLat, source, props)
+            return
+          }
+          const hits = consultar(event.point, fills)
+          if (!hits.length) {
+            onCatastro.current(null)
+            onActividad.current(null)
+            if (selRef.current) {
+              marcar(selRef.current, { sel: false })
+              selRef.current = null
+            }
+            return
+          }
+          const hit = hits[0]
+          const props = (hit.properties ?? {}) as Record<string, unknown>
+          const decision = decisionClic(hit.geometry, props)
+          if (decision === "ignorar") return
+          if (decision === "vacio") {
+            mostrarVacio(event.lngLat)
+            return
+          }
+          onActividad.current(null)
+          onCatastro.current({ layer: labelOf(String(hit.source)), props })
+          const esZona = String(hit.source) === "zonas"
+          if (hit.id != null) {
+            const siguiente = { source: String(hit.source), id: hit.id }
+            if (selRef.current && (selRef.current.source !== siguiente.source || selRef.current.id !== siguiente.id)) {
+              marcar(selRef.current, { sel: false })
+            }
+            marcar(siguiente, { sel: true })
+            selRef.current = siguiente
+          }
+          const crudo = String(props.nombre ?? "").trim()
+          const nombre = crudo || String(props.feature_id ?? props.codigo ?? "Área sin nombre")
+          const codigo = props.codigo ? String(props.codigo) : "sin código"
+          const uso = props.uso ? String(props.uso) : ""
+          const categoria = esZona
+            ? `Sector de capataz: ${props.sector_etiqueta ?? etiquetaCategoria("sector", String(props.cat_sector ?? ""), sectoresRef.current)}`
+            : `Categoría: ${escapeHtml(etiquetaCategoria("uso", String(props.cat_uso ?? "")))}`
           const popup = new Popup({ closeButton: true, maxWidth: "280px", className: "cv-popup" })
             .setLngLat(event.lngLat)
             .setHTML(
-              `<p class="cv-popup-kicker">${escapeHtml(claseVisible)} · ${escapeHtml(etiquetaEstado(String(props.estado ?? "")))}</p>
-               <p class="cv-popup-title">${escapeHtml(props.titulo || ACTIVIDAD.sinTitulo)}</p>
-               <p class="cv-popup-meta">${escapeHtml(props.equipo || ACTIVIDAD.sinCuadrilla)}</p>`,
-            )
-            .addTo(map)
-          popupRef.current = popup
-          return
-        }
-        const near = nearestInventoryPoint(map, event.point, inventoryRef.current, inventoryOnRef.current)
-        if (near) {
-          openInventory(event.lngLat, near.id, near.props)
-          return
-        }
-        const polyHits = invFills.length ? map.queryRenderedFeatures(event.point, { layers: invFills }) : []
-        if (polyHits.length) {
-          const source = String(polyHits[0].source).replace(/^inv-/, "")
-          openInventory(event.lngLat, source, (polyHits[0].properties ?? {}) as Record<string, unknown>)
-          return
-        }
-        const hits = map.queryRenderedFeatures(event.point, { layers: fills })
-        if (!hits.length) {
-          onCatastro.current(null)
-          onActividad.current(null)
-          if (selRef.current) {
-            map.setFeatureState(selRef.current, { sel: false })
-            selRef.current = null
-          }
-          return
-        }
-        const hit = hits[0]
-        const props = (hit.properties ?? {}) as Record<string, unknown>
-        onActividad.current(null)
-        onCatastro.current({ layer: labelOf(String(hit.source)), props })
-        const esZona = String(hit.source) === "zonas"
-        if (hit.id != null) {
-          const siguiente = { source: String(hit.source), id: hit.id }
-          if (selRef.current && (selRef.current.source !== siguiente.source || selRef.current.id !== siguiente.id)) {
-            map.setFeatureState(selRef.current, { sel: false })
-          }
-          map.setFeatureState(siguiente, { sel: true })
-          selRef.current = siguiente
-        }
-        const crudo = String(props.nombre ?? "").trim()
-        const nombre = crudo || String(props.feature_id ?? props.codigo ?? "Área sin nombre")
-        const codigo = props.codigo ? String(props.codigo) : "sin código"
-        const uso = props.uso ? String(props.uso) : ""
-        const categoria = esZona
-          ? `Sector de capataz: ${props.sector_etiqueta ?? etiquetaCategoria("sector", String(props.cat_sector ?? ""), sectoresRef.current)}`
-          : `Categoría: ${escapeHtml(etiquetaCategoria("uso", String(props.cat_uso ?? "")))}`
-        const popup = new Popup({ closeButton: true, maxWidth: "280px", className: "cv-popup" })
-          .setLngLat(event.lngLat)
-          .setHTML(
-            `<p class="cv-popup-kicker">${escapeHtml(labelOf(String(hit.source)))}</p>
+              `<p class="cv-popup-kicker">${escapeHtml(labelOf(String(hit.source)))}</p>
              <p class="cv-popup-title">${escapeHtml(nombre)}</p>
              <p class="cv-popup-meta">${escapeHtml(codigo)}${uso ? ` · ${escapeHtml(uso)}` : ""}</p>
              <p class="cv-popup-meta">${categoria}</p>`,
-          )
-          .addTo(map)
-        popup.on("close", () => {
-          if (popupRef.current === popup && selRef.current) {
-            map.setFeatureState(selRef.current, { sel: false })
-            selRef.current = null
-          }
-        })
-        popupRef.current = popup
+            )
+            .addTo(map)
+          popup.on("close", () => {
+            if (popupRef.current === popup && selRef.current) {
+              marcar(selRef.current, { sel: false })
+              selRef.current = null
+            }
+          })
+          popupRef.current = popup
+        } catch {
+          /* un clic no fuerza la lista */
+        }
       })
       setReady(true)
       map.resize()
