@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Para cambiar de cuenta de laboratorio use scripts/actualizar-credenciales-lab.sh
+# (environment aws-lab). Este script sigue subiendo los secrets del repositorio.
 # Sube las credenciales temporales del Learner Lab a los secrets del repo.
 # Lee el bloque del portapapeles (AWS Details > AWS CLI > Show) o, si no trae
 # las tres claves, el perfil [default] de ~/.aws/credentials.

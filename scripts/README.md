@@ -2,7 +2,13 @@
 
 | Script | Qué hace |
 |--------|----------|
-| `set-aws-secrets.sh` / `set-aws-secrets.ps1` | Sube las tres credenciales temporales del Learner Lab a los secrets del repo. Ver `docs/DESPLIEGUE.md` |
+| `actualizar-credenciales-lab.sh` / `.ps1` | Lee el bloque AWS CLI del Learner Lab (stdin o portapapeles) y lo sube al environment `aws-lab` sin imprimir valores. Ver `docs/CAMBIO-DE-CUENTA-LAB.md` |
+| `set-aws-secrets.sh` / `set-aws-secrets.ps1` | Sube las tres credenciales temporales del Learner Lab a los secrets del repo. Para una cuenta nueva prefiera `actualizar-credenciales-lab` |
+| `bootstrap-estado-terraform.sh` | Crea el cubo de estado `campus-verde-tfstate-<cuenta>` y el cubo de transferencia SSM en la cuenta actual |
+| `aprovisionar-cuenta.sh` | plan, apply o destroy parametrizado. Lo llama el workflow `aprovisionar-cuenta` |
+| `pausar-cuenta.sh` | Enciende o detiene instancias por etiquetas |
+| `generar-inventario-ansible.sh` | Inventario Ansible desde `terraform output -json` |
+| `recuperar-estado-terraform.sh` | Imprime `terraform import` si el estado se perdió y los recursos siguen. No ejecuta nada |
 | `bootstrap.sh` | `docker compose up -d`, espera, migra y corre el ETL |
 | `wait-db.sh` | Espera a que `pg_isready` responda en el servicio `db` |
 | `counts.sh` | Conteos de áreas, zonas y capas, con SRID 4326 |
