@@ -66,4 +66,6 @@ deploy/host-deploy.sh <develop|qa|produccion> --sha <40hex> [--rollback <sha40|r
 
 La guía completa de arquitectura, layout y operación con runners self-hosted se encuentra en [`docs/DEPLOY-RUNNER.md`](../docs/DEPLOY-RUNNER.md).
 
+Sin PEM el host sigue en HTTP. Con `fullchain.pem` y `privkey.pem` en el directorio de certificados, `host-deploy.sh` añade [`compose.tls.yml`](compose.tls.yml) (443 y el montaje de los PEM) y la cookie de la API pasa a `Secure`. El alta del certificado DuckDNS está en [`docs/DESPLIEGUE-README.md`](../docs/DESPLIEGUE-README.md).
+
 

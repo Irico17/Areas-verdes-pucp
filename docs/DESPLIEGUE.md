@@ -1,6 +1,6 @@
 # Despliegue por sesión (Learner Lab)
 
-Hay tres ambientes (`develop`, `qa`, `produccion`): puertos, bases y el flujo develop → qa → producción están en [`AMBIENTES.md`](AMBIENTES.md). Este archivo es la sesión del Learner Lab, que corresponde a **produccion**.
+Hay tres ambientes (`develop`, `qa`, `produccion`): puertos, bases y el flujo develop → qa → producción están en [`AMBIENTES.md`](AMBIENTES.md). La guía del runner y el HTTPS con DuckDNS están en [`DESPLIEGUE-README.md`](DESPLIEGUE-README.md). Este archivo es la sesión del Learner Lab, que corresponde a **produccion**.
 
 Cada sesión del laboratorio dura unas cuatro horas y las credenciales cambian. El lab no deja crear roles IAM ni un proveedor OIDC. El workflow `.github/workflows/deploy.yml` lee, del environment de GitHub (`develop`, `qa` o `produccion`), los secrets `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN`. Producción solo corre con `workflow_dispatch` y con la aprobación de ese environment. `ci.yml` prueba y publica las imágenes con el SHA; ya no despliega.
 
@@ -44,7 +44,9 @@ Si en otra sesión el lab liberó esa IP y Terraform asigna otra, el job imprime
 
 ## Sesión por HTTP
 
-El lab publica `http://<elastic-ip>` sin TLS. Una cookie `Secure` no se guarda en ese origen y el login parece no hacer nada: la API responde 200 y el navegador descarta `cv_sesion`.
+Sin el par PEM, el lab y los tres ambientes siguen en HTTP. Una cookie `Secure` no se guarda en ese origen y el login parece no hacer nada: la API responde 200 y el navegador descarta `cv_sesion`.
+
+El nombre público y el HTTPS de producción (`verde-pucp.duckdns.org`, solo cuando hay PEM) están en [`DESPLIEGUE-README.md`](DESPLIEGUE-README.md). Develop y qa no usan ese dominio. La validación con la PUCP sigue abierta y la restricción de la universidad no está firmada.
 
 `CAMPUS_COOKIE_SECURE` manda. Vale `true` solo con HTTPS. `CAMPUS_ENV=production` no la enciende: el compose de la instancia fija ese entorno también cuando nginx sigue en el puerto 80.
 
