@@ -299,6 +299,9 @@ export const VISTA_ACTIVIDAD = {
 
 export const MAPA = {
   capas: "Capas",
+  mostrarCapas: "Mostrar capas",
+  ocultarPanel: "Ocultar capas",
+  cerrarPanel: "Cerrar capas",
   catastro: "Catastro",
   mostrarCatastro: "Mostrar catastro",
   colorear: "Colorear el catastro por",
