@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./fixtures"
 
 test("el riego elige el sector de capataz y muestra la cobertura provisional", async ({ page }) => {
   await page.goto("/")

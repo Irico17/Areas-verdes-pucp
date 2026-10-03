@@ -176,6 +176,8 @@ jobs:
           python3 deploy/comparar_conteos.py --selftest
           bash deploy/test_deploy_orden.sh
           bash deploy/test_host_deploy.sh
+          bash deploy/test_smoke_tls.sh
+          bash deploy/tls/test_nginx_tls.sh
       - name: Swagger sin deriva
         working-directory: backend/app
         run: |
@@ -305,3 +307,94 @@ jobs:
 
           echo "API ${api}:${sha}"
           echo "WEB ${web}:${sha}"
+
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    services:
+      postgis:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: campus
+          POSTGRES_PASSWORD: campus
+          POSTGRES_DB: campus
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U campus -d campus"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
+        with:
+          go-version-file: backend/app/go.mod
+          cache: true
+          cache-dependency-path: backend/app/go.sum
+      - name: Compilar migrate y la API
+        working-directory: backend/app
+        run: |
+          go build -o "$RUNNER_TEMP/migrate" ./cmd/migrate
+          go build -o "$RUNNER_TEMP/api" ./cmd
+      - name: Aplicar migraciones y semilla ficticia
+        env:
+          DATABASE_URL: postgres://campus:campus@localhost:5432/campus?sslmode=disable
+          MIGRATIONS_DIR: ${{ github.workspace }}/db/migrations
+          SEED_FILE: ${{ github.workspace }}/deploy/seed/ficticio.sql
+          CAMPUS_DEV_PASSWORD: pando-local
+        run: |
+          "$RUNNER_TEMP/migrate"
+          "$RUNNER_TEMP/migrate" -semilla-ficticia
+      - name: Arrancar la API
+        env:
+          DATABASE_URL: postgres://campus:campus@localhost:5432/campus?sslmode=disable
+          API_ADDR: 127.0.0.1:8091
+          CAMPUS_COOKIE_SECURE: "false"
+          CAMPUS_DEV_PASSWORD: pando-local
+          CAMPUS_LOGIN_MAX: "1000"
+        run: |
+          nohup "$RUNNER_TEMP/api" > "$RUNNER_TEMP/api.log" 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8091/health >/dev/null; then
+              echo "API lista"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "la API no respondió en /health" >&2
+          cat "$RUNNER_TEMP/api.log" >&2 || true
+          exit 1
+      - uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Caché de Chromium de Playwright
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-1.63.0-${{ hashFiles('apps/web/package-lock.json') }}
+      - name: Instalar dependencias y Chromium
+        working-directory: apps/web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Pruebas de extremo a extremo
+        working-directory: apps/web
+        env:
+          CI: "true"
+          VITE_DEV_API: http://127.0.0.1:8091
+        run: npm run test:e2e
+      - name: Informe y trazas si falla
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-e2e
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

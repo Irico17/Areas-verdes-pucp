@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./fixtures"
 
 test("al volver la red el cambio de estado sale de la cola sin pulsar el botón", async ({ page, context }) => {
   await page.goto("/")

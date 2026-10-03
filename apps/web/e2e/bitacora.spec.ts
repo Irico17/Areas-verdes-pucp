@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./fixtures"
 import { deflateSync } from "node:zlib"
 
 function pngSolido(ancho: number, alto: number): Buffer {

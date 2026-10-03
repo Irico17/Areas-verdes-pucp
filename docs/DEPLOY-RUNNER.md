@@ -91,7 +91,7 @@ El script [`deploy/host-deploy.sh`](../deploy/host-deploy.sh) ejecuta el siguien
 8. **Espera de salud:** comprueba hasta 45 intentos que `campus-<ambiente>-db` alcance estado `healthy`.
 9. **Smoke test:** ejecuta [`deploy/smoke.sh`](../deploy/smoke.sh) contra `http://127.0.0.1:${WEB_PORT}`.
    - Si el smoke falla: ejecuta **rollback automático** a las imágenes previas (o reinicia el stack legado si era la primera migración) y sale con error `1`.
-10. **Conteos «después» (producción):** ejecuta nuevamente [`deploy/conteos.sql`](../deploy/conteos.sql) y compara con [`deploy/comparar_conteos.py`](../deploy/comparar_conteos.py) usando las exclusiones de [`deploy/conteos.excluir`](../deploy/conteos.excluir). Si alguna tabla de negocio varía en filas, el despliegue aborta con error.
+10. **Conteos «después» (producción):** ejecuta nuevamente [`deploy/conteos.sql`](../deploy/conteos.sql) y compara con [`deploy/comparar_conteos.py`](../deploy/comparar_conteos.py) usando las exclusiones de [`deploy/conteos.excluir`](../deploy/conteos.excluir). Si alguna tabla de negocio baja de filas (o desaparece), el despliegue aborta con error; los aumentos (las migraciones añaden catálogos, permisos y auditoría) y las tablas nuevas se reportan en el log sin fallar.
 11. **Registro:** escribe `$CAMPUS_HOME/state/deployed.env` con el SHA y fecha, y reporta en `$GITHUB_STEP_SUMMARY` si está disponible.
 
 ---
@@ -197,5 +197,5 @@ La instalación y registro del runner en las instancias EC2 la realiza el script
 
 ## 9. Limitaciones Actuales
 
-- **TLS / HTTPS pendiente:** El frontend expone tráfico HTTP directo (puerto 80 en producción, 8088 en develop, 8188 en qa). La terminación TLS mediante reverse proxy (Caddy / Nginx / Certbot / ALB) se configurará en un hito posterior. Por esta razón, `CAMPUS_COOKIE_SECURE` permanece en `false` hasta activar certificados SSL/TLS.
+- **TLS opt-in en producción:** Sin PEM, la web sigue en HTTP (puerto 80 en producción, 8088 en develop, 8188 en qa) y `CAMPUS_COOKIE_SECURE` queda en `false`. Con el par PEM, el mismo nginx termina TLS; el procedimiento está en [`DESPLIEGUE-README.md`](DESPLIEGUE-README.md). No se añade otro proxy. Develop y qa no llevan el dominio.
 - **Evidencias:** Si `EVIDENCIAS_BUCKET` está definido en el entorno del host, los bytes van a un cubo S3 privado y Postgres guarda la clave del objeto, no una URL pública. Si la variable está vacía, los archivos siguen en el bind mount `/opt/campus/data/app` (`EVIDENCIAS_DIR`) y la API lo escribe una sola vez en el log. Develop deja la variable vacía. Qa y producción ponen el nombre del cubo privado de ese ambiente en el host (`deploy/env/<ambiente>.env`, no versionado); el nombre no va en el repositorio. Las credenciales tampoco: el rol de la instancia, con `s3:PutObject` y `s3:GetObject` sobre ese cubo, o —si no hay rol— `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN` en el environment de GitHub de ese ambiente o en `host.env`. El cubo bloquea el acceso público. La plantilla versionada deja `EVIDENCIAS_BUCKET` vacía.

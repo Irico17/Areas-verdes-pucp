@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./fixtures"
 
 test("se abre un ejemplar, cambia la salud y queda el código anterior", async ({ page }) => {
   const codigo = `E2E-FLORA-${Date.now()}`

@@ -15,6 +15,10 @@ Desde la raíz del repo: `make web`. Abre http://127.0.0.1:4317.
 
 Vite reenvía `/api` y `/health` a `http://127.0.0.1:8091`.
 
+## Extremo a extremo
+
+`npm run test:e2e` (el alias `npm run e2e` hace lo mismo) levanta la web en `http://127.0.0.1:4317` si no está ya arriba y la deja hablar con la API de `VITE_DEV_API` (por defecto `http://127.0.0.1:8091`; `E2E_BASE_URL` cambia la base de Playwright). Hace falta esa API real y una base con las migraciones y la semilla ficticia (`migrate -semilla-ficticia`, clave de demostración `pando-local`). Las capturas quedan en `e2e-artifacts/` y el informe HTML en `playwright-report/`.
+
 ## Qué muestra
 
 - Base OpenStreetMap (teselas raster). Sin Street View.

@@ -75,7 +75,7 @@ Subir la imagen nueva con tag inmutable (el SHA del commit) y reiniciar el servi
 - [ ] `GET /health` responde `"status":"ok"` (lo que mira `campus-healthcheck`)
 - [ ] `GET /areas-verdes/v1/health` responde
 - [ ] Login con una cuenta semilla
-- [ ] Conteos después = conteos antes en todas las tablas de negocio existentes (validado por `deploy/comparar_conteos.py` con `deploy/conteos.excluir`)
+- [ ] Conteos después ≥ conteos antes en todas las tablas de negocio existentes (ninguna baja; los aumentos por migraciones son válidos) (validado por `deploy/comparar_conteos.py` con `deploy/conteos.excluir`)
 - [ ] `schema_migrations` = lista de antes + `047` y `048`
 - [ ] Mapa, una labor y una evidencia se abren
 - [ ] `cambios` reciente no muestra borrados de filas cargadas

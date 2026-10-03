@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./fixtures"
 
 test("el mapa dice sectores de capataz y el editor elige el lugar en un select", async ({ page }) => {
   await page.goto("/")

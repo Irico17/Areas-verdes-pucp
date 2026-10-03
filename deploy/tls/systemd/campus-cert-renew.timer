@@ -1,0 +1,15 @@
+# Dos veces al día. El servicio no renueva si faltan más de 30 días.
+# systemctl enable --now campus-cert-renew.timer
+# El fallo queda en journalctl -u campus-cert-renew.service
+
+[Unit]
+Description=Programa la renovación del certificado Let's Encrypt de VerdePUCP
+
+[Timer]
+OnCalendar=*-*-* 03,15:00:00
+Persistent=true
+RandomizedDelaySec=20min
+Unit=campus-cert-renew.service
+
+[Install]
+WantedBy=timers.target

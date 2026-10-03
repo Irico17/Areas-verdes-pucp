@@ -3,6 +3,11 @@
 
 Compara únicamente las tablas de negocio y excluye tablas técnicas que cambian
 legítimamente durante el despliegue (migraciones y sesiones de smoke test).
+
+Solo una BAJA de conteo (o una tabla que existía antes y ya no está) es pérdida
+de datos y hace fallar. Los aumentos son válidos (las migraciones y el smoke
+añaden filas: catálogos, permisos, auditoría) y las tablas nuevas no cuentan:
+se reportan en el log sin fallar.
 """
 
 from __future__ import annotations
@@ -60,27 +65,35 @@ def comparar(
     antes: dict[str, int],
     despues: dict[str, int],
     excluidas: set[str] | None = None,
-) -> tuple[list[str], list[str], int]:
+) -> tuple[list[str], list[str], list[str], int]:
     """Compara los conteos excluyendo las tablas indicadas.
 
-    Devuelve (diferencias, nuevas, total_comparadas).
+    Devuelve (bajas, aumentos, nuevas, total_comparadas):
+    - bajas: tablas que bajaron de conteo o desaparecieron (pérdida: falla).
+    - aumentos: tablas que subieron (válido, solo se reporta).
+    - nuevas: tablas que no existían antes (válido, solo se reporta).
     """
     if excluidas is None:
         excluidas = set()
 
-    diferencias: list[str] = []
+    bajas: list[str] = []
+    aumentos: list[str] = []
     comparadas = 0
 
     for tabla, filas in sorted(antes.items()):
         if tabla in excluidas:
             continue
         comparadas += 1
-        if despues.get(tabla) != filas:
-            despues_val = despues.get(tabla)
-            diferencias.append(f"{tabla}: antes {filas}, después {despues_val}")
+        despues_val = despues.get(tabla)
+        if despues_val is None:
+            bajas.append(f"{tabla}: antes {filas}, después ausente")
+        elif despues_val < filas:
+            bajas.append(f"{tabla}: antes {filas}, después {despues_val} (bajó {filas - despues_val})")
+        elif despues_val > filas:
+            aumentos.append(f"{tabla}: antes {filas}, después {despues_val} (+{despues_val - filas})")
 
-    nuevas = sorted(set(despues) - set(antes))
-    return diferencias, nuevas, comparadas
+    nuevas = sorted(t for t in set(despues) - set(antes) if t not in excluidas)
+    return bajas, aumentos, nuevas, comparadas
 
 
 def filtrar_conteos(texto: str, excluidas: set[str]) -> str:
@@ -100,83 +113,76 @@ def filtrar_conteos(texto: str, excluidas: set[str]) -> str:
 
 
 def _selftest() -> None:
-    # 1. Caso base: conteos coinciden en negocio, pero sesiones y schema_migrations cambiaron
     antes_tsv = """table_name\tfilas
 areas_verdes\t521
+catalogos\t45
 schema_migrations\t36
 sesiones\t0
 usuarios\t6
 zonas_supervision\t534
 """
-    despues_tsv = """table_name\tfilas
-areas_verdes\t521
-schema_migrations\t38
-sesiones\t1
-usuarios\t6
-zonas_supervision\t534
-"""
-    excluir_txt = """# Archivo de prueba
-schema_migrations # migración aplicada
-sesiones
-"""
     excluidas = leer_exclusiones(Path("/dev/null"))  # archivo inexistente
     if excluidas != set():
         raise SystemExit(f"archivo inexistente debió devolver set vacío: {excluidas}")
-
-    # Parsear exclusiones desde texto
-    excluidas_test = set()
-    for l in excluir_txt.splitlines():
-        l = l.strip()
-        if l and not l.startswith("#"):
-            excluidas_test.add(l.split("#")[0].strip())
-
+    excluidas_test = {"schema_migrations", "sesiones"}
     antes = leer_conteos(antes_tsv)
-    despues = leer_conteos(despues_tsv)
 
-    # Con exclusiones: debe pasar sin diferencias
-    difs, nuevas, n_comp = comparar(antes, despues, excluidas_test)
-    if difs:
-        raise SystemExit(f"No debió haber diferencias con exclusiones: {difs}")
-    if n_comp != 3:
-        raise SystemExit(f"Debieron compararse 3 tablas de negocio, se compararon: {n_comp}")
-    if nuevas:
-        raise SystemExit(f"No debió haber tablas nuevas: {nuevas}")
+    def caso(cuerpo: str, excl: set[str] | None = excluidas_test):
+        return comparar(antes, leer_conteos("table_name\tfilas\n" + cuerpo), excl)
 
-    # Sin exclusiones: debe fallar reportando sesiones y schema_migrations
-    difs_sin_excl, _, _ = comparar(antes, despues, set())
-    if len(difs_sin_excl) != 2:
-        raise SystemExit(f"Debieron fallar 2 tablas sin exclusiones: {difs_sin_excl}")
+    base = "areas_verdes\t521\nschema_migrations\t38\nsesiones\t1\nusuarios\t6\nzonas_supervision\t534\n"
 
-    # 2. Caso fallo: tabla de negocio con conteo distinto debe fallar
-    despues_negocio_cambio = """table_name\tfilas
-areas_verdes\t522
-schema_migrations\t38
-sesiones\t1
-usuarios\t6
-zonas_supervision\t534
-"""
-    despues_neg = leer_conteos(despues_negocio_cambio)
-    difs_neg, _, _ = comparar(antes, despues_neg, excluidas_test)
-    if not difs_neg or "areas_verdes" not in difs_neg[0]:
-        raise SystemExit(f"Cambio en tabla de negocio 'areas_verdes' no fue detectado: {difs_neg}")
+    # 1. Igual en negocio (las excluidas cambian): sin bajas ni aumentos
+    bajas, aumentos, nuevas, n_comp = caso("catalogos\t45\n" + base)
+    if bajas or aumentos or nuevas:
+        raise SystemExit(f"Caso igual no debió reportar nada: {bajas} {aumentos} {nuevas}")
+    if n_comp != 4:
+        raise SystemExit(f"Debieron compararse 4 tablas de negocio, se compararon: {n_comp}")
 
-    # 3. Caso tablas nuevas: se reportan y no provocan fallo
-    despues_con_nueva = """table_name\tfilas
-areas_verdes\t521
-nueva_tabla_negocio\t10
-schema_migrations\t38
-sesiones\t1
-usuarios\t6
-zonas_supervision\t534
-"""
-    despues_nueva = leer_conteos(despues_con_nueva)
-    difs_nueva, nuevas_tabla, _ = comparar(antes, despues_nueva, excluidas_test)
-    if difs_nueva:
-        raise SystemExit(f"Tabla nueva no debe considerarse diferencia destructiva: {difs_nueva}")
-    if nuevas_tabla != ["nueva_tabla_negocio"]:
-        raise SystemExit(f"No se reportó la tabla nueva: {nuevas_tabla}")
+    # 2. Sin exclusiones, las tablas técnicas que SUBEN tampoco fallan
+    bajas, aumentos, _, _ = caso("catalogos\t45\n" + base, set())
+    if bajas:
+        raise SystemExit(f"Un aumento no debe fallar: {bajas}")
+    if len(aumentos) != 2:
+        raise SystemExit(f"Debieron reportarse 2 aumentos (schema_migrations y sesiones): {aumentos}")
 
-    # 4. Caso filtro de texto
+    # 3. Sube (migraciones añaden catálogos): válido, se reporta
+    bajas, aumentos, _, _ = caso("catalogos\t116\n" + base)
+    if bajas:
+        raise SystemExit(f"Subir catalogos 45->116 no debe fallar: {bajas}")
+    if aumentos != ["catalogos: antes 45, después 116 (+71)"]:
+        raise SystemExit(f"No se reportó el aumento de catalogos: {aumentos}")
+
+    # 4. Baja en una tabla de negocio: debe fallar
+    bajas, _, _, _ = caso("catalogos\t45\n" + base.replace("areas_verdes\t521", "areas_verdes\t520"))
+    if len(bajas) != 1 or not bajas[0].startswith("areas_verdes: antes 521, después 520"):
+        raise SystemExit(f"La baja de areas_verdes no fue detectada: {bajas}")
+
+    # 5. Baja a cero también falla
+    bajas, _, _, _ = caso("catalogos\t0\n" + base)
+    if len(bajas) != 1 or "catalogos" not in bajas[0]:
+        raise SystemExit(f"La baja de catalogos a 0 no fue detectada: {bajas}")
+
+    # 6. Tabla que existía antes y desaparece: falla
+    bajas, _, _, _ = caso("catalogos\t45\n" + base.replace("usuarios\t6\n", ""))
+    if len(bajas) != 1 or "usuarios" not in bajas[0] or "ausente" not in bajas[0]:
+        raise SystemExit(f"La tabla ausente después no fue detectada: {bajas}")
+
+    # 7. Tabla nueva (no existía antes): se reporta y no falla
+    bajas, aumentos, nuevas, _ = caso("catalogos\t45\nnueva_tabla_negocio\t10\n" + base)
+    if bajas or aumentos:
+        raise SystemExit(f"Una tabla nueva no debe fallar ni contarse como aumento: {bajas} {aumentos}")
+    if nuevas != ["nueva_tabla_negocio"]:
+        raise SystemExit(f"No se reportó la tabla nueva: {nuevas}")
+
+    # 8. Mezcla: sube una, baja otra -> falla solo por la que baja
+    bajas, aumentos, _, _ = caso(
+        "catalogos\t116\n" + base.replace("zonas_supervision\t534", "zonas_supervision\t533")
+    )
+    if len(bajas) != 1 or "zonas_supervision" not in bajas[0] or len(aumentos) != 1:
+        raise SystemExit(f"La mezcla debe fallar solo por la baja: {bajas} {aumentos}")
+
+    # 9. Filtro de texto
     filtrado = filtrar_conteos(antes_tsv, excluidas_test)
     if "schema_migrations" in filtrado or "sesiones" in filtrado:
         raise SystemExit(f"Filtro no removió tablas excluidas: {filtrado}")
@@ -237,21 +243,26 @@ def main() -> None:
     antes = leer_conteos(Path(args.antes))
     despues = leer_conteos(Path(args.despues))
 
-    diferencias, nuevas, comparadas = comparar(antes, despues, excluidas)
+    bajas, aumentos, nuevas, comparadas = comparar(antes, despues, excluidas)
 
-    if diferencias:
-        sys.stderr.write("conteos distintos en tablas que ya existían:\n")
-        for d in diferencias:
-            sys.stderr.write(f"{d}\n")
-        sys.exit(1)
-
-    print(f"conteos iguales en {comparadas} tablas existentes")
+    if aumentos:
+        print("tablas que subieron de conteo (válido, p. ej. filas añadidas por migraciones):")
+        for a in aumentos:
+            print(f"  {a}")
     if nuevas:
         print("tablas nuevas: " + ", ".join(nuevas))
     if excluidas:
         excluidas_presentes = sorted(excluidas & (set(antes) | set(despues)))
         if excluidas_presentes:
             print(f"tablas excluidas de la comparación: {', '.join(excluidas_presentes)}")
+
+    if bajas:
+        sys.stderr.write("PÉRDIDA DE DATOS: tablas que bajaron de conteo o desaparecieron:\n")
+        for d in bajas:
+            sys.stderr.write(f"  {d}\n")
+        sys.exit(1)
+
+    print(f"ningún conteo bajó en {comparadas} tablas existentes ({len(aumentos)} subieron)")
 
 
 if __name__ == "__main__":

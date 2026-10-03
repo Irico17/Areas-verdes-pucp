@@ -25,12 +25,17 @@ El corte de la EC2 que ya tiene datos sigue en [`RUNBOOK-CORTE-PRODUCCION.md`](R
 | Proyecto Compose | `campus-develop` | `campus-qa` | `campus-produccion` |
 | Cuándo se despliega | push a `develop` o a `backend/arquitectura-equipo`, tras el CI | tag `rc-*` o a mano | solo a mano, con aprobación |
 | Antes de cambiar la EC2 | — | — | snapshot EBS, `pg_dump`, conteos |
+| Dominio/TLS | no (HTTP, cookie no Secure) | no (HTTP, cookie no Secure) | `verde-pucp.duckdns.org` cuando haya PEM |
 
 En una misma máquina los tres stacks conviven: puertos, nombres, volúmenes, redes y bases no se pisan. `make down ENV=qa` no borra volúmenes (`down` no usa `-v`).
 
 `SWAGGER_ENABLED`, `CAMPUS_CORS_ORIGINS`, `LOG_LEVEL`, `LOG_FORMAT`, `SERVER_GIN_MODE`, `DATABASE_MAX_OPEN_CONNS`, `DATABASE_MAX_IDLE_CONNS` y `DATABASE_CONN_MAX_LIFETIME` pisan el default del ambiente. Un asterisco en CORS se descarta. Sin `APP_ENV` el proceso se queda en el comportamiento histórico (pool 10/4/30 min, Swagger según el modo de Gin). El YAML de OpenAPI (`/api/v1/openapi.yaml` y `/areas-verdes/v1/openapi.yaml`) se apaga con 404 únicamente cuando `APP_ENV=produccion`; en develop, qa y local sin variables responde 200 con independencia de `SWAGGER_ENABLED`.
 
-La cookie `Secure` la sigue mandando `CAMPUS_COOKIE_SECURE`. En HTTP (el lab y el compose local) es `false`. Con TLS es `true`. `APP_ENV=produccion` no la enciende sola.
+La cookie `Secure` la sigue mandando `CAMPUS_COOKIE_SECURE`. En HTTP (el lab, develop, qa y el compose local) es `false`. Con el par PEM de producción es `true`. `APP_ENV=produccion` no la enciende sola.
+
+El dominio `verde-pucp.duckdns.org` se destina a **producción** (`100.51.112.92`): es el único ambiente que sirve la web en el puerto 80 y cuyo grupo de seguridad ya abre el 443. Develop y qa comparten una EC2 con puertos no estándar (8088 y 8188) y no están pensados para un nombre público; se quedan en HTTP y con cookie no Secure. Apuntar el dominio a develop o a qa exigiría publicar el 443 en esa EC2, abrir el puerto en su grupo de seguridad y un nombre por ambiente, y queda fuera de alcance. El procedimiento (certificado, cookie y el orden del cambio de DNS) está en [`DESPLIEGUE-README.md`](DESPLIEGUE-README.md).
+
+La validación con la PUCP sigue abierta y la restricción de la universidad no está firmada. La restricción institucional no está firmada. DuckDNS es un dominio gratuito de laboratorio, no el dominio definitivo (pendiente de decisión del cliente).
 
 ## Local
 
@@ -218,9 +223,9 @@ En producción el script (`deploy/deploy.sh produccion --aws`) ejecuta el siguie
 5. Inyección de secretos en la instancia (`scripts/poner-secretos.sh`).
 6. Actualización del compose en la instancia (`patch_compose.py`) y arranque de contenedores (`docker compose pull` y `up -d`).
 7. Smoke test (`deploy/smoke.sh`): verifica `/health`, login, lecturas y Swagger apagado. Si falla, revierte automáticamente a las imágenes previas (`PREVIOUS_API` / `PREVIOUS_WEB`).
-8. Conteos «después» de tablas y comparación (`deploy/comparar_conteos.py`): valida que las tablas de negocio mantengan exactamente sus filas.
+8. Conteos «después» de tablas y comparación (`deploy/comparar_conteos.py`): valida que ninguna tabla de negocio pierda filas.
 
-La comparación (`deploy/comparar_conteos.py`) valida que las tablas de datos de negocio mantengan exactamente sus filas. Se excluyen explícitamente las tablas técnicas que cambian de forma legítima durante el despliegue, definidas en [`deploy/conteos.excluir`](../deploy/conteos.excluir) (fuente única de verdad): `schema_migrations` (por migraciones pendientes aplicadas por el entrypoint) y `sesiones` (por el login del smoke test). Tablas nuevas introducidas por migraciones se reportan. Si una tabla de negocio diverge o el smoke falla, se aborta y se revierte a la imagen anterior. No hay migración «down»: las migraciones solo agregan. Volver el binario atrás no borra columnas. Restaurar el dump es el último recurso y lo decide una persona; se pierde lo cargado después del backup.
+La comparación (`deploy/comparar_conteos.py`) valida que ninguna tabla de datos de negocio baje de conteo ni desaparezca (pérdida de datos). Los aumentos son válidos porque las migraciones añaden filas, y se listan en el log. Se excluyen explícitamente las tablas técnicas que cambian de forma legítima durante el despliegue, definidas en [`deploy/conteos.excluir`](../deploy/conteos.excluir) (fuente única de verdad): `schema_migrations` (por migraciones pendientes aplicadas por el entrypoint) y `sesiones` (por el login del smoke test). Tablas nuevas introducidas por migraciones se reportan. Si una tabla de negocio baja o el smoke falla, se aborta y se revierte a la imagen anterior. No hay migración «down»: las migraciones solo agregan. Volver el binario atrás no borra columnas. Restaurar el dump es el último recurso y lo decide una persona; se pierde lo cargado después del backup.
 
 ## Secretos y variables
 
@@ -256,6 +261,7 @@ Repita con `--env qa` y `--env produccion`. No pegue los valores en el repo ni e
 
 ```bash
 gh variable set CAMPUS_CORS_ORIGINS --env develop --body 'http://127.0.0.1:8088'
+# Sin PEM el body sigue en false. Con el certificado de producción, pase a true.
 gh variable set CAMPUS_COOKIE_SECURE --env produccion --body 'false'
 gh variable set AWS_REGION --env produccion --body 'us-east-1'
 ```
