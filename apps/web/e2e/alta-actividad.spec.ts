@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./fixtures"
 
 test("el alta de una actividad muestra clase, tipo, riesgo y lugar de catálogo", async ({ page }) => {
   await page.goto("/")

@@ -1,4 +1,6 @@
-import { expect, test } from "@playwright/test"
+import { randomUUID } from "node:crypto"
+
+import { expect, test, type APIRequestContext } from "./fixtures"
 
 async function entrar(page: import("@playwright/test").Page, usuario: string) {
   await page.goto("/")
@@ -103,27 +105,52 @@ test("el nombre del capataz se lee y el botón de ayuda toma el foco", async ({ 
   await page.screenshot({ path: "e2e-artifacts/o4-claridad/capataz-identidad-390.png" })
 })
 
-test("archivar pide el motivo en un diálogo y la actividad sale de la lista", async ({ page }) => {
+async function prepararActividad(request: APIRequestContext, titulo: string) {
+  const sesion = await request.post("/areas-verdes/v1/sesion", {
+    data: { usuario: "coordinacion", clave: "pando-local" },
+  })
+  const cuerpoSesion = await sesion.text()
+  expect(sesion.ok(), `${sesion.status()} ${cuerpoSesion}`).toBeTruthy()
+  const alta = await request.post("/areas-verdes/v1/operacion/actividades", {
+    data: {
+      id: randomUUID(),
+      tipo: "limpieza",
+      titulo,
+      detalle: "Preparada para repetir el diálogo de archivo.",
+      lon: -77.0789,
+      lat: -12.0682,
+      assigned_capataz_id: "cap-norte",
+      ejecutor: "propia",
+    },
+  })
+  const cuerpoAlta = await alta.text()
+  expect(alta.ok(), `${alta.status()} ${cuerpoAlta}`).toBeTruthy()
+}
+
+test("archivar pide el motivo en un diálogo y la actividad sale de la lista", async ({ page, request }) => {
+  const titulo = `Limpieza e2e ${randomUUID().slice(0, 8)}`
+  await prepararActividad(request, titulo)
   await page.setViewportSize({ width: 1280, height: 800 })
   await entrar(page, "coordinacion")
   await page.getByRole("button", { name: "Actividades", exact: true }).click()
-  await page.getByRole("button", { name: /Limpieza de caminería norte/ }).click()
+  const fila = page.getByRole("button", { name: new RegExp(titulo) })
+  await fila.click()
   await page.getByRole("button", { name: "Más acciones" }).click()
   await page.getByRole("button", { name: "Archivar", exact: true }).click()
   const dialogo = page.locator("dialog.dialogo-archivo")
   await expect(dialogo).toBeVisible()
-  await expect(dialogo).toContainText('¿Archivar "Limpieza de caminería norte"?')
+  await expect(dialogo).toContainText(`¿Archivar "${titulo}"?`)
   await expect(dialogo).toContainText("Deja de verse en el mapa; no se borra.")
   await dialogo.getByRole("button", { name: "Cancelar" }).click()
   await expect(dialogo).toBeHidden()
-  await expect(page.getByRole("button", { name: /Limpieza de caminería norte/ })).toBeVisible()
+  await expect(fila).toBeVisible()
 
   await page.getByRole("button", { name: "Más acciones" }).click()
   await page.getByRole("button", { name: "Archivar", exact: true }).click()
   await expect(dialogo.getByRole("button", { name: "Archivar" })).toBeDisabled()
   await dialogo.getByLabel("Motivo de archivo").selectOption({ index: 1 })
   await dialogo.getByRole("button", { name: "Archivar" }).click()
-  await expect(page.getByRole("button", { name: /Limpieza de caminería norte/ })).toHaveCount(0)
+  await expect(fila).toHaveCount(0)
   await page.screenshot({ path: "e2e-artifacts/o4-claridad/detalle-archivo-1280.png" })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: "e2e-artifacts/o4-claridad/detalle-archivo-390.png" })

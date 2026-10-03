@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./fixtures"
 
 test("el historial muestra un cambio de la semilla y dice que no hay retención", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 })

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./fixtures"
 
 test("la solicitud no es solo un texto de lugar y la orden elige empresa", async ({ page }) => {
   await page.goto("/")
