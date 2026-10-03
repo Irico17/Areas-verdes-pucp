@@ -111,7 +111,7 @@ La matriz que pinta las pestañas está en `frontend/src/ui/permisos.ts`. Los c�
 
 ## Ambientes y cuentas de prueba
 
-Las seis cuentas son ficticias en los tres ambientes: `norte`, `sur`, `riego`, `coordinacion`, `jefatura` y `admin`. La clave es distinta en cada ambiente. Aquí van marcadores; no hay claves reales en este archivo.
+Las seis cuentas son ficticias en los tres ambientes: `norte`, `sur`, `riego`, `coordinacion`, `jefatura` y `admin`. La clave es distinta en cada ambiente. Este repositorio es público, así que aquí van marcadores (`<<CLAVE_*>>`) y no las claves reales; se entregan por un canal privado.
 
 | Ambiente | URL | Notas |
 | --- | --- | --- |
@@ -154,6 +154,14 @@ Esas IP de develop y de QA cambian si se apaga la instancia del laboratorio. Par
 | coordinacion | Coordinación | `<<CLAVE_PRODUCCION>>` |
 | jefatura | Jefatura | `<<CLAVE_PRODUCCION>>` |
 | admin | Administración | `<<CLAVE_PRODUCCION>>` |
+
+### Cambio de clave
+
+- **La API lo permite.** Cualquier cuenta activa cambia su propia clave con `POST /api/v1/sesion/clave` (cuerpo `{"clave_actual": "...", "clave_nueva": "..."}`, con sesión iniciada). La clave nueva debe tener al menos 10 caracteres. No hay otra política (mayúsculas, símbolos, caducidad ni historial).
+- **En la interfaz** el formulario de cambio propio solo aparece cuando la cuenta tiene `debe_cambiar_password`: tras entrar, la app pide la clave nueva antes de seguir. Las seis cuentas sembradas **no** lo tienen activado, así que entran directo y no están obligadas a cambiarla. Quien quiera cambiarla antes usa el endpoint (por ejemplo desde `/swagger/index.html`).
+- **Reinicio por jefatura o administración.** Los roles con el permiso `usuarios` (Jefatura y Administración) fijan una clave nueva a otra cuenta en la pestaña de usuarios («Cambiar clave»). Eso marca `debe_cambiar_password` y la persona debe cambiarla al entrar. Si el administrador lo hace sobre su propia cuenta, también debe cambiarla en el siguiente ingreso.
+- **Las claves de esta tabla dejan de valer al cambiarlas.** La siembra solo crea las cuentas que faltan; un despliegue no sobrescribe una clave ya cambiada ni vuelve a aplicar `CAMPUS_DEV_PASSWORD`. Si alguien la cambia, hay que actualizar este README.
+- **Producción** exige que `CAMPUS_DEV_PASSWORD` tenga al menos 16 caracteres y no sea una clave de laboratorio; esa regla solo vale para la clave de siembra, no para los cambios hechos desde la app (mínimo 10).
 
 En local, sin `APP_ENV`, las mismas cuentas entran con la clave de demostración de `.env.example` (`pando-local`). En producción la API rechaza `pando-local`, `campus-lab` y cualquier clave de menos de 16 caracteres.
 
