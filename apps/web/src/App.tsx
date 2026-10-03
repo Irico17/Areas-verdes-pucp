@@ -35,6 +35,7 @@ import { conCategorias, conteoPorCategoria, sectoresDesdeCatalogo, SIN_SECTOR, U
 import { ACTIVIDAD, CUENTA, MAPA, MODULO, etiquetaCuadrilla, resumenCatastro } from "./ui/nomenclatura"
 import { BottomSheet } from "./ui/BottomSheet"
 import { ControlMapa } from "./map/ControlMapa"
+import { MarcoMapa } from "./map/MarcoMapa"
 import { Hoy } from "./panel/Hoy"
 import { RegistrosCampo } from "./panel/RegistrosCampo"
 import { Resumen } from "./panel/Resumen"
@@ -1048,11 +1049,6 @@ export default function App() {
       </BottomSheet>
       <Recorrido rol={rol} usuario={sesion.usuario} forzar={ayudaForzada} onCerrar={() => setAyudaForzada(false)} />
       <div className="stage" ref={stageRef}>
-        <ConmutadorVista
-          vista={planoForzado ? "lista" : vista}
-          motivo={planoForzado}
-          onVista={setVista}
-        />
         {(planoForzado || vista === "lista") && (
           <ListaActividades
             items={itemsVisibles}
@@ -1063,35 +1059,47 @@ export default function App() {
             }}
           />
         )}
-        <ControlMapa
-          relieve={relieve}
-          onRelieve={setRelieve}
-          showEdificios={showEdificios}
-          onEdificios={() => setShowEdificios((on) => !on)}
-          edificios={edificios.features.length}
-          catastroOn={catastroOn}
-          onCatastro={() => setCatastroOn((on) => !on)}
-          areas={data.areas?.features.length ?? "—"}
-          zonas={data.zonas?.features.length ?? "—"}
-          colorPor={colorPor}
-          onColorPor={setColorPor}
-          categorias={catsColor}
-          conteo={conteoColor}
-          ocultas={ocultas[colorPor]}
-          onOculta={(id) =>
-            setOcultas((current) => {
-              const activas = current[colorPor]
-              const siguiente = activas.includes(id) ? activas.filter((item) => item !== id) : [...activas, id]
-              return { ...current, [colorPor]: siguiente }
-            })
+        <MarcoMapa
+          usuario={sesion.usuario}
+          vista={
+            <ConmutadorVista
+              vista={planoForzado ? "lista" : vista}
+              motivo={planoForzado}
+              onVista={setVista}
+            />
           }
-          visible={visible}
-          onCapa={(id) => setVisible((current) => ({ ...current, [id]: !current[id] }))}
-          data={data}
-          inventoryOn={inventoryOn}
-          onInventario={(id) => setInventoryOn((current) => ({ ...current, [id]: !current[id] }))}
-          inventory={inventory}
-          resumen={summary}
+          control={
+            <ControlMapa
+              relieve={relieve}
+              onRelieve={setRelieve}
+              showEdificios={showEdificios}
+              onEdificios={() => setShowEdificios((on) => !on)}
+              edificios={edificios.features.length}
+              catastroOn={catastroOn}
+              onCatastro={() => setCatastroOn((on) => !on)}
+              areas={data.areas?.features.length ?? "—"}
+              zonas={data.zonas?.features.length ?? "—"}
+              colorPor={colorPor}
+              onColorPor={setColorPor}
+              categorias={catsColor}
+              conteo={conteoColor}
+              ocultas={ocultas[colorPor]}
+              onOculta={(id) =>
+                setOcultas((current) => {
+                  const activas = current[colorPor]
+                  const siguiente = activas.includes(id) ? activas.filter((item) => item !== id) : [...activas, id]
+                  return { ...current, [colorPor]: siguiente }
+                })
+              }
+              visible={visible}
+              onCapa={(id) => setVisible((current) => ({ ...current, [id]: !current[id] }))}
+              data={data}
+              inventoryOn={inventoryOn}
+              onInventario={(id) => setInventoryOn((current) => ({ ...current, [id]: !current[id] }))}
+              inventory={inventory}
+              resumen={summary}
+            />
+          }
         />
         <MapBoundary>
           <CampusMap

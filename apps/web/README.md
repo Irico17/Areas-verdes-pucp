@@ -28,6 +28,7 @@ Vite reenvía `/api` y `/health` a `http://127.0.0.1:8091`.
 - Labores abiertas: color = estado, letra = tipo. Pin para crear, propia o tercerizada, bitácora y evidencia en disco.
 - Si no hay red, el alta y el cambio de estado se encolan; la última lista queda en este navegador.
 - Vista Plano / Relieve. En relieve, las áreas se extruyen y se pueden encender las huellas OSM.
+- En pantallas de hasta 640 px el panel de capas arranca cerrado. En escritorio se puede ocultar; la elección queda en este navegador, por persona y por ancho.
 - Inventario opcional y una agenda marcada como ficticia.
 - Sugerencia de tipo a partir del título: regla local, hay que confirmarla.
 
