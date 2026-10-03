@@ -14,8 +14,9 @@
 | `counts.sh` | Conteos de áreas, zonas y capas, con SRID 4326 |
 | `runner-instalar.sh` | Instala y registra el runner self-hosted de GitHub Actions en la EC2 (`develop`, `qa` o `produccion`). Lee token de `RUNNER_TOKEN` o SSM, verifica SHA-256 e instala servicio systemd. |
 | `paridad-api.sh` | Arnés de verificación de paridad entre la API vieja (`apps/api`) y la nueva (`backend/app`). Normaliza rutas, cabeceras y respuestas JSON. Ignora la clave `activo` en fichas de áreas verdes (expuesta por el backend nuevo en F2 pero ausente en la API vieja) sin ocultar otras diferencias. Soporta la directiva `solo-nueva` para pasos exclusivos del backend nuevo. |
+| `generar-esquema-bd.sh` | PostGIS temporal, aplica `db/migrations` y escribe `docs/BASE-DE-DATOS.md`. |
 
-El ETL en sí está en `apps/api/cmd/etl` (Go). Desde la raíz, `make bootstrap`, `make etl` y `make counts` llaman a estos scripts o al módulo.
+El ETL que usa el Makefile está en `backend/app/cmd/etl`. Desde la raíz, `make bootstrap`, `make etl` y `make counts` llaman a estos scripts o a ese módulo.
 
 ## Arnés de Paridad (`paridad-api.sh`)
 
